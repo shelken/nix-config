@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "catppuccin-btop": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1686163899,
+        "narHash": "sha256-J3UezOQMDdxpflGax0rGBF/XMiKqdqZXuX4KMVGTxFk=",
+        "owner": "catppuccin",
+        "repo": "btop",
+        "rev": "89ff712eb62747491a76a7902c475007244ff202",
+        "type": "github"
+      },
+      "original": {
+        "owner": "catppuccin",
+        "repo": "btop",
+        "type": "github"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -38,6 +54,7 @@
     },
     "root": {
       "inputs": {
+        "catppuccin-btop": "catppuccin-btop",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs"
       }

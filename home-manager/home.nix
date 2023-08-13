@@ -1,12 +1,13 @@
 { config, pkgs, ... }:
 
 {
-
   imports = [
     ./apps/zsh.nix
-    ./apps/micro.nix
+    ./apps/micro
     ./apps/git.nix
     ./apps/gh.nix
+    ./apps/btop.nix
+    ./apps/neovim.nix
   ];
   # Home Manager needs a bit of information about you and the paths it should
   # manage.

@@ -24,16 +24,29 @@
       url = github:nix-community/home-manager;
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # btop主题
+    catppuccin-btop = {
+      url = "github:catppuccin/btop";
+      flake = false;
+    };
+    
   };
 
-  outputs = { nixpkgs, home-manager,  ... }:
+  outputs = inputs @ {self, nixpkgs, home-manager,  ... }:
   let
     system = "x86_64-linux";
+    specialArgs =
+        {
+          #inherit username userfullname useremail;
+        }
+        // inputs;
   in
   {
     nixosConfigurations = {
       nixos = nixpkgs.lib.nixosSystem {
         inherit system;
+	inherit specialArgs;
         modules = [
           ./nixos/configuration.nix
           home-manager.nixosModules.home-manager
@@ -41,11 +54,13 @@
             home-manager = {
               useUserPackages = true;
               useGlobalPkgs = true;
+	      extraSpecialArgs = specialArgs;
               users.shelken = ./home-manager/home.nix;
             };
           }
         ];
       };
+
     };
   };
 }

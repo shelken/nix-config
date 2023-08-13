@@ -1,4 +1,5 @@
 {
+  home.file.".config/micro/bindings.json".source = ./bindings.json;
   programs.micro = {
     enable = true;
     settings = {
