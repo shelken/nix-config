@@ -7,7 +7,7 @@
     ./apps/git.nix
     ./apps/gh.nix
     ./apps/btop.nix
-    ./apps/neovim.nix
+    ./apps/neovim
   ];
   # Home Manager needs a bit of information about you and the paths it should
   # manage.
