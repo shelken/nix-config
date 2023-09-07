@@ -68,5 +68,6 @@
       };
 
     };
+    formatter.${system} = nixpkgs.legacyPackages.${system}.alejandra;
   };
 }
