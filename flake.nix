@@ -2,7 +2,7 @@
   description = "my flake configuration";
 
   nixConfig = {
-    experimental-features = [ "nix-command" "flakes" ];
+    experimental-features = ["nix-command" "flakes"];
     substituters = [
       # replace official cache with a mirror located in China
       "https://mirrors.ustc.edu.cn/nix-channels/store"
@@ -36,23 +36,25 @@
       url = "github:AstroNvim/AstroNvim/v3.36.0";
       flake = false;
     };
-    
   };
 
-  outputs = inputs @ {self, nixpkgs, home-manager,  ... }:
-  let
+  outputs = inputs @ {
+    self,
+    nixpkgs,
+    home-manager,
+    ...
+  }: let
     system = "x86_64-linux";
     specialArgs =
-        {
-          #inherit username userfullname useremail;
-        }
-        // inputs;
-  in
-  {
+      {
+        #inherit username userfullname useremail;
+      }
+      // inputs;
+  in {
     nixosConfigurations = {
       nixos = nixpkgs.lib.nixosSystem {
         inherit system;
-	inherit specialArgs;
+        inherit specialArgs;
         modules = [
           ./nixos/configuration.nix
           home-manager.nixosModules.home-manager
@@ -60,13 +62,12 @@
             home-manager = {
               useUserPackages = true;
               useGlobalPkgs = true;
-	      extraSpecialArgs = specialArgs;
+              extraSpecialArgs = specialArgs;
               users.shelken = ./home-manager/home.nix;
             };
           }
         ];
       };
-
     };
     formatter.${system} = nixpkgs.legacyPackages.${system}.alejandra;
   };

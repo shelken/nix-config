@@ -1,6 +1,8 @@
-{ config, pkgs, ... }:
-
 {
+  config,
+  pkgs,
+  ...
+}: {
   imports = [
     ./apps/zsh.nix
     ./apps/micro
@@ -76,5 +78,4 @@
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
-    
 }

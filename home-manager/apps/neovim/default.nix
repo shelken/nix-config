@@ -1,6 +1,8 @@
-{ pkgs, astronvim, ... }:
-
 {
+  pkgs,
+  astronvim,
+  ...
+}: {
   xdg.configFile = {
     # astronvim's config
     "nvim".source = astronvim;
@@ -16,11 +18,9 @@
 
     viAlias = false;
     vimAlias = true;
-    
   };
 
   home.packages = with pkgs; [
     gcc # 插件需要
   ];
-
 }
