@@ -8,8 +8,8 @@
     shellAliases = {
       ll = "ls -l";
       #update = "sudo nixos-rebuild switch";
-      proxy = "export http_proxy=http://192.168.6.1:7890";
-      unproxy = "unset http_proxy";
+      proxy = "export https_proxy=http://192.168.6.1:7890 http_proxy=http://192.168.6.1:7890";
+      unproxy = "unset https_proxy http_proxy";
     };
     history = {
       size = 3000;
