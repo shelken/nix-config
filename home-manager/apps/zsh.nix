@@ -7,14 +7,16 @@
     syntaxHighlighting.enable = true;
     shellAliases = {
       ll = "ls -l";
-      update = "sudo nixos-rebuild switch";
+      #update = "sudo nixos-rebuild switch";
+      proxy = "export http_proxy=http://192.168.6.1:7890";
+      unproxy = "unset http_proxy";
     };
     history = {
       size = 3000;
     };
     oh-my-zsh = {
       enable = true;
-      plugins = ["docker-compose" "docker"];
+      plugins = ["docker-compose" "docker" "z"];
       theme = "dst";
     };
     initExtra = ''
