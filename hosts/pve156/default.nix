@@ -85,6 +85,10 @@
     }
   ];
 
+  users.users."${username}".openssh.authorizedKeys.keys = [
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN7ymuGznhjjVOHNI90xO4mcQA8+onWd/n3pzg8ttRGH shelken@pve155"
+  ];
+
   services.qemuGuest.enable = true;
 
   #virtualisation.docker.storageDriver = "btrfs";
