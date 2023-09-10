@@ -45,9 +45,12 @@
     ...
   }: let
     system = "x86_64-linux";
+    username = "shelken";
+    userfullname = "Shelken Pan";
+    useremail = "shelken.pxk@gmail.com";
     specialArgs =
       {
-        #inherit username userfullname useremail;
+        inherit username userfullname useremail;
       }
       // inputs;
   in {
@@ -56,14 +59,14 @@
         inherit system;
         inherit specialArgs;
         modules = [
-          ./nixos/configuration.nix
+          ./hosts/pve155
           home-manager.nixosModules.home-manager
           {
             home-manager = {
               useUserPackages = true;
               useGlobalPkgs = true;
               extraSpecialArgs = specialArgs;
-              users.shelken = ./home-manager/home.nix;
+              users.${username} = ./home-manager/home.nix;
             };
           }
         ];
