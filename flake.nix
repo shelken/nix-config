@@ -71,6 +71,22 @@
           }
         ];
       };
+      pve156 = nixpkgs.lib.nixosSystem {
+        inherit system;
+        inherit specialArgs;
+        modules = [
+          ./hosts/pve156
+          home-manager.nixosModules.home-manager
+          {
+            home-manager = {
+              useUserPackages = true;
+              useGlobalPkgs = true;
+              extraSpecialArgs = specialArgs;
+              users.${username} = ./home-manager/home.nix;
+            };
+          }
+        ];
+      };
     };
     formatter.${system} = nixpkgs.legacyPackages.${system}.alejandra;
   };
