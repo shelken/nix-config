@@ -1,10 +1,14 @@
 {
+  username,
+  useremail,
+  ...
+}: {
   # …
 
   programs.git = {
     enable = true;
-    userName = "shelken";
-    userEmail = "shelken.pxk@gmail.com";
+    userName = username;
+    userEmail = useremail;
     attributes = [
     ];
     extraConfig = {
