@@ -83,6 +83,7 @@
     aria2
     git # used by nix flakes
     git-lfs # used by huggingface models
+    #docker_24 # use latest docker for use net-proxy
 
     # create a fhs environment by command `fhs`, so we can run non-nixos packages in nixos! TODO?
     (
@@ -108,5 +109,15 @@
     # start dockerd on boot.
     # This is required for containers which are created with the `--restart=always` flag to work.
     enableOnBoot = true;
+    daemon.settings = {
+      #proxies = {
+      #  "http-proxy" = "http://192.168.6.1:7890";
+      #  "https-proxy" = "http://192.168.6.1:7890";
+      #};
+      registry-mirrors = [
+        "https://registry.docker-cn.com"
+      ];
+    };
+    #extraOptions = "--http-proxy 'http://192.168.6.1:7890' --https-proxy 'http://192.168.6.1:7890'";
   };
 }

@@ -11,6 +11,7 @@
     ./apps/gh.nix
     ./apps/btop.nix
     ./apps/neovim
+    ./apps/proxychains
   ];
   # Home Manager needs a bit of information about you and the paths it should
   # manage.
@@ -46,6 +47,7 @@
     #   echo "Hello, ${config.home.username}!"
     # '')
     htop
+    proxychains-ng
   ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
