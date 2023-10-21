@@ -28,7 +28,6 @@
 
     withPython3 = true;
     withNodeJs = true;
-
   };
 
   home.packages = with pkgs; [
@@ -41,17 +40,12 @@
     # go
     go
 
-
     # lua
-
 
     # rust
     cargo
 
-
     # CloudNative
     terraform
-
-
   ];
 }
