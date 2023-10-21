@@ -1,0 +1,3 @@
+{
+  programs.direnv.enable = false;
+}
