@@ -25,9 +25,33 @@
 
     viAlias = false;
     vimAlias = true;
+
+    withPython3 = true;
+    withNodeJs = true;
+
   };
 
   home.packages = with pkgs; [
+    # c
     gcc # 插件需要
+
+    # nix
+    nil
+
+    # go
+    go
+
+
+    # lua
+
+
+    # rust
+    cargo
+
+
+    # CloudNative
+    terraform
+
+
   ];
 }
