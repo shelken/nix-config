@@ -36,6 +36,12 @@
       url = "github:AstroNvim/AstroNvim/v3.36.0";
       flake = false;
     };
+
+    # my astronvim config
+    astronvim-config = {
+      url = "github:shelken/astro-nvim-config";
+      flake = false;
+    };
   };
 
   outputs = inputs @ {
