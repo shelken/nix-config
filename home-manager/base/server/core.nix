@@ -56,7 +56,7 @@
     #glow # markdown previewer in terminal
 
     # container
-    docker-slim
+    #docker-slim
     #docker-gc
     ctop
 

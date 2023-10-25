@@ -49,7 +49,7 @@
     # (pkgs.writeShellScriptBin "my-hello" ''
     #   echo "Hello, ${config.home.username}!"
     # '')
-    htop
+    # htop
     proxychains-ng
   ];
 
