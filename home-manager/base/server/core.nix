@@ -38,7 +38,7 @@
     #cowsay
     #file
     #which
-    #tree
+    tree
     #gnutar
     #zstd
     #caddy
@@ -54,5 +54,12 @@
     # productivity
     #hugo # static site generator
     #glow # markdown previewer in terminal
+
+    # container
+    docker-slim
+    #docker-gc
+    ctop
+
+
   ];
 }
