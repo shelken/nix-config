@@ -46,6 +46,6 @@
     cargo
 
     # CloudNative
-    terraform
+    #terraform
   ];
 }
