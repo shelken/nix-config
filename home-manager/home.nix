@@ -2,6 +2,7 @@
   config,
   pkgs,
   username,
+  lib,
   ...
 }: {
   imports = [
@@ -52,6 +53,9 @@
     htop
     proxychains-ng
   ];
+
+  # 允许以使用，如 terraform
+  nixpkgs.config.allowUnfree = lib.mkForce true;
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.
