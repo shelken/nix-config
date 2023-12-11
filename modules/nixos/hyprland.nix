@@ -18,4 +18,6 @@
       xdg-desktop-portal-wlr
     ];
   };
+
+  security.polkit.enable = true;
 }
