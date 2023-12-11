@@ -21,7 +21,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     home-manager = {
-      url = github:nix-community/home-manager;
+      url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -42,6 +42,9 @@
       url = "github:shelken/astro-nvim-config";
       flake = false;
     };
+
+    # hyprland
+    hyprland.url = "github:hyprwm/Hyprland";
   };
 
   outputs = inputs @ {
@@ -66,6 +69,7 @@
         inherit specialArgs;
         modules = [
           ./hosts/pve155
+          ./modules/nixos/hyprland.nix
           home-manager.nixosModules.home-manager
           {
             home-manager = {
