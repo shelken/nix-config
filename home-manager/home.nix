@@ -14,6 +14,8 @@
     ./apps/proxychains
     ./apps/dev.nix
 
+    ./services/vscode-server.nix
+
     ./base/server
   ];
   # Home Manager needs a bit of information about you and the paths it should
