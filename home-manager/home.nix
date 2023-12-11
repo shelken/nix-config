@@ -14,8 +14,6 @@
     ./apps/proxychains
     ./apps/dev.nix
 
-    "${fetchTarball "https://github.com/msteen/nixos-vscode-server/tarball/master"}/modules/vscode-server/home.nix"
-
     ./base/server
   ];
   # Home Manager needs a bit of information about you and the paths it should
@@ -54,8 +52,6 @@
     # htop
     proxychains-ng
   ];
-
-  services.vscode-server.enable = true;
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.
