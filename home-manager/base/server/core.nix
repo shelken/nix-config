@@ -59,7 +59,5 @@
     #docker-slim
     #docker-gc
     ctop
-
-
   ];
 }

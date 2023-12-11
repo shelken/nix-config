@@ -1,11 +1,14 @@
-{pkgs, hyprland, ...}: {
+{
+  pkgs,
+  hyprland,
+  ...
+}: {
   programs.hyprland = {
     enable = true;
 
     xwayland = {
       enable = true;
     };
-
   };
 
   xdg.portal = {
@@ -15,5 +18,4 @@
       xdg-desktop-portal-wlr
     ];
   };
-
 }
