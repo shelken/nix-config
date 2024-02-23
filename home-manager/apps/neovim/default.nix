@@ -38,7 +38,7 @@
   home.packages = with pkgs; [
     # c
     gcc # 插件需要
-    make
+    gnumake
     # nix
     nil
 
