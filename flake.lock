@@ -20,11 +20,11 @@
     "astronvim-config": {
       "flake": false,
       "locked": {
-        "lastModified": 1708619282,
-        "narHash": "sha256-1uXcFTRE+LP1tdA3/Z6Hs8/DAwkCS37bMSIG9BXHasA=",
+        "lastModified": 1709169415,
+        "narHash": "sha256-Zg1sJIkdM5/QjstrKzS1UiHKEDszOpccq6j11hVxwuU=",
         "owner": "shelken",
         "repo": "astro-nvim-config",
-        "rev": "733cb1ca04027d7ffaa3af5ee3e4aca385750df8",
+        "rev": "35a7bcd370dee610318a416939f38c276c6a5f8a",
         "type": "github"
       },
       "original": {
