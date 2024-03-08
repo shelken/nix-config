@@ -34,10 +34,10 @@
     #yq-go # yaml processer https://github.com/mikefarah/yq
 
     # misc
-    #tldr
+    tldr
     #cowsay
-    #file
-    #which
+    file
+    which
     tree
     #gnutar
     #zstd

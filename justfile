@@ -18,3 +18,11 @@ update-input input:
 # update all flake inputs
 update:
   @sudo nix flake update
+
+# git add file
+add:
+  @git add .
+  
+#
+fmt:
+  @nix fmt .

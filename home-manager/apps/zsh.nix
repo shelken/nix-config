@@ -12,7 +12,7 @@
       unproxy = "unset https_proxy http_proxy";
     };
     history = {
-      size = 3000;
+      size = 10000;
     };
     oh-my-zsh = {
       enable = true;

@@ -5,12 +5,12 @@
   ...
 }: {
   imports = [
-    ./apps/zsh.nix
-    ./apps/micro
-    ./apps/git.nix
+    # ./apps/zsh.nix
+    # ./apps/micro
+    # ./apps/git.nix
     ./apps/gh.nix
-    ./apps/btop.nix
-    ./apps/neovim
+    # ./apps/btop.nix
+    # ./apps/neovim
     ./apps/proxychains
     ./apps/dev.nix
 

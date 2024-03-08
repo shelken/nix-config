@@ -39,6 +39,9 @@
     # c
     gcc # 插件需要
     gnumake
+    # 查询文件内容使用
+    ripgrep
+
     # nix
     nil
 
