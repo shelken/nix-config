@@ -80,9 +80,11 @@
     neovim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
     wget
     curl
-    aria2
+    # aria2
     git # used by nix flakes
-    git-lfs # used by huggingface models
+    neofetch
+    just
+    # git-lfs # used by huggingface models
     #docker_24 # use latest docker for use net-proxy
 
     # create a fhs environment by command `fhs`, so we can run non-nixos packages in nixos! TODO?
