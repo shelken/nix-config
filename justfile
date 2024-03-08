@@ -1,6 +1,9 @@
 
 alias b := rebuild
 
+default:
+  @just --list
+
 rebuild host:
   @sudo nixos-rebuild switch --upgrade --flake .#{{ host }}
 
