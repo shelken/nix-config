@@ -87,10 +87,6 @@
 
   services.qemuGuest.enable = true;
 
-  services.cloud-init = {
-    enable = true;
-    ext4.enable = true;
-  };
   #virtualisation.docker.storageDriver = "btrfs";
 
   ## for Nvidia GPU
