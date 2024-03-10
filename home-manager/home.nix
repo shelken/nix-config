@@ -12,7 +12,6 @@
     # ./apps/btop.nix
     # ./apps/neovim
     ./apps/proxychains
-    ./apps/dev.nix
 
     ./base/server
     ./base/desktop
