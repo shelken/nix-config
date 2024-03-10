@@ -45,6 +45,9 @@
 
     # hyprland
     hyprland.url = "github:hyprwm/Hyprland";
+
+    #devenv
+    # devenv.url = "github:cachix/devenv";
   };
 
   outputs = inputs @ {
