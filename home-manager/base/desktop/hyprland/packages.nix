@@ -11,5 +11,8 @@
     light
     brillo
     cava # 音频律动
+
+    # wayvnc
+    wayvnc
   ];
 }
