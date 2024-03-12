@@ -10,7 +10,6 @@
     pamixer
     light
     brillo
-    cava # 音频律动 
+    cava # 音频律动
   ];
 }
-

@@ -89,7 +89,7 @@
 
   services.qemuGuest.enable = true;
 
-#virtualisation.docker.storageDriver = "btrfs";
+  #virtualisation.docker.storageDriver = "btrfs";
 
   ## for Nvidia GPU
   #services.xserver.videoDrivers = ["nvidia"]; # will install nvidia-vaapi-driver by default

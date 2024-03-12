@@ -1,5 +1,4 @@
 {pkgs, ...}: {
-
   imports = [
     ./zoxide.nix
   ];
@@ -18,5 +17,4 @@
     unar
     #zoxide
   ];
-
 }

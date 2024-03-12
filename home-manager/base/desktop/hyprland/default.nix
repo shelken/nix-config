@@ -9,7 +9,7 @@
     ./wayland-apps.nix
     ./packages.nix
   ];
-    xdg.configFile = {
+  xdg.configFile = {
     "dunst" = {
       source = ./dunst;
       recursive = true;
