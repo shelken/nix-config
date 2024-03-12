@@ -86,6 +86,7 @@
     just
     # git-lfs # used by huggingface models
     #docker_24 # use latest docker for use net-proxy
+    # wayvnc
 
     # create a fhs environment by command `fhs`, so we can run non-nixos packages in nixos! TODO?
     (
