@@ -12,6 +12,10 @@ rebuild host:
 rebuild-debug host:
   @sudo nixos-rebuild switch --upgrade --flake .#{{ host }} --show-trace -L -v
 
+# clear old-history
+wipe duration:
+  @sudo nix profile wipe-history --older-than {{ duration }} --profile /nix/var/nix/profiles/system
+
 # nix-collect-garbage
 gc:
   @sudo nix-collect-garbage -d
