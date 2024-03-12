@@ -6,7 +6,7 @@
     # enableSyntaxHighlighting = true;
     syntaxHighlighting.enable = true;
     shellAliases = {
-      ll = "ls -l";
+      ll = "eza --icons -l -T -L=2";
       #update = "sudo nixos-rebuild switch";
       proxy = "export https_proxy=http://192.168.6.1:7890 http_proxy=http://192.168.6.1:7890";
       unproxy = "unset https_proxy http_proxy";

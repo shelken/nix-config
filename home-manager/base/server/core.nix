@@ -59,5 +59,7 @@
     #docker-slim
     #docker-gc
     ctop
+    # A modern, maintained replacement for ls
+    eza
   ];
 }
