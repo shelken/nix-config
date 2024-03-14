@@ -35,3 +35,9 @@ add:
 #
 fmt:
   @nix fmt .
+
+# query installed package size
+qip:
+  # @nix shell nixpkgs#nix-tree nixpkgs#ripgrep
+  @nix-store --gc --print-roots | rg -v '/proc/' | rg -Po '(?<= -> ).*' | xargs -o nix-tree
+
