@@ -1,5 +1,5 @@
 {
-  description = "my flake configuration";
+  description = "My flake configuration";
 
   nixConfig = {
     experimental-features = ["nix-command" "flakes"];
@@ -23,6 +23,13 @@
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # darwin
+    nixpkgs-darwin.url = "github:nixos/nixpkgs/nixpkgs-23.11-darwin";
+    nix-darwin = {
+      url = "github:lnl7/nix-darwin";
+      inputs.nixpkgs.follows = "nixpkgs-darwin";
     };
 
     # btop主题
@@ -79,7 +86,7 @@
               useUserPackages = true;
               useGlobalPkgs = true;
               extraSpecialArgs = specialArgs;
-              users.${username} = ./home-manager/home.nix;
+              users.${username} = ./home/home.nix;
             };
           }
         ];
@@ -95,7 +102,7 @@
               useUserPackages = true;
               useGlobalPkgs = true;
               extraSpecialArgs = specialArgs;
-              users.${username} = ./home-manager/home.nix;
+              users.${username} = ./home/home.nix;
             };
           }
         ];
