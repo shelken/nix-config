@@ -82,7 +82,7 @@
       home-modules = (map mylib.relativeToRoot [
         "home/home.nix"
       ]);
-    } // args;
+    };
     pve156Modules = {
       nixos-modules = (map mylib.relativeToRoot [
         "hosts/pve156"
@@ -107,7 +107,7 @@
   in {
     # linux x86
     nixosConfigurations = {
-      nixos = mylib.nixosSystem (pve155Modules // {system = "x86_64-linux";});
+      nixos = mylib.nixosSystem (pve155Modules // args // {system = "x86_64-linux";});
       pve156 = mylib.nixosSystem (pve156Modules // args // {system = "x86_64-linux";});
     };
     
