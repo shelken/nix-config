@@ -63,51 +63,60 @@
     home-manager,
     ...
   }: let
-    system = "x86_64-linux";
-    username = "shelken";
-    userfullname = "Shelken Pan";
-    useremail = "shelken.pxk@gmail.com";
+    inherit (inputs.nixpkgs) lib;
+    mylib = import ./lib;
+    myvars = import ./myvars {inherit lib;};
+    
     specialArgs =
-      {
-        inherit username userfullname useremail;
-      }
-      // inputs;
-  in {
-    nixosConfigurations = {
-      nixos = nixpkgs.lib.nixosSystem {
-        inherit system;
-        inherit specialArgs;
-        modules = [
-          ./hosts/pve155
-          ./modules/nixos/hyprland.nix
-          home-manager.nixosModules.home-manager
-          {
-            home-manager = {
-              useUserPackages = true;
-              useGlobalPkgs = true;
-              extraSpecialArgs = specialArgs;
-              users.${username} = ./home/home.nix;
-            };
-          }
-        ];
+      inputs
+      // {
+        inherit mylib myvars; 
+        inherit (myvars) username userfullname useremail;
       };
-      pve156 = nixpkgs.lib.nixosSystem {
-        inherit system;
-        inherit specialArgs;
-        modules = [
-          ./hosts/pve156
-          home-manager.nixosModules.home-manager
-          {
-            home-manager = {
-              useUserPackages = true;
-              useGlobalPkgs = true;
-              extraSpecialArgs = specialArgs;
-              users.${username} = ./home/home.nix;
-            };
-          }
-        ];
-      };
+    args = {inherit inputs lib mylib myvars specialArgs; };
+    pve155Modules = {
+      nixos-modules = map (mylib.relativeToRoot [
+        "hosts/pve155"
+        "modules/nixos/hyprland.nix"
+      ]);
+      home-modules = map (mylib.relativeToRoot [
+        "home/home.nix"
+      ]);
     };
-    formatter.${system} = nixpkgs.legacyPackages.${system}.alejandra;
+    pve156Modules = {
+      nixos-modules = map (mylib.relativeToRoot [
+        "hosts/pve156"
+      ]);
+      home-modules = map (mylib.relativeToRoot [
+        "home/home.nix"
+      ]);
+    };
+    yuukoModules = {
+      darwin-modules = map (mylib.relativeToRoot [
+        
+      ]);
+      home-modules = map (mylib.relativeToRoot [
+
+      ]);
+    };
+    
+    allSystemAbove = [
+      "x86_64-linux"
+      "aarch64-darwin"
+    ]
+  in {
+    # linux x86
+    nixosConfigurations = {
+      nixos = mylib.nixosSystem (pve155Modules // args // {system = "x86_64-linux";});
+      pve156 = mylib.nixosSystem (pve156Modules // args // {system = "x86_64-linux";});
+    };
+    
+    darwinConfigurations = {
+      # mac mini
+      yuuko = mylib.macosSystem (yuukoModules // args // {system = "aarch64-darwin";});
+    };
+
+    formatter = 
+    nixpkgs.lib.genAttrs allSystemAbove (system: nixpkgs.legacyPackages.${system}.alejandra);
   };
 }
