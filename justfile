@@ -5,6 +5,11 @@ alias bd := rebuild-debug
 default:
   @just --list
 
+# format
+fmt:
+  @nix fmt .
+
+# rebuild
 rebuild host:
   @sudo nixos-rebuild switch --upgrade --flake .#{{ host }}
 
@@ -31,10 +36,6 @@ update:
 # git add file
 add:
   @git add .
-  
-#
-fmt:
-  @nix fmt .
 
 # query installed package size
 qip:
