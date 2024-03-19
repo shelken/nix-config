@@ -9,7 +9,7 @@
   ...
 }: let
   inherit (inputs) nixpkgs home-manager ;
-  specialArgs = specialArgs;
+  # specialArgs = specialArgs;
 in
   nixpkgs.lib.nixosSystem {
     inherit system specialArgs;
