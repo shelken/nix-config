@@ -42,3 +42,12 @@ qip:
   # @nix shell nixpkgs#nix-tree nixpkgs#ripgrep
   @nix-store --gc --print-roots | rg -v '/proc/' | rg -Po '(?<= -> ).*' | xargs -o nix-tree
 
+[macos]
+set-proxy:
+  @sudo python3 utils/script/darwin_set_proxy.py
+
+darwin-build target: set-proxy
+  #!/usr/bin/env bash
+  config_target=".#darwinConfigurations.{{target}}.system"
+  @nix build $config_target --extra-experimental-features "nix-command flakes" 
+
