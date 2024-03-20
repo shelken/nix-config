@@ -91,14 +91,15 @@
         "home/home.nix"
       ]);
     };
-    # yuukoModules = {
-    #   darwin-modules = (map mylib.relativeToRoot [
-    #     
-    #   ]);
-    #   home-modules = (map mylib.relativeToRoot [
-    #
-    #   ]);
-    # };
+    yuukoModules = {
+      darwin-modules = (map mylib.relativeToRoot [
+        "modules/darwin"
+        "home/yuuko"
+      ]);
+      home-modules = (map mylib.relativeToRoot [
+        # "home/"
+      ]);
+    };
     
     allSystemAbove = [
       "x86_64-linux"
@@ -111,10 +112,11 @@
       pve156 = mylib.nixosSystem (pve156Modules // args // {system = "x86_64-linux";});
     };
     
-    # darwinConfigurations = {
-    #   # mac mini
-    #   yuuko = mylib.macosSystem (yuukoModules // args // {system = "aarch64-darwin";});
-    # };
+    darwinConfigurations = {
+      # mac mini
+      yuuko = mylib.macosSystem (yuukoModules // args // {system = "aarch64-darwin";});
+      yuuko-test = mylib.macosSystem (yuukoModules // args // {system = "x86_64-darwin";});
+    };
 
     formatter = 
     nixpkgs.lib.genAttrs allSystemAbove (system: nixpkgs.legacyPackages.${system}.alejandra);
