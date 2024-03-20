@@ -1,6 +1,6 @@
 _:
 let 
-  hostnme = "yuuko";
+  hostname = "yuuko";
 in {
   networking.hostName = hostname;
   networking.computerName = hostname;
