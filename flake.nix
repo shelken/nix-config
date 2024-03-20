@@ -94,7 +94,7 @@
     yuukoModules = {
       darwin-modules = (map mylib.relativeToRoot [
         "modules/darwin"
-        "home/yuuko"
+        "hosts/yuuko"
       ]);
       home-modules = (map mylib.relativeToRoot [
         # "home/"
