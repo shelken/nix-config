@@ -9,7 +9,7 @@
 
     # archives
     zip
-    # xz
+    xz
     zstd
     unzip
     p7zip
