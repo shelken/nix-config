@@ -46,6 +46,7 @@ qip:
 set-proxy:
   @sudo python3 utils/script/darwin_set_proxy.py
 
+[macos]
 darwin-build target:
   #!/usr/bin/env bash
   config_target=".#darwinConfigurations.{{target}}.system"
