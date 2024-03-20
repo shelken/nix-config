@@ -46,7 +46,7 @@ qip:
 set-proxy:
   @sudo python3 utils/script/darwin_set_proxy.py
 
-darwin-build target: set-proxy
+darwin-build target:
   #!/usr/bin/env bash
   config_target=".#darwinConfigurations.{{target}}.system"
   @nix build $config_target --extra-experimental-features "nix-command flakes" 
