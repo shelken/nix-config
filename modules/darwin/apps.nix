@@ -115,7 +115,7 @@ in {
       # `brew install`
       "wget" # download tool
       "curl" # no not install curl via nixpkgs, it's not working well on macOS!
-      # "aria2" # download tool
+      "aria2" # download tool
       "httpie" # http client
       # "wireguard-tools" # wireguard
 
