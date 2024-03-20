@@ -52,3 +52,8 @@ darwin-build target:
   config_target=".#darwinConfigurations.{{target}}.system"
   @nix build $config_target --extra-experimental-features "nix-command flakes" 
 
+[macos]
+darwin-switch target:
+  #!/usr/bin/env bash
+  config_target=".#{{target}}"
+  @./result/sw/bin/darwin-rebuild switch --flake $config_target 
