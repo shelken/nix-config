@@ -1,4 +1,4 @@
-{pkgs, myvars, ...}: {
+{pkgs, myvars, mylib, ...}: {
 
   users.users."${myvars.username}" = {
     home = "/Users/${myvars.username}";
@@ -9,10 +9,9 @@
     # It's better to change only kitty/wezterm's shell to nushell!
   }; 
 
-  imports = [
+  imports = (mylib.scanPaths ./.) 
+  ++ [
     ../base.nix
-    ./apps.nix
-    ./system.nix
   ];
 
   ###################################################################################
