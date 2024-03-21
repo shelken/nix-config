@@ -4,5 +4,6 @@
     ../base/home.nix
     ../apps/neovim
     ./core.nix
+    ./shell.nix
   ];
 }
