@@ -22,7 +22,14 @@
       themes = {
         # https://raw.githubusercontent.com/catppuccin/bat/main/themes/Catppuccin-mocha.tmTheme
         catppuccin-mocha = {
-          src = catppuccin-bat;
+          # src = catppuccin-bat;
+          # file = "themes/Catppuccin-mocha.tmTheme";
+          src = pkgs.fetchFromGitHub {
+            owner = "catppuccin";
+            repo = "bat"; # Bat uses sublime syntax for its themes
+            rev = "b19bea35a85a32294ac4732cad5b0dc6495bed32";
+            sha256 = "1y14nqhd6kxkkb053fvfa0rw72188gzmpzmnk6r3ishcq7d1dsiw";
+          };
           file = "themes/Catppuccin-mocha.tmTheme";
         };
       };

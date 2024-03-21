@@ -127,7 +127,7 @@
     };
 
     catppuccin-bat = {
-      url = "github:catppuccin/bat";
+      url = "github:catppuccin/bat/b19bea35a85a32294ac4732cad5b0dc6495bed32";
       flake = false;
     };
 
