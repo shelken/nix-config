@@ -8,7 +8,6 @@
     # useful in bash/zsh prompt, not in nushell.
     eza = {
       enable = true;
-      enableAliases = false; 
       git = true;
       icons = true;
     };
