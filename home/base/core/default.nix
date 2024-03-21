@@ -1,6 +1,5 @@
-{...}: {
-  imports = [
-    ./git.nix
-    ./core.nix
+{mylib, ...}: {
+  imports = (mylib.scanPaths ./.)
+  ++ [
   ];
 }
