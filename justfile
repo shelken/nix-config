@@ -3,7 +3,7 @@ set positional-arguments := true
 set dotenv-load := true
 
 # from .env
-profile=$PROFILE
+profile := $PROFILE
 
 alias b := rebuild
 alias bd := rebuild-debug
