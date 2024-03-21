@@ -144,7 +144,6 @@ in {
       "squirrel" # input method for Chinese, rime-squirrel
       # "google-chrome"
       "arc"
-      "visual-studio-code"
 
 
       # IM & audio & remote desktop & meeting
@@ -168,7 +167,9 @@ in {
       "syntax-highlight"
 
       # Development
+      "visual-studio-code"
       "orbstack"
+      "iterm2"
       # "mitmproxy" # HTTP/HTTPS traffic inspector
       # "insomnia" # REST client
       # "wireshark" # network analyzer

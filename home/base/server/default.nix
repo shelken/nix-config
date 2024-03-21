@@ -9,7 +9,7 @@
     ../../apps/yazi.nix
     ../../apps/zsh.nix
     ../../apps/btop.nix
-    ../../apps/git.nix
+    ../../base/code/git.nix
     ../../apps/neovim
     ./core.nix
     #./git.nix
