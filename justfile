@@ -2,6 +2,9 @@
 set positional-arguments := true
 set dotenv-load := true
 
+# from .env
+profile=$PROFILE
+
 alias b := rebuild
 alias bd := rebuild-debug
 
@@ -13,11 +16,11 @@ fmt:
   @nix fmt .
 
 # rebuild
-rebuild host:
+rebuild host=profile:
   @sudo nixos-rebuild switch --upgrade --flake .#{{ host }}
 
 # debug rebuild
-rebuild-debug host:
+rebuild-debug host=profile:
   @sudo nixos-rebuild switch --upgrade --flake .#{{ host }} --show-trace -L -v
 
 # clear old-history
@@ -55,13 +58,13 @@ set-proxy:
   @sudo python3 utils/script/darwin_set_proxy.py
 
 [macos]
-darwin-build target:
+darwin-build target=profile:
   #!/usr/bin/env bash
   config_target=".#darwinConfigurations.{{target}}.system"
   nix build $config_target --extra-experimental-features "nix-command flakes" 
 
 [macos]
-darwin-switch target:
+darwin-switch target=profile:
   #!/usr/bin/env bash
   config_target=".#{{target}}"
   ./result/sw/bin/darwin-rebuild switch --flake $config_target 
