@@ -42,6 +42,11 @@ qip:
   # @nix shell nixpkgs#nix-tree nixpkgs#ripgrep
   @nix-store --gc --print-roots | rg -v '/proc/' | rg -Po '(?<= -> ).*' | xargs -o nix-tree
 
+git-temp:
+  @git stash save 'temp'
+  @git pull --rebase
+  @git stash pop
+
 [macos]
 set-proxy:
   @sudo python3 utils/script/darwin_set_proxy.py
