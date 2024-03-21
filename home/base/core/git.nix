@@ -6,8 +6,8 @@
 
   programs.git = {
     enable = true;
-    userName = ${myvars.username};
-    userEmail = ${myvars.useremail};
+    userName = myvars.username;
+    userEmail = myvars.useremail;
     attributes = [
     ];
     includes = [
