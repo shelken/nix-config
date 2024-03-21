@@ -18,44 +18,6 @@
     ];
   };
 
-  inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    home-manager = {
-      url = "github:nix-community/home-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    # darwin
-    nixpkgs-darwin.url = "github:nixos/nixpkgs/nixpkgs-23.11-darwin";
-    nix-darwin = {
-      url = "github:lnl7/nix-darwin";
-      inputs.nixpkgs.follows = "nixpkgs-darwin";
-    };
-
-    # btop主题
-    catppuccin-btop = {
-      url = "github:catppuccin/btop";
-      flake = false;
-    };
-
-    # astronvim
-    astronvim = {
-      url = "github:AstroNvim/AstroNvim/v3.41.2";
-      flake = false;
-    };
-
-    # my astronvim config
-    astronvim-config = {
-      url = "github:shelken/astro-nvim-config";
-      flake = false;
-    };
-
-    # hyprland
-    hyprland.url = "github:hyprwm/Hyprland";
-
-    #devenv
-    # devenv.url = "github:cachix/devenv";
-  };
 
   outputs = inputs @ {
     self,
@@ -120,5 +82,54 @@
 
     formatter = 
     nixpkgs.lib.genAttrs allSystemAbove (system: nixpkgs.legacyPackages.${system}.alejandra);
+  };
+
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # darwin
+    nixpkgs-darwin.url = "github:nixos/nixpkgs/nixpkgs-23.11-darwin";
+    nix-darwin = {
+      url = "github:lnl7/nix-darwin";
+      inputs.nixpkgs.follows = "nixpkgs-darwin";
+    };
+
+    # astronvim
+    astronvim = {
+      url = "github:AstroNvim/AstroNvim/v3.41.2";
+      flake = false;
+    };
+
+    # my astronvim config
+    astronvim-config = {
+      url = "github:shelken/astro-nvim-config";
+      flake = false;
+    };
+
+    # hyprland
+    hyprland.url = "github:hyprwm/Hyprland";
+
+    # my dotfiles
+    dotfiles.url = "github:shelken/dotfiles.nix";
+
+#          ╭──────────────────────────────────────────────────────────╮
+#          │                          theme                           │
+#          ╰──────────────────────────────────────────────────────────╯
+    # btop主题
+    catppuccin-btop = {
+      url = "github:catppuccin/btop";
+      flake = false;
+    };
+
+    catppuccin-bat = {
+      url = "github:catppuccin/bat";
+      flake = false;
+    };
+
   };
 }

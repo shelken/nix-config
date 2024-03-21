@@ -1,3 +1,6 @@
+# set options
+set positional-arguments := true
+set dotenv-load := true
 
 alias b := rebuild
 alias bd := rebuild-debug
