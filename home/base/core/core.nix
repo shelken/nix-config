@@ -30,7 +30,7 @@
             rev = "b19bea35a85a32294ac4732cad5b0dc6495bed32";
             sha256 = "1y14nqhd6kxkkb053fvfa0rw72188gzmpzmnk6r3ishcq7d1dsiw";
           };
-          file = "themes/Catppuccin-mocha.tmTheme";
+          file = "themes/Catppuccin Mocha.tmTheme";
         };
       };
     };
