@@ -97,7 +97,7 @@
         "hosts/yuuko"
       ]);
       home-modules = (map mylib.relativeToRoot [
-        # "home/"
+        "home/darwin"
       ]);
     };
     

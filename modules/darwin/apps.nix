@@ -168,7 +168,7 @@ in {
       "syntax-highlight"
 
       # Development
-      # "orbstack"
+      "orbstack"
       # "mitmproxy" # HTTP/HTTPS traffic inspector
       # "insomnia" # REST client
       # "wireshark" # network analyzer
