@@ -141,7 +141,7 @@
         };
         # Prevent Photos from opening automatically when devices are plugged in
         "com.apple.ImageCapture".disableHotPlug = true;
-        # Arc 
+        # Arc
         "company.thebrowser.Browser" = {
           currentAppIconName = "flutedGlass";
         };

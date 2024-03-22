@@ -1,12 +1,15 @@
-{pkgs, catppuccin-yazi, ...}: {
-
+{
+  pkgs,
+  catppuccin-yazi,
+  ...
+}: {
   programs.yazi = {
     enable = true;
     enableBashIntegration = true;
     enableZshIntegration = true;
     settings = {
       manager = {
-        ratio = [ 2 7 7 ];
+        ratio = [2 7 7];
       };
       preview = {
         tab_size = 3;
@@ -24,5 +27,4 @@
       source = catppuccin-yazi + "/themes/mocha.toml";
     };
   };
-
 }

@@ -18,7 +18,6 @@
     ];
   };
 
-
   outputs = inputs @ {
     self,
     nixpkgs,
@@ -28,41 +27,41 @@
     inherit (inputs.nixpkgs) lib;
     mylib = import ./lib {inherit lib;};
     myvars = import ./vars {inherit lib;};
-    
-    genSpecialArgs = system: 
+
+    genSpecialArgs = system:
       inputs
       // {
-        inherit mylib myvars system; 
+        inherit mylib myvars system;
         inherit (myvars) username userfullname useremail;
       };
-    args = {inherit inputs lib mylib myvars genSpecialArgs; };
+    args = {inherit inputs lib mylib myvars genSpecialArgs;};
     pve155Modules = {
-      nixos-modules = (map mylib.relativeToRoot [
+      nixos-modules = map mylib.relativeToRoot [
         "hosts/pve155"
         "modules/nixos/hyprland.nix"
-      ]);
-      home-modules = (map mylib.relativeToRoot [
+      ];
+      home-modules = map mylib.relativeToRoot [
         "home/home.nix"
-      ]);
+      ];
     };
     pve156Modules = {
-      nixos-modules = (map mylib.relativeToRoot [
+      nixos-modules = map mylib.relativeToRoot [
         "hosts/pve156"
-      ]);
-      home-modules = (map mylib.relativeToRoot [
+      ];
+      home-modules = map mylib.relativeToRoot [
         "home/home.nix"
-      ]);
+      ];
     };
     yuukoModules = {
-      darwin-modules = (map mylib.relativeToRoot [
+      darwin-modules = map mylib.relativeToRoot [
         "modules/darwin"
         "hosts/yuuko"
-      ]);
-      home-modules = (map mylib.relativeToRoot [
+      ];
+      home-modules = map mylib.relativeToRoot [
         "home/darwin"
-      ]);
+      ];
     };
-    
+
     allSystemAbove = [
       "x86_64-linux"
       "aarch64-darwin"
@@ -73,17 +72,16 @@
       nixos = mylib.nixosSystem (pve155Modules // args // {system = "x86_64-linux";});
       pve156 = mylib.nixosSystem (pve156Modules // args // {system = "x86_64-linux";});
     };
-    
+
     darwinConfigurations = {
       # mac mini
       yuuko = mylib.macosSystem (yuukoModules // args // {system = "aarch64-darwin";});
       yuuko-test = mylib.macosSystem (yuukoModules // args // {system = "x86_64-darwin";});
     };
 
-    formatter = 
-    nixpkgs.lib.genAttrs allSystemAbove (system: nixpkgs.legacyPackages.${system}.alejandra);
+    formatter =
+      nixpkgs.lib.genAttrs allSystemAbove (system: nixpkgs.legacyPackages.${system}.alejandra);
   };
-
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -117,9 +115,9 @@
     # my dotfiles
     dotfiles.url = "github:shelken/dotfiles.nix";
 
-#          ╭──────────────────────────────────────────────────────────╮
-#          │                          theme                           │
-#          ╰──────────────────────────────────────────────────────────╯
+    #          ╭──────────────────────────────────────────────────────────╮
+    #          │                          theme                           │
+    #          ╰──────────────────────────────────────────────────────────╯
     # btop主题
     catppuccin-btop = {
       url = "github:catppuccin/btop";
@@ -130,11 +128,10 @@
       url = "github:catppuccin/bat/b19bea35a85a32294ac4732cad5b0dc6495bed32";
       flake = false;
     };
-    
+
     catppuccin-yazi = {
       url = "github:catppuccin/yazi";
       flake = false;
     };
-
   };
 }

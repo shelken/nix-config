@@ -1,9 +1,10 @@
 {mylib, ...}: {
-  imports = (mylib.scanPaths ./.) 
-  ++ [
-    ../base/core
-    ../base/home.nix
-    ../apps/neovim
-    ../apps/zsh
-  ];
+  imports =
+    (mylib.scanPaths ./.)
+    ++ [
+      ../base/core
+      ../base/home.nix
+      ../apps/neovim
+      ../apps/zsh
+    ];
 }

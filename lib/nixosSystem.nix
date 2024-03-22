@@ -8,7 +8,7 @@
   myvars,
   ...
 }: let
-  inherit (inputs) nixpkgs home-manager ;
+  inherit (inputs) nixpkgs home-manager;
   specialArgs = genSpecialArgs system;
 in
   nixpkgs.lib.nixosSystem {
