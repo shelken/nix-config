@@ -10,7 +10,7 @@
       };
       preview = {
         tab_size = 3;
-      }
+      };
     };
   };
 

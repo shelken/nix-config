@@ -12,7 +12,8 @@ from pathlib import Path
 NIX_DAEMON_PLIST = Path("/Library/LaunchDaemons/org.nixos.nix-daemon.plist")
 NIX_DAEMON_NAME = "org.nixos.nix-daemon"
 # http proxy provided by clash
-HTTP_PROXY = "http://127.0.0.1:7890"
+HTTP_PROXY = "http://192.168.6.226:7896"
+#HTTP_PROXY = ""
 
 pl = plistlib.loads(NIX_DAEMON_PLIST.read_bytes())
 
