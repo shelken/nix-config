@@ -3,7 +3,7 @@ let
   # 固定版本
   yabai = pkgs.yabai.overrideAttrs (old: rec {
     src = pkgs.fetchFromGitHub {
-      owner = "donaldguy";
+      owner = "koekeishiya";
       repo = "yabai";
       rev = "v6.0.15";
       hash = "sha256-buX6FRIXdM5VmYpA80eESDMPf+xeMfJJj0ulyx2g94M=";

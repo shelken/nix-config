@@ -29,13 +29,13 @@
     mylib = import ./lib {inherit lib;};
     myvars = import ./vars {inherit lib;};
     
-    specialArgs =
+    genSpecialArgs = system: 
       inputs
       // {
-        inherit mylib myvars; 
+        inherit mylib myvars system; 
         inherit (myvars) username userfullname useremail;
       };
-    args = {inherit inputs lib mylib myvars specialArgs; };
+    args = {inherit inputs lib mylib myvars genSpecialArgs; };
     pve155Modules = {
       nixos-modules = (map mylib.relativeToRoot [
         "hosts/pve155"

@@ -2,14 +2,14 @@
   inputs,
   lib,
   system,
-  specialArgs,
+  genSpecialArgs,
   nixos-modules,
   home-modules ? [],
   myvars,
   ...
 }: let
   inherit (inputs) nixpkgs home-manager ;
-  # specialArgs = specialArgs;
+  specialArgs = genSpecialArgs system;
 in
   nixpkgs.lib.nixosSystem {
     inherit system specialArgs;
