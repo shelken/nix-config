@@ -4,5 +4,6 @@
     ../base/core
     ../base/home.nix
     ../apps/neovim
+    ../apps/zsh
   ];
 }
