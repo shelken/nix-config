@@ -1,8 +1,8 @@
-{pkgs}:
+{pkgs, lib, ...}:
 let 
   zshDotDir = ".config/zsh";
   # omzCustomPath = "$HOME/.omz-custom"
-  configThemeNormal = ./p10k/.p10k.zsh;
+  configThemeNormal = ./p10k/p10k.zsh;
 in
 {
   programs.zsh = {
@@ -60,7 +60,7 @@ in
       {
         name = "powerlevel10k-config";
         src = lib.cleanSource ./p10k;
-        file = ".p10k.zsh";
+        file = "p10k.zsh";
       }
     ];
   };
