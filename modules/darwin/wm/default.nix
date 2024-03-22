@@ -1,4 +1,4 @@
-{dotfiles, pkgs, system}: 
+{dotfiles, pkgs, system, ...}: 
 let
   # 固定版本
   yabai = pkgs.yabai.overrideAttrs (old: rec {
@@ -15,7 +15,7 @@ in
  # for yabai and skhd
   services.yabai = {
     enable = true;
-    pkgs = yabai;
+    package = yabai;
     # https://github.com/LnL7/nix-darwin/blob/master/modules/services/yabai/default.nix
     enableScriptingAddition = false;
   }; 
