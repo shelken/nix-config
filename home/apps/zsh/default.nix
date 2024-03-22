@@ -1,8 +1,10 @@
-{pkgs, lib, ...}:
-let 
-  zshDotDir = ".config/zsh";
-in
 {
+  pkgs,
+  lib,
+  ...
+}: let
+  zshDotDir = ".config/zsh";
+in {
   programs.zsh = {
     enable = true;
     # 自定义配置目录
@@ -39,7 +41,7 @@ in
     };
     initExtra = ''
       bindkey '^f' autosuggest-accept
-     
+
       # p10k custome
       POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION='🤘'
 
@@ -76,4 +78,3 @@ in
     meslo-lgs-nf
   ];
 }
-

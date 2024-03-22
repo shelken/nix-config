@@ -1,7 +1,4 @@
-{
-  myvars,
-  ...
-}: {
+{myvars, ...}: {
   # …
 
   programs.git = {
