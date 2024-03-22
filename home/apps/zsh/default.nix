@@ -1,8 +1,6 @@
 {pkgs, lib, ...}:
 let 
   zshDotDir = ".config/zsh";
-  # omzCustomPath = "$HOME/.omz-custom"
-  configThemeNormal = ./p10k/p10k.zsh;
 in
 {
   programs.zsh = {
@@ -24,7 +22,7 @@ in
     shellAliases = {
       ll = "eza --icons -la -T -L=1";
       #update = "sudo nixos-rebuild switch";
-      proxy = "export https_proxy=http://192.168.6.1:7890 http_proxy=http://192.168.6.1:7890";
+      proxy = "export https_proxy=http://192.168.6.226:7896 http_proxy=http://192.168.6.226:7896";
       unproxy = "unset https_proxy http_proxy";
     };
     history = {
@@ -41,9 +39,10 @@ in
     };
     initExtra = ''
       bindkey '^f' autosuggest-accept
+     
+      # p10k custome
+      POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION='🤘'
 
-      [[ ! -f ${configThemeNormal} ]] || source ${configThemeNormal}
-      
       ################
       # 特定机器配置 #
       ################
