@@ -20,7 +20,7 @@ in
     enableScriptingAddition = false;
   }; 
 
-  programs.skhd = {
+  services.skhd = {
     enable = true;
   };
   
