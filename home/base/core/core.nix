@@ -2,6 +2,7 @@
   home.packages = with pkgs; [
     lazygit
     just
+    # asciinema
   ];
   programs = {
     # A modern replacement for ‘ls’
