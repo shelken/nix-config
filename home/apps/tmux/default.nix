@@ -1,4 +1,4 @@
-{pkgs, dotfiles, ...}: 
+{pkgs, dotfiles, system, ...}: 
 let
   tpm = pkgs.fetchFromGitHub {
     owner = "tmux-plugins";
