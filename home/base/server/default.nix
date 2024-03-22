@@ -7,6 +7,7 @@
     #./bash.nix
     #./bat.nix
     ../../apps/yazi
+    ../../apps/tmux
     ../../apps/zsh
     ../../apps/btop.nix
     ../../base/code/git.nix
