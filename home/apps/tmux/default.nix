@@ -35,23 +35,27 @@
     hash = "sha256-l6RGtRlMsVcA8t/Qpkin8M4wX1OTFNwwpY5PSf8E+rA=";
   };
 in {
-  programs.tmux = {
-    enable = true;
-    # plugins = with pkgs; [
-    #   {
-    #     plugin = tmuxPlugins.sensible;
-    #   }
-    #   {
-    #     plugin = tmuxPlugins.yank;
-    #   }
-    #   {
-    #     plugin = tmuxPlugins.vim-tmux-navigator;
-    #   }
-    #   {
-    #     plugin = tmuxPlugins.catppuccin;
-    #   }
-    # ];
-  };
+  # programs.tmux = {
+  #   enable = false;
+  #   # plugins = with pkgs; [
+  #   #   {
+  #   #     plugin = tmuxPlugins.sensible;
+  #   #   }
+  #   #   {
+  #   #     plugin = tmuxPlugins.yank;
+  #   #   }
+  #   #   {
+  #   #     plugin = tmuxPlugins.vim-tmux-navigator;
+  #   #   }
+  #   #   {
+  #   #     plugin = tmuxPlugins.catppuccin;
+  #   #   }
+  #   # ];
+  # };
+
+  home.packages = with pkgs; [
+    tmux
+  ];
 
   home.file = {
     ".tmux.conf".source = dotfiles.packages.${system}.dot-tmux + "/tmux.conf";
