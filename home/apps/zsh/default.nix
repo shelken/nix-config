@@ -8,7 +8,7 @@ in
     # 自定义配置目录
     dotDir = zshDotDir;
     enableCompletion = true;
-    enableAutosuggestions = true;
+    autosuggestion.enable = true;
     # enableSyntaxHighlighting = true;
     syntaxHighlighting.enable = true;
     initExtraFirst = ''
