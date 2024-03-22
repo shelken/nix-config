@@ -5,7 +5,6 @@
   ...
 }: {
   imports = [
-    # ./apps/zsh.nix
     # ./apps/micro
     # ./apps/git.nix
     ./apps/gh.nix

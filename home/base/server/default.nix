@@ -6,8 +6,8 @@
 
     #./bash.nix
     #./bat.nix
-    ../../apps/yazi.nix
-    ../../apps/zsh.nix
+    ../../apps/yazi
+    ../../apps/zsh
     ../../apps/btop.nix
     ../../base/code/git.nix
     ../../apps/neovim
