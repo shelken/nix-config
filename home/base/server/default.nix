@@ -10,7 +10,7 @@
     ../../apps/tmux
     ../../apps/zsh
     ../../apps/btop.nix
-    ../../base/code/git.nix
+    ../../base/core/git.nix
     ../../apps/neovim
     ./core.nix
     #./git.nix
