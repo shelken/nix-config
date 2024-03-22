@@ -1,4 +1,4 @@
-{dotfiles, pkgs, system, ...}: 
+{pkgs, ...}: 
 let
   # 固定版本
   yabai = pkgs.yabai.overrideAttrs (old: rec {
@@ -24,15 +24,15 @@ in
     enable = true;
   };
   
-  xdg.configFile = {
-    "yabai" = {
-      source = dotfiles.packages.${system}.dot-yabai + "/yabai";
-      recursive = true;
-    };
-    "skhd" = {
-      source = dotfiles.packages.${system}.dot-yabai + "/skhd";
-      recursive = true;
-    };
-  };
+  # xdg.configFile = {
+  #   "yabai" = {
+  #     source = dotfiles.packages.${system}.dot-yabai + "/yabai";
+  #     recursive = true;
+  #   };
+  #   "skhd" = {
+  #     source = dotfiles.packages.${system}.dot-yabai + "/skhd";
+  #     recursive = true;
+  #   };
+  # };
 
 }
