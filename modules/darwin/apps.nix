@@ -96,19 +96,21 @@ in {
     # otherwise Apple Store will refuse to install them.
     # For details, see https://github.com/mas-cli/mas
     masApps = {
-      # Wechat = 836500024;
-      # Xnip = 1221250572;
-      # TheUnarchiver = 425424353;
-      # DiskSpeedTest = 425264550;
-      # MicrosoftRemoteDesktop = 1295203466;
+      Wechat = 836500024;
+      Xnip = 1221250572;
+      DiskSpeedTest = 425264550;
+      # vidhub = 1659622164;
     };
 
     taps = [
       "homebrew/cask-fonts"
       "homebrew/services"
       "homebrew/cask-versions"
+      "shelken/tap"  # self tap 
 
-      "hashicorp/tap"
+      "hashicorp/tap"  # terraform 
+      "FelixKratz/formulae"  # jankyborders
+      "localsend/localsend"  # localsend 
     ];
 
     brews = [
@@ -117,17 +119,9 @@ in {
       "curl" # no not install curl via nixpkgs, it's not working well on macOS!
       "aria2" # download tool
       "httpie" # http client
-      # "wireguard-tools" # wireguard
-
-      # Usage:
-      #  https://github.com/tailscale/tailscale/wiki/Tailscaled-on-macOS#run-the-tailscaled-daemon
-      # 1. `sudo tailscaled install-system-daemon`
-      # 2. `tailscale up --accept-routes`
-      # "tailscale" # tailscale
 
       # https://github.com/rgcr/m-cli
       "m-cli" #  Swiss Army Knife for macOS
-      # "proxychains-ng"
 
       # commands like `gsed` `gtar` are required by some tools
       "gnu-sed"
@@ -136,46 +130,92 @@ in {
       # misc that nix do not have cache for.
       "git-trim"
       "terraform"
-      # "terraformer"
+
+      # janky borders; for yabai; need macOS 14+
+      "borders"
     ];
 
     # `brew install --cask`
     casks = [
       "squirrel" # input method for Chinese, rime-squirrel
       # "google-chrome"
-      "arc"
+      "arc"  # macOS 12+, browser
 
 
       # IM & audio & remote desktop & meeting
-      "telegram"
+      # "telegram"
+      "feishu"  # for work
       # "discord"
-      "microsoft-remote-desktop"
       # "rustdesk"
 
       # Misc
-      # "shadowsocksx-ng" # proxy tool
       "iina" # video player
-      "raycast" # (HotKey: alt/option + space)search, caculate and run scripts(with many plugins)
+      "raycast" # macOS 12+ (HotKey: alt/option + space)search, caculate and run scripts(with many plugins)
       "stats" # beautiful system status monitor in menu bar
-      "appcleaner" # app uninstall 
-      "applite"
-      "hiddenbar"
-      "picgo"
+      # "appcleaner" # app uninstall 
+      "applite" # homebrew ui 
+      "hiddenbar" # menubar plugin 
+      # "picgo"  # picbed
+      "the-unarchiver"  # zip,unzip
+      # "imageoptim"  # image compress
+      # "xld"  # 处理cd音频文件，flac等无损音频转化
+      # "localsend"
+      # "adrive"  # 阿里云盘
+      # "hackintool"  # hackintosh
+      # "shortcutdetective"  # 检查快捷键
+      # "barrier"  # 跨屏键鼠
+      # "musicbrainz-picard"  # 音乐信息刮削
+      # "cleanmymac"  # 清理
+      # "wpsoffice"  # pdf, word, excel
+
+      # read pdf,...
+      "koodo-reader"
+
+      # write
+      "obsidian"
+
+      # translation
+      "easydict"  # 翻译
+
+      # display
+      "betterdisplay"  # 显示器
+
+      # keyborader
+      # "karabiner-elements"  # 快捷键映射
+      "keyboradholder"  # 不同应用自动切输入法
+      "keyklu"  # shortcut viewer
+
+      # mouse
+      "mac-mouse-fix"  # 鼠标滚动
+      # "mos"
+
+      # network
+      "clashx-meta"  #
+      "zerotier-one" 
+      "tailscale"
+      "lulu"  # firewall
+
+      # download
+      # "motrix"  # 种子下载
+
+      # sync file 
+      "syncthing"  # 数据同步
+      # "resilio-sync"  
 
       # quicklook
       "qlmarkdown"
       "syntax-highlight"
 
+      # remote-desktop
+      "vnc-viewer"
+      "microsoft-remote-desktop"
+
       # Development
       "visual-studio-code"
-      "orbstack"
+      "orbstack"  # docker, need macOS 12+
       "iterm2"
-      # "mitmproxy" # HTTP/HTTPS traffic inspector
-      # "insomnia" # REST client
-      # "wireshark" # network analyzer
-      # "jdk-mission-control" # Java Mission Control
-      # "google-cloud-sdk" # Google Cloud SDK
-      # "miniforge" # Miniconda's community-driven distribution
+      #"intellij-idea" IDEA
+      #"navicat-premium" mysql...
     ];
   };
 }
