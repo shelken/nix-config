@@ -97,8 +97,8 @@ in {
     # For details, see https://github.com/mas-cli/mas
     masApps = {
       Wechat = 836500024;
-      Xnip = 1221250572;
-      DiskSpeedTest = 425264550;
+      # Xnip = 1221250572;
+      # DiskSpeedTest = 425264550;
       # vidhub = 1659622164;
     };
 
@@ -149,7 +149,7 @@ in {
 
       # Misc
       "iina" # video player
-      "raycast" # macOS 12+ (HotKey: alt/option + space)search, caculate and run scripts(with many plugins)
+      # "raycast" # macOS 12+ (HotKey: alt/option + space)search, caculate and run scripts(with many plugins)
       "stats" # beautiful system status monitor in menu bar
       # "appcleaner" # app uninstall
       "applite" # homebrew ui
@@ -171,34 +171,34 @@ in {
       "koodo-reader"
 
       # write
-      "obsidian"
+      # "obsidian"
 
       # translation
-      "easydict" # 翻译
+      # "easydict" # 翻译
 
       # display
-      "betterdisplay" # 显示器
+      # "betterdisplay" # 显示器
 
       # keyborader
       # "karabiner-elements"  # 快捷键映射
-      "keyboradholder" # 不同应用自动切输入法
-      "keyklu" # shortcut viewer
+      # "keyboradholder" # 不同应用自动切输入法
+      # "keyklu" # shortcut viewer
 
       # mouse
-      "mac-mouse-fix" # 鼠标滚动
+      # "mac-mouse-fix" # 鼠标滚动
       # "mos"
 
       # network
-      "clashx-meta" #
-      "zerotier-one"
-      "tailscale"
-      "lulu" # firewall
+      # "clashx-meta" #
+      # "zerotier-one"
+      # "tailscale"
+      # "lulu" # firewall
 
       # download
       # "motrix"  # 种子下载
 
       # sync file
-      "syncthing" # 数据同步
+      # "syncthing" # 数据同步
       # "resilio-sync"
 
       # quicklook
@@ -206,13 +206,13 @@ in {
       "syntax-highlight"
 
       # remote-desktop
-      "vnc-viewer"
-      "microsoft-remote-desktop"
+      # "vnc-viewer"
+      # "microsoft-remote-desktop"
 
       # Development
-      "visual-studio-code"
-      "orbstack" # docker, need macOS 12+
-      "iterm2"
+      # "visual-studio-code"
+      # "orbstack" # docker, need macOS 12+
+      # "iterm2"
       #"intellij-idea" IDEA
       #"navicat-premium" mysql...
     ];
