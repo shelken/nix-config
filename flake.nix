@@ -31,6 +31,11 @@
     genSpecialArgs = system:
       inputs
       // {
+        pkgs-unstable = import inputs.nixpkgs-unstable {
+          inherit system; # refer the `system` parameter form outer scope recursively
+          # To use chrome, we need to allow the installation of non-free software
+          config.allowUnfree = true;
+        };
         inherit mylib myvars system;
         inherit (myvars) username userfullname useremail;
       };
@@ -85,6 +90,7 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";

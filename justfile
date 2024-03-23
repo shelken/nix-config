@@ -32,11 +32,11 @@ gc:
   @sudo nix-collect-garbage -d
 
 # update a particular flake input
-update-input input:
-  @sudo nix flake lock --update-input {{ input }}
+upp input:
+  @nix flake lock --update-input {{ input }}
 
 # update all flake inputs
-update:
+up:
   @sudo nix flake update
 
 # git add file
