@@ -32,9 +32,9 @@ in {
       save = 10000;
     };
     oh-my-zsh = {
-      enable = false;
+      enable = true;
       plugins = [
-        "docker-comose"
+        # "docker-comose"
         "docker"
       ];
       # custom = omzCustomPath;

@@ -88,7 +88,7 @@ in {
     onActivation = {
       autoUpdate = true;
       # 'zap': uninstalls all formulae(and related files) not listed in the generated Brewfile
-      # cleanup = "zap";
+      cleanup = "uninstall";
     };
 
     # Applications to install from Mac App Store using mas.
@@ -154,7 +154,7 @@ in {
       # "appcleaner" # app uninstall
       "applite" # homebrew ui
       "hiddenbar" # menubar plugin
-      # "picgo"  # picbed
+      "picgo"  # picbed
       "the-unarchiver" # zip,unzip
       # "imageoptim"  # image compress
       # "xld"  # 处理cd音频文件，flac等无损音频转化
@@ -174,25 +174,25 @@ in {
       # "obsidian"
 
       # translation
-      # "easydict" # 翻译
+      "easydict" # 翻译
 
       # display
-      # "betterdisplay" # 显示器
+      "betterdisplay" # 显示器
 
       # keyborader
       # "karabiner-elements"  # 快捷键映射
-      # "keyboradholder" # 不同应用自动切输入法
-      # "keyklu" # shortcut viewer
+      "keyboardholder" # 不同应用自动切输入法
+      "keyclu" # shortcut viewer
 
       # mouse
-      # "mac-mouse-fix" # 鼠标滚动
+      "mac-mouse-fix" # 鼠标滚动
       # "mos"
 
       # network
-      # "clashx-meta" #
+      "clashx-meta" #
       # "zerotier-one"
       # "tailscale"
-      # "lulu" # firewall
+      "lulu" # firewall
 
       # download
       # "motrix"  # 种子下载
