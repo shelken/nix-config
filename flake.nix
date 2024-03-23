@@ -99,7 +99,7 @@
 
     # astronvim
     astronvim = {
-      url = "github:AstroNvim/AstroNvim/v3.41.2";
+      url = "github:AstroNvim/AstroNvim/v3.45.3";
       flake = false;
     };
 

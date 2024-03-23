@@ -3,16 +3,16 @@
     "astronvim": {
       "flake": false,
       "locked": {
-        "lastModified": 1705337239,
-        "narHash": "sha256-jF+D2CdnSJ5at9HYrDGHKYodVL4VBdqA94OPBu4ESUo=",
+        "lastModified": 1710957235,
+        "narHash": "sha256-69DBcOpjDZBMOQGz8obMBFpEBeoSWuXZ4CNAK2GqI+M=",
         "owner": "AstroNvim",
         "repo": "AstroNvim",
-        "rev": "c58489a292fc2ebbc662c54a45213b01f7401f41",
+        "rev": "0da3fa834137597f13e53196c8c6f7e1425601ea",
         "type": "github"
       },
       "original": {
         "owner": "AstroNvim",
-        "ref": "v3.41.2",
+        "ref": "v3.45.3",
         "repo": "AstroNvim",
         "type": "github"
       }
