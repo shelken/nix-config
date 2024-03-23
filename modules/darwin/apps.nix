@@ -154,7 +154,7 @@ in {
       # "appcleaner" # app uninstall
       "applite" # homebrew ui
       "hiddenbar" # menubar plugin
-      "picgo"  # picbed
+      "picgo" # picbed
       "the-unarchiver" # zip,unzip
       # "imageoptim"  # image compress
       # "xld"  # 处理cd音频文件，flac等无损音频转化

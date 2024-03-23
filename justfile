@@ -36,6 +36,10 @@ up:
 add:
   @git add .
 
+# git pull
+pull:
+  @git pull --rebase
+
 # 查看包文件树
 [linux]
 qip:
@@ -61,6 +65,7 @@ prefetch-git repo rev:
 rebuild host=profile:
   @sudo nixos-rebuild switch --upgrade --flake .#{{ host }}
 
+# nixos 重建
 [linux]
 switch host=profile: 
   just rebuild $1
