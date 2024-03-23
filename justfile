@@ -8,63 +8,95 @@ profile := "$PROFILE"
 alias b := rebuild
 alias bd := rebuild-debug
 
+# 显式帮助
 default:
   @just --list
 
-# format
+# 格式化
 fmt:
   @nix fmt .
 
-# rebuild
-rebuild host=profile:
-  @sudo nixos-rebuild switch --upgrade --flake .#{{ host }}
+# 交互式源码查看
+repl:
+  @nix repl -f flake:nixpkgs
 
-# debug rebuild
-rebuild-debug host=profile:
-  @sudo nixos-rebuild switch --upgrade --flake .#{{ host }} --show-trace -L -v
-
-# clear old-history
-wipe duration:
-  @sudo nix profile wipe-history --older-than {{ duration }} --profile /nix/var/nix/profiles/system
-
-# nix-collect-garbage
+# 清理无用的包
 gc:
-  @sudo nix-collect-garbage -d
+  @nix-collect-garbage -d
 
-# update a particular flake input
+# 指定输入更新
 upp input:
   @nix flake lock --update-input {{ input }}
 
-# update all flake inputs
+# 更新整个输入
 up:
-  @sudo nix flake update
+  @nix flake update
 
-# git add file
+# git add all
 add:
   @git add .
 
-# query installed package size
+# 查看包文件树
+[linux]
 qip:
   # @nix shell nixpkgs#nix-tree nixpkgs#ripgrep
   @nix-store --gc --print-roots | rg -v '/proc/' | rg -Po '(?<= -> ).*' | xargs -o nix-tree
 
+# 暂存未提交文件合并
 git-temp:
   @git stash save 'temp'
   @git pull --rebase
   @git stash pop
 
+# nix-prefetch-url
+prefetch-url url:
+  @nix-prefetch-url --type sha256 '{{ url }}' | xargs nix hash to-sri --type sha256
+
+# nix-prefetch-git
+prefetch-git repo rev:
+  @nix-prefetch-git --url 'git@github.com:{{ repo }}' --rev '{{ rev }}' --fetch-submodules
+
+# nixos 重建
+[linux]
+rebuild host=profile:
+  @sudo nixos-rebuild switch --upgrade --flake .#{{ host }}
+
+[linux]
+switch host=profile: 
+  just rebuild $1
+
+# nixos 重建(调试)
+[linux]
+rebuild-debug host=profile:
+  @sudo nixos-rebuild switch --upgrade --flake .#{{ host }} --show-trace -L -v
+
+# 清除历史；默认`3d`; 三天前
+[linux]
+wipe duration="3d":
+  @sudo nix profile wipe-history --older-than {{ duration }} --profile /nix/var/nix/profiles/system
+
+# mac更新前调整nix到代理
 [macos]
 set-proxy:
   @sudo python3 utils/script/darwin_set_proxy.py
 
+# mac 构建; target对应当前主机名
 [macos]
-darwin-build target=profile:
+rebuild target=profile: set-proxy
   #!/usr/bin/env bash
   config_target=".#darwinConfigurations.{{target}}.system"
   nix build $config_target --extra-experimental-features "nix-command flakes" 
 
+# mac 构建; 调试
 [macos]
-darwin-switch target=profile:
+rebuild-debug target=profile: set-proxy
+  #!/usr/bin/env bash
+  config_target=".#darwinConfigurations.{{target}}.system"
+  nix build $config_target --extra-experimental-features "nix-command flakes" --show-trace 
+
+# mac 应用配置; target对应当前主机名
+[macos]
+switch target=profile: set-proxy
   #!/usr/bin/env bash
   config_target=".#{{target}}"
-  ./result/sw/bin/darwin-rebuild switch --flake $config_target 
+  ./result/sw/bin/darwin-rebuild switch --flake $config_target
