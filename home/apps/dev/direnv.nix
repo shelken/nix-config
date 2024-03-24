@@ -6,6 +6,6 @@
   };
   home.packages = [
     # devenv.packages."${pkgs.system}".devenv
-    pkgs.cachix
+    # pkgs.cachix
   ];
 }

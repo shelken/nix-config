@@ -6,5 +6,6 @@
       ../base/home.nix
       ../apps/neovim
       ../apps/zsh
+      ../apps/dev
     ];
 }
