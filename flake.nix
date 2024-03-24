@@ -18,12 +18,7 @@
     ];
   };
 
-  outputs = inputs @ {
-    self,
-    nixpkgs,
-    home-manager,
-    ...
-  }: let
+  outputs = inputs @ {nixpkgs, ...}: let
     inherit (inputs.nixpkgs) lib;
     mylib = import ./lib {inherit lib;};
     myvars = import ./vars {inherit lib;};
@@ -70,6 +65,7 @@
     allSystemAbove = [
       "x86_64-linux"
       "aarch64-darwin"
+      "x86_64-darwin"
     ];
   in {
     # linux x86
@@ -83,6 +79,32 @@
       yuuko = mylib.macosSystem (yuukoModules // args // {system = "aarch64-darwin";});
       yuuko-test = mylib.macosSystem (yuukoModules // args // {system = "x86_64-darwin";});
     };
+
+    # Development Shells
+    devShells = nixpkgs.lib.genAttrs allSystemAbove (
+      system: let
+        pkgs = nixpkgs.legacyPackages.${system};
+      in {
+        default = pkgs.mkShell {
+          packages = with pkgs; [
+            # fix https://discourse.nixos.org/t/non-interactive-bash-errors-from-flake-nix-mkshell/33310
+            bashInteractive
+            # Nix-related
+            alejandra
+            deadnix
+            statix
+            # spell checker
+            typos
+            # code formatter
+            nodePackages.prettier
+          ];
+          name = "dots";
+          # shellHook = ''
+          #   ${self.checks.${system}.pre-commit-check.shellHook}
+          # '';
+        };
+      }
+    );
 
     formatter =
       nixpkgs.lib.genAttrs allSystemAbove (system: nixpkgs.legacyPackages.${system}.alejandra);
