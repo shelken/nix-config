@@ -1,4 +1,4 @@
-{myvars, ...}: {
+{...}: {
   programs.ssh.extraConfig = ''
     Host github.com
       User git

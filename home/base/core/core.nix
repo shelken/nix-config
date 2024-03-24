@@ -1,15 +1,11 @@
-{
-  pkgs,
-  catppuccin-bat,
-  ...
-}: {
+{pkgs, ...}: {
   home.packages = with pkgs; [
     tldr
     neofetch
     lazygit
     just
     asciinema
-    
+
     # nix tool
     # https://github.com/nix-community/nix-melt
     nix-melt # A TUI flake.lock viewer

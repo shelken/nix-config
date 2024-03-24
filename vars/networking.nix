@@ -3,7 +3,7 @@
 
   hostAddress =
     lib.attrsets.mapAttrs
-    (name: address: {inherit prefixLength address;})
+    (_name: address: {inherit prefixLength address;})
     {
       pve155 = "192.168.6.155";
       pve156 = "192.168.6.156";

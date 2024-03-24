@@ -8,7 +8,7 @@
   genSpecialArgs,
   ...
 }: let
-  inherit (inputs) nixpkgs home-manager nix-darwin;
+  inherit (inputs) home-manager nix-darwin;
   specialArgs = genSpecialArgs system;
 in
   nix-darwin.lib.darwinSystem {

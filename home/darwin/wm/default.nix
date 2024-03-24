@@ -1,9 +1,4 @@
-{
-  dotfiles,
-  system,
-  pkgs,
-  ...
-}: {
+{...}: {
   # xdg.configFile = {
   #   "yabai" = {
   #     source = dotfiles.packages.${system}.dot-yabai + "/yabai";
