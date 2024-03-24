@@ -4,8 +4,8 @@
     nix-direnv.enable = true;
     enableZshIntegration = true;
   };
-  home.packages = [
-    # devenv.packages."${pkgs.system}".devenv
-    # pkgs.cachix
-  ];
+  # home.packages = [
+  #   # devenv.packages."${pkgs.system}".devenv
+  #   # pkgs.cachix
+  # ];
 }
