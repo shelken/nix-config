@@ -1,12 +1,11 @@
 {
   pkgs,
-  lib,
   myvars,
   config,
   ...
 }: let
   # 固定版本
-  yabai = pkgs.yabai.overrideAttrs (old: rec {
+  yabai = pkgs.yabai.overrideAttrs (_old: rec {
     version = "6.0.15";
     src =
       if pkgs.stdenv.isAarch64
