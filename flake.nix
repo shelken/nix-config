@@ -59,6 +59,7 @@
       ];
       home-modules = map mylib.relativeToRoot [
         "home/darwin"
+        "hosts/yuuko/home.nix"
       ];
     };
     nanoModules = {
