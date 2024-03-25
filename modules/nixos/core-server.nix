@@ -95,6 +95,7 @@
     git # used by nix flakes
     neofetch
     just
+    dig
     # git-lfs # used by huggingface models
     #docker_24 # use latest docker for use net-proxy
     # wayvnc
