@@ -111,6 +111,7 @@ in {
       "hashicorp/tap" # terraform
       "FelixKratz/formulae" # jankyborders
       "localsend/localsend" # localsend
+      "gromgit/fuse"  # macfuse,mounty
     ];
 
     brews = [
@@ -131,6 +132,7 @@ in {
       "git-trim"
       "terraform"
 
+      # "python@3.12"
       # janky borders; for yabai; need macOS 14+
       # "borders"
     ];
