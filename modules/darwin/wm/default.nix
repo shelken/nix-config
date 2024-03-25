@@ -2,10 +2,11 @@
   pkgs,
   myvars,
   config,
+  pkgs-unstable,
   ...
 }: let
   # 固定版本
-  yabai = pkgs.yabai.overrideAttrs (_old: rec {
+  yabai = pkgs-unstable.yabai.overrideAttrs (_old: rec {
     version = "6.0.15";
     src =
       if pkgs.stdenv.isAarch64
