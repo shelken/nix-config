@@ -215,7 +215,7 @@ in {
 
       # Development
       # "visual-studio-code"
-      # "orbstack" # docker, need macOS 12+
+      "orbstack" # docker, need macOS 12+
       # "iterm2"
       #"intellij-idea" IDEA
       #"navicat-premium" mysql...

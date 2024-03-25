@@ -6,7 +6,7 @@
 }: {
   # 使用 lazygit
   imports = [
-    ../lazygit.nix
+    ./packages.nix
   ];
 
   xdg.configFile = {
@@ -35,25 +35,8 @@
     withNodeJs = true;
   };
 
-  home.packages = with pkgs; [
-    # c
-    gcc # 插件需要
-    gnumake
-    # 查询文件内容使用
-    ripgrep
+  programs.lazygit = {
+    enable = true;
+  };
 
-    # nix
-    nil
-
-    # go
-    go
-
-    # lua
-
-    # rust
-    cargo
-
-    # CloudNative
-    #terraform
-  ];
 }
