@@ -15,7 +15,12 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 # clone repo
 git clone https://github.com/shelken/my-nix-flake.git ~/my-nix-flake
 
+# before run
+# uninstall yabai and skhd;
+echo "PROFILE=<hostname>" >> .env
+
 # run 
-nix build $config_target --extra-experimental-features "nix-command flakes"
+just rebuild
+just switch
 
 ```
