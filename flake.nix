@@ -61,6 +61,15 @@
         "home/darwin"
       ];
     };
+    nanoModules = {
+      darwin-modules = map mylib.relativeToRoot [
+        "modules/darwin"
+        "hosts/nano"
+      ];
+      home-modules = map mylib.relativeToRoot [
+        "home/darwin"
+      ];
+    };
 
     allSystemAbove = [
       "x86_64-linux"
@@ -77,7 +86,7 @@
     darwinConfigurations = {
       # mac mini
       yuuko = mylib.macosSystem (yuukoModules // args // {system = "aarch64-darwin";});
-      yuuko-test = mylib.macosSystem (yuukoModules // args // {system = "x86_64-darwin";});
+      nano = mylib.macosSystem (nanoModules // args // {system = "x86_64-darwin";});
     };
 
     # Development Shells
