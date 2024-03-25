@@ -6,6 +6,7 @@
   home.homeDirectory = "/Users/${myvars.username}";
   home.packages = with pkgs; [
     gh
+    glab
     nali
   ];
 }
