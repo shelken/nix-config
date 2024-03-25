@@ -24,3 +24,11 @@ just rebuild
 just switch
 
 ```
+
+## 常见问题
+
+### font 文件 一直在等lock
+
+解决：`sudo rm -rf /nix/store/**.lock`
+
+
