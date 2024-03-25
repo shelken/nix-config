@@ -1,5 +1,4 @@
 {
-  pkgs,
   astronvim,
   astronvim-config,
   ...
@@ -38,5 +37,4 @@
   programs.lazygit = {
     enable = true;
   };
-
 }

@@ -1,5 +1,4 @@
-{pkgs, ...}:
-{
+{pkgs, ...}: {
   home.packages = with pkgs; [
     # c
     gcc # 插件需要
@@ -27,8 +26,8 @@
     rustfmt
 
     #-- misc
-    marksman  # lsp for markdown
-    glow  # markdown preview
+    marksman # lsp for markdown
+    glow # markdown preview
     taplo # TOML language server / formatter / validator
     nodePackages.yaml-language-server
     sqlfluff # SQL linter
@@ -41,13 +40,12 @@
     hadolint # Dockerfile linter
 
     #-- frontend
-    # html/css lsp 
+    # html/css lsp
     nodePackages.vscode-langservers-extracted
-    
+
     #-- bash
     nodePackages.bash-language-server
     shellcheck
     shfmt
-
   ];
 }
