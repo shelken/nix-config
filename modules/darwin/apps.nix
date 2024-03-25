@@ -96,7 +96,7 @@ in {
     # otherwise Apple Store will refuse to install them.
     # For details, see https://github.com/mas-cli/mas
     masApps = {
-      Wechat = 836500024;
+      # Wechat = 836500024;
       # Xnip = 1221250572;
       # DiskSpeedTest = 425264550;
       # vidhub = 1659622164;
@@ -132,7 +132,7 @@ in {
       "terraform"
 
       # janky borders; for yabai; need macOS 14+
-      "borders"
+      # "borders"
     ];
 
     # `brew install --cask`
@@ -152,7 +152,7 @@ in {
       # "raycast" # macOS 12+ (HotKey: alt/option + space)search, caculate and run scripts(with many plugins)
       "stats" # beautiful system status monitor in menu bar
       # "appcleaner" # app uninstall
-      "applite" # homebrew ui
+      # "applite" # homebrew ui; need macOS 13+
       "hiddenbar" # menubar plugin
       "picgo" # picbed
       "the-unarchiver" # zip,unzip
@@ -166,6 +166,8 @@ in {
       # "musicbrainz-picard"  # 音乐信息刮削
       # "cleanmymac"  # 清理
       # "wpsoffice"  # pdf, word, excel
+      "mounty"  # for mount nfts disk 
+      "macfuse"  # mounty need
 
       # read pdf,...
       "koodo-reader"
