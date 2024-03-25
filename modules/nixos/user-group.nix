@@ -25,7 +25,7 @@
       "docker"
     ];
     openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK1/TnqUWbdQgCcF1mXsgdMumR7EKGpyKn19SHzhFBuY shelken@macmini"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK1/TnqUWbdQgCcF1mXsgdMumR7EKGpyKn19SHzhFBuY shelken@yuuko"
     ];
   };
 
