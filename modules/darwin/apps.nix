@@ -111,7 +111,7 @@ in {
       "hashicorp/tap" # terraform
       "FelixKratz/formulae" # jankyborders
       "localsend/localsend" # localsend
-      "gromgit/fuse"  # macfuse,mounty
+      "gromgit/fuse" # macfuse,mounty
     ];
 
     brews = [
@@ -168,8 +168,8 @@ in {
       # "musicbrainz-picard"  # 音乐信息刮削
       # "cleanmymac"  # 清理
       # "wpsoffice"  # pdf, word, excel
-      "mounty"  # for mount nfts disk 
-      "macfuse"  # mounty need
+      "mounty" # for mount nfts disk
+      "macfuse" # mounty need
 
       # read pdf,...
       "koodo-reader"
