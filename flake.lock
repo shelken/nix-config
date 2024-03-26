@@ -101,11 +101,11 @@
     "dot-tmux": {
       "flake": false,
       "locked": {
-        "lastModified": 1711125475,
-        "narHash": "sha256-ybBJ8nguh8n1pNm1L23+2mVXrV3Qcj391dyDgKZT3pc=",
+        "lastModified": 1711468550,
+        "narHash": "sha256-6kv5JcHHasfQ6ERd0JMLqgN/Dxu4HV74TLvvshOFMPA=",
         "owner": "shelken",
         "repo": "dot-tmux",
-        "rev": "b304e05c55d474665cfe2ce264831a87e5786fc4",
+        "rev": "b286b836ab888d157347127c4d5f1cc69f5cdc75",
         "type": "github"
       },
       "original": {
@@ -139,11 +139,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1711198613,
-        "narHash": "sha256-CJ/FNpxdm3/TPnArztSlFGKTaDO2Fi+Rwq9la6H8PxU=",
+        "lastModified": 1711468630,
+        "narHash": "sha256-0Bo6wVd9wYuqu2F51+tIpmsS+IVRcaQ909NOhICAF9I=",
         "owner": "shelken",
         "repo": "dotfiles.nix",
-        "rev": "625bdaf6f9862b16efd3cd34ae8d1390df028b7f",
+        "rev": "04682912202af6add649fd464112b676ac2c0a86",
         "type": "github"
       },
       "original": {
