@@ -2,21 +2,21 @@
   logFile = "/var/tmp/sketchybar.log";
 in {
   services.sketchybar = {
-    enable = false;
+    enable = true;
     # extraPackages = with pkgs; [
     #   (callPackage ../../../home/darwin/wm/sketchyhelper.nix { })
     # ];
-    extraPackages = with pkgs; [
-      coreutils
-      curl
-      # gh
-      gnugrep
-      gnused
-      jq
-      lua5_4
-      # wttrbar
-      # (callPackage ../../../home/darwin/wm/sketchyhelper.nix { })
-    ];
+    # extraPackages = with pkgs; [
+    #   coreutils
+    #   curl
+    #   # gh
+    #   gnugrep
+    #   gnused
+    #   jq
+    #   lua5_4
+    #   # wttrbar
+    #   # (callPackage ../../../home/darwin/wm/sketchyhelper.nix { })
+    # ];
   };
 
   launchd.user.agents.sketchybar = {
