@@ -9,10 +9,10 @@
       pve156 = "192.168.6.156";
       yuuko = "192.168.6.226";
       nano-zt = "192.168.168.7";
-      #-- not nix 
+      #-- not nix
       nas-home = "192.168.0.80";
       tvbox = "192.168.6.141";
-      # on pve 
+      # on pve
       pve = "192.168.6.213";
       pve-ai = "192.168.6.42";
       pve-common = "192.168.6.48";
@@ -21,9 +21,11 @@
       router-mine = "192.168.6.1";
       router-old = "192.168.8.1";
     };
-  mhostAddress = hostAddress // {
-    nas-home = hostAddress.nas-home // { port = "233"; };
-  };
+  mhostAddress =
+    hostAddress
+    // {
+      nas-home = hostAddress.nas-home // {port = "233";};
+    };
 
   ssh = {
     extraConfig =
@@ -38,5 +40,4 @@
       ""
       mhostAddress;
   };
-    
 }
