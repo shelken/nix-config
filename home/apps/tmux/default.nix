@@ -34,6 +34,12 @@
     rev = "e80cb735bbcd264ff971fdf7e58b219b60286c81";
     hash = "sha256-l6RGtRlMsVcA8t/Qpkin8M4wX1OTFNwwpY5PSf8E+rA=";
   };
+  resurrect = pkgs.fetchFromGitHub {
+    owner = "tmux-plugins";
+    repo = "tmux-resurrect";
+    rev = "cff343cf9e81983d3da0c8562b01616f12e8d548";
+    hash = "sha256-FcSjYyWjXM1B+WmiK2bqUNJYtH7sJBUsY2IjSur5TjY=";
+  };
 in {
   # programs.tmux = {
   #   enable = false;
@@ -64,5 +70,6 @@ in {
     ".tmux/plugins/tmux-yank".source = yank + "/";
     ".tmux/plugins/vim-tmux-navigator".source = vim-tmux-navigator + "/";
     ".tmux/plugins/tmux".source = catppuccin + "/";
+    ".tmux/plugins/tmux-resurrect".source = resurrect + "/";
   };
 }
