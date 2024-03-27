@@ -54,7 +54,10 @@ git-temp:
 
 # nix-prefetch-url
 prefetch-url url:
-  @nix-prefetch-url --type sha256 '{{ url }}' | xargs nix hash to-sri --type sha256
+  @nix-prefetch-url --print-path --type sha256 '{{ url }}' | xargs nix hash to-sri --type sha256
+
+prefetch-gh owner-repo rev:
+  @nix-prefetch-url --print-path --unpack https://github.com/{{ owner-repo }}/archive/{{ rev }}.tar.gz | awk 'NR>1{print $1}' | xargs nix-hash --sri --type sha256
 
 # nix-prefetch-git
 prefetch-git repo rev:
