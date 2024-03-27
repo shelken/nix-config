@@ -45,6 +45,16 @@ yabai -m rule --add app="^IntelliJ IDEA$" manage=off
 yabai -m rule --add app="^OpenAI Translator$" manage=off
 yabai -m rule --add app="^Raycast$" manage=off
 yabai -m rule --add app="^Screen Sharing$" manage=off
+yabai -m rule --add app="^Finder$" title="(Co(py|nnect)|Move|Info|Pref)" manage=off
+yabai -m rule --add app="^Safari$" title="^(General|(Tab|Password|Website|Extension)s|AutoFill|Se(arch|curity)|Privacy|Advance)$" manage=off
+yabai -m rule --add app="^Settings$" title=".*" manage=off
+yabai -m rule --add app="^App Store$" manage=off
+yabai -m rule --add app="^Activity Monitor$" manage=off
+yabai -m rule --add app="^Calculator$" manage=off
+yabai -m rule --add app="^Dictionary$" manage=off
+yabai -m rule --add title="Software Update" manage=off
+yabai -m rule --add app="System Information" title="About This Mac" manage=off
+yabai -m rule --add app="System Information" title="System Information" manage=off
 
 # float system preferences
 yabai -m rule --add app="^系统设置$" manage=off
