@@ -152,6 +152,13 @@
 
     # my dotfiles
     dotfiles.url = "github:shelken/dotfiles.nix";
+    
+
+    # secrets
+    secrets = {
+      url = "github:shelken/dotfiles.nix";
+      flake = false;
+    };
 
     #          ╭──────────────────────────────────────────────────────────╮
     #          │                          theme                           │

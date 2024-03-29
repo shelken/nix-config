@@ -426,7 +426,24 @@
         "nix-darwin": "nix-darwin",
         "nixpkgs": "nixpkgs_3",
         "nixpkgs-darwin": "nixpkgs-darwin",
-        "nixpkgs-unstable": "nixpkgs-unstable"
+        "nixpkgs-unstable": "nixpkgs-unstable",
+        "secrets": "secrets"
+      }
+    },
+    "secrets": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1711646511,
+        "narHash": "sha256-WhT7sSn9141MZ2JJkgo81rIkm5aujWd4cFOXRcjM5b0=",
+        "owner": "shelken",
+        "repo": "dotfiles.nix",
+        "rev": "57c5c1ea1df99b2a159071f5a343b106a1eef7f7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "shelken",
+        "repo": "dotfiles.nix",
+        "type": "github"
       }
     },
     "systems": {
