@@ -56,12 +56,17 @@ git-temp:
 prefetch-url url:
   @nix-prefetch-url --print-path --unpack '{{ url }}' | awk 'NR>1{print $1}' | xargs nix-hash --sri --type sha256
 
+# github sha256计算
 prefetch-gh owner-repo rev:
   @nix-prefetch-url --print-path --unpack https://github.com/{{ owner-repo }}/archive/{{ rev }}.tar.gz | awk 'NR>1{print $1}' | xargs nix-hash --sri --type sha256
 
 # nix-prefetch-git
 prefetch-git repo rev:
   @nix-prefetch-git --url 'git@github.com:{{ repo }}' --rev '{{ rev }}' --fetch-submodules
+
+# 清除nvim
+nvim-clean:
+  @rm -rf $HOME/.config/astronvim/lua/user
 
 # nixos 重建
 [linux]
