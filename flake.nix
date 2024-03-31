@@ -59,6 +59,7 @@
       ];
       home-modules = map mylib.relativeToRoot [
         "home/darwin"
+        "secrets/home.nix" 
         "hosts/yuuko/home.nix"
       ];
     };
@@ -69,6 +70,7 @@
       ];
       home-modules = map mylib.relativeToRoot [
         "home/darwin"
+        "secrets/home.nix" 
       ];
     };
 
@@ -153,10 +155,16 @@
     # my dotfiles
     dotfiles.url = "github:shelken/dotfiles.nix";
     
+    # secrets management
+    agenix = {
+      # lock with git commit at 0.15.0
+      url = "github:ryantm/agenix/564595d0ad4be7277e07fa63b5a991b3c645655d";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # secrets
     secrets = {
-      url = "github:shelken/dotfiles.nix";
+      url = "git+ssh://git@github.com/shelken/secrets.nix.git?shallow=1";
       flake = false;
     };
 
