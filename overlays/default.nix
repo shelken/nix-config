@@ -1,4 +1,3 @@
-args: 
-[
+args: [
   (import ./maven.nix args)
 ]

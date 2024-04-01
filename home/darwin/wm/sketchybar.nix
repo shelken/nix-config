@@ -1,8 +1,4 @@
-{
-  lib,
-  pkgs,
-  ...
-}: {
+{lib, ...}: {
   xdg.configFile = {
     "sketchybar" = {
       source = lib.cleanSourceWith {
