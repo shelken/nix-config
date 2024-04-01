@@ -1,5 +1,4 @@
-{...}: let
-in {
+{...}: {
   imports = [
     ./skhd.nix
     ./yabai.nix

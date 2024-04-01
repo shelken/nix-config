@@ -1,8 +1,6 @@
-_:
-let 
+_: let
   javaVersion = 17;
-in
-(slef: super: {
+in (_slef: super: {
   maven = super.maven.override {
     jdk = super."jdk${toString javaVersion}";
   };

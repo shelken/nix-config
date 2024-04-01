@@ -14,6 +14,7 @@ default:
 
 # 格式化
 fmt:
+  @deadnix -e
   @nix fmt .
 
 # 交互式源码查看

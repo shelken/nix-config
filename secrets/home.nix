@@ -20,14 +20,6 @@
   # ];
 
   age.secrets = let
-    noaccess = {
-      mode = "0000";
-      owner = "root";
-    };
-    high_security = {
-      mode = "0500";
-      owner = "root";
-    };
     user_readable = {
       mode = "0500";
       # owner = myvars.username;
@@ -37,11 +29,9 @@
     # no one can read/write this file, even root.
     # ---------------------------------------------
 
-
     # ---------------------------------------------
     # only root can read this file.
     # ---------------------------------------------
-
 
     # ---------------------------------------------
     # user can read this file.
