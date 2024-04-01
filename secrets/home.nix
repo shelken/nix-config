@@ -43,6 +43,18 @@
         path = "${config.home.homeDirectory}/.wakatime.cfg";
       }
       // user_readable;
+    "asciinema-install-id" =
+      {
+        file = "${secrets}/secrets/misc/asciinema-install-id.age";
+        path = "${config.home.homeDirectory}/.config/asciinema/install-id";
+      }
+      // user_readable;
+    "rclone.conf" =
+      {
+        file = "${secrets}/secrets/fm/rclone.conf";
+        path = "${config.home.homeDirectory}/.config/rclone/rclone.conf";
+      }
+      // user_readable;
   };
 
   # both the original file and the symlink should be readable and executable by the user
