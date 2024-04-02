@@ -38,8 +38,13 @@
     # terraform  # install via brew on macOS
     terraform-ls
     hadolint # Dockerfile linter
+    helm-ls  # helm lsp 
 
     #-- frontend
+    #javascript/typescript --#
+    nodePackages.nodejs
+    nodePackages.typescript
+    nodePackages.typescript-language-server
     # html/css lsp
     nodePackages.vscode-langservers-extracted
 
