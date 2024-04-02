@@ -69,6 +69,11 @@ prefetch-git repo rev:
 nvim-clean:
   @rm -rf $HOME/.config/astronvim/lua/user
 
+# 调试wez
+wez-test:
+  @rm -f $HOME/.config/wezterm/wezterm.lua
+  @ln -s {{justfile_directory()}}/home/apps/wezterm/wezterm.lua $HOME/.config/wezterm/wezterm.lua
+
 # nixos 重建
 [linux]
 rebuild host=profile:
