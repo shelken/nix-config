@@ -7,5 +7,6 @@
       ../apps/neovim
       ../apps/zsh
       ../apps/dev
+      ../apps/wezterm
     ];
 }
