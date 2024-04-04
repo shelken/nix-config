@@ -157,7 +157,7 @@
     # the most important thing is to remap option key to alt key globally,
     # but it's not supported by macOS yet.
     keyboard = {
-      enableKeyMapping = false; # enable key mapping so that we can use `option` as `control`
+      enableKeyMapping = true; # enable key mapping so that we can use `option` as `control`
 
       # NOTE: do NOT support remap capslock to both control and escape at the same time
       remapCapsLockToControl = true; # remap caps lock to control, useful for emac users
