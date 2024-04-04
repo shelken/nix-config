@@ -147,6 +147,17 @@
       inputs.nixpkgs.follows = "nixpkgs-darwin";
     };
 
+    rime-main = {
+    # 霧凇拼音
+      url = "github:iDvel/rime-ice";
+      flake = false;
+    };
+
+    rime-config = {
+      url = "github:shelken/rime-auto-deploy";
+      flake = false;
+    };
+
     # astronvim
     astronvim = {
       url = "github:AstroNvim/AstroNvim/v3.45.3";

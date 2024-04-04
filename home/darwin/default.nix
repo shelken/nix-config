@@ -8,5 +8,6 @@
       ../apps/zsh
       ../apps/dev
       ../apps/wezterm
+      ../apps/squirrel
     ];
 }
