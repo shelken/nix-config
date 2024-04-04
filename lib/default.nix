@@ -1,4 +1,8 @@
-{lib, ...}: {
+{lib, ...}: 
+let
+  inherit (lib) mkOption types;
+in 
+{
   macosSystem = import ./macosSystem.nix;
   nixosSystem = import ./nixosSystem.nix;
   relativeToRoot = lib.path.append ../.;
@@ -17,4 +21,10 @@
             )
         )
         (builtins.readDir path)));
+  
+  mkBoolOpt = default: description:
+    mkOption {
+      inherit default description;
+      type = types.bool;
+    };
 }
