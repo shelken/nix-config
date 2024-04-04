@@ -479,6 +479,38 @@
         "type": "github"
       }
     },
+    "rime-config": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1709695946,
+        "narHash": "sha256-EL3McBsWax/5V5xgVsqzNnAoUy2xrAhA+iAguXkcm6Y=",
+        "owner": "shelken",
+        "repo": "rime-auto-deploy",
+        "rev": "e34186e7ffe43a6e2a1813e57e7ef2e712a1be7c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "shelken",
+        "repo": "rime-auto-deploy",
+        "type": "github"
+      }
+    },
+    "rime-main": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1711212298,
+        "narHash": "sha256-n/89Os25hAJRjIwqfgmUCHigIWDOQ4V6DPIlv6xYBzk=",
+        "owner": "iDvel",
+        "repo": "rime-ice",
+        "rev": "ab648212584a5e54bf72583ba729e9d82c7f4888",
+        "type": "github"
+      },
+      "original": {
+        "owner": "iDvel",
+        "repo": "rime-ice",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "agenix": "agenix",
@@ -494,6 +526,8 @@
         "nixpkgs": "nixpkgs_3",
         "nixpkgs-darwin": "nixpkgs-darwin",
         "nixpkgs-unstable": "nixpkgs-unstable",
+        "rime-config": "rime-config",
+        "rime-main": "rime-main",
         "secrets": "secrets"
       }
     },
