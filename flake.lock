@@ -507,6 +507,7 @@
       },
       "original": {
         "owner": "iDvel",
+        "ref": "main",
         "repo": "rime-ice",
         "type": "github"
       }
