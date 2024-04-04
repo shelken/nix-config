@@ -157,17 +157,17 @@
     # the most important thing is to remap option key to alt key globally,
     # but it's not supported by macOS yet.
     keyboard = {
-      enableKeyMapping = true; # enable key mapping so that we can use `option` as `control`
+      enableKeyMapping = false; # enable key mapping so that we can use `option` as `control`
 
       # NOTE: do NOT support remap capslock to both control and escape at the same time
-      remapCapsLockToControl = true; # remap caps lock to control, useful for emac users
+      # remapCapsLockToControl = true; # remap caps lock to control, useful for emac users
       # remapCapsLockToEscape = true; # remap caps lock to escape, useful for vim users
 
       # swap left command and left alt
       # so it matches common keyboard layout: `ctrl | command | alt`
       #
       # disabled, caused only problems!
-      swapLeftCommandAndLeftAlt = true;
+      # swapLeftCommandAndLeftAlt = true;
 
       # userKeyMapping = [
       #   # remap escape to caps lock
