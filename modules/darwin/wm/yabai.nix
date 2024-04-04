@@ -3,6 +3,9 @@
   myvars,
   config,
   pkgs-unstable,
+  lib,
+  mylib,
+  options,
   ...
 }: let
   # 固定版本
@@ -24,18 +27,26 @@
         });
   });
   homeDir = config.users.users."${myvars.username}".home;
+  inherit (lib) mkIf;
+  inherit (mylib) mkBoolOpt;
+  cfg = config.shelken.wm.yabai;
 in {
-  # for yabai and skhd
-  services.yabai = {
-    enable = true;
-    package = yabai;
-    # https://github.com/LnL7/nix-darwin/blob/master/modules/services/yabai/default.nix
-    enableScriptingAddition = false;
-    extraConfig = builtins.readFile ./yabairc;
+  options.shelken.wm.yabai = {
+    enable = mkBoolOpt true "Whether or not to enable yabai.";
   };
+  config = mkIf cfg.enable {
+    # for yabai and skhd
+    services.yabai = {
+      enable = true;
+      package = yabai;
+      # https://github.com/LnL7/nix-darwin/blob/master/modules/services/yabai/default.nix
+      enableScriptingAddition = false;
+      extraConfig = builtins.readFile ./yabairc;
+    };
 
-  launchd.user.agents.yabai.serviceConfig = {
-    StandardErrorPath = "${homeDir}/Library/Logs/yabai.stderr.log";
-    StandardOutPath = "${homeDir}/Library/Logs/yabai.stdout.log";
+    launchd.user.agents.yabai.serviceConfig = {
+      StandardErrorPath = "${homeDir}/Library/Logs/yabai.stderr.log";
+      StandardOutPath = "${homeDir}/Library/Logs/yabai.stdout.log";
+    };
   };
 }
