@@ -141,11 +141,11 @@ in {
     casks = [
       "squirrel" # input method for Chinese, rime-squirrel
       # "google-chrome"
-      "arc" # macOS 12+, browser
+      # "arc" # macOS 12+, browser
 
       # IM & audio & remote desktop & meeting
       # "telegram"
-      "feishu" # for work
+      # "feishu" # for work
       # "discord"
       # "rustdesk"
 
@@ -156,7 +156,7 @@ in {
       # "appcleaner" # app uninstall
       # "applite" # homebrew ui; need macOS 13+
       "hiddenbar" # menubar plugin
-      "picgo" # picbed
+      # "picgo" # picbed
       "the-unarchiver" # zip,unzip
       # "imageoptim"  # image compress
       # "xld"  # 处理cd音频文件，flac等无损音频转化
@@ -168,11 +168,11 @@ in {
       # "musicbrainz-picard"  # 音乐信息刮削
       # "cleanmymac"  # 清理
       # "wpsoffice"  # pdf, word, excel
-      "mounty" # for mount nfts disk
-      "macfuse" # mounty need
+      # "mounty" # for mount nfts disk
+      # "macfuse" # mounty need
 
       # read pdf,...
-      "koodo-reader"
+      # "koodo-reader"
 
       # write
       # "obsidian"
@@ -185,8 +185,8 @@ in {
 
       # keyborader
       # "karabiner-elements"  # 快捷键映射
-      "keyboardholder" # 不同应用自动切输入法
-      "keyclu" # shortcut viewer
+      # "keyboardholder" # 不同应用自动切输入法
+      # "keyclu" # shortcut viewer
 
       # mouse
       "mac-mouse-fix" # 鼠标滚动
@@ -196,7 +196,7 @@ in {
       "clashx-meta" #
       # "zerotier-one"
       # "tailscale"
-      "lulu" # firewall
+      # "lulu" # firewall
 
       # download
       # "motrix"  # 种子下载
@@ -215,7 +215,7 @@ in {
 
       # Development
       # "visual-studio-code"
-      "orbstack" # docker, need macOS 12+
+      # "orbstack" # docker, need macOS 12+
       # "iterm2"
       "wezterm"
       #"intellij-idea" IDEA
