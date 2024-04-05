@@ -148,7 +148,7 @@
     };
 
     rime-main = {
-    # 霧凇拼音
+      # 霧凇拼音
       url = "github:iDvel/rime-ice/main";
       flake = false;
     };
