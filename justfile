@@ -74,6 +74,11 @@ wez-test:
   @rm -f $HOME/.config/wezterm/wezterm.lua
   @ln -s {{justfile_directory()}}/home/apps/wezterm/wezterm.lua $HOME/.config/wezterm/wezterm.lua
 
+# nixos deploy
+[linux]
+deploy host mach:
+  @nixos-rebuild switch --flake .#{{ host }} --target-host {{ mach }} --use-remote-sudo --verbose
+
 # nixos 重建
 [linux]
 rebuild host=profile:
