@@ -112,6 +112,7 @@ in {
       "FelixKratz/formulae" # jankyborders
       "localsend/localsend" # localsend
       "gromgit/fuse" # macfuse,mounty
+      "he3-app/he3"  # he3
     ];
 
     brews = [
@@ -218,6 +219,7 @@ in {
       # "orbstack" # docker, need macOS 12+
       # "iterm2"
       "wezterm"
+      # "he3"
       #"intellij-idea" IDEA
       #"navicat-premium" mysql...
     ];
