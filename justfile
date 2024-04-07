@@ -22,8 +22,8 @@ repl:
   @nix repl -f flake:nixpkgs
 
 # 清理无用的包
-gc:
-  @nix-collect-garbage -d
+gc duration="7d" *args="":
+  @nix-collect-garbage --delete-older-than {{ duration }} {{args}}
 
 # 指定输入更新
 upp input:
