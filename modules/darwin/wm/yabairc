@@ -57,6 +57,7 @@ yabai -m rule --add app="System Information" title="About This Mac" manage=off
 yabai -m rule --add app="System Information" title="System Information" manage=off
 yabai -m rule --add app="Easydict" manage=off
 yabai -m rule --add app="WeChat" title="Window" manage=off
+yabai -m rule --add app="Lark Helper" manage=off # 飞书
 
 # float system preferences
 yabai -m rule --add app="^系统设置$" manage=off

@@ -15,6 +15,7 @@
     #-- go
     go
     gopls # go language server
+    delve # go debugger
 
     #-- lua
     stylua
