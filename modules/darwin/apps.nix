@@ -112,7 +112,7 @@ in {
       "FelixKratz/formulae" # jankyborders
       "localsend/localsend" # localsend
       "gromgit/fuse" # macfuse,mounty
-      "he3-app/he3"  # he3
+      "he3-app/he3" # he3
     ];
 
     brews = [
