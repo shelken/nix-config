@@ -14,5 +14,9 @@
     cargo
     rust-analyzer
     rustfmt
+
+    #-- deploy
+    ansible
+    sshpass
   ];
 }
