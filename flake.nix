@@ -18,7 +18,11 @@
     ];
   };
 
-  outputs = inputs @ {nixpkgs, ...}: let
+  outputs = inputs @ {
+    self,
+    nixpkgs,
+    ...
+  }: let
     inherit (inputs.nixpkgs) lib;
     mylib = import ./lib {inherit lib;};
     myvars = import ./vars {inherit lib;};
@@ -88,6 +92,7 @@
       "aarch64-darwin"
       "x86_64-darwin"
     ];
+    forAllSystems = func: (nixpkgs.lib.genAttrs allSystemAbove func);
   in {
     # linux x86
     nixosConfigurations = {
@@ -102,8 +107,35 @@
       ling = mylib.macosSystem (lingModules // args // {system = "aarch64-darwin";});
     };
 
+    checks = forAllSystems (
+      system: {
+        pre-commit-check = inputs.git-hooks.lib.${system}.run {
+          src = "./.";
+          hooks = {
+            alejandra.enable = true; # formatter
+            typos = {
+              enable = true;
+              settings = {
+                write = true; # Automatically fix typos
+                configPath = "./.typos.toml"; # relative to the flake root
+              };
+            }; # Source code spell checker
+            prettier = {
+              enable = true;
+              settings = {
+                write = true; # Automatically format files
+                configPath = "./.prettierrc.yaml"; # relative to the flake root
+              };
+            }; # 主要用于文档检查
+            # deadnix.enable = true; # detect unused variable bindings in `*.nix`
+            # statix.enable = true; # lints and suggestions for Nix code(auto suggestions)
+          };
+        };
+      }
+    );
+
     # Development Shells
-    devShells = nixpkgs.lib.genAttrs allSystemAbove (
+    devShells = forAllSystems (
       system: let
         pkgs = nixpkgs.legacyPackages.${system};
       in {
@@ -121,15 +153,15 @@
             nodePackages.prettier
           ];
           name = "dots";
-          # shellHook = ''
-          #   ${self.checks.${system}.pre-commit-check.shellHook}
-          # '';
+          shellHook = ''
+            ${self.checks.${system}.pre-commit-check.shellHook}
+          '';
         };
       }
     );
 
     formatter =
-      nixpkgs.lib.genAttrs allSystemAbove (system: nixpkgs.legacyPackages.${system}.alejandra);
+      forAllSystems (system: nixpkgs.legacyPackages.${system}.alejandra);
   };
 
   inputs = {
@@ -187,6 +219,12 @@
     secrets = {
       url = "git+ssh://git@github.com/shelken/secrets.nix.git?shallow=1";
       flake = false;
+    };
+
+    # git-hooks; gen pre-commit-config
+    git-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     #          ╭──────────────────────────────────────────────────────────╮
