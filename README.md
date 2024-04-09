@@ -3,27 +3,44 @@
 ## 初始化
 
 ```bash
-# install homebrew 
+# 1. install homebrew 
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# install nix
+# 2. install nix
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+
+# 3. clone repo
+git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-config
+
+# 4. uninstall yabai and skhd;(if you have installed)
+
+# 5. specify the profile that defined in flake.nix 
+echo "PROFILE=<profile-name>" >> .env
+
+```
+
+## 应用
+
+```bash
+
+# before run, you should have just. `brew install just`
+# switch  
+just switch
+
+# only build result
+just b
+
+```
+
+## 卸载
+
+```bash
 
 # uninstall nix 
 /nix/nix-installer uninstall
 
-# clone repo
-git clone https://github.com/shelken/my-nix-flake.git ~/my-nix-flake
-
-# before run
-# uninstall yabai and skhd;
-echo "PROFILE=<hostname>" >> .env
-
-# run 
-just rebuild
-just switch
-
 ```
+
 
 ## 常见问题
 
