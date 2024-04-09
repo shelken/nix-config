@@ -31,7 +31,7 @@
     # supported languages: only some mainstream languages currently(do not support nix/nginx/yaml/toml/...)
     #ast-grep
     #jq # A lightweight and flexible command-line JSON processor
-    #yq-go # yaml processer https://github.com/mikefarah/yq
+    #yq-go # yaml processor https://github.com/mikefarah/yq
 
     # misc
     tldr

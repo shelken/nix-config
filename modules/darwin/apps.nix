@@ -152,7 +152,7 @@ in {
 
       # Misc
       "iina" # video player
-      # "raycast" # macOS 12+ (HotKey: alt/option + space)search, caculate and run scripts(with many plugins)
+      # "raycast" # macOS 12+ (HotKey: alt/option + space)search, calculate and run scripts(with many plugins)
       "stats" # beautiful system status monitor in menu bar
       # "appcleaner" # app uninstall
       # "applite" # homebrew ui; need macOS 13+
