@@ -3,12 +3,13 @@ ignore-dot = true
 ignore-files = true
 # 忽略文件
 extend-exclude = [
-
+  "*.zsh"
 ]
 
 [default]
 binary = false
 # 自定义不可纠正的文本Custom uncorrectable sections (e.g. markdown code fences, PGP signatures, etc)
 extend-ignore-re = [
-
+  "iterm2",
+  "Deactive",
 ]
