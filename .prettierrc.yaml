@@ -1,0 +1,4 @@
+semi: false # 尾部始终加分号
+singleQuote: false
+printWidth: 100
+proseWrap: always # always change wrapping in markdown text
