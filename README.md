@@ -48,4 +48,15 @@ just b
 
 解决：`sudo rm -rf /nix/store/**.lock`
 
+# 部署
 
+> 在本地部署其他机器
+
+## example
+
+```bash
+# 1 deploy pve156 config on host(pve156) 
+just deploy pve156 shelken@pve156 
+# 2
+just deploy pve156 shelken@192.168.6.156 
+```
