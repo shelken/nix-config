@@ -6,7 +6,7 @@
     # 查询文件内容使用
     ripgrep
 
-    #-- python 
+    #-- python
     nodePackages.pyright
     (python311.withPackages (
       ps:
