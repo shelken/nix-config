@@ -111,16 +111,21 @@ rebuild target=profile: set-proxy
   config_target=".#darwinConfigurations.{{target}}.system"
   nix build $config_target --extra-experimental-features "nix-command flakes" 
 
-# mac 构建; 调试
+# 构建; 调试
 [macos]
 rebuild-debug target=profile: set-proxy
   #!/usr/bin/env bash
   config_target=".#darwinConfigurations.{{target}}.system"
   nix build $config_target --extra-experimental-features "nix-command flakes" --show-trace 
 
-# mac 应用配置; target对应当前主机名
+# 应用配置; target对应当前主机名
 [macos]
 switch target=profile: set-proxy
   #!/usr/bin/env bash
   config_target=".#{{target}}"
   ./result/sw/bin/darwin-rebuild switch --flake $config_target
+
+# 回滚配置
+[macos]
+rollback:
+  ./result/sw/bin/darwin-rebuild --rollback
