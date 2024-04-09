@@ -6,6 +6,15 @@
     # 查询文件内容使用
     ripgrep
 
+    #-- python 
+    nodePackages.pyright
+    (python311.withPackages (
+      ps:
+        with ps; [
+          ruff-lsp
+        ]
+    ))
+
     #-- nix
     nil
     # rnix-lsp  # has been remove
