@@ -3,7 +3,7 @@
 ## 初始化
 
 ```bash
-# 1. install homebrew 
+# 1. install homebrew
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # 2. install nix
@@ -14,7 +14,7 @@ git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-con
 
 # 4. uninstall yabai and skhd;(if you have installed)
 
-# 5. specify the profile that defined in flake.nix 
+# 5. specify the profile that defined in flake.nix
 echo "PROFILE=<profile-name>" >> .env
 
 ```
@@ -24,7 +24,7 @@ echo "PROFILE=<profile-name>" >> .env
 ```bash
 
 # before run, you should have just. `brew install just`
-# switch  
+# switch
 just switch
 
 # only build result
@@ -36,11 +36,10 @@ just b
 
 ```bash
 
-# uninstall nix 
+# uninstall nix
 /nix/nix-installer uninstall
 
 ```
-
 
 ## 常见问题
 
@@ -55,8 +54,8 @@ just b
 ## example
 
 ```bash
-# 1 deploy pve156 config on host(pve156) 
-just deploy pve156 shelken@pve156 
+# 1 deploy pve156 config on host(pve156)
+just deploy pve156 shelken@pve156
 # 2
-just deploy pve156 shelken@192.168.6.156 
+just deploy pve156 shelken@192.168.6.156
 ```

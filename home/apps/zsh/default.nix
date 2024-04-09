@@ -43,7 +43,7 @@ in {
     initExtra = ''
       bindkey '^f' autosuggest-accept
 
-      # p10k custome
+      # p10k custom
       POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION='🤘'
 
       ################

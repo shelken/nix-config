@@ -1,6 +1,6 @@
 {
-    "Alt-/": "lua:comment.comment",
-    "CtrlUnderscore": "lua:comment.comment",
-    "Ctrl-,": "PreviousTab",
-    "Ctrl-.": "NextTab"
+  "Alt-/": "lua:comment.comment",
+  "CtrlUnderscore": "lua:comment.comment",
+  "Ctrl-,": "PreviousTab",
+  "Ctrl-.": "NextTab"
 }
