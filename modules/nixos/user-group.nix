@@ -15,7 +15,7 @@
     hashedPassword = "$6$fp3uxFyqFlkw/uSt$T4ji2Vq6CH/71hQkwTsxgj56iVKP.QF.NFst71D8wNDF5ubazRYqkmr30lNJfPRl3KpM1MOwHwC8Zjsuo5LOx0";
     home = "/home/${username}";
     isNormalUser = true;
-    description = username;
+    # description = username;
     shell = pkgs.zsh;
     extraGroups = [
       username
@@ -24,9 +24,9 @@
       "wheel"
       "docker"
     ];
-    openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK1/TnqUWbdQgCcF1mXsgdMumR7EKGpyKn19SHzhFBuY shelken@yuuko"
-    ];
+    # openssh.authorizedKeys.keys = [
+    #   "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK1/TnqUWbdQgCcF1mXsgdMumR7EKGpyKn19SHzhFBuY shelken@yuuko"
+    # ];
   };
 
   # 默认shell=zsh需要此

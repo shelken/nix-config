@@ -6,5 +6,6 @@
       ../../apps/yazi
       ../../apps/tmux
       ../../apps/zsh
+      ../../apps/dev/direnv.nix
     ];
 }
