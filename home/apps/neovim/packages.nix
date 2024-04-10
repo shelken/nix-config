@@ -40,7 +40,7 @@
     glow # markdown preview
     taplo # TOML language server / formatter / validator
     nodePackages.yaml-language-server
-    sqlfluff # SQL linter
+    # sqlfluff # SQL linter
     actionlint # GitHub Actions linter
 
     #-- Cloud
