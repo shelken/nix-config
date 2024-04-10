@@ -227,6 +227,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    comoji = {
+      url = "github:shelken/comoji";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     #          ╭──────────────────────────────────────────────────────────╮
     #          │                          theme                           │
     #          ╰──────────────────────────────────────────────────────────╯
