@@ -74,6 +74,12 @@ wez-test:
   @rm -f $HOME/.config/wezterm/wezterm.lua
   @ln -s {{justfile_directory()}}/home/apps/wezterm/wezterm.lua $HOME/.config/wezterm/wezterm.lua
 
+commit: 
+  @lazygit
+  @git hook run pre-commit
+  @lazygit
+  @comoji commit
+
 # nixos deploy
 [linux]
 deploy host mach:
