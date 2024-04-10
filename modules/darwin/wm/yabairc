@@ -41,13 +41,15 @@ yabai -m config                                 \
     mouse_action2                resize         \
     mouse_drop_action            swap
 
-yabai -m rule --add app="^IntelliJ IDEA$" manage=off
+# Assign apps to specific spaces
+# yabai -m rule --add app="^Arc$" space=1
+
 yabai -m rule --add app="^OpenAI Translator$" manage=off
 yabai -m rule --add app="^Raycast$" manage=off
 yabai -m rule --add app="^Screen Sharing$" manage=off
 yabai -m rule --add app="^Finder$" title="(Co(py|nnect)|Move|Info|Pref)" manage=off
 yabai -m rule --add app="^Safari$" title="^(General|(Tab|Password|Website|Extension)s|AutoFill|Se(arch|curity)|Privacy|Advance)$" manage=off
-yabai -m rule --add app="^Settings$" title=".*" manage=off
+yabai -m rule --add app="^Settings$" manage=off
 yabai -m rule --add app="^App Store$" manage=off
 yabai -m rule --add app="^Activity Monitor$" manage=off
 yabai -m rule --add app="^Calculator$" manage=off
@@ -56,8 +58,18 @@ yabai -m rule --add title="Software Update" manage=off
 yabai -m rule --add app="System Information" title="About This Mac" manage=off
 yabai -m rule --add app="System Information" title="System Information" manage=off
 yabai -m rule --add app="Easydict" manage=off
-yabai -m rule --add app="WeChat" title="Window" manage=off
+yabai -m rule --add app="WeChat" title!="WeChat \(Chats\)" manage=off
 yabai -m rule --add app="Lark Helper" manage=off # 飞书
+
+# 画中画 PIP 
+yabai -m rule --add app="^Arc$" subrole="^AXSystemDialog$" manage=off
+
+# JetBrains
+JB_Apps='^(CLion|PyCharm|IntelliJ IDEA)$'
+yabai -m rule --add app="${JB_Apps}" manage=off
+# If `Open last project when launch` is checked, add this rule. And make sure `always show project path` is also checked.
+yabai -m rule --add app="${JB_Apps}" title=".*\[.*\].*" manage=on 
+yabai -m rule --add app="${JB_Apps}" title="^$"  manage=on
 
 # float system preferences
 yabai -m rule --add app="^系统设置$" manage=off
