@@ -2,7 +2,6 @@
   home.packages = with pkgs; [
     tldr
     neofetch
-    lazygit
     just
     asciinema
 

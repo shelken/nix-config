@@ -1,4 +1,8 @@
-{myvars, ...}: {
+{
+  myvars,
+  pkgs,
+  ...
+}: {
   # …
 
   programs.git = {
@@ -48,5 +52,11 @@
     };
   };
 
+  home.packages = with pkgs; [
+    onefetch
+    git-cliff # git log to changelog
+    lazygit
+    comoji
+  ];
   # …
 }
