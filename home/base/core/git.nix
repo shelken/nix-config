@@ -3,8 +3,6 @@
   pkgs,
   ...
 }: {
-  # …
-
   programs.git = {
     enable = true;
     userName = myvars.username;
@@ -58,5 +56,8 @@
     lazygit
     comoji
   ];
-  # …
+
+  home.sessionVariables = {
+    COMOJI_EMOJI_FORMAT = "true";
+  };
 }

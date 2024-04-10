@@ -113,11 +113,11 @@
         "utils": "utils"
       },
       "locked": {
-        "lastModified": 1712770216,
-        "narHash": "sha256-zYGtl1WQu6BEMu/RopUUZR7HahaCxMpS3BR9CM+Mhz4=",
+        "lastModified": 1712774787,
+        "narHash": "sha256-p+9cfThbCzCgI9MxHtqOWefBB6598OTR1d5JfEnc05I=",
         "owner": "shelken",
         "repo": "comoji",
-        "rev": "1a670dbc7a79cd130c5154465222d23f22aab3dd",
+        "rev": "f85d99e255ff125637d7f9cb90672c15078161a8",
         "type": "github"
       },
       "original": {
