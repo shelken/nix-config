@@ -74,6 +74,7 @@ wez-test:
   @rm -f $HOME/.config/wezterm/wezterm.lua
   @ln -s {{justfile_directory()}}/home/apps/wezterm/wezterm.lua $HOME/.config/wezterm/wezterm.lua
 
+# 提交
 commit: 
   @lazygit
   @git hook run pre-commit
