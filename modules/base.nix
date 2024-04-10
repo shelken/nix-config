@@ -54,7 +54,7 @@
     #    2. Never leave the device and never sent over the network.
     # 2. Or just use hardware security keys like Yubikey/CanoKey.
     openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK1/TnqUWbdQgCcF1mXsgdMumR7EKGpyKn19SHzhFBuY shelken@macmini"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK1/TnqUWbdQgCcF1mXsgdMumR7EKGpyKn19SHzhFBuY shelken@yuuko"
     ];
   };
 

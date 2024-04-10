@@ -4,6 +4,9 @@
   nixpkgs,
   ...
 }: {
+  imports = [
+    ../base.nix
+  ];
   ###################################################################################
   #
   #  NixOS's core configuration suitable for all my machines
