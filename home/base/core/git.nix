@@ -60,4 +60,8 @@
   home.sessionVariables = {
     COMOJI_EMOJI_FORMAT = "true";
   };
+
+  home.shellAliases = {
+    comojit = "lazygit && comoji commit && lazygit";
+  };
 }
