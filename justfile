@@ -76,10 +76,17 @@ wez-test:
 
 # 提交
 commit: 
-  @lazygit
-  @git hook run pre-commit
-  @lazygit
-  @comoji commit
+  #!/usr/bin/env zsh
+  # add file
+  lazygit && \
+  # pre-commit hook 
+  git hook run pre-commit
+  # 失败后进入查看 
+  if [ $? -ne 0 ]; then 
+    lazygit 
+  fi
+  comoji commit && \
+  lazygit
 
 # nixos deploy
 [linux]
