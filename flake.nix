@@ -110,7 +110,7 @@
     checks = forAllSystems (
       system: {
         pre-commit-check = inputs.git-hooks.lib.${system}.run {
-          src = "./.";
+          src = ./.;
           hooks = {
             alejandra.enable = true; # formatter
             typos = {
