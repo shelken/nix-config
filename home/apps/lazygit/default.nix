@@ -4,7 +4,7 @@
     settings = {
       # diff with difftastic
       git.paging.externalDiffCommand = "difft --color=always";
-      # cappuccins-mocha-pink
+      # catppuccin-mocha-pink
       gui.theme = {
         activeBorderColor = ["#f5c2e7" "bold"];
         inactiveBorderColor = ["#a6adc8"];

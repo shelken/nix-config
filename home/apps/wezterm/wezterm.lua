@@ -3,7 +3,8 @@ local config = {
 	font_size = 20,
 	-- font = wezterm.font("JetBrainsMonoNL Nerd Font", { weight = "Regular" }),
 	font = wezterm.font("FiraCode Nerd Font Mono", { weight = "Regular" }),
-	color_scheme = "Catppuccin Mocha",
+	-- color_scheme = "Catppuccin Mocha",
+	color_scheme = "Catppuccin Macchiato", -- or Mocha, Frappe, Latte, Macchiato
 
 	use_fancy_tab_bar = false,
 	hide_tab_bar_if_only_one_tab = true,
