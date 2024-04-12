@@ -237,7 +237,7 @@
     #          ╰──────────────────────────────────────────────────────────╯
     # btop主题
     catppuccin-btop = {
-      url = "github:catppuccin/btop";
+      url = "github:catppuccin/btop/c6469190f2ecf25f017d6120bf4e050e6b1d17af";
       flake = false;
     };
 
@@ -247,7 +247,7 @@
     };
 
     catppuccin-yazi = {
-      url = "github:catppuccin/yazi";
+      url = "github:catppuccin/yazi/0846aed69b2a62d29c98e100af0cf55ca729723d";
       flake = false;
     };
   };
