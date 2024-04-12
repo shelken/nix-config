@@ -33,8 +33,4 @@
     withPython3 = true;
     withNodeJs = true;
   };
-
-  programs.lazygit = {
-    enable = true;
-  };
 }

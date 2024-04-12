@@ -46,6 +46,7 @@
     # sqlfluff # SQL linter
     actionlint # GitHub Actions linter
     buf-language-server # bufls
+    lazygit
 
     #-- Cloud
     nodePackages.dockerfile-language-server-nodejs
