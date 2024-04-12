@@ -2,6 +2,9 @@
   home.packages = with pkgs; [
     # c
     gcc # 插件需要
+    # c/c++ tools with clang-tools, the unwrapped version won't
+    # add alias like `cc` and `c++`, so that it won't conflict with gcc
+    llvmPackages.clang-unwrapped
     gnumake
     # 查询文件内容使用
     ripgrep
@@ -42,6 +45,7 @@
     nodePackages.yaml-language-server
     # sqlfluff # SQL linter
     actionlint # GitHub Actions linter
+    buf-language-server # bufls
 
     #-- Cloud
     nodePackages.dockerfile-language-server-nodejs
