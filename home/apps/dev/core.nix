@@ -18,5 +18,8 @@
     #-- deploy
     ansible
     sshpass
+
+    # misc
+    protobuf
   ];
 }
