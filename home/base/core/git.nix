@@ -3,10 +3,16 @@
   pkgs,
   ...
 }: {
+  imports = [
+    ../../apps/lazygit
+  ];
   programs.git = {
     enable = true;
     userName = myvars.username;
     userEmail = myvars.useremail;
+    ignores = [
+      ".DS_Store"
+    ];
     attributes = [
     ];
     includes = [
@@ -48,12 +54,12 @@
       # update = "submodule update --init --recursive";
       # foreach = "submodule foreach";
     };
+    difftastic.enable = true; # https://github.com/Wilfred/difftastic.
   };
 
   home.packages = with pkgs; [
     onefetch
-    git-cliff # git log to changelog
-    lazygit
+    git-cliff
     comoji
   ];
 
