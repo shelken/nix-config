@@ -35,6 +35,10 @@
           # To use chrome, we need to allow the installation of non-free software
           config.allowUnfree = true;
         };
+        mylibx = import ./lib/extend.nix {
+          pkgs = import inputs.nixpkgs {inherit system;};
+          inherit lib;
+        };
         inherit mylib myvars system;
         inherit (myvars) username userfullname useremail;
       };
@@ -248,6 +252,11 @@
 
     catppuccin-yazi = {
       url = "github:catppuccin/yazi/0846aed69b2a62d29c98e100af0cf55ca729723d";
+      flake = false;
+    };
+
+    catppuccin-lazygit = {
+      url = "github:catppuccin/lazygit/30bff2e6d14ca12a09d71e5ce4e6a086b3e48aa6";
       flake = false;
     };
   };
