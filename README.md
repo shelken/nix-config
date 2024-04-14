@@ -19,7 +19,7 @@
 
 <p align="center">
   <a href="https://github.com/shelken/nix-config/commits"><img src="https://img.shields.io/github/last-commit/shelken/nix-config?logo=nixos&labelColor=363a4f&color=f5a97f&style=for-the-badge"></a>
-  <a href="https://github.com/shelken/dotfiles.nix"><img src="https://img.shields.io/github/last-commit/shelken/dotfiles.nix?label=dotfiles&logoColor=363a4f&color=cba6f7&style=for-the-badge"></a>
+  <a href="https://github.com/shelken/dotfiles.nix"><img src="https://img.shields.io/github/last-commit/shelken/dotfiles.nix?label=dotfiles&logoColor=363a4f&color=C6A0F6&style=for-the-badge"></a>
     <a href="https://github.com/shelken/dotfiles.nix"><img src="https://img.shields.io/github/actions/workflow/status/shelken/dotfiles.nix/sync-upstream.yml?label=dotfiles&logo=githubactions&logoColor=white&labelColor=363a4f&color=b7bdf8&style=for-the-badge"></a>
 </p>
 
