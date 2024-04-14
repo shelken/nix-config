@@ -131,6 +131,10 @@ up:
 upp input:
   @nix flake lock --update-input {{ input }}
 
+# view flake.lock
+view:
+  @nix-melt
+
 # 调试wez
 wez-test:
   @rm -f $HOME/.config/wezterm/wezterm.lua
