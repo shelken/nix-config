@@ -1,5 +1,5 @@
 <h3 align="center">
-  <img src="https://avatars.githubusercontent.com/u/33972006?v=4" width="100" alt="Logo"/><br/>
+  <img src="https://images.weserv.nl/?url=https://avatars.githubusercontent.com/u/33972006?v=4" width="100" alt="Logo"/><br/>
   <img src="https://raw.githubusercontent.com/catppuccin/catppuccin/main/assets/misc/transparent.png" height="30" width="0px"/>
   <img src="https://nixos.org/logo/nixos-logo-only-hires.png" height="20" /> NixOS Config for <a href="https://github.com/shelken">Shelken</a>
   <img src="https://raw.githubusercontent.com/catppuccin/catppuccin/main/assets/misc/transparent.png" height="30" width="0px"/>
