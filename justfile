@@ -78,13 +78,10 @@ wez-test:
 commit: 
   #!/usr/bin/env zsh
   # add file
-  lazygit && \
+  git add . && \
   # pre-commit hook 
   git hook run pre-commit
-  # 失败后进入查看 
-  if [ $? -ne 0 ]; then 
-    lazygit 
-  fi
+  lazygit
   comoji commit && \
   lazygit
 
