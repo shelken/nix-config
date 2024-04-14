@@ -1,4 +1,4 @@
-{...}: let
+_: let
   logFile = "/var/tmp/sketchybar.log";
 in {
   services.sketchybar = {

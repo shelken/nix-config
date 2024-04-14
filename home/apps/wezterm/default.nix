@@ -1,4 +1,4 @@
-{...}: {
+_: {
   programs.wezterm = {
     # 使用Homebrew
     enable = false;
