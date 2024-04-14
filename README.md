@@ -1,3 +1,30 @@
+<h3 align="center">
+  <img src="https://avatars.githubusercontent.com/u/33972006?v=4" width="100" alt="Logo"/><br/>
+  <img src="https://raw.githubusercontent.com/catppuccin/catppuccin/main/assets/misc/transparent.png" height="30" width="0px"/>
+  <img src="https://nixos.org/logo/nixos-logo-only-hires.png" height="20" /> NixOS Config for <a href="https://github.com/shelken">Shelken</a>
+  <img src="https://raw.githubusercontent.com/catppuccin/catppuccin/main/assets/misc/transparent.png" height="30" width="0px"/>
+</h3>
+
+<h6 align="center">
+  <a href="#darwin">Darwin</a>
+  ·
+  <a href="#部署">部署</a>
+  ·
+  <a href="#引用">引用</a>
+</h6>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/catppuccin/catppuccin/main/assets/palette/macchiato.png" width="400" />
+</p>
+
+<p align="center">
+  <a href="https://github.com/shelken/nix-config/commits"><img src="https://img.shields.io/github/last-commit/shelken/nix-config?logo=nixos&labelColor=363a4f&color=f5a97f&style=for-the-badge"></a>
+  <a href="https://github.com/shelken/dotfiles.nix"><img src="https://img.shields.io/github/last-commit/shelken/dotfiles.nix?label=dotfiles&logoColor=363a4f&color=cba6f7&style=for-the-badge"></a>
+    <a href="https://github.com/shelken/dotfiles.nix"><img src="https://img.shields.io/github/actions/workflow/status/shelken/dotfiles.nix/sync-upstream.yml?label=dotfiles&logo=githubactions&logoColor=white&labelColor=363a4f&color=b7bdf8&style=for-the-badge"></a>
+</p>
+
+&nbsp;
+
 # darwin
 
 ## 初始化
@@ -59,3 +86,16 @@ just deploy pve156 shelken@pve156
 # 2
 just deploy pve156 shelken@192.168.6.156
 ```
+
+# 引用
+
+> 配置参考来源
+
+- [ryan4yin's nix-config](https://github.com/ryan4yin/nix-config) `*`主要配置来源
+- [khaneliman/khanelinix](https://github.com/khaneliman/khanelinix) `*`使用 Snowfall 感觉不错
+- [catppuccin/catppuccin](https://github.com/catppuccin/catppuccin) `*`主题配色
+- [Home Manager Options](https://home-manager-options.extranix.com)
+- [Nix Darwin Configuration Options](https://daiderd.com/nix-darwin/manual/index.html)
+- [NixOS Packages Search](https://search.nixos.org/packages)
+- [NixOS Options Search](https://search.nixos.org/options)
+- [NixOS 与 Flakes 一份非官方的新手指南](https://nixos-and-flakes.thiscute.world/zh) `*`中文教程
