@@ -20,6 +20,30 @@ in {
       preview = {
         tab_size = 3;
       };
+      plugin = {
+        prepend_previewers = [
+          {
+            name = "*.md";
+            run = "glow";
+          }
+        ];
+      };
+    };
+    keymap = {
+      manager = {
+        prepend_keymap = [
+          # {
+          #   on = [ "f" "g"];
+          #   run = "plugin fg";
+          #   desc = "find file by content";
+          # }
+          # {
+          #   on = [ "f" "f"];
+          #   run = "plugin fg --args='fzf'";
+          #   desc = "find file by file name";
+          # }
+        ];
+      };
     };
   };
 
@@ -28,6 +52,12 @@ in {
     fd
     exiftool
     mediainfo
+    # for markdown preview
+    glow
+    # for fg.yazi
+    # fzf
+    # ripgrep
+    # bat
   ];
 
   xdg.configFile = {
@@ -37,5 +67,30 @@ in {
     "yazi/Catppuccin-${yazi_theme}.tmTheme" = {
       source = catppuccin-bat + "/themes/Catppuccin ${bat_flavor}.tmTheme";
     };
+    # not good
+    # "yazi/plugins/fg.yazi" = {
+    #   source = pkgs.fetchFromGitHub {
+    #     owner = "DreamMaoMao";
+    #     repo = "fg.yazi";
+    #     rev = "cc53d56";
+    #     sha256 = "sha256-xUZdmDZhbUzX5Ka2xogRQJI52EL81n9ZLrcxDacgfN0=";
+    #   };
+    # };
+    "yazi/plugins/glow.yazi" = {
+      source = pkgs.fetchFromGitHub {
+        owner = "Reledia";
+        repo = "glow.yazi";
+        rev = "cf1f1f0";
+        sha256 = "sha256-U4ullcOwN6TCaZ8gXCPMk/fGbtZLe4e1Y0RhRKLZKng=";
+      };
+    };
+    # "yazi/plugins/preview.yazi" = {
+    #   source = pkgs.fetchFromGitHub {
+    #     owner = "Urie96";
+    #     repo = "preview.yazi";
+    #     rev = "eab63ea";
+    #     sha256 = "sha256-WhAZyME8IVEmGQTAIxUSMDXPf0xqqAHixYfT8lXBtIQ=";
+    #   };
+    # };
   };
 }
