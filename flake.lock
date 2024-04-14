@@ -170,11 +170,11 @@
     "dot-astro-nvim": {
       "flake": false,
       "locked": {
-        "lastModified": 1712946668,
-        "narHash": "sha256-BP25dtgDX1nuuDs3qPPFCQBnuG5FK+UFakx6KJ3YPFM=",
+        "lastModified": 1713103168,
+        "narHash": "sha256-ZcALnTkoiBAdGai6vKqm3ZS0yCCWS1CZYBH0NS5jLYA=",
         "owner": "shelken",
         "repo": "dot-astro-nvim",
-        "rev": "55004e9119fdd62edf730444b6a5ada8d2a614cc",
+        "rev": "2ebea93af48a9181aea9ad2aa634c0c8392331d1",
         "type": "github"
       },
       "original": {
@@ -199,36 +199,19 @@
         "type": "github"
       }
     },
-    "dot-yabai": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1711198519,
-        "narHash": "sha256-K67rnt9nnfKam+aVx5K9G/u1SIY3kHtKa/7LBkz0wDc=",
-        "owner": "shelken",
-        "repo": "dot-yabai",
-        "rev": "c741ac31b809683487d518728fe0c1a1ebafc3e8",
-        "type": "github"
-      },
-      "original": {
-        "owner": "shelken",
-        "repo": "dot-yabai",
-        "type": "github"
-      }
-    },
     "dotfiles": {
       "inputs": {
         "dot-astro-nvim": "dot-astro-nvim",
         "dot-tmux": "dot-tmux",
-        "dot-yabai": "dot-yabai",
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1712946705,
-        "narHash": "sha256-eVK+B807jwN65ObJpykGzDcvVXs7KkWAdT8epCb2K2o=",
+        "lastModified": 1713114679,
+        "narHash": "sha256-QH8DNeny8PuxeWaihmo1m+N+2ArFcWRI+hWPG2XTDmg=",
         "owner": "shelken",
         "repo": "dotfiles.nix",
-        "rev": "47436a6a9d96c404654fecc531da43fea775ac42",
+        "rev": "8989bef25fbed8b0419a2d27dd1030ec539997ee",
         "type": "github"
       },
       "original": {
@@ -500,11 +483,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1710806803,
-        "narHash": "sha256-qrxvLS888pNJFwJdK+hf1wpRCSQcqA6W5+Ox202NDa0=",
+        "lastModified": 1712791164,
+        "narHash": "sha256-3sbWO1mbpWsLepZGbWaMovSO7ndZeFqDSdX0hZ9nVyw=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "b06025f1533a1e07b6db3e75151caa155d1c7eb3",
+        "rev": "1042fd8b148a9105f3c0aca3a6177fd1d9360ba5",
         "type": "github"
       },
       "original": {
