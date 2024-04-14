@@ -26,6 +26,8 @@ in {
   home.packages = with pkgs; [
     file
     fd
+    exiftool
+    mediainfo
   ];
 
   xdg.configFile = {
