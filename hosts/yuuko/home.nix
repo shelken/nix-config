@@ -1,5 +1,5 @@
 {myvars, ...}: {
   programs.ssh = {
-    extraConfig = myvars.networking.ssh.extraConfig;
+    inherit (myvars.networking.ssh) extraConfig;
   };
 }
