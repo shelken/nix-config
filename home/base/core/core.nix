@@ -8,6 +8,7 @@
     neofetch
     just
     asciinema
+    ctop
 
     # nix tool
     # https://github.com/nix-community/nix-melt

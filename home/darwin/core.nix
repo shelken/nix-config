@@ -8,5 +8,6 @@
     gh
     glab
     nali
+    rclone
   ];
 }
