@@ -169,6 +169,8 @@
           packages = with pkgs; [
             # fix https://discourse.nixos.org/t/non-interactive-bash-errors-from-flake-nix-mkshell/33310
             bashInteractive
+            # deploy
+            colmena
             # Nix-related
             alejandra
             deadnix
