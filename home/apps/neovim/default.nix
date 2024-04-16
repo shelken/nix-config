@@ -1,6 +1,9 @@
 {
-  astronvim,
+  # astronvim,
   astronvim-config,
+  lib,
+  pkgs,
+  config,
   ...
 }: {
   # 使用 lazygit
@@ -8,20 +11,9 @@
     ./packages.nix
   ];
 
-  xdg.configFile = {
-    # astronvim's config
-    "nvim" = {
-      source = astronvim;
-      force = true;
-    };
-
-    # my custom astronvim config, astronvim will load it after base config
-    # https://github.com/AstroNvim/AstroNvim/blob/v3.32.0/lua/astronvim/bootstrap.lua#L15-L16
-    "astronvim/lua/user" = {
-      source = astronvim-config;
-      force = true;
-    };
-  };
+  home.activation.installAstroNvim = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    ${pkgs.rsync}/bin/rsync -avz --chmod=D2755,F744 ${astronvim-config}/ ${config.xdg.configHome}/nvim/
+  '';
 
   programs.neovim = {
     enable = true;

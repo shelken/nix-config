@@ -195,14 +195,14 @@
     };
 
     # astronvim
-    astronvim = {
-      url = "github:AstroNvim/AstroNvim/v3.45.3";
-      flake = false;
-    };
+    # astronvim = {
+    #   url = "github:AstroNvim/AstroNvim/v3.45.3";
+    #   flake = false;
+    # };
 
     # my astronvim config
     astronvim-config = {
-      url = "github:shelken/astro-nvim-config";
+      url = "github:shelken/dot-astro-nvim";
       flake = false;
     };
 

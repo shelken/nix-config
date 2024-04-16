@@ -23,36 +23,19 @@
         "type": "github"
       }
     },
-    "astronvim": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1710957235,
-        "narHash": "sha256-69DBcOpjDZBMOQGz8obMBFpEBeoSWuXZ4CNAK2GqI+M=",
-        "owner": "AstroNvim",
-        "repo": "AstroNvim",
-        "rev": "0da3fa834137597f13e53196c8c6f7e1425601ea",
-        "type": "github"
-      },
-      "original": {
-        "owner": "AstroNvim",
-        "ref": "v3.45.3",
-        "repo": "AstroNvim",
-        "type": "github"
-      }
-    },
     "astronvim-config": {
       "flake": false,
       "locked": {
-        "lastModified": 1713103168,
-        "narHash": "sha256-ZcALnTkoiBAdGai6vKqm3ZS0yCCWS1CZYBH0NS5jLYA=",
+        "lastModified": 1713240388,
+        "narHash": "sha256-HjsvuzkB6SGWXxICJego9YzH0aqhwWb24XEsUkMYPTk=",
         "owner": "shelken",
-        "repo": "astro-nvim-config",
-        "rev": "2ebea93af48a9181aea9ad2aa634c0c8392331d1",
+        "repo": "dot-astro-nvim",
+        "rev": "ec7d62de3a96360fde5a3e9b85c244b727c0b6ba",
         "type": "github"
       },
       "original": {
         "owner": "shelken",
-        "repo": "astro-nvim-config",
+        "repo": "dot-astro-nvim",
         "type": "github"
       }
     },
@@ -613,7 +596,6 @@
     "root": {
       "inputs": {
         "agenix": "agenix",
-        "astronvim": "astronvim",
         "astronvim-config": "astronvim-config",
         "catppuccin-bat": "catppuccin-bat",
         "catppuccin-btop": "catppuccin-btop",
