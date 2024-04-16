@@ -1,6 +1,7 @@
 {lib, ...}: let
   inherit (lib) mkOption types;
 in {
+  colmenaSystem = import ./colmenaSystem.nix;
   macosSystem = import ./macosSystem.nix;
   nixosSystem = import ./nixosSystem.nix;
   relativeToRoot = lib.path.append ../.;

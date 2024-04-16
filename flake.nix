@@ -111,6 +111,28 @@
       ling = mylib.macosSystem (lingModules // args // {system = "aarch64-darwin";});
     };
 
+    colmena =
+      {
+        meta = (
+          let
+            system = "x86_64-linux";
+          in {
+            # colmena's default nixpkgs & specialArgs
+            nixpkgs = import nixpkgs {inherit system;};
+            specialArgs = genSpecialArgs system;
+          }
+        );
+      }
+      // {
+        pve156 = mylib.colmenaSystem (pve156Modules
+          // args
+          // {
+            tags = ["pve156"];
+            ssh-user = myvars.username;
+            system = "x86_64-linux";
+          });
+      };
+
     checks = forAllSystems (
       system: {
         pre-commit-check = inputs.git-hooks.lib.${system}.run {
