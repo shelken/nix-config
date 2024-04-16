@@ -22,7 +22,7 @@ in {
       unsetopt AUTO_REMOVE_SLASH
     '';
     shellAliases = {
-      ll = "eza --icons -la -T -L=1";
+      ll = "eza --icons -l -T -L=1";
       record = "asciinema rec --overwrite -i 1 --rows 28 --cols 140";
       #update = "sudo nixos-rebuild switch";
       proxy = "export https_proxy=http://127.1:7896 http_proxy=http://127.1:7896";
