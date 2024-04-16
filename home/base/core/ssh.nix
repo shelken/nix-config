@@ -1,4 +1,4 @@
-_: {
+{myvars, ...}: {
   programs.ssh = {
     enable = true;
     extraConfig = ''
@@ -6,7 +6,7 @@ _: {
         User git
         HostName ssh.github.com
         Port 443
-
+      ${myvars.networking.ssh.extraConfig}
     '';
   };
 }
