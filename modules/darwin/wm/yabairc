@@ -68,8 +68,8 @@ yabai -m rule --add app="^Arc$" subrole="^AXSystemDialog$" manage=off
 JB_Apps='^(CLion|PyCharm|IntelliJ IDEA)$'
 yabai -m rule --add app="${JB_Apps}" manage=off
 # If `Open last project when launch` is checked, add this rule. And make sure `always show project path` is also checked.
-yabai -m rule --add app="${JB_Apps}" title=".*\[.*\].*" manage=on 
-yabai -m rule --add app="${JB_Apps}" title="^$"  manage=on
+yabai -m rule --add app="${JB_Apps}" title=".*\[.*\].+" manage=on 
+# yabai -m rule --add app="${JB_Apps}" title="^$"  manage=on
 
 # float system preferences
 yabai -m rule --add app="^系统设置$" manage=off
