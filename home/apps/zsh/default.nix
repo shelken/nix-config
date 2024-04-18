@@ -19,6 +19,7 @@ in {
       setopt HIST_FCNTL_LOCK
       setopt HIST_IGNORE_ALL_DUPS
       setopt SHARE_HISTORY
+      setopt EXTENDED_HISTORY
       unsetopt AUTO_REMOVE_SLASH
     '';
     shellAliases = {
