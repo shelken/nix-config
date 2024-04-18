@@ -4,7 +4,7 @@
     gcc # 插件需要
     # c/c++ tools with clang-tools, the unwrapped version won't
     # add alias like `cc` and `c++`, so that it won't conflict with gcc
-    llvmPackages.clang-unwrapped
+    # llvmPackages.clang-unwrapped
     gnumake
     # 查询文件内容使用
     ripgrep
@@ -15,6 +15,7 @@
       ps:
         with ps; [
           ruff-lsp
+          black # python formatter
         ]
     ))
 
@@ -23,9 +24,14 @@
     # rnix-lsp  # has been remove
     statix # Lints and suggestions for the nix programming language
     deadnix # Find and remove unused code in .nix source files
+    alejandra # Nix Code Formatter
 
     #-- go
     go
+    gomodifytags
+    iferr # generate error handling code for go
+    impl # generate function implementation for go
+    gotools # contains tools like: godoc, goimports, etc.
     gopls # go language server
     delve # go debugger
 
@@ -46,6 +52,8 @@
     # sqlfluff # SQL linter
     actionlint # GitHub Actions linter
     buf-language-server # bufls
+    tree-sitter # common language parser/highlighter
+    nodePackages.prettier # common code formatter
     lazygit
 
     #-- Cloud
