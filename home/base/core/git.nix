@@ -29,13 +29,18 @@
     };
     aliases = {
       # common aliases
-      # br = "branch";
-      # co = "checkout";
-      # st = "status";
-      ls = "log --pretty=format:\"%C(yellow)%h%Cred%d\\\\ %Creset%s%Cblue\\\\ [%cn]\" --decorate";
-      ll = "log --pretty=format:\"%C(yellow)%h%Cred%d\\\\ %Creset%s%Cblue\\\\ [%cn]\" --decorate --numstat";
+      br = "branch";
+      co = "checkout";
+      st = "status";
+
       # git change-commits GIT_COMMITTER_NAME "old name" "new name"
       change-commits = "!f() { VAR=$1; OLD=$2; NEW=$3; shift 3; git filter-branch --env-filter \"if [[ \\\"$`echo $VAR`\\\" = '$OLD' ]]; then export $VAR='$NEW'; fi\" $@; }; f ";
+      # search config
+      cs = "config --get-regexp";
+
+      ls = "log --pretty=format:\"%C(yellow)%h%Cred%d\\\\ %Creset%s%Cblue\\\\ [%cn]\" --decorate";
+      ll = "log --pretty=format:\"%C(yellow)%h%Cred%d\\\\ %Creset%s%Cblue\\\\ [%cn]\" --decorate --numstat";
+
       # cm = "commit -m"; # commit via `git cm <message>`
       # ca = "commit -am"; # commit all changes via `git ca <message>`
       # dc = "diff --cached";

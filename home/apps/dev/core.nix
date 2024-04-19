@@ -19,6 +19,9 @@
     ansible
     sshpass
 
+    #-- container
+    dive # A tool for exploring each layer in a docker image
+
     # misc
     protobuf
   ];
