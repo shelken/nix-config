@@ -4,7 +4,7 @@
     sops
 
     #-- java
-    # jdk17
+    jdk17
     maven
 
     #-- golang
@@ -25,4 +25,8 @@
     # misc
     protobuf
   ];
+  programs.java = {
+    enable = true;
+    package = pkgs.jdk17;
+  };
 }
