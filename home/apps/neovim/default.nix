@@ -1,11 +1,13 @@
 {
-  # astronvim,
-  astronvim-config,
+  dotfiles,
+  system,
   lib,
   pkgs,
   config,
   ...
-}: {
+}: let
+  astronvim-config = dotfiles.packages.${system}.dot-astro-nvim;
+in {
   # 使用 lazygit
   imports = [
     ./packages.nix
