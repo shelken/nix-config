@@ -573,11 +573,11 @@
     "rime-config": {
       "flake": false,
       "locked": {
-        "lastModified": 1712946430,
-        "narHash": "sha256-LuVNweGKWwaOCM4e7SbwT14ICjOPS7ZTYKu82zLKQJk=",
+        "lastModified": 1713856397,
+        "narHash": "sha256-3ledR7dMlCviA6Pjod5N+llKYEw+PwhiEgPza2cnemw=",
         "owner": "shelken",
         "repo": "rime-auto-deploy",
-        "rev": "038653cc647f09022a41221ade4d711de45ca29d",
+        "rev": "cb0e77ad4ec0edd9c8520613543f2203528c2fa2",
         "type": "github"
       },
       "original": {

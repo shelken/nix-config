@@ -27,6 +27,16 @@ commit:
   comoji commit && \
   lazygit
 
+# 检查theme
+check-themes:
+  #!/usr/bin/env bash
+  array=("btop" "bat" "squirrel" "lazygit" "wezterm" "yazi" "tmux")
+  for i in "${array[@]}"; do
+    # echo $(gh repo view catppuccin/"$i" --json name,updatedAt)
+    nix-prefetch-git --no-deepClone --quiet --url "git@github.com:catppuccin/$i" --rev HEAD | jq ". | {url, date}" &
+  done
+  wait
+
 # nixos deploy
 [linux]
 deploy host mach:
@@ -57,7 +67,7 @@ prefetch-gh owner-repo rev:
 
 # nix-prefetch-git
 prefetch-git repo rev:
-  @nix-prefetch-git --url 'git@github.com:{{ repo }}' --rev '{{ rev }}' --fetch-submodules
+  @nix-prefetch-git --no-deepClone --quiet --url 'git@github.com:{{ repo }}' --rev '{{ rev }}' --fetch-submodules
 
 # nix-prefetch-url
 prefetch-url url:
