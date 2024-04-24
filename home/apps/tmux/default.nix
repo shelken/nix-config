@@ -31,8 +31,8 @@
   catppuccin = pkgs.fetchFromGitHub {
     owner = "catppuccin";
     repo = "tmux";
-    rev = "e80cb735bbcd264ff971fdf7e58b219b60286c81";
-    hash = "sha256-l6RGtRlMsVcA8t/Qpkin8M4wX1OTFNwwpY5PSf8E+rA=";
+    rev = "a556353d60833367b13739e660d4057a96f2f4fe";
+    hash = "sha256-i5rnMnkFGOWeRi38euttei/fVIxlrV6dQxemAM+LV0A=";
   };
   resurrect = pkgs.fetchFromGitHub {
     owner = "tmux-plugins";
