@@ -35,6 +35,18 @@ in {
       {
         plugin = tmuxPlugins.catppuccin;
         extraConfig = ''
+          # 左下样式
+          set -g @catppuccin_window_left_separator "█"
+          set -g @catppuccin_window_right_separator "█ "
+          set -g @catppuccin_window_number_position "right"
+          set -g @catppuccin_window_middle_separator "  █"
+          # 右侧状态栏
+          set -g @catppuccin_status_modules_right "application session date_time"
+          set -g @catppuccin_status_left_separator  ""
+          set -g @catppuccin_status_right_separator " "
+          set -g @catppuccin_status_fill "all"
+          set -g @catppuccin_status_connect_separator "yes"
+          # set -g @catppuccin_date_time_text "%Y-%m-%d"
           set -g @catppuccin_flavour ${theme}
         '';
       }
