@@ -62,8 +62,8 @@ nvim-clean:
   @rm -rf $HOME/.config/astronvim/lua/user
 
 # github sha256计算
-prefetch-gh owner-repo rev:
-  @nix-prefetch-url --print-path --unpack https://github.com/{{ owner-repo }}/archive/{{ rev }}.tar.gz | awk 'NR>1{print $1}' | xargs nix-hash --sri --type sha256
+prefetch-gh owner repo rev="HEAD":
+  @nix-prefetch-github --no-deep-clone --quiet --rev {{ rev }} {{ owner }} {{ repo }}
 
 # nix-prefetch-git
 prefetch-git repo rev:

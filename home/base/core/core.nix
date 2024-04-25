@@ -16,6 +16,7 @@
     # https://github.com/utdemir/nix-tree
     nix-tree # A TUI to visualize the dependency graph of a nix derivation
     nix-prefetch-git
+    nix-prefetch-github
   ];
   programs = {
     # A modern replacement for ‘ls’

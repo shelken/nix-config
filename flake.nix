@@ -179,6 +179,9 @@
             typos
             # code formatter
             nodePackages.prettier
+            # tools
+            nix-prefetch-git
+            nix-prefetch-github
           ];
           name = "dots";
           shellHook = ''
