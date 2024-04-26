@@ -1,0 +1,43 @@
+customCommands:
+  - key: "<c-c>"
+    description: "commit as non-default author"
+    command:
+      'git commit -m "{{index .PromptResponses 0}}" --author="{{index .PromptResponses 1}} <{{index
+      .PromptResponses 2}}>"'
+    context: "files"
+    prompts:
+      - type: "input"
+        title: "Commit Message"
+        initialValue: ""
+      - type: "input"
+        title: "Author Name"
+        initialValue: ""
+      - type: "input"
+        title: "Email Address"
+        initialValue: ""
+    loadingText: "committing"
+  - key: t
+    command: tig show {{.SelectedSubCommit.Sha}}
+    context: subCommits
+    description: tig commit (`t` again to browse files at revision)
+    subprocess: true
+  - key: t
+    command: tig show {{.SelectedLocalBranch.Name}}
+    context: localBranches
+    description: tig branch (`t` again to browse files at revision)
+    subprocess: true
+  - key: t
+    command: tig show {{.SelectedRemoteBranch.RemoteName}}/{{.SelectedRemoteBranch.Name}}
+    context: remoteBranches
+    description: tig branch (`t` again to browse files at revision)
+    subprocess: true
+  - key: t
+    command: tig {{.SelectedSubCommit.Sha}} -- {{.SelectedCommitFile.Name}}
+    context: commitFiles
+    description: tig file (history of commits affecting file)
+    subprocess: true
+  - key: t
+    command: tig -- {{.SelectedFile.Name}}
+    context: files
+    description: tig file (history of commits affecting file)
+    subprocess: true
