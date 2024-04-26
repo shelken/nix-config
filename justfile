@@ -69,9 +69,13 @@ prefetch-gh owner repo rev="HEAD":
 prefetch-git repo rev:
   @nix-prefetch-git --no-deepClone --quiet --url 'git@github.com:{{ repo }}' --rev '{{ rev }}' --fetch-submodules
 
-# nix-prefetch-url
+# nix-prefetch-url, 用于pypi等
 prefetch-url url:
-  @nix-prefetch-url --print-path --unpack '{{ url }}' | awk 'NR>1{print $1}' | xargs nix-hash --sri --type sha256
+  @nix-prefetch-url --print-path '{{ url }}' | awk 'NR>1{print $1}' | xargs nix-hash --flat --base32 --type sha256 --sri
+
+# nix-prefetch-url2, 用于github
+prefetch-url2 url:
+  @nix-prefetch-url --print-path --unpack '{{ url }}' | awk 'NR>1{print $1}' | xargs nix-hash --type sha256 --sri
 
 # git pull
 pull:
