@@ -9,5 +9,6 @@
       ../apps/dev
       ../apps/wezterm
       ../apps/squirrel
+      ../apps/kitty
     ];
 }

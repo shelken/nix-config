@@ -57,6 +57,14 @@ git-temp:
   @git pull --rebase
   @git stash pop
 
+# kitty clean
+kitty-clean:
+  @rm -f $HOME/.config/kitty/kitty.conf
+
+# 调试 kitty
+kitty-test: kitty-clean
+  @ln -s {{justfile_directory()}}/home/apps/kitty/kitty.conf $HOME/.config/kitty/kitty.conf
+
 # 清除nvim
 nvim-clean:
   @rm -rf $HOME/.config/astronvim/lua/user
