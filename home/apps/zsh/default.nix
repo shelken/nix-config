@@ -46,6 +46,8 @@ in {
 
       # p10k custom
       POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION='🤘'
+      # mitigation: https://github.com/romkatv/powerlevel10k?tab=readme-ov-file#mitigation
+      POWERLEVEL9K_TERM_SHELL_INTEGRATION=true
 
       ################
       # 特定机器配置 #
