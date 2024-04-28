@@ -89,6 +89,6 @@ yabai -m rule --add title='Settings$' manage=off
 # yabai -m signal --add event=dock_did_restart action="sudo yabai --load-sa"
 
 # boarders 该路径在x86上可能不行
-/opt/homebrew/bin/borders active_color=0xffCAD3F5 inactive_color=0xbb282E44 hidpi=on width=5.0 &
+/opt/homebrew/bin/borders active_color=0xffCAD3F5 inactive_color=0xbb282E44 hidpi=on width=3.0 &
 
 echo "yabai configuration loaded.."

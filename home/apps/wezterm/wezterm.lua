@@ -10,8 +10,8 @@ local config = {
 	hide_tab_bar_if_only_one_tab = true,
 	window_decorations = "RESIZE",
 	show_new_tab_button_in_tab_bar = false,
-	window_background_opacity = 0.95,
-	macos_window_background_blur = 80,
+	window_background_opacity = 0.88,
+	macos_window_background_blur = 64,
 	text_background_opacity = 0.9,
 	-- 平铺时希望false
 	adjust_window_size_when_changing_font_size = false,
