@@ -1,0 +1,11 @@
+"$schema" = "https://yazi-rs.github.io/schemas/keymap.json"
+
+# 一次Esc退出输入框
+[[input.prepend_keymap]]
+desc = "Cancel input"
+on = ["<Esc>"]
+run = "close"
+
+[tasks]
+prepend_keymap = [
+]

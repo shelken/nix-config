@@ -11,40 +11,6 @@
 in {
   programs.yazi = {
     enable = true;
-    enableBashIntegration = true;
-    enableZshIntegration = true;
-    settings = {
-      manager = {
-        ratio = [2 7 7];
-      };
-      preview = {
-        tab_size = 3;
-      };
-      plugin = {
-        prepend_previewers = [
-          {
-            name = "*.md";
-            run = "glow";
-          }
-        ];
-      };
-    };
-    keymap = {
-      manager = {
-        prepend_keymap = [
-          # {
-          #   on = [ "f" "g"];
-          #   run = "plugin fg";
-          #   desc = "find file by content";
-          # }
-          # {
-          #   on = [ "f" "f"];
-          #   run = "plugin fg --args='fzf'";
-          #   desc = "find file by file name";
-          # }
-        ];
-      };
-    };
   };
 
   home.packages = with pkgs; [
@@ -61,6 +27,15 @@ in {
   ];
 
   xdg.configFile = {
+    "yazi/yazi.toml" = {
+      source = ./yazi.toml;
+    };
+    "yazi/keymap.toml" = {
+      source = ./keymap.toml;
+    };
+    "yazi/init.lua" = {
+      source = ./init.lua;
+    };
     "yazi/theme.toml" = {
       source = catppuccin-yazi + "/themes/${yazi_theme}.toml";
     };
