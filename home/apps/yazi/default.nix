@@ -11,6 +11,8 @@
 in {
   programs.yazi = {
     enable = true;
+    enableZshIntegration = true;
+    enableBashIntegration = true;
   };
 
   home.packages = with pkgs; [
