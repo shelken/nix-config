@@ -49,7 +49,7 @@ fmt:
 
 # 清理无用的包
 gc duration="7d" *args="":
-  @nix-collect-garbage --delete-older-than {{ duration }} {{args}}
+  @sudo nix-collect-garbage --delete-older-than {{ duration }} {{args}}
 
 # 暂存未提交文件合并
 git-temp:
@@ -64,6 +64,11 @@ kitty-clean:
 # 调试 kitty
 kitty-test: kitty-clean
   @ln -s {{justfile_directory()}}/home/apps/kitty/kitty.conf $HOME/.config/kitty/kitty.conf
+
+# 显示历史配置列表
+[macos]
+ls-gen:
+  @darwin-rebuild --list-generations
 
 # 清除nvim
 nvim-clean:
@@ -126,7 +131,7 @@ repl:
 # 回滚配置
 [macos]
 rollback:
-  ./result/sw/bin/darwin-rebuild --rollback
+  @darwin-rebuild --rollback
 
 # mac更新前调整nix到代理
 [macos]
@@ -136,14 +141,14 @@ set-proxy:
 # nixos 重建
 [linux]
 switch host=profile: 
-  just rebuild $1
+  @just rebuild $1
 
 # 应用配置; target对应当前主机名
 [macos]
 switch target=profile: set-proxy
   #!/usr/bin/env bash
   config_target=".#{{target}}"
-  ./result/sw/bin/darwin-rebuild switch --flake $config_target
+  darwin-rebuild switch --flake $config_target
 
 # 更新整个输入
 up:
