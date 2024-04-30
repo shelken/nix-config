@@ -49,6 +49,7 @@ fmt:
 
 # 清理无用的包
 gc duration="7d" *args="":
+  @nix-collect-garbage --delete-older-than {{ duration }} {{args}}
   @sudo nix-collect-garbage --delete-older-than {{ duration }} {{args}}
 
 # 暂存未提交文件合并
