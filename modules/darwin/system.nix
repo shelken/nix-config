@@ -214,7 +214,7 @@
           # Characters
           "FiraCode"
           "JetBrainsMono"
-          "Iosevka"
+          # "Iosevka"
         ];
       })
       # julia-mono

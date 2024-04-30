@@ -28,9 +28,9 @@
       (nerdfonts.override {
         fonts = [
           # symbols icon only
-          # "NerdFontsSymbolsOnly"
+          "NerdFontsSymbolsOnly"
           # Characters
-          # "FiraCode"
+          "FiraCode"
           "JetBrainsMono"
           "Iosevka"
         ];

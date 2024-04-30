@@ -1,6 +1,6 @@
 local wezterm = require("wezterm")
 local config = {
-	font_size = 20,
+	font_size = 18,
 	-- font = wezterm.font("JetBrainsMonoNL Nerd Font", { weight = "Regular" }),
 	font = wezterm.font("FiraCode Nerd Font Mono", { weight = "Medium" }),
 	-- font = wezterm.font("FiraCode Nerd Font Mono", { weight = "Regular" }),
