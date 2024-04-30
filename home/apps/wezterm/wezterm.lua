@@ -2,7 +2,8 @@ local wezterm = require("wezterm")
 local config = {
 	font_size = 20,
 	-- font = wezterm.font("JetBrainsMonoNL Nerd Font", { weight = "Regular" }),
-	font = wezterm.font("FiraCode Nerd Font Mono", { weight = "Regular" }),
+	font = wezterm.font("FiraCode Nerd Font Mono", { weight = "Medium" }),
+	-- font = wezterm.font("FiraCode Nerd Font Mono", { weight = "Regular" }),
 	-- color_scheme = "Catppuccin Mocha",
 	color_scheme = "Catppuccin Macchiato", -- or Mocha, Frappe, Latte, Macchiato
 
@@ -12,7 +13,7 @@ local config = {
 	show_new_tab_button_in_tab_bar = false,
 	window_background_opacity = 0.88,
 	macos_window_background_blur = 64,
-	text_background_opacity = 0.9,
+	-- text_background_opacity = 0.9,
 	-- 平铺时希望false
 	adjust_window_size_when_changing_font_size = false,
 	window_padding = {
