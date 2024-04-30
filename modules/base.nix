@@ -23,6 +23,7 @@
     gnused # GNU sed, very powerful(mainly for replacing text in files)
     gawk # GNU awk, a pattern scanning and processing language
     jq # A lightweight and flexible command-line JSON processor
+    yj # for mylibx
 
     # networking tools
     mtr # A network diagnostic tool

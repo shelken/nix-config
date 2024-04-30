@@ -1,4 +1,4 @@
-{dotfiles, ...}: let
-in (_slef: super: {
-  dot-astro-nvim = dotfiles.packages."${super.system}".dot-astro-nvim;
+{dotfiles, ...}: (slef: _super: {
+  dot-astro-nvim = dotfiles.packages."${slef.system}".dot-astro-nvim;
+  dot-tmux = dotfiles.packages."${slef.system}".dot-tmux;
 })

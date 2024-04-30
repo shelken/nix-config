@@ -1,13 +1,11 @@
 {
   pkgs,
-  dotfiles,
-  system,
   lib,
   myvars,
   ...
 }: let
   inherit (lib) concatStrings;
-  baseConf = builtins.readFile (dotfiles.packages.${system}.dot-tmux + "/tmux.conf");
+  baseConf = builtins.readFile (pkgs.dot-tmux + "/tmux.conf");
   theme = lib.strings.toLower myvars.catppuccin_flavor;
 in {
   programs.tmux = {
