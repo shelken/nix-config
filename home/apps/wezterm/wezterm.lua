@@ -7,6 +7,12 @@ local config = {
 	-- color_scheme = "Catppuccin Mocha",
 	color_scheme = "Catppuccin Macchiato", -- or Mocha, Frappe, Latte, Macchiato
 
+	-- cursor
+	default_cursor_style = "BlinkingBlock",
+	cursor_blink_ease_in = "Constant",
+	cursor_blink_ease_out = "Constant",
+	cursor_blink_rate = 600,
+
 	use_fancy_tab_bar = false,
 	hide_tab_bar_if_only_one_tab = true,
 	window_decorations = "RESIZE",
