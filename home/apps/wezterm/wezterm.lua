@@ -1,5 +1,7 @@
 local wezterm = require("wezterm")
 local config = {
+	-- Displaying correct colors on mac
+	front_end = "WebGpu",
 	font_size = 18,
 	-- font = wezterm.font("JetBrainsMonoNL Nerd Font", { weight = "Regular" }),
 	font = wezterm.font("FiraCode Nerd Font Mono", { weight = "Medium" }),
