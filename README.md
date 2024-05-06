@@ -74,6 +74,10 @@ just b
 
 解决：`sudo rm -rf /nix/store/**.lock`
 
+### wezterm 在 mac 上颜色显示错误
+
+尝试在`wezterm.lua`中配置`front_end = "WebGpu"`。
+
 # 部署
 
 > 在本地部署其他机器
