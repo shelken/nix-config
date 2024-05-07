@@ -1,4 +1,9 @@
 {pkgs, ...}: {
+  home.sessionVariables = {
+    # for go
+    GOPROXY = "https://goproxy.io";
+  };
+
   home.packages = with pkgs; [
     age
     sops
@@ -25,8 +30,4 @@
     # misc
     protobuf
   ];
-  programs.java = {
-    enable = true;
-    package = pkgs.jdk17;
-  };
 }

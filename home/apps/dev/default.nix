@@ -1,6 +1,3 @@
-{...}: {
-  imports = [
-    ./direnv.nix
-    ./core.nix
-  ];
+{mylib, ...}: {
+  imports = mylib.scanPaths ./.;
 }
