@@ -218,16 +218,17 @@
       flake = false;
     };
 
-    rime-config = {
-      url = "github:shelken/rime-auto-deploy";
-      flake = false;
+    # hyprland
+    hyprland = {
+      url = "github:hyprwm/Hyprland/v0.38.1";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # hyprland
-    hyprland.url = "github:hyprwm/Hyprland";
-
     # my dotfiles
-    dotfiles.url = "github:shelken/dotfiles.nix";
+    dotfiles = {
+      url = "github:shelken/dotfiles.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # secrets management
     agenix = {
