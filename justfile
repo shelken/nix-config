@@ -16,17 +16,6 @@ default:
 add:
   @git add .
 
-# 提交
-commit: 
-  #!/usr/bin/env zsh
-  # add file
-  git add . && \
-  # pre-commit hook 
-  git hook run pre-commit
-  lazygit
-  comoji commit && \
-  lazygit
-
 # 检查theme
 check-themes:
   #!/usr/bin/env bash

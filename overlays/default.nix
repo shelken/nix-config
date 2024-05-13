@@ -1,8 +1,4 @@
-{
-  comoji,
-  mylib,
-  ...
-} @ args:
+{mylib, ...} @ args:
 (
   map
   (path: (import path args))
@@ -10,5 +6,4 @@
 )
 ++ [
   # (import ./maven.nix args)
-  comoji.overlays.default
 ]
