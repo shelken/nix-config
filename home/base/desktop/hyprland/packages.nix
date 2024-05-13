@@ -1,18 +1,18 @@
 {pkgs, ...}: {
   home.packages = with pkgs; [
-    waybar
-    rofi
-    dunst
-    swaybg
+    # waybar
+    # rofi
+    # dunst
+    # swaybg
     #swaylock
-    swaylock-effects
-    swayidle
-    pamixer
-    light
-    brillo
-    cava # 音频律动
+    # swaylock-effects
+    # swayidle
+    # pamixer
+    # light
+    # brillo
+    # cava # 音频律动
 
     # wayvnc
-    wayvnc
+    # wayvnc
   ];
 }
