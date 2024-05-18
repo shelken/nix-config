@@ -3,8 +3,16 @@ local config = {
 	-- Displaying correct colors on mac
 	front_end = "WebGpu",
 	font_size = 18,
-	-- font = wezterm.font("JetBrainsMonoNL Nerd Font", { weight = "Regular" }),
-	font = wezterm.font("FiraCode Nerd Font Mono", { weight = "Medium" }),
+	font = wezterm.font("JetBrainsMono Nerd Font", { weight = "Medium" }),
+	-- font = wezterm.font_with_fallback {
+	-- 	"JetBrainsMono Nerd Font",
+	-- 	"FiraCode Nerd Font",
+	--
+	-- 	-- To avoid 'Chinese characters displayed as variant (Japanese) glyphs'
+	-- 	"Source Han Sans SC",
+	-- 	"Source Han Sans TC"
+	-- }
+	-- font = wezterm.font("FiraCode Nerd Font Mono", { weight = "Medium" }),
 	-- font = wezterm.font("FiraCode Nerd Font Mono", { weight = "Regular" }),
 	-- color_scheme = "Catppuccin Mocha",
 	color_scheme = "Catppuccin Macchiato", -- or Mocha, Frappe, Latte, Macchiato
