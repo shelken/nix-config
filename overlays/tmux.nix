@@ -1,5 +1,5 @@
 {pkgs, ...}: let
-in (_slef: super: {
+in (_self: super: {
   tmuxPlugins.catppuccin =
     super.tmuxPlugins.catppuccin.overrideAttrs
     (_: {

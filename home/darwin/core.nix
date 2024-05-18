@@ -9,5 +9,6 @@
     glab
     nali
     rclone
+    superfile
   ];
 }
