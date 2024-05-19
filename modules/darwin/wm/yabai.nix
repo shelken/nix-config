@@ -10,20 +10,20 @@
 }: let
   # 固定版本
   yabai = pkgs-unstable.yabai.overrideAttrs (_old: rec {
-    version = "6.0.15";
+    version = "7.1.1";
     src =
       if pkgs.stdenv.isAarch64
       then
         (pkgs.fetchzip {
           url = "https://github.com/koekeishiya/yabai/releases/download/v${version}/yabai-v${version}.tar.gz";
-          hash = "sha256-L82N0IaC2OAZVhmu9NALencK78FeCZI2cWJyNkGH2vQ=";
+          hash = "sha256-LNOAT1vm6EEmcKdshMKjYWFfoRoRNbgZgjEpOTacWc8=";
         })
       else
         (pkgs.fetchFromGitHub {
           owner = "koekeishiya";
           repo = "yabai";
           rev = "v${version}";
-          hash = "sha256-buX6FRIXdM5VmYpA80eESDMPf+xeMfJJj0ulyx2g94M=";
+          hash = "sha256-dznMjSaS2kkyYf7JrNf1Y++Nb5YFOmk/JQP3BBrf5Bk=";
         });
   });
   homeDir = config.users.users."${myvars.username}".home;
