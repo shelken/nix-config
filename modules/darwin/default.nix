@@ -36,7 +36,7 @@
   nixpkgs.config.allowUnfree = true;
 
   #
-  nixpkgs.config.allowBroken = true;
+  # nixpkgs.config.allowBroken = true;
 
   # Auto upgrade nix package and the daemon service.
   services.nix-daemon.enable = true;
