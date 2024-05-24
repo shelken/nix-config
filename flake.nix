@@ -209,7 +209,7 @@
     nixpkgs-darwin.url = "github:nixos/nixpkgs/nixpkgs-23.11-darwin";
     nix-darwin = {
       url = "github:lnl7/nix-darwin";
-      # inputs.nixpkgs.follows = "nixpkg";
+      # inputs.nixpkgs.follows = "nixpkgs";
       inputs.nixpkgs.follows = "nixpkgs-darwin";
     };
 
