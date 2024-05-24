@@ -219,6 +219,7 @@ in {
       # "visual-studio-code"
       # "orbstack" # docker, need macOS 12+
       # "iterm2"
+      "kitty"
       "wezterm"
       # "he3"
       #"intellij-idea" IDEA

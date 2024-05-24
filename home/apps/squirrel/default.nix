@@ -4,6 +4,7 @@
   pkgs,
   ...
 }: let
+  # squirrel is only for darwin
   rimeDir = "Library/Rime";
   rime-config = pkgs.dot-squirrel;
   custom_file_list = builtins.attrNames (builtins.readDir (rime-config + "/custom"));
