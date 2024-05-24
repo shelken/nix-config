@@ -32,11 +32,15 @@
           # Characters
           "FiraCode"
           "JetBrainsMono"
-          "Iosevka"
+          # "Iosevka"
         ];
       })
       # julia-mono
       # dejavu_fonts
+
+      # https://github.com/subframe7536/Maple-font
+      # https://search.nixos.org/packages?channel=unstable&from=0&size=50&sort=relevance&type=packages&query=maple-
+      maple-mono-SC-NF
     ];
 
     # user defined fonts
