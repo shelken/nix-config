@@ -7,6 +7,7 @@ profile := "$PROFILE"
 
 alias b := rebuild
 alias bd := rebuild-debug
+alias sw := switch
 
 # 显式帮助
 default:
