@@ -21,7 +21,7 @@
     rustfmt
 
     #-- deploy
-    # ansible
+    ansible
     sshpass
 
     #-- container
