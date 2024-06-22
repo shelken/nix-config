@@ -15,6 +15,7 @@
     (python311.withPackages (
       ps:
         with ps; [
+          pip
           ruff-lsp
           black # python formatter
         ]
