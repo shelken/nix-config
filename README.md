@@ -27,6 +27,8 @@
 
 # darwin
 
+![](assets/imgs/README_2024-06-23_01-25-22.png)
+
 ## 初始化
 
 ```bash
