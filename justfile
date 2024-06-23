@@ -67,9 +67,42 @@ nvim-clean:
 
 # github sha256计算
 prefetch-gh owner repo rev="HEAD":
-  @nix-prefetch-github --no-deep-clone --quiet --rev {{ rev }} {{ owner }} {{ repo }}
+    #!/usr/bin/env bash
+    json=$(nix-prefetch-github --no-deep-clone --quiet --rev {{ rev }} {{ owner }} {{ repo }})
+    owner=$(echo "$json" | jq -r '.owner')
+    repo=$(echo "$json" | jq -r '.repo')
+    rev=$(echo "$json" | jq -r '.rev' | cut -c 1-8)
+    hash=$(echo "$json" | jq -r '.hash')
+    cat <<EOF
+    pkgs.fetchFromGitHub {
+      owner = "$owner";
+      repo  = "$repo";
+      rev   = "$rev";
+      hash  = "$hash";
+    };
+    EOF
 
-# nix-prefetch-git
+# github 
+prefetch-gh2 repo rev="HEAD":
+  #!/usr/bin/env bash
+  function parse_github_url {
+    local input=$1
+    local user repo
+
+    if [[ $input == https://github.com/* ]]; then
+      user=${input#https://github.com/}
+      user=${user%%/*}
+      repo=${input#https://github.com/$user/}
+    else
+      user=${input%%/*}
+      repo=${input#*/}
+    fi
+
+    echo "$user" "$repo"
+  }
+  read owner repo <<< $(parse_github_url {{ repo }})
+  just prefetch-gh $owner $repo {{ rev }}
+
 prefetch-git repo rev:
   @nix-prefetch-git --no-deepClone --quiet --url 'git@github.com:{{ repo }}' --rev '{{ rev }}' --fetch-submodules
 
