@@ -10,7 +10,7 @@
     ./hardware-configuration.nix
 
     ../../modules/nixos/core-server.nix
-    ../../modules/nixos/user-group.nix
+    ../../modules/nixos/base/user-group.nix
     # ../../modules/nixos/nvidia.nix
     ../../modules/desktop
 
