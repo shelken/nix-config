@@ -48,7 +48,7 @@
     pve155Modules = {
       nixos-modules = map mylib.relativeToRoot [
         "hosts/pve155"
-        "modules/nixos/hyprland.nix"
+        # "modules/nixos/hyprland.nix"
       ];
       home-modules = map mylib.relativeToRoot [
         "home/linux"
