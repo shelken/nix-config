@@ -51,7 +51,7 @@
         "modules/nixos/hyprland.nix"
       ];
       home-modules = map mylib.relativeToRoot [
-        "home/home.nix"
+        "home/linux"
       ];
     };
     pve156Modules = {
@@ -59,7 +59,7 @@
         "hosts/pve156"
       ];
       home-modules = map mylib.relativeToRoot [
-        "home/home.nix"
+        "home/linux"
       ];
     };
     yuukoModules = {
