@@ -58,9 +58,17 @@ in {
         owner = "Reledia";
         repo = "glow.yazi";
         rev = "cf1f1f0";
-        sha256 = "sha256-U4ullcOwN6TCaZ8gXCPMk/fGbtZLe4e1Y0RhRKLZKng=";
+        hash = "sha256-U4ullcOwN6TCaZ8gXCPMk/fGbtZLe4e1Y0RhRKLZKng=";
       };
     };
+    # "yazi/plugins/mime.yazi" = {
+    #   source = pkgs.fetchFromGitHub {
+    #     owner = "DreamMaoMao";
+    #     repo = "mime.yazi";
+    #     rev = "8e866b9c";
+    #     hash = "sha256-RGev5ecsBrzJHlooWw24FWZMjpwUshPMGRUc4UIh5mg=";
+    #   };
+    # };
     # "yazi/plugins/preview.yazi" = {
     #   source = pkgs.fetchFromGitHub {
     #     owner = "Urie96";
