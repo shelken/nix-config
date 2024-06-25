@@ -12,5 +12,6 @@
       ../apps/squirrel
       ../apps/kitty
       ../apps/zellij
+      ../apps/tailscale/base.nix
     ];
 }
