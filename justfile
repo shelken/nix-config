@@ -169,7 +169,7 @@ set-proxy:
 # nixos 重建
 [linux]
 switch host=profile: 
-  @nh os switch -a H {{host}} flake.nix
+  @nh os switch -a -H {{host}} flake.nix
 
 # 应用配置; target对应当前主机名
 [macos]
