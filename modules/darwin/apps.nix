@@ -53,7 +53,7 @@ in {
     neovim
     git
     gnugrep # replacee macos's grep
-    gnutar # replacee macos's tar
+    #gnutar # replacee macos's tar
 
     # darwin only apps
   ];
