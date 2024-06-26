@@ -62,6 +62,15 @@
         "home/linux"
       ];
     };
+    workTestModules = {
+      nixos-modules = map mylib.relativeToRoot [
+        "modules/nixos/base"
+        "modules/base.nix"
+      ];
+      home-modules = map mylib.relativeToRoot [
+        "home/linux/core.nix"
+      ];
+    };
     yuukoModules = {
       darwin-modules = map mylib.relativeToRoot [
         "modules/darwin"
@@ -104,6 +113,7 @@
     nixosConfigurations = {
       nixos = mylib.nixosSystem (pve155Modules // args // {system = "x86_64-linux";});
       pve156 = mylib.nixosSystem (pve156Modules // args // {system = "x86_64-linux";});
+      work-test = mylib.nixosSystem (workTestModules // args // {system = "x86_64-linux";});
     };
 
     darwinConfigurations = {
