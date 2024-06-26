@@ -250,6 +250,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # generate iso/qcow2/docker/... image from nixos configuration
+    nixos-generators = {
+      url = "github:nix-community/nixos-generators";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # superfile = {
     #   url = "github:yorukot/superfile";
     #   inputs.nixpkgs.follows = "nixpkgs";
