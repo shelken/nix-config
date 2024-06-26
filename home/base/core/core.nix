@@ -17,6 +17,8 @@
     nix-tree # A TUI to visualize the dependency graph of a nix derivation
     nix-prefetch-git
     nix-prefetch-github
+    nix-output-monitor # nom
+    nh # Yet another nix cli helper
   ];
   programs = {
     # A modern replacement for ‘ls’

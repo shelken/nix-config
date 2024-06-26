@@ -127,26 +127,26 @@ qip:
 # nixos 重建
 [linux]
 rebuild host=profile:
-  @sudo nixos-rebuild switch --upgrade --flake .#{{ host }}
+  @nh os build -H {{host}} flake.nix
 
 # mac 构建; target对应当前主机名
 [macos]
 rebuild target=profile: set-proxy
   #!/usr/bin/env bash
   config_target=".#darwinConfigurations.{{target}}.system"
-  nix build $config_target --extra-experimental-features "nix-command flakes" 
+  nom build $config_target --extra-experimental-features "nix-command flakes" 
 
 # nixos 重建(调试)
 [linux]
 rebuild-debug host=profile:
-  @sudo nixos-rebuild switch --upgrade --flake .#{{ host }} --show-trace -L -v
+  @nh os build -H {{host}} flake.nix -v
 
 # 构建; 调试
 [macos]
 rebuild-debug target=profile: set-proxy
   #!/usr/bin/env bash
   config_target=".#darwinConfigurations.{{target}}.system"
-  nix build $config_target --extra-experimental-features "nix-command flakes" --show-trace 
+  nom build $config_target --extra-experimental-features "nix-command flakes" -v
 
 # 交互式源码查看
 repl:
@@ -157,6 +157,10 @@ repl:
 rollback:
   @darwin-rebuild --rollback
 
+# 搜索包
+search pkg num='10':
+  @nh search -l {{num}} -c nixos-24.05 {{pkg}}
+
 # mac更新前调整nix到代理
 [macos]
 set-proxy:
@@ -165,7 +169,7 @@ set-proxy:
 # nixos 重建
 [linux]
 switch host=profile: 
-  @just rebuild $1
+  @nh os switch -a H {{host}} flake.nix
 
 # 应用配置; target对应当前主机名
 [macos]
