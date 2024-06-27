@@ -276,22 +276,22 @@
     #          ╰──────────────────────────────────────────────────────────╯
     # btop主题
     catppuccin-btop = {
-      url = "github:catppuccin/btop/c6469190f2ecf25f017d6120bf4e050e6b1d17af";
+      url = "github:catppuccin/btop/21b8d595";
       flake = false;
     };
 
     catppuccin-bat = {
-      url = "github:catppuccin/bat/b19bea35a85a32294ac4732cad5b0dc6495bed32";
+      url = "github:catppuccin/bat/d714cc1d";
       flake = false;
     };
 
     catppuccin-yazi = {
-      url = "github:catppuccin/yazi/0846aed69b2a62d29c98e100af0cf55ca729723d";
+      url = "github:catppuccin/yazi/9bfdccc2";
       flake = false;
     };
 
     catppuccin-lazygit = {
-      url = "github:catppuccin/lazygit/30bff2e6d14ca12a09d71e5ce4e6a086b3e48aa6";
+      url = "github:catppuccin/lazygit/21a25afd";
       flake = false;
     };
   };

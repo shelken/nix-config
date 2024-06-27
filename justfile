@@ -23,7 +23,7 @@ check-themes:
   array=("btop" "bat" "squirrel" "lazygit" "wezterm" "yazi" "tmux")
   for i in "${array[@]}"; do
     # echo $(gh repo view catppuccin/"$i" --json name,updatedAt)
-    nix-prefetch-git --no-deepClone --quiet --url "git@github.com:catppuccin/$i" --rev HEAD | jq ". | {url, date}" &
+    (just prefetch-gh2 catppuccin/$i) &
   done
   wait
 
@@ -92,7 +92,7 @@ prefetch-gh owner repo rev="HEAD":
 prefetch-gh2 repo rev="HEAD":
   #!/usr/bin/env bash
   function parse_github_url {
-    local input=$1
+    local input={{ repo }}
     local user repo
 
     if [[ $input == https://github.com/* ]]; then
@@ -107,7 +107,19 @@ prefetch-gh2 repo rev="HEAD":
     echo "$user" "$repo"
   }
   read owner repo <<< $(parse_github_url {{ repo }})
-  just prefetch-gh $owner $repo {{ rev }}
+  json=$(nix-prefetch-git --no-deepClone --quiet --url "git@github.com:$owner/$repo" --rev {{rev}})
+  rev=$(echo "$json" | jq -r '.rev' | cut -c 1-8)
+  hash=$(echo "$json" | jq -r '.hash')
+  last_date=$(echo "$json" | jq -r '.date')
+  cat <<EOF
+  $owner/$repo 上次更新时间：$last_date
+  pkgs.fetchFromGitHub {
+    owner = "$owner";
+    repo  = "$repo";
+    rev   = "$rev";
+    hash  = "$hash";
+  };
+  EOF
 
 prefetch-git repo rev:
   @nix-prefetch-git --no-deepClone --quiet --url 'git@github.com:{{ repo }}' --rev '{{ rev }}' --fetch-submodules

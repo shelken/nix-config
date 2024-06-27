@@ -6,8 +6,8 @@ in (_self: super: {
       src = pkgs.fetchFromGitHub {
         owner = "catppuccin";
         repo = "tmux";
-        rev = "a556353d60833367b13739e660d4057a96f2f4fe";
-        hash = "sha256-i5rnMnkFGOWeRi38euttei/fVIxlrV6dQxemAM+LV0A=";
+        rev = "e7cd05fa";
+        hash = "sha256-Sz5o4redRQYNiniwTeFhndGXerVBNGrza6GcKziLdQc=";
       };
       version = "2024-04-24";
     });
