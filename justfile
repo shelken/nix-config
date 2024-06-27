@@ -48,7 +48,7 @@ gen-image host format:
   #!/usr/bin/env bash
   nom build .#nixosConfigurations.{{host}}.config.formats.{{format}}
   d=$(readlink -f result)
-  suffix="${d#*.}"
+  suffix="${d##*.}"
   ls -hl $d
   rsync -avPL result pve:/var/lib/vz/template/iso/{{host}}-latest.$suffix
 
