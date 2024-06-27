@@ -45,8 +45,12 @@ gc duration="7d" *args="":
 # 生成镜像
 [linux]
 gen-image host format:
-  @nom build .#nixosConfigurations.{{host}}.config.formats.{{format}}
-  @ll $(readlink -f result)
+  #!/usr/bin/env bash
+  nom build .#nixosConfigurations.{{host}}.config.formats.{{format}}
+  d=$(readlink -f result)
+  suffix="${d#*.}"
+  ls -hl $d
+  rsync -avPL result pve:/var/lib/vz/template/iso/{{host}}-latest.$suffix
 
 # 暂存未提交文件合并
 git-temp:
