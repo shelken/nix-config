@@ -93,6 +93,20 @@ just deploy pve156 shelken@pve156
 just deploy pve156 shelken@192.168.6.156
 ```
 
+# 构建镜像
+
+> 使用 `nixos-generators`
+
+```bash
+
+# 该命令将构建镜像并上传到我的`pve`路径下
+just gen-image {host} {format}
+# 例如 生成 iso 格式的 work-test 的镜像
+just gen-image work-test iso
+just gen-image work-test qcow
+
+```
+
 # 引用
 
 > 配置参考来源
