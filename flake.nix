@@ -68,7 +68,7 @@
         "modules/base.nix"
       ];
       home-modules = map mylib.relativeToRoot [
-        "home/linux/core.nix"
+        "home/linux"
       ];
     };
     yuukoModules = {

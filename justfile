@@ -42,6 +42,12 @@ gc duration="7d" *args="":
   @nix-collect-garbage --delete-older-than {{ duration }} {{args}}
   @sudo nix-collect-garbage --delete-older-than {{ duration }} {{args}}
 
+# 生成镜像
+[linux]
+gen-image host format:
+  @nom build .#nixosConfigurations.{{host}}.config.formats.{{format}}
+  @ll $(readlink -f result)
+
 # 暂存未提交文件合并
 git-temp:
   @git stash save 'temp'
