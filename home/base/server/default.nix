@@ -5,6 +5,5 @@
 
     ../../apps/tailscale
     ../../apps/neovim
-    ../../apps/vscode-server
   ];
 }
