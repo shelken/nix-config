@@ -266,6 +266,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # vscode-server
+    vscode-server = {
+      url = "github:nix-community/nixos-vscode-server/fc900c16";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # superfile = {
     #   url = "github:yorukot/superfile";
     #   inputs.nixpkgs.follows = "nixpkgs";
