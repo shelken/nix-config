@@ -1,5 +1,6 @@
 
 #!/bin/bash
+# 交换两个space所有窗口
 target_space=$1
 target_windows=$(yabai -m query --windows --space $target_space | jq '.[] | .id')
 current_space=$(yabai -m query --spaces | jq '.[] | select(."has-focus" == true) | .index')

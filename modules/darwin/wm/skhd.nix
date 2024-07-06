@@ -3,6 +3,7 @@
   config,
   lib,
   mylib,
+  pkgs,
   options,
   ...
 }: let
@@ -16,6 +17,7 @@ in {
     enable = mkBoolOpt true "Whether or not to enable yabai.";
   };
   config = mkIf cfg.enable {
+    system.activationScripts.skhd.text = "su - $(logname) -c '${pkgs.skhd}/bin/skhd -r'";
     services.skhd = {
       enable = true;
       skhdConfig = ''
@@ -86,15 +88,15 @@ in {
         #          ╭──────────────────────────────────────────────────────────╮
         #          │                       switch space                       │
         #          ╰──────────────────────────────────────────────────────────╯
-        alt - 1 : yabai -m query --spaces --space 1 | jq -r '.windows[0] // empty' | xargs yabai -m window --focus
-        alt - 2 : yabai -m query --spaces --space 2 | jq -r '.windows[0] // empty' | xargs yabai -m window --focus
-        alt - 3 : yabai -m query --spaces --space 3 | jq -r '.windows[0] // empty' | xargs yabai -m window --focus
-        alt - 4 : yabai -m query --spaces --space 4 | jq -r '.windows[0] // empty' | xargs yabai -m window --focus
-        alt - 5 : yabai -m query --spaces --space 5 | jq -r '.windows[0] // empty' | xargs yabai -m window --focus
-        alt - 6 : yabai -m query --spaces --space 6 | jq -r '.windows[0] // empty' | xargs yabai -m window --focus
-        alt - 7 : yabai -m query --spaces --space 7 | jq -r '.windows[0] // empty' | xargs yabai -m window --focus
-        alt - 8 : yabai -m query --spaces --space 8 | jq -r '.windows[0] // empty' | xargs yabai -m window --focus
-        alt - 9 : yabai -m query --spaces --space 9 | jq -r '.windows[0] // empty' | xargs yabai -m window --focus
+        alt - 1 : ${scriptsPath}/ss.sh 1
+        alt - 2 : ${scriptsPath}/ss.sh 2
+        alt - 3 : ${scriptsPath}/ss.sh 3
+        alt - 4 : ${scriptsPath}/ss.sh 4
+        alt - 5 : ${scriptsPath}/ss.sh 5
+        alt - 6 : ${scriptsPath}/ss.sh 6
+        alt - 7 : ${scriptsPath}/ss.sh 7
+        alt - 8 : ${scriptsPath}/ss.sh 8
+        alt - 9 : ${scriptsPath}/ss.sh 9
 
         # 无关闭 sip 时使用
         # alt - 1 ; ss1
@@ -111,15 +113,15 @@ in {
         #          ╭──────────────────────────────────────────────────────────╮
         #          │                   move window to space                   │
         #          ╰──────────────────────────────────────────────────────────╯
-        shift + cmd - 1 : ${scriptsPath}/wsss.sh 1
-        shift + cmd - 2 : ${scriptsPath}/wsss.sh 2
-        shift + cmd - 3 : ${scriptsPath}/wsss.sh 3
-        shift + cmd - 4 : ${scriptsPath}/wsss.sh 4
-        shift + cmd - 5 : ${scriptsPath}/wsss.sh 5
-        shift + cmd - 6 : ${scriptsPath}/wsss.sh 6
-        shift + cmd - 7 : ${scriptsPath}/wsss.sh 7
-        shift + cmd - 8 : ${scriptsPath}/wsss.sh 8
-        shift + cmd - 9 : ${scriptsPath}/wsss.sh 9
+        shift + cmd - 1 : yabai -m window --space 1 && ${scriptsPath}/ss.sh 1
+        shift + cmd - 2 : yabai -m window --space 2 && ${scriptsPath}/ss.sh 2
+        shift + cmd - 3 : yabai -m window --space 3 && ${scriptsPath}/ss.sh 3
+        shift + cmd - 4 : yabai -m window --space 4 && ${scriptsPath}/ss.sh 4
+        shift + cmd - 5 : yabai -m window --space 5 && ${scriptsPath}/ss.sh 5
+        shift + cmd - 6 : yabai -m window --space 6 && ${scriptsPath}/ss.sh 6
+        shift + cmd - 7 : yabai -m window --space 7 && ${scriptsPath}/ss.sh 7
+        shift + cmd - 8 : yabai -m window --space 8 && ${scriptsPath}/ss.sh 8
+        shift + cmd - 9 : yabai -m window --space 9 && ${scriptsPath}/ss.sh 9
 
         #          ╭──────────────────────────────────────────────────────────╮
         #          │                 交换两个space的所有窗口                  │
