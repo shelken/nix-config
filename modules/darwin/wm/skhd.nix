@@ -54,7 +54,8 @@ in {
         ctrl + shift - up    : yabai -m window --warp north
         ctrl + shift - right : yabai -m window --warp east
         # 全屏
-        ctrl + alt - return : yabai -m window --toggle zoom-parent
+        # options: zoom-parent, zoom-fullscreen, native-fullscreen
+        ctrl + alt - return : yabai -m window --toggle zoom-fullscreen
         # 切换窗口水平垂直
         ctrl + alt - l : yabai -m window --toggle split
         # 切换float
