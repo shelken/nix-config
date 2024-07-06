@@ -43,11 +43,16 @@ in {
         #          ╭──────────────────────────────────────────────────────────╮
         #          │                         窗口交换                         │
         #          ╰──────────────────────────────────────────────────────────╯
-        ctrl + alt - r : ${scriptsPath}/cycle_counterclockwise.sh
-        ctrl + alt - left : yabai -m window --swap west
-        ctrl + alt - down : yabai -m window --swap south
-        ctrl + alt - up : yabai -m window --swap north
+        ctrl + alt - r     : ${scriptsPath}/cycle_counterclockwise.sh
+        ctrl + alt - left  : yabai -m window --swap west
+        ctrl + alt - down  : yabai -m window --swap south
+        ctrl + alt - up    : yabai -m window --swap north
         ctrl + alt - right : yabai -m window --swap east
+
+        ctrl + shift - left  : yabai -m window --warp west
+        ctrl + shift - down  : yabai -m window --warp south
+        ctrl + shift - up    : yabai -m window --warp north
+        ctrl + shift - right : yabai -m window --warp east
         # 全屏
         ctrl + alt - return : yabai -m window --toggle zoom-parent
         # 切换窗口水平垂直
