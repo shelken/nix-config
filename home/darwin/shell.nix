@@ -34,4 +34,8 @@ in {
     enable = true;
     inherit envExtra;
   };
+
+  home.shellAliases = {
+    idea = "open -a '/Applications/IntelliJ IDEA.app/Contents/MacOS/idea' ."; # 使用idea打开当前目录
+  };
 }
