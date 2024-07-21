@@ -66,10 +66,10 @@ in {
         #          ╭──────────────────────────────────────────────────────────╮
         #          │                       调整窗口大小                       │
         #          ╰──────────────────────────────────────────────────────────╯
-        cmd + shift - left : yabai -m window --resize left:-50:0; yabai -m window --resize right:-50:0
-        cmd + shift - down : yabai -m window --resize bottom:0:50; yabai -m window --resize top:0:50
-        cmd + shift - up : yabai -m window --resize top:0:-50; yabai -m window --resize bottom:0:-50
-        cmd + shift - right : yabai -m window --resize right:50:0; yabai -m window --resize left:50:0
+        alt + shift - left : yabai -m window --resize left:-50:0; yabai -m window --resize right:-50:0
+        alt + shift - down : yabai -m window --resize bottom:0:50; yabai -m window --resize top:0:50
+        alt + shift - up : yabai -m window --resize top:0:-50; yabai -m window --resize bottom:0:-50
+        alt + shift - right : yabai -m window --resize right:50:0; yabai -m window --resize left:50:0
 
         # space
 
