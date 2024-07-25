@@ -9,9 +9,11 @@ in {
     enable = true;
     # 自定义配置目录
     dotDir = zshDotDir;
+    # 自动补全
     enableCompletion = true;
+    # 自动提示
     autosuggestion.enable = true;
-    # enableSyntaxHighlighting = true;
+    # 语法高亮
     syntaxHighlighting.enable = true;
     initExtraFirst = ''
       setopt AUTO_CD
@@ -38,6 +40,9 @@ in {
       plugins = [
         # "docker-comose"
         "docker"
+        "gitignore" # 命令gi; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/gitignore/README.md
+        "httpie" # 命令http; 自动补全; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/httpie/README.md
+        "golang" # 自动补全以及alias; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/golang/README.md
       ];
       # custom = omzCustomPath;
     };
