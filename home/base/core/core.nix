@@ -21,6 +21,7 @@
     nh # Yet another nix cli helper
   ];
   programs = {
+    # ls 替代
     # A modern replacement for ‘ls’
     # useful in bash/zsh prompt, not in nushell.
     eza = {
@@ -30,6 +31,7 @@
     };
 
     # a cat(1) clone with syntax highlighting and Git integration.
+    # cat 替代
     bat = {
       enable = true;
       config = {
@@ -70,6 +72,7 @@
     #   zi foo             # cd with interactive selection (using fzf)
     #
     #   z foo<SPACE><TAB>  # show interactive completions (zoxide v0.8.0+, bash 4.4+/fish/zsh only)
+    # 快速跳转
     zoxide = {
       enable = true;
       enableBashIntegration = true;

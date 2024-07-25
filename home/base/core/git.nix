@@ -61,12 +61,13 @@
       # update = "submodule update --init --recursive";
       # foreach = "submodule foreach";
     };
+    # 差异对比增强
     difftastic.enable = true; # https://github.com/Wilfred/difftastic.
   };
 
   home.packages = with pkgs; [
-    onefetch
-    git-cliff
+    onefetch # 显式当前git项目的详细信息
+    git-cliff #
   ];
 
   home.sessionVariables = {
