@@ -3,8 +3,8 @@ local config = {
 	-- Displaying correct colors on mac
 	front_end = "WebGpu",
 	font_size = 18,
-	-- font = wezterm.font("JetBrainsMono Nerd Font", { weight = "Medium" }),
-	font = wezterm.font("Maple Mono SC NF", { weight = "Regular" }),
+	font = wezterm.font("JetBrainsMono Nerd Font", { weight = "Medium" }),
+	-- font = wezterm.font("Maple Mono SC NF", { weight = "Regular" }),
 	-- font = wezterm.font_with_fallback {
 	-- 	"JetBrainsMono Nerd Font",
 	-- 	"FiraCode Nerd Font",
