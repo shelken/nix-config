@@ -50,7 +50,7 @@ gen-image host format:
   d=$(readlink -f result)
   suffix="${d##*.}"
   ls -hl $d
-  rsync -avPL result pve:/var/lib/vz/template/iso/{{host}}-latest.$suffix
+  rsync -avPL --checksum result pve:/var/lib/vz/template/iso/{{host}}-latest.$suffix
 
 # 暂存未提交文件合并
 git-temp:
