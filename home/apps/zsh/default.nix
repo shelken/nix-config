@@ -75,6 +75,11 @@ in {
         src = lib.cleanSource ./p10k;
         file = "p10k.zsh";
       }
+      {
+        name = "rclone-auto-complete";
+        src = ../rclone;
+        file = "rclone.zsh";
+      }
     ];
   };
 
