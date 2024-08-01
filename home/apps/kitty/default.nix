@@ -24,6 +24,12 @@
       fi
     '';
   };
+  kitty-icon-pkgs = pkgs.fetchFromGitHub {
+    owner = "DinkDonk";
+    repo = "kitty-icon";
+    rev = "0bdece53";
+    hash = "sha256-TLltUcfJpY+3rwvHYgtN4zBpbBnLBYyzDu90UMnxwoc=";
+  };
 in {
   programs.kitty = {
     enable = false; # 用 homebrew 安装
@@ -48,6 +54,9 @@ in {
       ''
       origin_file
     ];
+  };
+  xdg.configFile."kitty/kitty.app.png" = {
+    source = "${kitty-icon-pkgs}/kitty-light.png";
   };
 
   programs.zsh.initExtra = shellIntegrationInit.zsh;
