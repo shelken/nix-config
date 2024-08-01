@@ -86,6 +86,7 @@ in {
   programs.fzf = {
     enable = true;
     enableZshIntegration = true;
+    defaultCommand = "fd --type f";
     colors = {
       # catppuccins mocha
       bg = "#1e1e2e";
