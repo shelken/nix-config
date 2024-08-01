@@ -136,6 +136,11 @@ in {
         ctrl + cmd + alt - 7 : ${scriptsPath}/switch_space.sh 7
         ctrl + cmd + alt - 8 : ${scriptsPath}/switch_space.sh 8
         ctrl + cmd + alt - 9 : ${scriptsPath}/switch_space.sh 9
+
+        #          ╭──────────────────────────────────────────────────────────╮
+        #          │                         打开应用                         │
+        #          ╰──────────────────────────────────────────────────────────╯
+        # alt - k : ${scriptsPath}/kitty_quake.sh
       '';
     };
 
