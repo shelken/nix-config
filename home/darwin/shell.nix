@@ -1,4 +1,4 @@
-let
+{...} @ args: let
   envExtra = ''
     export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
   '';
@@ -36,6 +36,6 @@ in {
   };
 
   home.shellAliases = {
-    idea = "open -a '/Applications/IntelliJ IDEA.app/Contents/MacOS/idea' ."; # 使用idea打开当前目录
+    # idea = "open -a '/Applications/IntelliJ IDEA.app/Contents/MacOS/idea' ."; # 使用idea打开当前目录
   };
 }
