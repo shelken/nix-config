@@ -2,7 +2,7 @@
   lib,
   mylib,
   config,
-  options,
+  # options,
   ...
 }: let
   inherit (lib) mkIf;
