@@ -1,5 +1,5 @@
 {...}: {
   imports = [
-    # ./sketchybar.nix
+    ./aerospace.nix
   ];
 }

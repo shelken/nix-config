@@ -32,7 +32,7 @@
   cfg = config.shelken.wm.yabai;
 in {
   options.shelken.wm.yabai = {
-    enable = mkBoolOpt true "Whether or not to enable yabai.";
+    enable = mkBoolOpt false "Whether or not to enable yabai.";
   };
   config = mkIf cfg.enable {
     # for yabai and skhd

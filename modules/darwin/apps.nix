@@ -113,6 +113,7 @@ in {
       "localsend/localsend" # localsend
       "gromgit/fuse" # macfuse,mounty
       "he3-app/he3" # he3
+      "nikitabobko/tap" # aerospace
     ];
 
     brews = [
@@ -143,6 +144,7 @@ in {
 
     # `brew install --cask`
     casks = [
+      # "aerospace" # 窗口管理
       "squirrel" # input method for Chinese, rime-squirrel
       # "google-chrome"
       # "arc" # macOS 12+, browser

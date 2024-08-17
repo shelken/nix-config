@@ -14,7 +14,7 @@
   cfg = config.shelken.wm.skhd;
 in {
   options.shelken.wm.skhd = {
-    enable = mkBoolOpt true "Whether or not to enable yabai.";
+    enable = mkBoolOpt false "Whether or not to enable yabai.";
   };
   config = mkIf cfg.enable {
     system.activationScripts.skhd.text = "su - $(logname) -c '${pkgs.skhd}/bin/skhd -r'";

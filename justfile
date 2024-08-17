@@ -13,6 +13,13 @@ alias sw := switch
 default:
   @just --list
 
+aerospace-clean:
+  @rm -f $HOME/.config/aerospace/aerospace.toml
+
+aerospace-test:
+  just aerospace-clean
+  @ln -s {{justfile_directory()}}/modules/darwin/wm/aerospace/aerospace.toml $HOME/.config/aerospace/aerospace.toml
+
 # git add all
 add:
   @git add .
