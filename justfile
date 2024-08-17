@@ -18,7 +18,7 @@ aerospace-clean:
 
 aerospace-test:
   just aerospace-clean
-  @ln -s {{justfile_directory()}}/modules/darwin/wm/aerospace/aerospace.toml $HOME/.config/aerospace/aerospace.toml
+  @ln -s {{justfile_directory()}}/home/darwin/wm/aerospace/aerospace.toml $HOME/.config/aerospace/aerospace.toml
 
 # git add all
 add:

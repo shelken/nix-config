@@ -195,7 +195,7 @@ in {
       # "keyclu" # shortcut viewer
 
       # mouse
-      "mac-mouse-fix" # 鼠标滚动
+      # "mac-mouse-fix" # 鼠标滚动
       # "mos"
 
       # network
