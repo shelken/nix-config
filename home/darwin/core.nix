@@ -11,5 +11,6 @@
     nali
     rclone
     superfile
+    comma
   ];
 }
