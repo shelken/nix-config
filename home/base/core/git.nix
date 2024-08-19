@@ -68,6 +68,7 @@
   home.packages = with pkgs; [
     onefetch # 显式当前git项目的详细信息
     git-cliff #
+    git-filter-repo # 清除git大文件，修改历史
   ];
 
   home.sessionVariables = {
