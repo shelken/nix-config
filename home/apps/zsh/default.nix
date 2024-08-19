@@ -19,7 +19,6 @@ in {
       setopt AUTO_CD
       setopt INTERACTIVE_COMMENTS
       setopt HIST_FCNTL_LOCK
-      setopt HIST_IGNORE_ALL_DUPS
       setopt SHARE_HISTORY
       setopt EXTENDED_HISTORY
       unsetopt AUTO_REMOVE_SLASH
@@ -31,9 +30,12 @@ in {
       proxy = "export https_proxy=http://127.1:7896 http_proxy=http://127.1:7896";
       unproxy = "unset https_proxy http_proxy";
     };
+    # https://home-manager-options.extranix.com/?query=zsh.history
     history = {
       size = 10000;
       save = 10000;
+      extended = true;
+      ignoreAllDups = false;
     };
     oh-my-zsh = {
       enable = true;
