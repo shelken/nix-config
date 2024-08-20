@@ -80,7 +80,7 @@
       shellcheck
       shfmt
     ]
-    ++ lib.optional (!stdenv.isDarwin) [
+    ++ lib.optionals (!stdenv.isDarwin) [
       gcc
       clang-tools
     ];
