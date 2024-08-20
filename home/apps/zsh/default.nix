@@ -16,6 +16,9 @@ in {
     # 语法高亮
     syntaxHighlighting.enable = true;
     initExtraFirst = ''
+      # 性能分析
+      zmodload zsh/zprof
+
       setopt AUTO_CD
       setopt INTERACTIVE_COMMENTS
       setopt HIST_FCNTL_LOCK
