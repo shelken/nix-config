@@ -11,11 +11,9 @@
 
     # nix communitys cache server
     extra-substituters = [
-      "https://hyprland.cachix.org"
       "https://hadolint.cachix.org"
     ];
     extra-trusted-public-keys = [
-      "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
       "hadolint.cachix.org-1:CdmLJ7MXh5ojKBPUQGYklkbetIdIcC8tgOTGRUnxBjo="
     ];
   };
@@ -230,10 +228,10 @@
     };
 
     # hyprland
-    hyprland = {
-      url = "github:hyprwm/Hyprland/v0.38.1";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # hyprland = {
+    #   url = "github:hyprwm/Hyprland/v0.38.1";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
 
     # my dotfiles
     dotfiles = {
