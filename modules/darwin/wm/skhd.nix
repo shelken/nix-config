@@ -97,6 +97,9 @@ in {
         alt - 7 : ${scriptsPath}/ss.sh 7
         alt - 8 : ${scriptsPath}/ss.sh 8
         alt - 9 : ${scriptsPath}/ss.sh 9
+        alt - t : ${scriptsPath}/ss.sh 2
+        alt - b : ${scriptsPath}/ss.sh 1
+        alt - c : ${scriptsPath}/ss.sh 3
 
         # 无关闭 sip 时使用
         # alt - 1 ; ss1
@@ -122,6 +125,9 @@ in {
         shift + cmd - 7 : yabai -m window --space 7 && ${scriptsPath}/ss.sh 7
         shift + cmd - 8 : yabai -m window --space 8 && ${scriptsPath}/ss.sh 8
         shift + cmd - 9 : yabai -m window --space 9 && ${scriptsPath}/ss.sh 9
+        shift + alt - b : yabai -m window --space 1 && ${scriptsPath}/ss.sh 1
+        shift + alt - t : yabai -m window --space 2 && ${scriptsPath}/ss.sh 2
+        shift + alt - c : yabai -m window --space 3 && ${scriptsPath}/ss.sh 3
 
         #          ╭──────────────────────────────────────────────────────────╮
         #          │                 交换两个space的所有窗口                  │
