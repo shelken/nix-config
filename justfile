@@ -49,6 +49,11 @@ gc duration="7d" *args="":
   @nix-collect-garbage --delete-older-than {{ duration }} {{args}}
   @sudo nix-collect-garbage --delete-older-than {{ duration }} {{args}}
 
+# 清理所有
+gc-all:
+  @nix-collect-garbage -d
+  @sudo nix-collect-garbage -d
+
 # 生成镜像
 [linux]
 gen-image host format:

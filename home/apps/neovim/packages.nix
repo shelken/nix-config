@@ -12,7 +12,7 @@
       ripgrep
 
       #-- python
-      nodePackages.pyright
+      pyright
       (python311.withPackages (
         ps:
           with ps; [

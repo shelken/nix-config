@@ -10,12 +10,12 @@
     #];
 
     # nix communitys cache server
-    extra-substituters = [
-      "https://hadolint.cachix.org"
-    ];
-    extra-trusted-public-keys = [
-      "hadolint.cachix.org-1:CdmLJ7MXh5ojKBPUQGYklkbetIdIcC8tgOTGRUnxBjo="
-    ];
+    # extra-substituters = [
+    #   "https://hadolint.cachix.org"
+    # ];
+    # extra-trusted-public-keys = [
+    #   "hadolint.cachix.org-1:CdmLJ7MXh5ojKBPUQGYklkbetIdIcC8tgOTGRUnxBjo="
+    # ];
   };
 
   outputs = inputs @ {
@@ -206,7 +206,7 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
     # darwin
     nixpkgs-darwin.url = "github:nixos/nixpkgs/nixpkgs-24.05-darwin";
@@ -217,7 +217,8 @@
     };
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-24.05";
+      #url = "github:nix-community/home-manager/release-24.05";
+      url = "github:nix-community/home-manager/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
