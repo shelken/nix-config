@@ -1,0 +1,51 @@
+set dotenv-load
+target_drive:="alist3_local"
+share_dir:="/ali/Alist/公共分享目录/临时"
+share_link_dir:="/临时"
+today_dir:="$(date +'%Y-%m-%d')"
+
+alist_base:="$ALIST_HOST"
+
+# 上传到{{target_drive}}
+public local_file dir=today_dir:
+  @rclone copy -P --header "Referer:https://www.aliyundrive.com/" "{{local_file}}" {{target_drive}}:{{share_dir}}/{{dir}}
+
+get-link file dir=today_dir:
+  #!/usr/bin/env bash
+  origin_uri=$(echo -n "{{share_link_dir}}/{{dir}}/{{file}}")
+  share_uri=$(echo -n "{{share_dir}}/{{dir}}/{{file}}")
+  dirs=$(echo -n "$share_uri" | awk -F"/" '{for (i=1; i<=NF; i++) print $i}')
+  uri=""
+  for d in $dirs; do
+    encoded=$(echo -n "$d" | jq -sRr @uri)
+    uri="$uri/$encoded"
+  done
+  sign=$(http {{alist_base}}/api/fs/get path="$origin_uri" | jq -r '.data.sign')
+  echo "{{alist_base}}/d$uri?sign=$sign"
+
+ls dir=today_dir: 
+  @rclone lsf {{target_drive}}:{{share_dir}}/{{dir}}
+
+rm file:
+  @rclone delete --retries 1 {{target_drive}}:{{share_dir}}/"{{file}}"
+
+lsd dir="": 
+  @rclone lsf {{target_drive}}:{{share_dir}}/{{dir}} --dirs-only
+
+mkdir dir=today_dir:
+  @rclone mkdir {{target_drive}}:{{share_dir}}/{{dir}}
+
+clean-old:
+  #!/usr/bin/env bash
+  while read day
+  do
+    if [ -n "$day" ] && [ "$day" != "{{today_dir}}/" ]; then
+      rclone rmdir {{target_drive}}:{{share_dir}}/"$day"
+    fi
+  done <<< $(rclone lsf {{target_drive}}:{{share_dir}}/{{today_dir}} --dirs-only)
+
+browse:
+  @open "{{alist_base}}{{share_dir}}"
+
+rmdir dir:
+  @rclone rmdir --retries 1 {{target_drive}}:{{share_dir}}/{{dir}}
