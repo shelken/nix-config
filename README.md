@@ -48,6 +48,12 @@ git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-con
 # 5. specify the profile that defined in flake.nix
 echo "PROFILE=<profile-name>" >> .env
 
+# 6. 安装nix-darwin并配置
+nix run nix-darwin -- switch --flake .#$PROFILE
+
+# 7. 打开新标签，执行
+just sw
+
 ```
 
 ## 应用
