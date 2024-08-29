@@ -175,6 +175,7 @@ in {
       # "cleanmymac"  # 清理
       # "wpsoffice"  # pdf, word, excel
       # "mounty" # for mount nfts disk
+      # "ntfs-3g-mac" # mounty need
       # "macfuse" # mounty need
 
       # read pdf,...
