@@ -43,15 +43,13 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 # 3. clone repo
 git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-config
 
-# 4. uninstall yabai and skhd;(if you have installed)
-
-# 5. specify the profile that defined in flake.nix
+# 4. specify the profile that defined in flake.nix
 echo "PROFILE=<profile-name>" >> .env
 
-# 6. 安装nix-darwin并配置
+# 5. 安装nix-darwin并配置
 nix run nix-darwin -- switch --flake .#$PROFILE
 
-# 7. 打开新标签，执行
+# 6. 打开新标签，执行
 just sw
 
 ```
