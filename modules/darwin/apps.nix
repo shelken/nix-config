@@ -156,7 +156,7 @@ in {
       # "rustdesk"
 
       # Misc
-      "iina" # video player
+      # "iina" # video player
       # "raycast" # macOS 12+ (HotKey: alt/option + space)search, calculate and run scripts(with many plugins)
       "stats" # beautiful system status monitor in menu bar
       # "appcleaner" # app uninstall
@@ -185,10 +185,10 @@ in {
       # "obsidian"
 
       # translation
-      "easydict" # 翻译
+      # "easydict" # 翻译
 
       # display
-      "betterdisplay" # 显示器
+      # "betterdisplay" # 显示器
 
       # keyborader
       # "karabiner-elements"  # 快捷键映射
@@ -225,7 +225,7 @@ in {
       # "orbstack" # docker, need macOS 12+
       # "iterm2"
       "kitty"
-      "wezterm"
+      # "wezterm"
       # "he3"
       #"intellij-idea" IDEA
       #"navicat-premium" mysql...
