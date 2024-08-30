@@ -87,7 +87,6 @@
       ];
       home-modules = map mylib.relativeToRoot [
         "home/darwin"
-        "secrets/home.nix"
       ];
     };
     lingModules = {
