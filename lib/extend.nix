@@ -1,6 +1,7 @@
 {
   lib,
   pkgs,
+  secrets,
   ...
 }: {
   # a -> path -> a
@@ -24,4 +25,6 @@
   mkUpper = str:
     with builtins;
       (lib.toUpper (substring 0 1 str)) + (substring 1 (stringLength str) str);
+
+  get-sops-file = file: secrets + "/sops/secrets/${file}";
 }

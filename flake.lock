@@ -427,6 +427,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-stable_2": {
+      "locked": {
+        "lastModified": 1721524707,
+        "narHash": "sha256-5NctRsoE54N86nWd0psae70YSLfrOek3Kv1e8KoXe/0=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "556533a23879fc7e5f98dd2e0b31a6911a213171",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "release-24.05",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nixpkgs-unstable": {
       "locked": {
         "lastModified": 1723175592,
@@ -477,16 +493,17 @@
         "nixpkgs-unstable": "nixpkgs-unstable",
         "rime-main": "rime-main",
         "secrets": "secrets",
+        "sops-nix": "sops-nix",
         "vscode-server": "vscode-server"
       }
     },
     "secrets": {
       "flake": false,
       "locked": {
-        "lastModified": 1722668303,
-        "narHash": "sha256-a8b1vlOMRflY5gIitRdhtmCCm0yY6tAdJ5uzHS9ukcQ=",
+        "lastModified": 1725363806,
+        "narHash": "sha256-o3xA9d9HhmdI5y6/E0dBS4MPq9804hSXajEbPuZSjA8=",
         "ref": "refs/heads/main",
-        "rev": "7f117117cdbcbc8f712550577ef9952cbfc73eb2",
+        "rev": "77fce00f1224a825e579dc2cfcc4998c1df040ec",
         "shallow": true,
         "type": "git",
         "url": "ssh://git@github.com/shelken/secrets.nix.git"
@@ -495,6 +512,27 @@
         "shallow": true,
         "type": "git",
         "url": "ssh://git@github.com/shelken/secrets.nix.git"
+      }
+    },
+    "sops-nix": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "nixpkgs-stable": "nixpkgs-stable_2"
+      },
+      "locked": {
+        "lastModified": 1725201042,
+        "narHash": "sha256-lj5pxOwidP0W//E7IvyhbhXrnEUW99I07+QpERnzTS4=",
+        "owner": "Mic92",
+        "repo": "sops-nix",
+        "rev": "5db5921e40ae382d6716dce591ea23b0a39d96f7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Mic92",
+        "repo": "sops-nix",
+        "type": "github"
       }
     },
     "systems": {

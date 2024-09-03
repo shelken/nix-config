@@ -1,5 +1,6 @@
 {
   agenix,
+  sops-nix,
   secrets,
   config,
   ...
@@ -7,11 +8,23 @@
   imports = [
     # agenix.darwinModules.default
     agenix.homeManagerModules.default
+    # sops-nix
+    sops-nix.homeManagerModules.sops
   ];
 
   # home.packages = with pkgs; [
   #   agenix.packages."${pkgs.system}".default
   # ];
+
+  sops.age = {
+    generateKey = true;
+    keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
+    sshKeyPaths = [
+      "${config.home.homeDirectory}/.ssh/id_ed25519"
+    ];
+  };
+  # 统一linux 和 darwin
+  home.sessionVariables.SOPS_AGE_KEY_FILE = config.sops.age.keyFile;
 
   # if you changed this key, you need to regenerate all encrypt files from the decrypt contents!
   # age.identityPaths = [

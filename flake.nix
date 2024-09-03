@@ -37,6 +37,7 @@
         };
         mylibx = import ./lib/extend.nix {
           pkgs = import inputs.nixpkgs {inherit system;};
+          secrets = inputs.secrets;
           inherit lib;
         };
         inherit mylib myvars system;
@@ -243,6 +244,11 @@
     agenix = {
       # lock with git commit at 0.15.0
       url = "github:ryantm/agenix/564595d0ad4be7277e07fa63b5a991b3c645655d";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

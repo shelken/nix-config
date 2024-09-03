@@ -5,6 +5,7 @@ in {
   macosSystem = import ./macosSystem.nix;
   nixosSystem = import ./nixosSystem.nix;
   relativeToRoot = lib.path.append ../.;
+  get-sops-file = file: ../. + "/sops/secrets/${file}";
   # 扫入当前目录所有除default.nix的以nix结尾的文件，以及第一层目录
   # 返回一个目录list
   scanPaths = path:
