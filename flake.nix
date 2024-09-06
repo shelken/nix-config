@@ -97,6 +97,7 @@
       ];
       home-modules = map mylib.relativeToRoot [
         "home/darwin"
+        "hosts/ling/home.nix"
       ];
     };
 

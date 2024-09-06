@@ -7,4 +7,5 @@ in {
   imports = [
     ./apps.nix
   ];
+  shelken.wm.aerospace.enable = true;
 }

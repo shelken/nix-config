@@ -4,5 +4,6 @@
   # };
   shelken = {
     wm.aerospace.enable = true;
+    secrets = true;
   };
 }

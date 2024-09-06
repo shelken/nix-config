@@ -1,10 +1,13 @@
 {
   agenix,
+  myvars,
   sops-nix,
   secrets,
   config,
   ...
-}: {
+}: let
+  get-sops-file = file: secrets + "/sops/secrets/${file}";
+in {
   imports = [
     # agenix.darwinModules.default
     agenix.homeManagerModules.default
@@ -25,6 +28,18 @@
   };
   # 统一linux 和 darwin
   home.sessionVariables.SOPS_AGE_KEY_FILE = config.sops.age.keyFile;
+
+  sops.secrets = {
+    "deepseek/api-key" = {
+      # path = "${config.home.homeDirectory}/test2.txt";
+      # sopsFile = ../../../../sops/secrets/deepseek/default.yaml;
+      sopsFile = get-sops-file "${myvars.username}/default.yaml";
+    };
+    "github/cli-token" = {
+      sopsFile = get-sops-file "shelken/default.yaml";
+      path = "${config.home.homeDirectory}/.config/gh/access-token";
+    };
+  };
 
   # if you changed this key, you need to regenerate all encrypt files from the decrypt contents!
   # age.identityPaths = [
