@@ -161,7 +161,7 @@ in {
       "stats" # beautiful system status monitor in menu bar
       # "appcleaner" # app uninstall
       # "applite" # homebrew ui; need macOS 13+
-      "hiddenbar" # menubar plugin
+      # "hiddenbar" # menubar plugin
       # "picgo" # picbed
       "the-unarchiver" # zip,unzip
       # "imageoptim"  # image compress
