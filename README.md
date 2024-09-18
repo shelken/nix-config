@@ -86,6 +86,12 @@ just b
 
 尝试在`wezterm.lua`中配置`front_end = "WebGpu"`。
 
+### `Operation not permitted`?
+
+![](assets/imgs/README_2024-09-19_01-08-46.png)
+
+给nix完整的磁盘访问权限
+
 # 部署
 
 > 在本地部署其他机器

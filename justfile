@@ -180,7 +180,7 @@ rebuild-debug host=profile:
 rebuild-debug target=profile: set-proxy
   #!/usr/bin/env bash
   config_target=".#darwinConfigurations.{{target}}.system"
-  nom build $config_target --extra-experimental-features "nix-command flakes" -v
+  nix build $config_target --extra-experimental-features "nix-command flakes" -v
 
 # 交互式源码查看
 repl:
