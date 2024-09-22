@@ -21,8 +21,8 @@ in {
     #   };
     # };
 
-    home.packages = with pkgs; [
-      ice-bar
-    ];
+    # home.packages = with pkgs; [
+    #   ice-bar
+    # ];
   };
 }

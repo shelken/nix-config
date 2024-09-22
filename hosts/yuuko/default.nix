@@ -7,5 +7,8 @@ in {
   imports = [
     ./apps.nix
   ];
-  shelken.wm.aerospace.enable = true;
+  shelken.wm = {
+    aerospace.enable = true;
+    iceBar.enable = true;
+  };
 }

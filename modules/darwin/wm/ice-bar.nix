@@ -7,21 +7,19 @@
 }: let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
-  cfg = config.shelken.wm.aerospace;
+  cfg = config.shelken.wm.iceBar;
 in {
-  options.shelken.wm.aerospace = {
-    enable = mkBoolOpt false "Whether or not to enable aerospace.";
+  options.shelken.wm.iceBar = {
+    enable = mkBoolOpt false "Whether or not to enable.";
   };
 
   config = mkIf cfg.enable {
     # 版本差异的
     homebrew = {
       casks = [
-        "aerospace"
+        "jordanbaird-ice"
       ];
       brews = [
-        # janky borders; for aerospace; need macOS 14+
-        "borders"
       ];
     };
   };
