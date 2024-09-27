@@ -20,6 +20,7 @@ in {
 
     tools.music.enable = true;
     tools.image.enable = true;
+    tools.others.enable = true;
 
     social.personal.enable = true;
   };
