@@ -17,6 +17,8 @@ in {
       casks = [
         # "google-chrome"
         "arc" # macOS 12+, browser
+        "iina"
+        "microsoft-remote-desktop"
       ];
       masApps = {
         Wechat = 836500024;

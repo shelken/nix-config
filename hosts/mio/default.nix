@@ -15,6 +15,12 @@ in {
       tools.enable = true;
       desktop.enable = true;
       homelab.enable = true;
+      work.enable = true;
     };
+
+    tools.music.enable = true;
+    tools.image.enable = true;
+
+    social.personal.enable = true;
   };
 }

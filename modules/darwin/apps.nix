@@ -147,13 +147,10 @@ in {
       "squirrel" # input method for Chinese, rime-squirrel
 
       # IM & audio & remote desktop & meeting
-      # "telegram"
-      # "feishu" # for work
       # "discord"
       # "rustdesk"
 
       # Misc
-      # "iina" # video player
       "raycast" # macOS 12+ (HotKey: alt/option + space)search, calculate and run scripts(with many plugins)
       "stats" # beautiful system status monitor in menu bar
       "appcleaner" # app uninstall
@@ -161,14 +158,11 @@ in {
       # "hiddenbar" # menubar plugin
       # "picgo" # picbed
       "the-unarchiver" # zip,unzip
-      # "imageoptim"  # image compress
-      # "xld"  # 处理cd音频文件，flac等无损音频转化
       # "localsend"
       # "adrive"  # 阿里云盘
       # "hackintool"  # hackintosh
       # "shortcutdetective"  # 检查快捷键
       # "barrier"  # 跨屏键鼠
-      # "musicbrainz-picard"  # 音乐信息刮削
       # "cleanmymac"  # 清理
 
       # read pdf,...
@@ -194,13 +188,11 @@ in {
 
       # remote-desktop
       # "vnc-viewer"
-      # "microsoft-remote-desktop"
 
       # Development
       # "iterm2"
       "kitty"
       # "wezterm"
-      # "he3"
       #"navicat-premium" mysql...
     ];
   };
