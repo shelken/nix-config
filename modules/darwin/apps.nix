@@ -144,10 +144,7 @@ in {
 
     # `brew install --cask`
     casks = [
-      # "aerospace" # 窗口管理
       "squirrel" # input method for Chinese, rime-squirrel
-      # "google-chrome"
-      # "arc" # macOS 12+, browser
 
       # IM & audio & remote desktop & meeting
       # "telegram"
@@ -173,40 +170,19 @@ in {
       # "barrier"  # 跨屏键鼠
       # "musicbrainz-picard"  # 音乐信息刮削
       # "cleanmymac"  # 清理
-      # "wpsoffice"  # pdf, word, excel
-      # "mounty" # for mount nfts disk
-      # "ntfs-3g-mac" # mounty need
-      # "macfuse" # mounty need
 
       # read pdf,...
       # "koodo-reader"
-
-      # write
-      # "obsidian"
-
-      # translation
-      # "easydict" # 翻译
-
-      # display
-      # "betterdisplay" # 显示器
 
       # keyborader
       # "karabiner-elements"  # 快捷键映射
       # "keyboardholder" # 不同应用自动切输入法
       # "keyclu" # shortcut viewer
 
-      # mouse
-      # "mac-mouse-fix" # 鼠标滚动
-      # "mos"
-
       # network
       "clashx-meta" #
-      # "zerotier-one"
       # "tailscale"
       # "lulu" # firewall
-
-      # download
-      # "motrix"  # 种子下载
 
       # sync file
       # "syncthing" # 数据同步
@@ -221,13 +197,10 @@ in {
       # "microsoft-remote-desktop"
 
       # Development
-      # "visual-studio-code"
-      # "orbstack" # docker, need macOS 12+
       # "iterm2"
       "kitty"
       # "wezterm"
       # "he3"
-      #"intellij-idea" IDEA
       #"navicat-premium" mysql...
     ];
   };
