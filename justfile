@@ -193,7 +193,7 @@ rollback:
 
 # 搜索包
 search pkg num='10':
-  @nh search -l {{num}} -c nixos-24.05 {{pkg}}
+  @nh search -l {{num}} -c nixos-unstable {{pkg}}
 
 # mac更新前调整nix到代理
 [macos]
