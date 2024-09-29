@@ -186,9 +186,6 @@ in {
       "qlmarkdown"
       "syntax-highlight"
 
-      # remote-desktop
-      # "vnc-viewer"
-
       # Development
       # "iterm2"
       "kitty"

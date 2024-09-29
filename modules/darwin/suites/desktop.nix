@@ -19,6 +19,7 @@ in {
         "arc" # macOS 12+, browser
         "iina"
         "microsoft-remote-desktop"
+        "vnc-viewer"
         "keycastr" # an open source keystroke visualizer.
       ];
       masApps = {
