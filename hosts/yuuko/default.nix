@@ -10,7 +10,7 @@ in {
       iceBar.enable = true;
     };
     suites = {
-      write.enable = true;
+      write.enable = false;
       dev.enable = true;
       tools.enable = false;
       desktop.enable = true;
@@ -24,7 +24,7 @@ in {
     # tools.virts.enable = true; # 虚拟机
     # tools.others.enable = true; # 其他：altserver,备份
 
-    social.personal.enable = true;
+    social.personal.enable = false;
   };
   homebrew = {
     onActivation = {
