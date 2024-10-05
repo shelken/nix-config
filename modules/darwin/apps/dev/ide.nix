@@ -17,6 +17,7 @@ in {
       casks = [
         "visual-studio-code" # vs-code
         "intellij-idea" # IDEA
+        "zed"
       ];
     };
   };

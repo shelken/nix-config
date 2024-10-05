@@ -114,6 +114,7 @@ in {
       "gromgit/fuse" # macfuse,mounty
       "he3-app/he3" # he3
       "nikitabobko/tap" # aerospace
+      "bigwig-club/brew" # upic
     ];
 
     brews = [

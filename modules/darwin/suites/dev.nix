@@ -15,5 +15,6 @@ in {
   config = mkIf cfg.enable {
     shelken.dev.container.enable = true;
     shelken.dev.ide.enable = true;
+    shelken.dev.misc.enable = true;
   };
 }

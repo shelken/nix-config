@@ -16,6 +16,7 @@ in {
     homebrew = {
       casks = [
         "imageoptim" # image compress
+        "upic"
       ];
     };
   };

@@ -24,4 +24,11 @@ in {
 
     social.personal.enable = true;
   };
+  homebrew = {
+    onActivation = {
+      # autoUpdate = true;
+      # 'zap': uninstalls all formulae(and related files) not listed in the generated Brewfile
+      cleanup = "zap";
+    };
+  };
 }
