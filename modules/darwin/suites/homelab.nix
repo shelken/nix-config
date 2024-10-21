@@ -14,5 +14,12 @@ in {
 
   config = mkIf cfg.enable {
     shelken.network.homelab.enable = true;
+    homebrew = {
+      casks = [
+      ];
+      masApps = {
+        vidhub = 1659622164; # media player
+      };
+    };
   };
 }
