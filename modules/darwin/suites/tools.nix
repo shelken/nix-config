@@ -18,6 +18,7 @@ in {
       music.enable = true; # 音乐刮削相关
       image.enable = true; # 图片处理
       virts.enable = true; # 虚拟机
+      rclone.enable = true; # rclone
       others.enable = true; # 其他：altserver,备份
     };
   };

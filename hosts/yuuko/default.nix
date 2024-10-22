@@ -19,6 +19,7 @@ in {
     };
 
     tools.main.enable = true;
+    tools.rclone.enable = true;
     # tools.music.enable = true; # 音乐刮削相关
     # tools.image.enable = true; # 图片处理
     # tools.virts.enable = true; # 虚拟机
