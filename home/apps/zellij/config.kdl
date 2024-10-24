@@ -1,0 +1,11 @@
+// theme "catppuccin-macchiato"
+
+session_serialization true
+
+keybinds {
+  normal {
+    unbind "Ctrl q" "Ctrl s" // for vim
+    bind "Ctrl f" { SwitchToMode "Scroll"; }
+    bind "Ctrl x" { Quit; }
+  }
+}

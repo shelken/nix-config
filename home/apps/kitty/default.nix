@@ -31,16 +31,16 @@
     hash = "sha256-TLltUcfJpY+3rwvHYgtN4zBpbBnLBYyzDu90UMnxwoc=";
   };
 in {
-  programs.kitty = {
-    enable = false; # 用 homebrew 安装
-    theme = theme;
-    shellIntegration.mode = shell_integration;
-    extraConfig = builtins.readFile ./kitty.conf;
-    environment = {
-      # not use `xterm-kitty`
-      # "TERM" = "xterm-256color";
-    };
-  };
+  # programs.kitty = {
+  #   enable = false; # 用 homebrew 安装
+  #   theme = theme;
+  #   shellIntegration.mode = shell_integration;
+  #   extraConfig = builtins.readFile ./kitty.conf;
+  #   environment = {
+  #     # not use `xterm-kitty`
+  #     # "TERM" = "xterm-256color";
+  #   };
+  # };
 
   xdg.configFile."kitty/kitty.conf" = {
     text = concatStrings [
