@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  pkgs,
+  pkgs-unstable,
+  ...
+}: {
   home.sessionVariables = {
     # for go
     GOPROXY = "https://goproxy.io";
@@ -17,10 +21,10 @@
     go
 
     #-- rust
-    cargo
-    rustc
-    rust-analyzer
-    rustfmt
+    pkgs-unstable.cargo
+    pkgs-unstable.rustc
+    pkgs-unstable.rust-analyzer
+    pkgs-unstable.rustfmt
 
     #-- deploy
     ansible

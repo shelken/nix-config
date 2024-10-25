@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  pkgs,
+  pkgs-unstable,
+  ...
+}: {
   home.packages = with pkgs;
     [
       # c
@@ -43,9 +47,9 @@
       lua-language-server
 
       #-- rust
-      rust-analyzer
-      cargo # rust package manager
-      rustfmt
+      pkgs-unstable.rust-analyzer
+      pkgs-unstable.cargo # rust package manager
+      pkgs-unstable.rustfmt
 
       #-- misc
       marksman # lsp for markdown
