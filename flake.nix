@@ -81,6 +81,17 @@
         "hosts/yuuko/home.nix"
       ];
     };
+    sakamotoModules = {
+      darwin-modules = map mylib.relativeToRoot [
+        "modules/darwin"
+        "hosts/sakamoto"
+      ];
+      home-modules = map mylib.relativeToRoot [
+        "home/darwin"
+        "secrets/home.nix"
+        "hosts/sakamoto/home.nix"
+      ];
+    };
     mioModules = {
       darwin-modules = map mylib.relativeToRoot [
         "modules/darwin"
@@ -129,6 +140,7 @@
     darwinConfigurations = {
       # mac mini
       yuuko = mylib.macosSystem (yuukoModules // args // {system = "aarch64-darwin";});
+      sakamoto = mylib.macosSystem (sakamotoModules // args // {system = "aarch64-darwin";});
       # macbook air
       mio = mylib.macosSystem (mioModules // args // {system = "aarch64-darwin";});
       nano = mylib.macosSystem (nanoModules // args // {system = "x86_64-darwin";});
