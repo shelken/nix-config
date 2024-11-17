@@ -34,8 +34,15 @@
 ## 初始化
 
 ```bash
+# 0. 如果有用到secrets，将新机器加入secrets.nix
+ssh-keygen -t ed25519 -C "shelken@[host]"
+cat ~/.ssh/id_ed25519.pub
+## 将公钥放到github上
+
 # 1. install homebrew
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+## 将brew命令加入path
+eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # 2. install nix
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
@@ -91,6 +98,16 @@ just b
 ![](assets/imgs/README_2024-09-19_01-08-46.png)
 
 给nix完整的磁盘访问权限
+
+### 安装Homebrew错误?(即使设置http代理)
+
+尝试使用热点数据和使用Quantumult X来代理
+
+### go 编译出错
+
+![](assets/imgs/README_2024-11-16_21-25-22.png)
+
+尝试使用热点数据和使用Quantumult X来代理
 
 # 部署
 
