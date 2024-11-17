@@ -20,6 +20,7 @@ in {
         "iina"
         "microsoft-remote-desktop"
         "vnc-viewer"
+        "parsec"
         "keycastr" # an open source keystroke visualizer.
       ];
       masApps = {

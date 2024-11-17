@@ -16,6 +16,7 @@ in {
       desktop.enable = true;
       homelab.enable = true;
       work.enable = true;
+      game.enable = true;
     };
 
     tools.main.enable = true;
