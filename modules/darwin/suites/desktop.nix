@@ -15,7 +15,7 @@ in {
   config = mkIf cfg.enable {
     homebrew = {
       casks = [
-        # "google-chrome"
+        "google-chrome"
         "arc" # macOS 12+, browser
         "iina"
         "microsoft-remote-desktop"
