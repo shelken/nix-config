@@ -24,6 +24,7 @@ in {
         # "mos"
         # download
         "motrix" # 种子下载
+        "chatgpt" # 官方客户端
       ];
     };
   };
