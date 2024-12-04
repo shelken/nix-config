@@ -10,11 +10,8 @@
     ./hardware-configuration.nix
 
     ../../modules/nixos/core-server.nix
-    ../../modules/nixos/base/user-group.nix
-    # ../../modules/nixos/nvidia.nix
-    ../../modules/desktop
 
-    #../../../secrets/nixos.nix
+    ../../modules/desktop
   ];
 
   #nixpkgs.overlays = import ../../../overlays args;
@@ -86,8 +83,6 @@
       ];
     }
   ];
-
-  services.qemuGuest.enable = true;
 
   #virtualisation.docker.storageDriver = "btrfs";
 

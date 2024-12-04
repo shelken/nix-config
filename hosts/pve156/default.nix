@@ -8,11 +8,7 @@
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
-
     ../../modules/nixos/core-server.nix
-    ../../modules/nixos/base/user-group.nix
-
-    #../../../secrets/nixos.nix
   ];
 
   #nixpkgs.overlays = import ../../../overlays args;
@@ -88,8 +84,6 @@
   users.users."${username}".openssh.authorizedKeys.keys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN7ymuGznhjjVOHNI90xO4mcQA8+onWd/n3pzg8ttRGH shelken@pve155"
   ];
-
-  services.qemuGuest.enable = true;
 
   #virtualisation.docker.storageDriver = "btrfs";
 

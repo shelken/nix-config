@@ -21,4 +21,7 @@
           })
     )
   ];
+
+  services.qemuGuest.enable = true; # qemu-guest-agent
+  systemd.services."serial-getty@ttyS0".enable = true;
 }
