@@ -59,7 +59,7 @@
       nodePackages.yaml-language-server
       # sqlfluff # SQL linter
       actionlint # GitHub Actions linter
-      buf-language-server # bufls
+      buf # bufls
       tree-sitter # common language parser/highlighter
       nodePackages.prettier # common code formatter
       lazygit
