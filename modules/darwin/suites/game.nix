@@ -14,6 +14,7 @@ in {
 
   config = mkIf cfg.enable {
     shelken.game.winx.enable = true;
+    shelken.game.main.enable = true;
     # homebrew = {
     #   casks = [
     #   ];

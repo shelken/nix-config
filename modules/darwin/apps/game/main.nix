@@ -6,9 +6,9 @@
 }: let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
-  cfg = config.shelken.game.winx;
+  cfg = config.shelken.game.main;
 in {
-  options.shelken.game.winx = {
+  options.shelken.game.main = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };
 
@@ -16,7 +16,7 @@ in {
     # 版本差异的
     homebrew = {
       casks = [
-        "mythic"
+        "steam"
       ];
     };
   };
