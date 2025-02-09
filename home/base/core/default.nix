@@ -4,7 +4,7 @@
     ++ [
       ../../apps/btop.nix
       ../../apps/yazi
-      ../../apps/tmux
+      # ../../apps/tmux
       ../../apps/zsh
       ../../apps/dev/direnv.nix
       ../../apps/fastfetch
