@@ -8,7 +8,7 @@
   genSpecialArgs,
   ...
 }: let
-  inherit (inputs) home-manager nix-darwin nixpkgs;
+  inherit (inputs) home-manager nix-darwin nixpkgs-darwin;
   specialArgs = genSpecialArgs system;
 in
   nix-darwin.lib.darwinSystem {
@@ -16,11 +16,11 @@ in
     modules =
       darwin-modules
       # 保证命令执行与当前flake的input的nixpkgs包一致
-      ++ [
-        ({lib, ...}: {
-          nixpkgs.pkgs = import nixpkgs {inherit system;};
-        })
-      ]
+      # ++ [
+      #   ({lib, ...}: {
+      #     nixpkgs.pkgs = import nixpkgs-darwin {inherit system;};
+      #   })
+      # ]
       ++ (
         lib.optionals ((lib.lists.length home-modules) > 0)
         [

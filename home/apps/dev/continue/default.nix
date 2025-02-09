@@ -1,5 +1,4 @@
 {
-  mylibx,
   lib,
   config,
   myvars,
