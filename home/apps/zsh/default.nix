@@ -85,6 +85,11 @@ in {
         src = ../rclone;
         file = "rclone.zsh";
       }
+      {
+        name = "my-zsh-scripts";
+        src = ./scripts;
+        file = "scripts.zsh";
+      }
     ];
   };
 
