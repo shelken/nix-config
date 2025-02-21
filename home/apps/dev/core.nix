@@ -35,5 +35,8 @@
 
     # misc
     protobuf
+
+    # ts
+    pnpm
   ];
 }
