@@ -18,6 +18,8 @@ in {
         "visual-studio-code" # vs-code
         "intellij-idea" # IDEA
         "zed"
+        "cursor"
+        "trae"
       ];
     };
   };

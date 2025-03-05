@@ -39,4 +39,11 @@
     # ts
     pnpm
   ];
+
+  # for go goPath
+  programs.go = {
+    enable = true;
+    goPath = "go";
+    goBin = "go/bin";
+  };
 }
