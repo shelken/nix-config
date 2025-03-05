@@ -17,7 +17,12 @@
 ###################################################################################
 {
   # Add ability to used TouchID for sudo authentication
-  security.pam.enableSudoTouchIdAuth = true;
+  # https://github.com/LnL7/nix-darwin/blob/991bb2f6d46fc2ff7990913c173afdb0318314cb/modules/security/pam.nix
+  security.pam.services.sudo_local = {
+    touchIdAuth = true;
+    watchIdAuth = true;
+    reattach = true;
+  };
 
   system = {
     # activationScripts are executed every time you boot the system or run `nixos-rebuild` / `darwin-rebuild`.
