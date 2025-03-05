@@ -1,9 +1,14 @@
 {
   pkgs,
   pkgs-unstable,
+  config,
+  lib,
   ...
-}: {
+}: let
+  cfg = config.shelken.neovim;
+in {
   home.packages = with pkgs;
+    lib.optionals (!cfg.minimal)
     [
       # c
       # gcc # 插件需要
