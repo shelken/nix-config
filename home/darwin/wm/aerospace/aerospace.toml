@@ -186,11 +186,15 @@ alt-shift-r = 'mode main'
 if.app-id = 'company.thebrowser.Browser'
 run = 'move-node-to-workspace B'
 [[on-window-detected]]
+if.app-id = 'ea.browser.deta.surf'
+run = 'move-node-to-workspace B'
+[[on-window-detected]]
 if.app-id = 'com.google.Chrome'
 run = 'move-node-to-workspace B'
 [[on-window-detected]]
 if.app-id = 'com.apple.Safari'
 run = 'move-node-to-workspace B'
+
 [[on-window-detected]]
 if.app-id = 'com.jetbrains.intellij'
 run = 'move-node-to-workspace C'
@@ -198,11 +202,29 @@ run = 'move-node-to-workspace C'
 if.app-id = 'com.microsoft.VSCode'
 run = 'move-node-to-workspace C'
 [[on-window-detected]]
+if.app-id = 'com.todesktop.230313mzl4w4u92' # cursor
+run = 'move-node-to-workspace C'
+[[on-window-detected]]
+if.app-id = 'com.trae.app'
+run = 'move-node-to-workspace C'
+
+[[on-window-detected]]
 if.app-id = 'com.apple.finder'
 run = 'move-node-to-workspace F'
 [[on-window-detected]]
 if.app-id = 'net.kovidgoyal.kitty'
 run = ['move-node-to-workspace T']
+
+[[on-window-detected]]
+if.app-id = 'com.apple.ScreenSharing'
+run = 'move-node-to-workspace 4'
+[[on-window-detected]]
+if.app-id = 'tv.parsec.www' 
+run = 'move-node-to-workspace 4'
+
+[[on-window-detected]]
+if.app-id = 'md.obsidian' 
+run = 'move-node-to-workspace 2'
 
 # [workspace-to-monitor-force-assignment]
 # T = 1
