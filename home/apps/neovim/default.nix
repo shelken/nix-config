@@ -33,12 +33,6 @@ in {
 
       withPython3 = true;
       withNodeJs = true;
-
-      extraPython3Packages = ps:
-        with ps; [
-          pillow # for pastify plugin
-          pynvim # for pastify plugin
-        ];
     };
   };
 }

@@ -68,6 +68,7 @@ in {
       tree-sitter # common language parser/highlighter
       nodePackages.prettier # common code formatter
       lazygit
+      pngpaste # for img-clip plugins on mac
 
       #-- Cloud
       nodePackages.dockerfile-language-server-nodejs
