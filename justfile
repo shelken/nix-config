@@ -184,10 +184,10 @@ rebuild-debug host=profile:
 
 # 构建; 调试
 [macos]
-rebuild-debug target=profile: set-proxy
+rebuild-debug target=profile *args="": set-proxy
   #!/usr/bin/env bash
   config_target=".#darwinConfigurations.{{target}}.system"
-  nix build $config_target --extra-experimental-features "nix-command flakes" -v
+  nix build $config_target --extra-experimental-features "nix-command flakes" -v {{args}}
 
 # 交互式源码查看
 repl:
