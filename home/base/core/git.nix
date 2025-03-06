@@ -1,8 +1,17 @@
 {
   myvars,
   pkgs,
+  lib,
   ...
-}: {
+}: let
+  catppuccin-delta-theme-path = pkgs.fetchFromGitHub {
+    owner = "catppuccin";
+    repo = "delta";
+    rev = "e9e21cff";
+    hash = "sha256-04po0A7bVMsmYdJcKL6oL39RlMLij1lRKvWl5AUXJ7Q=";
+  };
+  flavor = lib.strings.toLower myvars.catppuccin_flavor;
+in {
   imports = [
     ../../apps/lazygit
   ];
@@ -21,11 +30,13 @@
         path = "~/work/.gitconfig";
         # condition = "gitdir:~/work/";
       }
+      {path = "${catppuccin-delta-theme-path}/catppuccin.gitconfig";}
     ];
     extraConfig = {
       init.defaultBranch = "main";
       push.autoSetupRemote = true;
       pull.rebase = true;
+      delta.features = "catppuccin-${flavor}";
     };
     aliases = {
       # common aliases
@@ -62,7 +73,8 @@
       # foreach = "submodule foreach";
     };
     # 差异对比增强
-    difftastic.enable = true; # https://github.com/Wilfred/difftastic.
+    difftastic.enable = false; # https://github.com/Wilfred/difftastic.
+    delta.enable = true;
   };
 
   home.packages = with pkgs; [

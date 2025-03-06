@@ -17,14 +17,18 @@ in {
     settings =
       base_config
       // {
-        # diff with difftastic
-        git.paging.externalDiffCommand = "difft --color=always";
+        # diff with delta
+        git.paging = {
+          colorArg = "always";
+          pager = "delta --dark --paging=never";
+        };
       }
       // catppuccin_theme;
   };
 
   home.packages = with pkgs; [
-    difftastic
+    # difftastic
+    delta
     # 查看文件或分支的历史
     tig
   ];

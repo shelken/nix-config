@@ -1,6 +1,6 @@
 customCommands:
   - key: "<c-c>"
-    description: "commit as non-default author"
+    description: "非默认git用户提交(commit as non-default author)"
     command:
       'git commit -m "{{index .PromptResponses 0}}" --author="{{index .PromptResponses 1}} <{{index
       .PromptResponses 2}}>"'

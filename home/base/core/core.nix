@@ -36,11 +36,11 @@
       enable = true;
       config = {
         pager = "less -FR";
-        theme = "catppuccin";
+        theme = "Catppuccin ${myvars.catppuccin_flavor}";
       };
       themes = {
         # https://raw.githubusercontent.com/catppuccin/bat/main/themes/Catppuccin-mocha.tmTheme
-        catppuccin = {
+        "Catppuccin ${myvars.catppuccin_flavor}" = {
           # src = catppuccin-bat;
           # file = "themes/Catppuccin-mocha.tmTheme";
           src = pkgs.fetchFromGitHub {
