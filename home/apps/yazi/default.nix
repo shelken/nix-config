@@ -57,8 +57,8 @@ in {
       source = pkgs.fetchFromGitHub {
         owner = "Reledia";
         repo = "glow.yazi";
-        rev = "cf1f1f0";
-        hash = "sha256-U4ullcOwN6TCaZ8gXCPMk/fGbtZLe4e1Y0RhRKLZKng=";
+        rev = "c76bf4fb";
+        hash = "sha256-DPud1Mfagl2z490f5L69ZPnZmVCa0ROXtFeDbEegBBU=";
       };
     };
     # "yazi/plugins/mime.yazi" = {
