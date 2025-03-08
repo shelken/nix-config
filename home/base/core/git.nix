@@ -36,7 +36,13 @@ in {
       init.defaultBranch = "main";
       push.autoSetupRemote = true;
       pull.rebase = true;
-      delta.features = "catppuccin-${flavor}";
+      log.date = "format:'%Y-%m-%d %H:%M:%S'";
+      delta = {
+        navigate = true;
+        features = "catppuccin-${flavor}";
+        side-by-side = true;
+        hyperlinks = true;
+      };
     };
     aliases = {
       # common aliases
@@ -74,7 +80,7 @@ in {
     };
     # 差异对比增强
     difftastic.enable = false; # https://github.com/Wilfred/difftastic.
-    delta.enable = true;
+    delta.enable = false;
   };
 
   home.packages = with pkgs; [
