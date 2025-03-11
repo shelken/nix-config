@@ -109,10 +109,7 @@
               },
               {
                 "from": {
-                  "key_code": "left_shift",
-                  "modifiers": {
-                    "optional": ["any"]
-                  }
+                  "key_code": "left_shift"
                 },
                 "to": [
                   {
