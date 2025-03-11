@@ -16,6 +16,7 @@ in {
       desktop.enable = true; # 桌面：
       homelab.enable = true; # homelab
       work.enable = true; # 工作
+      creative.enable = true; # 创意
     };
 
     # tools.music.enable = true; # 音乐刮削相关

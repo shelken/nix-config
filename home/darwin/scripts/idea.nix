@@ -1,5 +1,5 @@
 {pkgs, ...}: {
-  idea_open_folder = pkgs.writeShellScriptBin "idea" ''
+  script = pkgs.writeShellScriptBin "idea" ''
     idea_function() {
       local path="$1"
       if [ -z "$path" ]; then
