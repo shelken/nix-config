@@ -74,7 +74,7 @@
             ]
           },
           {
-            "description": "双击left_shift 切换到rime输入法",
+            "description": "双击right_shift 切换到rime输入法",
             "manipulators": [
               {
                 "conditions": [
@@ -93,7 +93,7 @@
                   }
                 ],
                 "from": {
-                  "key_code": "left_shift",
+                  "key_code": "right_shift",
                   "modifiers": {
                     "optional": ["any"]
                   }
@@ -109,7 +109,7 @@
               },
               {
                 "from": {
-                  "key_code": "left_shift"
+                  "key_code": "right_shift"
                 },
                 "to": [
                   {
