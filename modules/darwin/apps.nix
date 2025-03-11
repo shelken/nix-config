@@ -170,7 +170,7 @@ in {
       # "koodo-reader"
 
       # keyborader
-      # "karabiner-elements"  # 快捷键映射
+      "karabiner-elements" # 快捷键映射
       # "keyboardholder" # 不同应用自动切输入法
       # "keyclu" # shortcut viewer
 

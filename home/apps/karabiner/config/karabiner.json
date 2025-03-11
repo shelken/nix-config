@@ -1,0 +1,189 @@
+{
+  "profiles": [
+    {
+      "name": "Default profile",
+      "virtual_hid_keyboard": {
+        "keyboard_type_v2": "ansi"
+      }
+    },
+    {
+      "complex_modifications": {
+        "rules": [
+          {
+            "description": "shift+alt+spacebar 切换到rime输入法",
+            "enabled": false,
+            "manipulators": [
+              {
+                "conditions": [
+                  {
+                    "input_sources": [
+                      {
+                        "input_source_id": "^im\\.rime\\.inputmethod\\.Squirrel\\.Hans$"
+                      }
+                    ],
+                    "type": "input_source_unless"
+                  }
+                ],
+                "from": {
+                  "key_code": "spacebar",
+                  "modifiers": {
+                    "mandatory": ["left_shift", "left_alt"]
+                  }
+                },
+                "to": [
+                  {
+                    "select_input_source": {
+                      "input_source_id": "^im\\.rime\\.inputmethod\\.Squirrel\\.Hans$"
+                    }
+                  }
+                ],
+                "type": "basic"
+              }
+            ]
+          },
+          {
+            "description": "right_control 切换到rime输入法",
+            "enabled": false,
+            "manipulators": [
+              {
+                "conditions": [
+                  {
+                    "input_sources": [
+                      {
+                        "input_source_id": "^im\\.rime\\.inputmethod\\.Squirrel\\.Hans$"
+                      }
+                    ],
+                    "type": "input_source_unless"
+                  }
+                ],
+                "from": {
+                  "key_code": "right_control",
+                  "modifiers": {
+                    "optional": ["any"]
+                  }
+                },
+                "to": [
+                  {
+                    "select_input_source": {
+                      "input_source_id": "^im\\.rime\\.inputmethod\\.Squirrel\\.Hans$"
+                    }
+                  }
+                ],
+                "type": "basic"
+              }
+            ]
+          },
+          {
+            "description": "双击left_shift 切换到rime输入法",
+            "manipulators": [
+              {
+                "conditions": [
+                  {
+                    "name": "double-shift",
+                    "type": "variable_if",
+                    "value": 1
+                  },
+                  {
+                    "input_sources": [
+                      {
+                        "input_source_id": "^im\\.rime\\.inputmethod\\.Squirrel\\.Hans$"
+                      }
+                    ],
+                    "type": "input_source_unless"
+                  }
+                ],
+                "from": {
+                  "key_code": "left_shift",
+                  "modifiers": {
+                    "optional": ["any"]
+                  }
+                },
+                "to": [
+                  {
+                    "select_input_source": {
+                      "input_source_id": "^im\\.rime\\.inputmethod\\.Squirrel\\.Hans$"
+                    }
+                  }
+                ],
+                "type": "basic"
+              },
+              {
+                "from": {
+                  "key_code": "left_shift",
+                  "modifiers": {
+                    "optional": ["any"]
+                  }
+                },
+                "to": [
+                  {
+                    "set_variable": {
+                      "name": "double-shift",
+                      "value": 1
+                    }
+                  }
+                ],
+                "to_delayed_action": {
+                  "to_if_canceled": [
+                    {
+                      "set_variable": {
+                        "name": "double-shift",
+                        "value": 0
+                      }
+                    }
+                  ],
+                  "to_if_invoked": [
+                    {
+                      "set_variable": {
+                        "name": "double-shift",
+                        "value": 0
+                      }
+                    }
+                  ]
+                },
+                "type": "basic"
+              }
+            ]
+          }
+        ]
+      },
+      "devices": [
+        {
+          "identifiers": {
+            "is_keyboard": true,
+            "is_pointing_device": true,
+            "product_id": 64007,
+            "vendor_id": 13652
+          },
+          "ignore": false,
+          "simple_modifications": [
+            {
+              "from": {
+                "key_code": "caps_lock"
+              },
+              "to": [
+                {
+                  "key_code": "left_control"
+                }
+              ]
+            },
+            {
+              "from": {
+                "key_code": "left_control"
+              },
+              "to": [
+                {
+                  "key_code": "caps_lock"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "name": "kzzi",
+      "selected": true,
+      "virtual_hid_keyboard": {
+        "keyboard_type_v2": "ansi"
+      }
+    }
+  ]
+}
