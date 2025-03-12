@@ -24,15 +24,19 @@ in {
       ${pkgs.rsync}/bin/rsync -avz --delete --chmod=D2755,F744 ${astronvim-config}/ ${config.xdg.configHome}/nvim/
     '');
 
-    programs.neovim = {
-      enable = true;
-      defaultEditor = true;
+    programs.neovim =
+      {
+        enable = true;
+        defaultEditor = true;
 
-      viAlias = true;
-      vimAlias = true;
-
-      withPython3 = true;
-      withNodeJs = true;
-    };
+        viAlias = true;
+        vimAlias = true;
+      }
+      // lib.optionalAttrs (!cfg.minimal) {
+        withPython3 = true;
+        withNodeJs = true;
+        extraLuaPackages = ps: [ps.magick]; # for nvim image plugin https://github.com/3rd/image.nvim
+        extraPackages = [pkgs.imagemagick]; # for nvim image plugin https://github.com/3rd/image.nvim
+      };
   };
 }
