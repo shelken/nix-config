@@ -99,10 +99,14 @@ alt-comma = 'layout accordion horizontal vertical'
 # alt-k = 'focus up'
 # alt-l = 'focus right'
 
-alt-left  = 'focus left'
-alt-down  = 'focus down'
-alt-up    = 'focus up'
-alt-right = 'focus right'
+# alt-left  = 'focus left'
+# alt-down  = 'focus down'
+# alt-up    = 'focus up'
+# alt-right = 'focus right'
+alt-left  = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors left'
+alt-down  = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors down'
+alt-up    = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors up'
+alt-right = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors right'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#move
 alt-ctrl-left  = ['join-with left']
@@ -130,26 +134,26 @@ alt-7 = 'workspace 7'
 alt-8 = 'workspace 8'
 alt-9 = 'workspace 9'
 
-alt-t = 'workspace T' # terminal
-alt-f = 'workspace F' # finder
-alt-b = 'workspace B' # Browser
-alt-c = 'workspace C' # Code
+# alt-t = 'workspace T' # terminal
+# alt-f = 'workspace F' # finder
+# alt-b = 'workspace B' # Browser
+# alt-c = 'workspace C' # Code
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#move-node-to-workspace
-alt-shift-1 = 'move-node-to-workspace 1'
-alt-shift-2 = 'move-node-to-workspace 2'
-alt-shift-3 = 'move-node-to-workspace 3'
-alt-shift-4 = 'move-node-to-workspace 4'
-alt-shift-5 = 'move-node-to-workspace 5'
-alt-shift-6 = 'move-node-to-workspace 6'
-alt-shift-7 = 'move-node-to-workspace 7'
-alt-shift-8 = 'move-node-to-workspace 8'
-alt-shift-9 = 'move-node-to-workspace 9'
+alt-shift-1 = 'move-node-to-workspace --focus-follows-window 1'
+alt-shift-2 = 'move-node-to-workspace --focus-follows-window 2'
+alt-shift-3 = 'move-node-to-workspace --focus-follows-window 3'
+alt-shift-4 = 'move-node-to-workspace --focus-follows-window 4'
+alt-shift-5 = 'move-node-to-workspace --focus-follows-window 5'
+alt-shift-6 = 'move-node-to-workspace --focus-follows-window 6'
+alt-shift-7 = 'move-node-to-workspace --focus-follows-window 7'
+alt-shift-8 = 'move-node-to-workspace --focus-follows-window 8'
+alt-shift-9 = 'move-node-to-workspace --focus-follows-window 9'
 
-alt-shift-t = 'move-node-to-workspace T'
-alt-shift-f = 'move-node-to-workspace F'
-alt-shift-b = 'move-node-to-workspace B'
-alt-shift-c = 'move-node-to-workspace C'
+# alt-shift-t = 'move-node-to-workspace --focus-follows-window T'
+# alt-shift-f = 'move-node-to-workspace --focus-follows-window F'
+# alt-shift-b = 'move-node-to-workspace --focus-follows-window B'
+# alt-shift-c = 'move-node-to-workspace --focus-follows-window C'
 
 alt-ctrl-enter = 'fullscreen' # 占满屏幕
 alt-ctrl-f     = ['layout floating tiling'] # 窗口 悬浮/平铺 切换
@@ -162,6 +166,13 @@ alt-shift-tab = 'move-workspace-to-monitor --wrap-around next'
 # See: https://nikitabobko.github.io/AeroSpace/commands#mode
 alt-shift-semicolon = 'mode service' # 进入service模式
 alt-shift-r    = 'mode remote-desktop'  # 远程桌面模式
+
+# 快速打开应用
+alt-k = ['exec-and-forget open /Applications/Kitty.app']
+alt-w = ['exec-and-forget open /Applications/WeChat.app']
+alt-a = ['exec-and-forget open /Applications/Arc.app']
+alt-f = ['exec-and-forget open -a Finder']
+alt-c = ['exec-and-forget open -a Visual\ Studio\ Code']
 
 # 'service' binding mode declaration.
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
@@ -182,47 +193,83 @@ alt-ctrl-right = ['join-with right', 'mode main']
 [mode.remote-desktop.binding]
 alt-shift-r = 'mode main'
 
-# 触发打开特定应用的命令
+# 触发打开特定应用的窗口命令
 [[on-window-detected]]
-if.app-id = 'company.thebrowser.Browser'
-run = 'move-node-to-workspace B'
-[[on-window-detected]]
-if.app-id = 'ea.browser.deta.surf'
-run = 'move-node-to-workspace B'
-[[on-window-detected]]
-if.app-id = 'com.google.Chrome'
-run = 'move-node-to-workspace B'
-[[on-window-detected]]
-if.app-id = 'com.apple.Safari'
-run = 'move-node-to-workspace B'
-
-[[on-window-detected]]
-if.app-id = 'com.jetbrains.intellij'
-run = 'move-node-to-workspace C'
-[[on-window-detected]]
-if.app-id = 'com.microsoft.VSCode'
-run = 'move-node-to-workspace C'
-[[on-window-detected]]
-if.app-id = 'com.todesktop.230313mzl4w4u92' # cursor
-run = 'move-node-to-workspace C'
-[[on-window-detected]]
-if.app-id = 'com.trae.app'
-run = 'move-node-to-workspace C'
+if.app-id = 'com.tencent.xinWeChat'
+if.window-title-regex-substring = '^(?!WeChat \(Chats\)|微信 \(聊天\)).*$'
+run = ['layout floating']
 
 [[on-window-detected]]
 if.app-id = 'com.apple.finder'
-run = 'move-node-to-workspace F'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.codeweavers.CrossOver'
+run = ['layout floating', 'move-node-to-workspace 5']
+[[on-window-detected]]
+if.app-name-regex-substring = '^com.codeweavers.CrossOverHelper'
+run = ['layout floating', 'move-node-to-workspace 5']
+
+[[on-window-detected]]
+if.app-id = 'com.apple.AppStore'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.Photos'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.reminders'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.MobileSMS'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.colliderli.iina'
+run = ['layout floating']
+
+[[on-window-detected]]
+if.app-id = 'com.openai.chat'
+run = ['layout floating']
+
+[[on-window-detected]]
+if.app-id = 'com.apple.TextEdit'
+run = ['layout floating']
+
+[[on-window-detected]]
+if.window-title-regex-substring = '(Picture in Picture|Picture-in-Picture|画中画)'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'company.thebrowser.Browser'
+run = 'move-node-to-workspace 1'
+[[on-window-detected]]
+if.app-id = 'ea.browser.deta.surf'
+run = 'move-node-to-workspace 1'
+[[on-window-detected]]
+if.app-id = 'com.google.Chrome'
+run = 'move-node-to-workspace 1'
+[[on-window-detected]]
+if.app-id = 'com.apple.Safari'
+run = 'move-node-to-workspace 1'
+
+[[on-window-detected]]
+if.app-id = 'com.jetbrains.intellij'
+run = 'move-node-to-workspace 2'
+[[on-window-detected]]
+if.app-id = 'com.microsoft.VSCode'
+run = 'move-node-to-workspace 2'
+[[on-window-detected]]
+if.app-id = 'com.todesktop.230313mzl4w4u92' # cursor
+run = 'move-node-to-workspace 2'
+[[on-window-detected]]
+if.app-id = 'com.trae.app'
+run = 'move-node-to-workspace 2'
 [[on-window-detected]]
 if.app-id = 'net.kovidgoyal.kitty'
-run = ['move-node-to-workspace T']
-
-[[on-window-detected]]
-if.app-id = 'com.apple.ScreenSharing'
-run = 'move-node-to-workspace 4'
-[[on-window-detected]]
-if.app-id = 'tv.parsec.www' 
-run = 'move-node-to-workspace 4'
-
+run = ['move-node-to-workspace 2']
 [[on-window-detected]]
 if.app-id = 'md.obsidian' 
 run = 'move-node-to-workspace 2'
@@ -231,13 +278,18 @@ if.app-id = 'com.apple.FinalCutTrial'
 run = 'move-node-to-workspace 2'
 
 [[on-window-detected]]
-if.app-id = 'com.codeweavers.CrossOver'
-run = ['layout floating','move-node-to-workspace 3']
+if.app-id = 'com.tencent.xinWeChat'
+run = 'move-node-to-workspace 3'
+
 [[on-window-detected]]
-if.window-title-regex-substring = 'exe$'
-run = 'layout floating'
+if.app-id = 'com.apple.ScreenSharing'
+run = 'move-node-to-workspace 4'
 [[on-window-detected]]
-if.app-name-regex-substring = '^com.codeweavers.CrossOverHelper'
-run = 'layout floating'
+if.app-id = 'tv.parsec.www' 
+run = 'move-node-to-workspace 4'
+[[on-window-detected]]
+if.app-name-regex-substring = 'BlueStacks'
+run = ['layout floating', 'move-node-to-workspace 4']
+
 # [workspace-to-monitor-force-assignment]
 # T = 1
