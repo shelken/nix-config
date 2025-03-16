@@ -10,7 +10,7 @@ in {
   #   source = ./config/karabiner.json;
   # };
   home.activation.SyncKarabinerConfig = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    ${pkgs.rsync}/bin/rsync -az --delete --chmod=F600 \
+    ${pkgs.rsync}/bin/rsync -az --delete --chmod=F600 --mkpath \
     ${config-path}/karabiner.json \
     ${config.xdg.configHome}/karabiner/karabiner.json
   '';
