@@ -6,19 +6,17 @@
 }: let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
-  cfg = config.shelken.tools.others;
+  cfg = config.shelken.tools.cap;
+  # 截屏录屏
 in {
-  options.shelken.tools.others = {
+  options.shelken.tools.cap = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };
 
   config = mkIf cfg.enable {
     homebrew = {
       casks = [
-        "altserver"
-
-        # "bbackupp"
-        # "wezterm"
+        "obs"
       ];
     };
   };

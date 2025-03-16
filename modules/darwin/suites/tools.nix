@@ -20,6 +20,7 @@ in {
       virts.enable = true; # 虚拟机
       rclone.enable = true; # rclone
       others.enable = true; # 其他：altserver,备份
+      cap.enable = true; # 截屏录屏工具
     };
   };
 }

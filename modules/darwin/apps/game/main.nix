@@ -16,7 +16,7 @@ in {
     # 版本差异的
     homebrew = {
       casks = [
-        "steam"
+        # "steam"
       ];
     };
   };
