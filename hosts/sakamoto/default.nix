@@ -33,7 +33,7 @@ in {
     onActivation = {
       # autoUpdate = true;
       # 'zap': uninstalls all formulae(and related files) not listed in the generated Brewfile
-      cleanup = "uninstall";
+      cleanup = "zap";
     };
   };
 }
