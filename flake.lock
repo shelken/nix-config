@@ -429,11 +429,11 @@
     "rime-main": {
       "flake": false,
       "locked": {
-        "lastModified": 1738768680,
-        "narHash": "sha256-mB5hmn+2p58TdilDz9ozGyibBqLAIjwGuu558Ye30JY=",
+        "lastModified": 1741700082,
+        "narHash": "sha256-/sKoufIf4m5h1Zds6AqIyeCjDaZsFU9ot5ln3ykuNyU=",
         "owner": "iDvel",
         "repo": "rime-ice",
-        "rev": "a07cdd0f60ba56ec7fc0329fff7bf4637d02a08f",
+        "rev": "75b225e84f5e95ddf0b5a50fa6e2cff9800ee7b7",
         "type": "github"
       },
       "original": {
