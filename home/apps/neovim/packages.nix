@@ -69,6 +69,7 @@ in {
       nodePackages.prettier # common code formatter
       lazygit
       pngpaste # for img-clip plugins on mac
+      chafa # for alpha.nvim
 
       #-- Cloud
       nodePackages.dockerfile-language-server-nodejs
