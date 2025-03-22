@@ -9,15 +9,15 @@ in {
     enable = true;
     # 自定义配置目录
     dotDir = zshDotDir;
-    # 自动补全
-    enableCompletion = true;
+    # 自动补全 默认不需要，如果使用omz的话
+    # enableCompletion = true;
     # 自动提示
     autosuggestion.enable = true;
     # 语法高亮
     syntaxHighlighting.enable = true;
     initExtraFirst = ''
       # 性能分析
-      zmodload zsh/zprof
+      # zmodload zsh/zprof
 
       setopt AUTO_CD
       setopt INTERACTIVE_COMMENTS
@@ -28,6 +28,7 @@ in {
     '';
     shellAliases = {
       ll = "eza --icons -l -T -L=1";
+      mkdir = "mkdir -p";
       record = "asciinema rec --overwrite -i 1 --rows 28 --cols 140";
       #update = "sudo nixos-rebuild switch";
       proxy = "export https_proxy=http://127.1:7896 http_proxy=http://127.1:7896";
@@ -51,6 +52,15 @@ in {
         "mvn" # 自动补全及alias; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/mvn/README.md
         "qrcode" # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/qrcode/README.md
         "sudo" # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/sudo/README.md
+        "tailscale"
+
+        "fluxcd"
+        "helm"
+        "kubectl"
+        "minikube"
+        "terraform"
+
+        "pip"
       ];
       # custom = omzCustomPath;
     };
@@ -74,6 +84,11 @@ in {
         name = "powerlevel10k";
         src = pkgs.zsh-powerlevel10k;
         file = "share/zsh-powerlevel10k/powerlevel10k.zsh-theme";
+      }
+      {
+        name = "fzf-tab";
+        src = pkgs.zsh-fzf-tab;
+        file = "share/fzf-tab/fzf-tab.plugin.zsh";
       }
       {
         name = "powerlevel10k-config";
