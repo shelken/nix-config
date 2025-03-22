@@ -2,6 +2,8 @@
   myvars,
   lib,
   pkgs,
+  config,
+  hostname,
   ...
 }: let
   theme = "catppuccin-${lib.strings.toLower myvars.catppuccin_flavor}";
@@ -23,6 +25,15 @@
       cp $src $out/bin/zellij_forgot.wasm
     '';
   };
+  layout_dir =
+    if builtins.pathExists ./layouts/${hostname}
+    then ''
+      default_layout "default"
+      layout_dir "${config.home.homeDirectory}/.config/zellij/layouts/${hostname}"
+    ''
+    else ''
+      default_layout "basic"
+    '';
   zjstatus = pkgs.stdenv.mkDerivation rec {
     pname = "zjstatus";
     version = "v0.17.0";
@@ -49,18 +60,17 @@ in {
   };
 
   xdg.configFile = {
-    "zellij/layouts/basic.kdl".text = builtins.readFile ./layouts/basic.kdl;
-    "zellij/layouts/basic.swap.kdl".text = builtins.readFile ./layouts/basic.swap.kdl;
+    "zellij/layouts".source = ./layouts;
     "zellij/config.kdl" = {
       text = concatStrings [
         ''
           // 主题配色
           theme "${theme}"
 
-          default_layout "basic"
           session_serialization true
           simplified_ui false
         ''
+        layout_dir
         ''
           //键盘绑定
           keybinds {

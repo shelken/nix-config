@@ -25,13 +25,13 @@ in
         lib.optionals ((lib.lists.length home-modules) > 0)
         [
           home-manager.darwinModules.home-manager
-          {
+          ({config, ...}: {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
 
-            home-manager.extraSpecialArgs = specialArgs;
+            home-manager.extraSpecialArgs = specialArgs // {hostname = config.networking.hostName;};
             home-manager.users."${myvars.username}".imports = home-modules;
-          }
+          })
         ]
       );
   }

@@ -1,0 +1,64 @@
+layout {
+    // pane size=1 borderless=true {
+    //     plugin location="tab-bar"
+    // }
+
+    tab_template name="default-template" {
+        pane size=1 borderless=true {
+            plugin location="zjstatus"
+        }
+        children
+    // pane size=2 borderless=true {
+    //     plugin location="status-bar"
+    // }
+    }
+
+    cwd "/Users/shelken"
+
+    default-template name="nix" focus=true cwd="Code/self/MyRepo/my-nix-flake" {
+        pane stacked=true {
+            pane command="nvim" close_on_exit=true expanded=true
+            pane
+            pane cwd="~/Code/self/hysteria2"
+        }
+    }
+
+    default-template name="astro" cwd="~/Code/self/MyRepo/dot/dot-astro-nvim" {
+        pane stacked=true name="default" {
+            pane
+            pane
+        }
+    }
+
+    default-template name="rime" cwd="~/Code/self/MyRepo/rime-auto-deploy" {
+        pane stacked=true name="default" {
+            pane
+            pane
+        }
+    }
+
+    default-template name="dotfiles" cwd="~/Code/self/MyRepo/dotfiles.nix" {
+        pane stacked=true name="default" {
+            pane
+            pane
+        }
+    }
+
+    default-template name="secrets" cwd="~/Code/self/MyRepo/secrets.nix" {
+        pane stacked=true name="default" {
+            pane
+            pane
+        }
+    }
+
+    // default-template name="hy" cwd="Code/self/hysteria2" {
+    //     pane stacked=true name="default" {
+    //         pane
+    //     }
+    // }
+
+    // pane size=2 borderless=true {
+    //     plugin location="status-bar"
+    // }
+}
+
