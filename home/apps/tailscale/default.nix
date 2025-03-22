@@ -1,6 +1,7 @@
 {...}: let
 in {
   imports = [
-    ./base.nix
+    # 使用omz的插件补全
+    # ./base.nix
   ];
 }
