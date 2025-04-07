@@ -99,14 +99,14 @@ alt-comma = 'layout accordion horizontal vertical'
 # alt-k = 'focus up'
 # alt-l = 'focus right'
 
-# alt-left  = 'focus left'
-# alt-down  = 'focus down'
-# alt-up    = 'focus up'
-# alt-right = 'focus right'
-alt-left  = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors left'
-alt-down  = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors down'
-alt-up    = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors up'
-alt-right = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors right'
+alt-left  = 'focus left'
+alt-down  = 'focus down'
+alt-up    = 'focus up'
+alt-right = 'focus right'
+# alt-left  = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors left'
+# alt-down  = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors down'
+# alt-up    = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors up'
+# alt-right = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors right'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#move
 alt-ctrl-left  = ['join-with left']
@@ -194,10 +194,9 @@ alt-ctrl-right = ['join-with right', 'mode main']
 alt-shift-r = 'mode main'
 
 # 触发打开特定应用的窗口命令
-[[on-window-detected]]
-if.app-id = 'com.tencent.xinWeChat'
-if.window-title-regex-substring = '^(?!WeChat \(Chats\)|微信 \(聊天\)).*$'
-run = ['layout floating']
+# [[on-window-detected]]
+# if.app-id = 'com.tencent.xinWeChat'
+# if.window-title-regex-su run = ['layout floating']
 
 [[on-window-detected]]
 if.app-id = 'com.apple.finder'
@@ -206,12 +205,16 @@ run = 'layout floating'
 [[on-window-detected]]
 if.app-id = 'com.codeweavers.CrossOver'
 run = ['layout floating', 'move-node-to-workspace 5']
-[[on-window-detected]]
-if.app-name-regex-substring = '^com.codeweavers.CrossOverHelper'
-run = ['layout floating', 'move-node-to-workspace 5']
+# [[on-window-detected]]
+# if.app-name-regex-substring = '^com.codeweavers.CrossOverHelper'
+# run = ['layout floating', 'move-node-to-workspace 5']
 
 [[on-window-detected]]
 if.app-id = 'com.apple.AppStore'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.ActivityMonitor'
 run = 'layout floating'
 
 [[on-window-detected]]
@@ -230,17 +233,17 @@ run = 'layout floating'
 if.app-id = 'com.colliderli.iina'
 run = ['layout floating']
 
-[[on-window-detected]]
-if.app-id = 'com.openai.chat'
-run = ['layout floating']
+# [[on-window-detected]]
+# if.app-id = 'com.openai.chat'
+# run = ['layout floating']
 
 [[on-window-detected]]
 if.app-id = 'com.apple.TextEdit'
 run = ['layout floating']
 
-[[on-window-detected]]
-if.window-title-regex-substring = '(Picture in Picture|Picture-in-Picture|画中画)'
-run = 'layout floating'
+# [[on-window-detected]]
+# if.window-title-regex-substring = '(Picture in Picture|Picture-in-Picture|画中画)'
+# run = 'layout floating'
 
 [[on-window-detected]]
 if.app-id = 'company.thebrowser.Browser'
@@ -288,7 +291,7 @@ run = 'move-node-to-workspace 4'
 if.app-id = 'tv.parsec.www' 
 run = 'move-node-to-workspace 4'
 [[on-window-detected]]
-if.app-name-regex-substring = 'BlueStacks'
+if.app-id = 'com.now.gg.BlueStacks' 
 run = ['layout floating', 'move-node-to-workspace 4']
 
 # [workspace-to-monitor-force-assignment]

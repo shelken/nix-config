@@ -30,5 +30,10 @@ in {
         # vidhub = 1659622164;
       };
     };
+    system.defaults.CustomUserPreferences = {
+      "com.colliderli.iina" = {
+        arrowBtnAction = 1; # 左右箭头按钮的功能 1 切换上下集 2 快进快退
+      };
+    };
   };
 }
