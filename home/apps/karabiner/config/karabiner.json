@@ -10,6 +10,32 @@
       "complex_modifications": {
         "rules": [
           {
+            "description": "单击左ctrl切换输入法",
+            "enabled": true,
+            "manipulators": [
+              {
+                "type": "basic",
+                "from": {
+                  "key_code": "left_control",
+                  "modifiers": {
+                    "optional": ["any"]
+                  }
+                },
+                "to": [
+                  {
+                    "key_code": "left_control"
+                  }
+                ],
+                "to_if_alone": [
+                  {
+                    "key_code": "spacebar",
+                    "modifiers": ["control"]
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "description": "shift+alt+spacebar 切换到rime输入法",
             "enabled": false,
             "manipulators": [

@@ -132,11 +132,11 @@
     "dot-squirrel": {
       "flake": false,
       "locked": {
-        "lastModified": 1742266281,
-        "narHash": "sha256-O7MAmk3qNaGxlxUk9vy0puTCeJGMpcf3q6eflTRwkVc=",
+        "lastModified": 1744737419,
+        "narHash": "sha256-wzXO6QZGsM7Rbtc6r0+Itg04BABdaPRIEh3Rjcvejvc=",
         "owner": "shelken",
         "repo": "rime-auto-deploy",
-        "rev": "381aefa6c61db271c72a44e791a894d977499788",
+        "rev": "674fb128b76b4292445e8e62a5c343c0abbbcd86",
         "type": "github"
       },
       "original": {
@@ -172,11 +172,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1742370924,
-        "narHash": "sha256-JyUojmawrRq/wrl0NdqSOlc/5/rc3Vw3wiqYM8k5Pk8=",
+        "lastModified": 1744737485,
+        "narHash": "sha256-r2Tv7k9/fPWM+xvF8VZ7d2mwTwpinHwvAYhgzl0HH5M=",
         "owner": "shelken",
         "repo": "dotfiles.nix",
-        "rev": "ab55750e2dc4a0e4cedfe2a29c26a6b71226517b",
+        "rev": "164fa92bb21cedeebfc85a9101f1b4f31ebdfe7a",
         "type": "github"
       },
       "original": {
