@@ -2,6 +2,7 @@
   lib,
   mylib,
   config,
+  pkgs,
   ...
 }: let
   inherit (lib) mkIf;
@@ -15,8 +16,10 @@ in {
   config = mkIf cfg.enable {
     homebrew = {
       casks = [
-        "google-chrome"
+        # "google-chrome"
         "arc" # macOS 12+, browser
+        # "brave-browser"
+
         "iina"
         "microsoft-remote-desktop"
         "vnc-viewer"
@@ -24,10 +27,9 @@ in {
         "keycastr" # an open source keystroke visualizer.
       ];
       masApps = {
-        Wechat = 836500024;
-        Xnip = 1221250572; # 截图
+        # Wechat = 836500024;
+        # Xnip = 1221250572; # 截图
         DiskSpeedTest = 425264550; # 硬盘测速
-        # vidhub = 1659622164;
       };
     };
     system.defaults.CustomUserPreferences = {

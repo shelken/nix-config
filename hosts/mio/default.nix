@@ -17,6 +17,7 @@ in {
       homelab.enable = true; # homelab
       work.enable = true; # 工作
       creative.enable = true; # 创意
+      personal.enable = true; # 个人
     };
 
     # tools.music.enable = true; # 音乐刮削相关
@@ -24,6 +25,6 @@ in {
     # tools.virts.enable = true; # 虚拟机
     # tools.others.enable = true; # 其他：altserver,备份
 
-    social.personal.enable = true; # 个人相关：通信telegram
+    # social.personal.enable = true; # 个人相关：通信telegram
   };
 }

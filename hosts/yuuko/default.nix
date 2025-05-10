@@ -24,8 +24,6 @@ in {
     # tools.image.enable = true; # 图片处理
     # tools.virts.enable = true; # 虚拟机
     # tools.others.enable = true; # 其他：altserver,备份
-
-    social.personal.enable = false;
   };
   homebrew = {
     onActivation = {

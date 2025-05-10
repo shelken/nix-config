@@ -26,8 +26,6 @@ in {
     tools.virts.enable = true; # 虚拟机
     # tools.others.enable = true; # 其他：altserver,备份
     tools.cap.enable = true;
-
-    social.personal.enable = false;
   };
   homebrew = {
     onActivation = {

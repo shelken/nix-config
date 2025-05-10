@@ -6,14 +6,14 @@
 }: let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
-  cfg = config.shelken.suites.work;
+  cfg = config.shelken.suites.personal;
 in {
-  options.shelken.suites.work = {
+  options.shelken.suites.personal = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };
 
   config = mkIf cfg.enable {
-    shelken.social.feishu.enable = true;
+    shelken.social.telegram.enable = true;
     shelken.social.wechat.enable = true;
   };
 }

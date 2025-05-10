@@ -6,16 +6,16 @@
 }: let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
-  cfg = config.shelken.social.personal;
+  cfg = config.shelken.social.wechat;
 in {
-  options.shelken.social.personal = {
+  options.shelken.social.wechat = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };
 
   config = mkIf cfg.enable {
     homebrew = {
       casks = [
-        "telegram"
+        "wechat"
         # "discord"
       ];
     };
