@@ -5,7 +5,6 @@
   shelken = {
     wm = {
       aerospace.enable = true;
-      iceBar.enable = true;
     };
     secrets.enable = true;
   };
