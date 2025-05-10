@@ -22,11 +22,12 @@ in {
 
       #-- python
       pyright
+      ruff-lsp
       (python311.withPackages (
         ps:
           with ps; [
             pip
-            ruff-lsp
+            # ruff
             black # python formatter
           ]
       ))
