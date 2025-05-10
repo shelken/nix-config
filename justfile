@@ -165,6 +165,16 @@ qip:
   # @nix shell nixpkgs#nix-tree nixpkgs#ripgrep
   @nix-store --gc --print-roots | rg -v '/proc/' | rg -Po '(?<= -> ).*' | xargs -o nix-tree
 
+# raycast 最新配置导出
+[macos]
+raycast-export:
+  @./utils/script/capture-raycast-config.zsh e ./home/apps/raycast
+
+# raycast 最新配置导入
+[macos]
+raycast-import:
+  @./utils/script/capture-raycast-config.zsh i ./home/apps/raycast
+
 # nixos 重建
 [linux]
 rebuild host=profile:

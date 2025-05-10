@@ -1,7 +1,5 @@
 #!/usr/bin/env zsh
 
-# vim:filetype=zsh syntax=zsh tabstop=2 shiftwidth=2 softtabstop=2 expandtab autoindent fileencoding=utf-8
-
 # file location: <anywhere; but advisable in the PATH>
 
 # This script will export/import the raycast configs to/from the location specified in the target directory.
@@ -95,6 +93,8 @@ if [[ "${1}" == 'e' ]]; then
       delay 0.5
 
       key code 53
+      key code 53
+      delay 0.5 # 导出时间
     end tell
 EOF
 
@@ -126,11 +126,11 @@ elif [[ "${1}" == 'i' ]]; then
       key code 36
       delay 0.3
 
-      key code 36
-      delay 0.3
+      key code 36 # 提示框确认
+      delay 5 
 
-      key code 36
-      delay 2
+      key code 36 
+      delay 0.5
 
       key code 53
       key code 53

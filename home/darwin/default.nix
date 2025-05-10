@@ -5,6 +5,7 @@
       ../base/core
       ../base/home.nix
       # 特定应用
+      ../apps/raycast
       ../apps/karabiner
       ../apps/chromium
       ../apps/neovim
