@@ -2,36 +2,27 @@
   "profiles": [
     {
       "name": "Default profile",
-      "virtual_hid_keyboard": {
-        "keyboard_type_v2": "ansi"
-      }
+      "virtual_hid_keyboard": { "keyboard_type_v2": "ansi" }
     },
     {
       "complex_modifications": {
         "rules": [
           {
             "description": "单击左ctrl切换输入法",
-            "enabled": true,
             "manipulators": [
               {
-                "type": "basic",
                 "from": {
                   "key_code": "left_control",
-                  "modifiers": {
-                    "optional": ["any"]
-                  }
+                  "modifiers": { "optional": ["any"] }
                 },
-                "to": [
-                  {
-                    "key_code": "left_control"
-                  }
-                ],
+                "to": [{ "key_code": "left_control" }],
                 "to_if_alone": [
                   {
                     "key_code": "spacebar",
                     "modifiers": ["control"]
                   }
-                ]
+                ],
+                "type": "basic"
               }
             ]
           },
@@ -43,18 +34,14 @@
                 "conditions": [
                   {
                     "input_sources": [
-                      {
-                        "input_source_id": "^im\\.rime\\.inputmethod\\.Squirrel\\.Hans$"
-                      }
+                      { "input_source_id": "^im\\.rime\\.inputmethod\\.Squirrel\\.Hans$" }
                     ],
                     "type": "input_source_unless"
                   }
                 ],
                 "from": {
                   "key_code": "spacebar",
-                  "modifiers": {
-                    "mandatory": ["left_shift", "left_alt"]
-                  }
+                  "modifiers": { "mandatory": ["left_shift", "left_alt"] }
                 },
                 "to": [
                   {
@@ -75,18 +62,14 @@
                 "conditions": [
                   {
                     "input_sources": [
-                      {
-                        "input_source_id": "^im\\.rime\\.inputmethod\\.Squirrel\\.Hans$"
-                      }
+                      { "input_source_id": "^im\\.rime\\.inputmethod\\.Squirrel\\.Hans$" }
                     ],
                     "type": "input_source_unless"
                   }
                 ],
                 "from": {
                   "key_code": "right_control",
-                  "modifiers": {
-                    "optional": ["any"]
-                  }
+                  "modifiers": { "optional": ["any"] }
                 },
                 "to": [
                   {
@@ -111,18 +94,14 @@
                   },
                   {
                     "input_sources": [
-                      {
-                        "input_source_id": "^im\\.rime\\.inputmethod\\.Squirrel\\.Hans$"
-                      }
+                      { "input_source_id": "^im\\.rime\\.inputmethod\\.Squirrel\\.Hans$" }
                     ],
                     "type": "input_source_unless"
                   }
                 ],
                 "from": {
                   "key_code": "right_control",
-                  "modifiers": {
-                    "optional": ["any"]
-                  }
+                  "modifiers": { "optional": ["any"] }
                 },
                 "to": [
                   {
@@ -134,9 +113,7 @@
                 "type": "basic"
               },
               {
-                "from": {
-                  "key_code": "right_control"
-                },
+                "from": { "key_code": "right_control" },
                 "to": [
                   {
                     "set_variable": {
@@ -180,33 +157,32 @@
           "ignore": false,
           "simple_modifications": [
             {
-              "from": {
-                "key_code": "caps_lock"
-              },
-              "to": [
-                {
-                  "key_code": "left_control"
-                }
-              ]
+              "from": { "key_code": "caps_lock" },
+              "to": [{ "key_code": "left_control" }]
             },
             {
-              "from": {
-                "key_code": "left_control"
-              },
-              "to": [
-                {
-                  "key_code": "caps_lock"
-                }
-              ]
+              "from": { "key_code": "left_control" },
+              "to": [{ "key_code": "caps_lock" }]
+            }
+          ]
+        },
+        {
+          "identifiers": { "is_keyboard": true },
+          "simple_modifications": [
+            {
+              "from": { "key_code": "caps_lock" },
+              "to": [{ "key_code": "left_control" }]
+            },
+            {
+              "from": { "key_code": "left_control" },
+              "to": [{ "key_code": "caps_lock" }]
             }
           ]
         }
       ],
       "name": "kzzi",
       "selected": true,
-      "virtual_hid_keyboard": {
-        "keyboard_type_v2": "ansi"
-      }
+      "virtual_hid_keyboard": { "keyboard_type_v2": "ansi" }
     }
   ]
 }
