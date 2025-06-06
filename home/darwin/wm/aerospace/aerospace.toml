@@ -170,7 +170,7 @@ alt-shift-r    = 'mode remote-desktop'  # 远程桌面模式
 # 快速打开应用
 alt-k = ['exec-and-forget open /Applications/Kitty.app']
 alt-w = ['exec-and-forget open /Applications/WeChat.app']
-alt-b = ['exec-and-forget open /Applications/Arc.app']
+alt-b = ['exec-and-forget open /Applications/Google\ Chrome.app']
 alt-f = ['exec-and-forget open -a Finder']
 alt-c = ['exec-and-forget open -a Visual\ Studio\ Code']
 
