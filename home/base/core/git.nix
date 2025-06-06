@@ -34,9 +34,44 @@ in {
     ];
     extraConfig = {
       init.defaultBranch = "main";
-      push.autoSetupRemote = true;
       pull.rebase = true;
       log.date = "format:'%Y-%m-%d %H:%M:%S'";
+      push = {
+        autoSetupRemote = true;
+        default = "current";
+        followTags = true;
+      };
+      rebase = {
+        autoStash = true;
+      };
+      core = {
+        whitespace = "error";
+        autocrlf = "input";
+      };
+      status = {
+        short = true;
+        showStash = true;
+      };
+      submodule = {
+        fetchJobs = 16;
+      };
+      advice = {
+        statusHints = false;
+      };
+      blame = {
+        coloring = "highlightRecent";
+        date = "relative";
+      };
+      diff = {
+        renames = "copies";
+        interHunkContext = 10;
+      };
+      url = {
+        "git@github.com:".insteadOf = "gh:";
+      };
+      credential = {
+        "https://mirrors.tuna.tsinghua.edu.cn".helper = "gh auth git-credential"; # 本质也是github
+      };
       delta = {
         navigate = true;
         features = "catppuccin-${flavor}";
@@ -45,38 +80,10 @@ in {
       };
     };
     aliases = {
-      # common aliases
-      br = "branch";
-      co = "checkout";
-      st = "status";
-
       # git change-commits GIT_COMMITTER_NAME "old name" "new name"
       change-commits = "!f() { VAR=$1; OLD=$2; NEW=$3; shift 3; git filter-branch --env-filter \"if [[ \\\"$`echo $VAR`\\\" = '$OLD' ]]; then export $VAR='$NEW'; fi\" $@; }; f ";
       # search config
       cs = "config --get-regexp";
-
-      ls = "log --pretty=format:\"%C(yellow)%h%Cred%d\\\\ %Creset%s%Cblue\\\\ [%cn]\" --decorate";
-      ll = "log --pretty=format:\"%C(yellow)%h%Cred%d\\\\ %Creset%s%Cblue\\\\ [%cn]\" --decorate --numstat";
-
-      # cm = "commit -m"; # commit via `git cm <message>`
-      # ca = "commit -am"; # commit all changes via `git ca <message>`
-      # dc = "diff --cached";
-      #
-      # amend = "commit --amend -m"; # amend commit message via `git amend <message>`
-      # unstage = "reset HEAD --"; # unstage file via `git unstage <file>`
-      # merged = "branch --merged"; # list merged(into HEAD) branches via `git merged`
-      # unmerged = "branch --no-merged"; # list unmerged(into HEAD) branches via `git unmerged`
-      # nonexist = "remote prune origin --dry-run"; # list non-exist(remote) branches via `git nonexist`
-      #
-      # # delete merged branches except master & dev & staging
-      # #  `!` indicates it's a shell script, not a git subcommand
-      # delmerged = ''! git branch --merged | egrep -v "(^\*|main|master|dev|staging)" | xargs git branch -d'';
-      # # delete non-exist(remote) branches
-      # delnonexist = "remote prune origin";
-      #
-      # # aliases for submodule
-      # update = "submodule update --init --recursive";
-      # foreach = "submodule foreach";
     };
     # 差异对比增强
     difftastic.enable = false; # https://github.com/Wilfred/difftastic.
