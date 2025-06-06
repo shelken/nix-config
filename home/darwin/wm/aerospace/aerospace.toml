@@ -246,6 +246,10 @@ run = ['layout floating']
 # run = 'layout floating'
 
 [[on-window-detected]]
+if.app-id = 'com.audirvana.Audirvana'
+run = ['layout floating']
+
+[[on-window-detected]]
 if.app-id = 'company.thebrowser.Browser'
 run = 'move-node-to-workspace 1'
 [[on-window-detected]]
