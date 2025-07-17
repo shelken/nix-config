@@ -154,17 +154,7 @@
             "product_id": 64007,
             "vendor_id": 13652
           },
-          "ignore": false,
-          "simple_modifications": [
-            {
-              "from": { "key_code": "caps_lock" },
-              "to": [{ "key_code": "left_control" }]
-            },
-            {
-              "from": { "key_code": "left_control" },
-              "to": [{ "key_code": "caps_lock" }]
-            }
-          ]
+          "ignore": false
         },
         {
           "identifiers": { "is_keyboard": true },
