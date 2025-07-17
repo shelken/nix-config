@@ -13,6 +13,6 @@
     superfile # like yazi
     comma # use `, cowsay hello` == `nix run nixpkgs#cowsay -- hello`
     bandwhich # 查看本地程序网络连接
-    doggo # dig 替代
+    q
   ];
 }
