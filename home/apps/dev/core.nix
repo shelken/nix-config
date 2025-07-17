@@ -28,6 +28,7 @@
 
     #-- deploy
     ansible
+    ansible-lint
     sshpass
 
     #-- container
