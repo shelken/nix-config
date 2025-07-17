@@ -74,7 +74,8 @@
       # cache mirror located in China
       # status: https://mirror.sjtu.edu.cn/
       # "https://mirror.sjtu.edu.cn/nix-channels/store"
-      # status: https://mirrors.ustc.edu.cn/status/
+      # status: https://mirrors.ustc.e1du.cn/status/
+      "https://nix-cache.ooooo.space"
       "https://mirrors.ustc.edu.cn/nix-channels/store"
 
       "https://nix-community.cachix.org"
