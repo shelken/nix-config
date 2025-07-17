@@ -145,7 +145,7 @@ in {
 
     # `brew install --cask`
     casks = [
-      "squirrel" # input method for Chinese, rime-squirrel
+      "squirrel-app" # input method for Chinese, rime-squirrel
 
       # IM & audio & remote desktop & meeting
       # "discord"
