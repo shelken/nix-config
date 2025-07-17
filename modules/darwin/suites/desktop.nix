@@ -16,8 +16,7 @@ in {
   config = mkIf cfg.enable {
     homebrew = {
       casks = [
-        # "google-chrome"
-        "arc" # macOS 12+, browser
+        "google-chrome"
         # "brave-browser"
 
         "iina"

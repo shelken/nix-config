@@ -152,10 +152,6 @@
         };
         # Prevent Photos from opening automatically when devices are plugged in
         "com.apple.ImageCapture".disableHotPlug = true;
-        # Arc
-        "company.thebrowser.Browser" = {
-          currentAppIconName = "flutedGlass";
-        };
         # Stats
         "eu.exelban.Stats" = {
           # "Battery_state" = 0;

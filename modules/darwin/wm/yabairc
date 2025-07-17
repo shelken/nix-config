@@ -42,7 +42,6 @@ yabai -m config                                 \
     mouse_drop_action            swap
 
 # Assign apps to specific spaces
-# yabai -m rule --add app="^Arc$" space=1
 
 yabai -m rule --add app="^OpenAI Translator$" manage=off
 yabai -m rule --add app="^Raycast$" manage=off
@@ -61,8 +60,6 @@ yabai -m rule --add app="Easydict" manage=off
 yabai -m rule --add app="WeChat" title!="WeChat \(Chats\)" manage=off
 yabai -m rule --add app="Lark Helper" manage=off # 飞书
 
-# 画中画 PIP 
-yabai -m rule --add app="^Arc$" subrole="^AXSystemDialog$" manage=off
 
 # JetBrains
 JB_Apps='^(CLion|PyCharm|IntelliJ IDEA)$'
