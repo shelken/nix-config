@@ -69,9 +69,6 @@ in {
       url = {
         "git@github.com:".insteadOf = "gh:";
       };
-      credential = {
-        "https://mirrors.tuna.tsinghua.edu.cn".helper = "gh auth git-credential"; # 本质也是github
-      };
       delta = {
         navigate = true;
         features = "catppuccin-${flavor}";

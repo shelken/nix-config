@@ -99,10 +99,10 @@ alt-comma = 'layout accordion horizontal vertical'
 # alt-k = 'focus up'
 # alt-l = 'focus right'
 
-alt-left  = 'focus left'
-alt-down  = 'focus down'
-alt-up    = 'focus up'
-alt-right = 'focus right'
+alt-left  = 'focus left --ignore-floating'
+alt-down  = 'focus down --ignore-floating'
+alt-up    = 'focus up --ignore-floating'
+alt-right = 'focus right --ignore-floating'
 # alt-left  = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors left'
 # alt-down  = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors down'
 # alt-up    = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors up'
@@ -203,6 +203,10 @@ if.app-id = 'com.apple.finder'
 run = 'layout floating'
 
 [[on-window-detected]]
+if.app-id = 'com.apple.FontBook'
+run = 'layout floating'
+
+[[on-window-detected]]
 if.app-id = 'com.codeweavers.CrossOver'
 run = ['layout floating', 'move-node-to-workspace 5']
 # [[on-window-detected]]
@@ -290,13 +294,13 @@ run = 'move-node-to-workspace 3'
 
 [[on-window-detected]]
 if.app-id = 'com.apple.ScreenSharing'
-run = 'move-node-to-workspace 4'
+run = ['layout floating', 'move-node-to-workspace 4']
 [[on-window-detected]]
 if.app-id = 'tv.parsec.www' 
-run = 'move-node-to-workspace 4'
+run = ['layout floating', 'move-node-to-workspace 4']
 [[on-window-detected]]
 if.app-id = 'com.now.gg.BlueStacks' 
-run = ['layout floating', 'move-node-to-workspace 4']
+run = ['layout floating']
 
 # [workspace-to-monitor-force-assignment]
 # T = 1

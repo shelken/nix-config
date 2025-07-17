@@ -15,17 +15,6 @@ in {
     autosuggestion.enable = true;
     # 语法高亮
     syntaxHighlighting.enable = true;
-    initExtraFirst = ''
-      # 性能分析
-      # zmodload zsh/zprof
-
-      setopt AUTO_CD
-      setopt INTERACTIVE_COMMENTS
-      setopt HIST_FCNTL_LOCK
-      setopt SHARE_HISTORY
-      setopt EXTENDED_HISTORY
-      unsetopt AUTO_REMOVE_SLASH
-    '';
     shellAliases = {
       ll = "eza --icons -l -T -L=1";
       mkdir = "mkdir -p";
@@ -64,19 +53,33 @@ in {
       ];
       # custom = omzCustomPath;
     };
-    initExtra = ''
-      bindkey '^f' autosuggest-accept
+    initContent = let
+      firstInit = lib.mkBefore ''
+        # 性能分析
+        # zmodload zsh/zprof
 
-      # p10k custom
-      POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION='🤘'
-      # mitigation: https://github.com/romkatv/powerlevel10k?tab=readme-ov-file#mitigation
-      POWERLEVEL9K_TERM_SHELL_INTEGRATION=true
+        setopt AUTO_CD
+        setopt INTERACTIVE_COMMENTS
+        setopt HIST_FCNTL_LOCK
+        setopt SHARE_HISTORY
+        setopt EXTENDED_HISTORY
+        unsetopt AUTO_REMOVE_SLASH
+      '';
+      defaultInit = ''
+        bindkey '^f' autosuggest-accept
 
-      ################
-      # 特定机器配置 #
-      ################
-      [[ -s "$HOME/.specific.zsh" ]] && source $HOME/.specific.zsh
-    '';
+        # p10k custom
+        POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION='🤘'
+        # mitigation: https://github.com/romkatv/powerlevel10k?tab=readme-ov-file#mitigation
+        POWERLEVEL9K_TERM_SHELL_INTEGRATION=true
+
+        ################
+        # 特定机器配置 #
+        ################
+        [[ -s "$HOME/.specific.zsh" ]] && source $HOME/.specific.zsh
+      '';
+    in
+      lib.mkMerge [firstInit defaultInit];
     plugins = [
       {
         # A prompt will appear the first time to configure it properly

@@ -313,22 +313,22 @@
     #          ╰──────────────────────────────────────────────────────────╯
     # btop主题
     catppuccin-btop = {
-      url = "github:catppuccin/btop/21b8d595";
+      url = "github:catppuccin/btop/f437574b";
       flake = false;
     };
 
     catppuccin-bat = {
-      url = "github:catppuccin/bat/d714cc1d";
+      url = "github:catppuccin/bat/699f60fc";
       flake = false;
     };
 
     catppuccin-yazi = {
-      url = "github:catppuccin/yazi/9bfdccc2";
+      url = "github:catppuccin/yazi/1a8c939e";
       flake = false;
     };
 
     catppuccin-lazygit = {
-      url = "github:catppuccin/lazygit/21a25afd";
+      url = "github:catppuccin/lazygit/c2489590";
       flake = false;
     };
   };

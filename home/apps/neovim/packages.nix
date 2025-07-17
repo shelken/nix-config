@@ -22,7 +22,9 @@ in {
 
       #-- python
       pyright
-      ruff-lsp
+      ruff
+      # ruff-lsp has been deprecated, use `ruff server` instead
+      # ruff-lsp
       (python311.withPackages (
         ps:
           with ps; [

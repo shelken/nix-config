@@ -1,6 +1,6 @@
 "$schema" = "https://yazi-rs.github.io/schemas/yazi.json"
 
-[manager]
+[mgr]
 ratio = [2, 7, 7]
 show_hidden = true
 show_symlink = true

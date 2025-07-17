@@ -3,5 +3,5 @@
     zsh = builtins.readFile ./tailscale.zsh;
   };
 in {
-  programs.zsh.initExtra = shellIntegrationInit.zsh;
+  programs.zsh.initContent = shellIntegrationInit.zsh;
 }

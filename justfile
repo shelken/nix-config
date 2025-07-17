@@ -19,6 +19,7 @@ aerospace-clean:
 aerospace-test:
   just aerospace-clean
   @ln -s {{justfile_directory()}}/home/darwin/wm/aerospace/aerospace.toml $HOME/.config/aerospace/aerospace.toml
+  @aerospace reload-config
 
 # git add all
 add:
@@ -88,7 +89,7 @@ continue-test: continue-clean
 # 显示历史配置列表
 [macos]
 ls-gen:
-  @darwin-rebuild --list-generations
+  @sudo darwin-rebuild --list-generations
 
 # 清除nvim
 nvim-clean:
@@ -206,7 +207,7 @@ repl:
 # 回滚配置
 [macos]
 rollback:
-  @darwin-rebuild --rollback
+  @sudo darwin-rebuild --rollback
 
 # 搜索包
 search pkg num='10':
@@ -227,7 +228,7 @@ switch host=profile:
 switch target=profile: set-proxy
   #!/usr/bin/env bash
   config_target=".#{{target}}"
-  darwin-rebuild switch --flake $config_target
+  sudo darwin-rebuild switch --flake $config_target
 
 # 更新整个输入
 up:
@@ -235,7 +236,7 @@ up:
 
 # 指定输入更新
 upp input:
-  @nix flake lock --update-input {{ input }}
+  @nix flake update {{ input }}
 
 # view flake.lock
 view:

@@ -59,7 +59,7 @@ in {
     source = "${kitty-icon-pkgs}/kitty-light.png";
   };
 
-  programs.zsh.initExtra = shellIntegrationInit.zsh;
+  programs.zsh.initContent = shellIntegrationInit.zsh;
   programs.bash.initExtra = shellIntegrationInit.bash;
 
   home.sessionVariables = {

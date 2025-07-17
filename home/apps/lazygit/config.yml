@@ -16,28 +16,23 @@ customCommands:
         title: "Email Address"
         initialValue: ""
     loadingText: "committing"
-  - key: t
-    command: tig show {{.SelectedSubCommit.Sha}}
-    context: subCommits
-    description: tig commit (`t` again to browse files at revision)
-    subprocess: true
-  - key: t
-    command: tig show {{.SelectedLocalBranch.Name}}
-    context: localBranches
-    description: tig branch (`t` again to browse files at revision)
-    subprocess: true
-  - key: t
-    command: tig show {{.SelectedRemoteBranch.RemoteName}}/{{.SelectedRemoteBranch.Name}}
-    context: remoteBranches
-    description: tig branch (`t` again to browse files at revision)
-    subprocess: true
-  - key: t
-    command: tig {{.SelectedSubCommit.Sha}} -- {{.SelectedCommitFile.Name}}
-    context: commitFiles
-    description: tig file (history of commits affecting file)
-    subprocess: true
-  - key: t
-    command: tig -- {{.SelectedFile.Name}}
-    context: files
-    description: tig file (history of commits affecting file)
-    subprocess: true
+#   - key: t
+#     command: tig show {{.SelectedSubCommit.Sha}}
+#     context: subCommits
+#     description: tig commit (`t` again to browse files at revision)
+#   - key: t
+#     command: tig show {{.SelectedLocalBranch.Name}}
+#     context: localBranches
+#     description: tig branch (`t` again to browse files at revision)
+#   - key: t
+#     command: tig show {{.SelectedRemoteBranch.RemoteName}}/{{.SelectedRemoteBranch.Name}}
+#     context: remoteBranches
+#     description: tig branch (`t` again to browse files at revision)
+#   - key: t
+#     command: tig {{.SelectedSubCommit.Sha}} -- {{.SelectedCommitFile.Name}}
+#     context: commitFiles
+#     description: tig file (history of commits affecting file)
+#   - key: t
+#     command: tig -- {{.SelectedFile.Name}}
+#     context: files
+#     description: tig file (history of commits affecting file)
