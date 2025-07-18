@@ -110,19 +110,20 @@ in {
 
       "hashicorp/tap" # terraform
       "FelixKratz/formulae" # jankyborders
-      "localsend/localsend" # localsend
+      # "localsend/localsend" # localsend
       "gromgit/fuse" # macfuse,mounty
-      "he3-app/he3" # he3
+      "mihomo-party-org/mihomo-party"
       "nikitabobko/tap" # aerospace
       "bigwig-club/brew" # upic
+      "mhaeuser/mhaeuser" # battery-toolkit
     ];
 
     brews = [
       # `brew install`
       "wget" # download tool
       "curl" # no not install curl via nixpkgs, it's not working well on macOS!
-      "aria2" # download tool
-      "httpie" # http client
+      # "aria2" # download tool
+      # "httpie" # http client
 
       # https://github.com/rgcr/m-cli
       "m-cli" #  Swiss Army Knife for macOS
@@ -136,20 +137,17 @@ in {
 
       # misc that nix do not have cache for.
       "git-trim"
-      "terraform"
-
-      # "python@3.12"
-      # janky borders; for yabai; need macOS 14+
-      # "borders"
     ];
 
     # `brew install --cask`
     casks = [
+      # input-source
       "squirrel-app" # input method for Chinese, rime-squirrel
 
+      # browser
+      "google-chrome"
+
       # IM & audio & remote desktop & meeting
-      # "discord"
-      # "rustdesk"
 
       # Misc
       "raycast" # macOS 12+ (HotKey: alt/option + space)search, calculate and run scripts(with many plugins)
@@ -160,39 +158,23 @@ in {
       # "hiddenbar" # menubar plugin
       # "picgo" # picbed
       "the-unarchiver" # zip,unzip
-      # "localsend"
-      # "adrive"  # 阿里云盘
-      # "hackintool"  # hackintosh
-      # "shortcutdetective"  # 检查快捷键
-      # "barrier"  # 跨屏键鼠
-      # "cleanmymac"  # 清理
-
-      # read pdf,...
-      # "koodo-reader"
+      "parsec"
+      "mac-mouse-fix" # 鼠标滚动
 
       # keyborader
       "karabiner-elements" # 快捷键映射
-      # "keyboardholder" # 不同应用自动切输入法
-      # "keyclu" # shortcut viewer
 
       # network
-      "clashx-meta" #
-      # "tailscale"
-      # "lulu" # firewall
-
-      # sync file
-      # "syncthing" # 数据同步
-      # "resilio-sync"
+      "mihomo-party"
 
       # quicklook
       "qlmarkdown"
       "syntax-highlight"
 
       # Development
-      # "iterm2"
       "kitty"
+      "visual-studio-code"
       # "wezterm"
-      #"navicat-premium" mysql...
     ];
   };
 }

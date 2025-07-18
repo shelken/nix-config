@@ -15,11 +15,10 @@ in {
   config = mkIf cfg.enable {
     homebrew = {
       casks = [
-        "visual-studio-code" # vs-code
         "intellij-idea" # IDEA
-        "zed"
-        "cursor"
-        "trae"
+        # "zed"
+        # "cursor"
+        # "trae"
       ];
     };
   };

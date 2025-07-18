@@ -6,13 +6,17 @@
 }: let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
-  cfg = config.shelken.suites.write;
+  cfg = config.shelken.tools.restic;
 in {
-  options.shelken.suites.write = {
+  options.shelken.tools.restic = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };
 
   config = mkIf cfg.enable {
-    shelken.write.obsidian.enable = true;
+    homebrew = {
+      casks = [
+        "restic-browser"
+      ];
+    };
   };
 }

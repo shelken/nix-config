@@ -6,17 +6,17 @@
 }: let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
-  cfg = config.shelken.creative.fcp;
+  cfg = config.shelken.dev.navicat;
 in {
-  options.shelken.creative.fcp = {
+  options.shelken.dev.navicat = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };
 
   config = mkIf cfg.enable {
     homebrew = {
-      # masApps = {
-      #   FinalCutPro = 424389933;
-      # };
+      casks = [
+        "navicat-premium-lite"
+      ];
     };
   };
 }

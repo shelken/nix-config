@@ -15,7 +15,6 @@ in {
   config = mkIf cfg.enable {
     homebrew = {
       casks = [
-        "he3" # 开发工具箱
       ];
     };
   };

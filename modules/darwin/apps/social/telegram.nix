@@ -16,7 +16,6 @@ in {
     homebrew = {
       casks = [
         "telegram"
-        # "discord"
       ];
     };
   };

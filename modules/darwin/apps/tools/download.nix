@@ -6,20 +6,17 @@
 }: let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
-  cfg = config.shelken.suites.homelab;
+  cfg = config.shelken.tools.download;
 in {
-  options.shelken.suites.homelab = {
+  options.shelken.tools.download = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };
 
   config = mkIf cfg.enable {
-    shelken.network.homelab.enable = true;
     homebrew = {
       casks = [
+        "motrix" # 下载
       ];
-      masApps = {
-        # vidhub = 1659622164; # media player
-      };
     };
   };
 }

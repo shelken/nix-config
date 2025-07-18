@@ -10,21 +10,36 @@ in {
       iceBar.enable = true; # 菜单栏美化
     };
     suites = {
-      write.enable = true; # 写作
-      dev.enable = true; # 开发
-      tools.enable = true; # 工具
       desktop.enable = true; # 桌面：
-      homelab.enable = true; # homelab
-      work.enable = true; # 工作
-      creative.enable = true; # 创意
-      personal.enable = true; # 个人
     };
-
-    # tools.music.enable = true; # 音乐刮削相关
-    # tools.image.enable = true; # 图片处理
-    # tools.virts.enable = true; # 虚拟机
-    # tools.others.enable = true; # 其他：altserver,备份
-
-    # social.personal.enable = true; # 个人相关：通信telegram
+    write = {
+      obsidian.enable = true;
+    };
+    dev = {
+      container.enable = true;
+      ide.enable = true;
+      navicat.enable = true;
+    };
+    tools = {
+      cap.enable = false;
+      download.enable = true;
+      gpt.enable = true;
+      cherry-studio.enable = true;
+      image.enable = true;
+      music.enable = true;
+      others.enable = true;
+      rclone.enable = true;
+      battery.enable = true;
+    };
+    social = {
+      feishu.enable = false;
+      telegram.enable = true;
+      wechat.enable = true;
+    };
+  };
+  homebrew = {
+    onActivation = {
+      cleanup = "uninstall";
+    };
   };
 }

@@ -16,14 +16,14 @@ in {
   config = mkIf cfg.enable {
     homebrew = {
       casks = [
-        "google-chrome"
-        # "brave-browser"
-
+        "easydict" # 翻译
+        "betterdisplay" # 显示器
         "iina"
-        "microsoft-remote-desktop"
-        "vnc-viewer"
-        "parsec"
-        "keycastr" # an open source keystroke visualizer.
+
+        # "microsoft-remote-desktop"
+        # "vnc-viewer"
+
+        # "keycastr" # an open source keystroke visualizer.
       ];
       masApps = {
         # Wechat = 836500024;

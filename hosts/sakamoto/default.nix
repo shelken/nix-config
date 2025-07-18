@@ -6,26 +6,37 @@ in {
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
     wm = {
-      aerospace.enable = true;
-      iceBar.enable = true;
+      aerospace.enable = true; # 平铺窗口管理
+      iceBar.enable = true; # 菜单栏美化
     };
     suites = {
-      write.enable = false;
-      dev.enable = true;
-      tools.enable = false;
-      desktop.enable = true;
-      homelab.enable = true;
-      work.enable = true;
-      game.enable = true;
+      desktop.enable = true; # 桌面：
     };
-
-    tools.main.enable = true;
-    tools.rclone.enable = true;
-    # tools.music.enable = true; # 音乐刮削相关
-    # tools.image.enable = true; # 图片处理
-    tools.virts.enable = true; # 虚拟机
-    # tools.others.enable = true; # 其他：altserver,备份
-    tools.cap.enable = true;
+    write = {
+      obsidian.enable = false;
+    };
+    dev = {
+      container.enable = true;
+      ide.enable = false;
+      navicat.enable = false;
+    };
+    tools = {
+      cap.enable = true;
+      download.enable = false;
+      gpt.enable = false;
+      cherry-studio.enable = false;
+      image.enable = false;
+      music.enable = false;
+      others.enable = false; # altstore
+      rclone.enable = false;
+      battery.enable = false;
+      virts.enable = true;
+    };
+    social = {
+      feishu.enable = false;
+      telegram.enable = false;
+      wechat.enable = false;
+    };
   };
   homebrew = {
     onActivation = {

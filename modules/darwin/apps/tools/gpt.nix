@@ -6,14 +6,17 @@
 }: let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
-  cfg = config.shelken.suites.work;
+  cfg = config.shelken.tools.gpt;
 in {
-  options.shelken.suites.work = {
+  options.shelken.tools.gpt = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };
 
   config = mkIf cfg.enable {
-    shelken.social.feishu.enable = true;
-    shelken.social.wechat.enable = true;
+    homebrew = {
+      casks = [
+        "chatgpt" # 官方客户端
+      ];
+    };
   };
 }

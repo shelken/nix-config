@@ -6,24 +6,15 @@ in {
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
     wm = {
-      aerospace.enable = true;
-      iceBar.enable = true;
+      aerospace.enable = true; # 平铺窗口管理
+      iceBar.enable = true; # 菜单栏美化
     };
     suites = {
-      write.enable = false;
-      dev.enable = true;
-      tools.enable = false;
-      desktop.enable = true;
-      homelab.enable = true;
-      work.enable = true;
+      desktop.enable = true; # 桌面：
     };
-
-    tools.main.enable = true;
-    tools.rclone.enable = true;
-    # tools.music.enable = true; # 音乐刮削相关
-    # tools.image.enable = true; # 图片处理
-    # tools.virts.enable = true; # 虚拟机
-    # tools.others.enable = true; # 其他：altserver,备份
+    dev = {
+      container.enable = true;
+    };
   };
   homebrew = {
     onActivation = {
