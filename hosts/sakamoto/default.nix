@@ -37,6 +37,9 @@ in {
       telegram.enable = false;
       wechat.enable = false;
     };
+    homelab = {
+      server.enable = true;
+    };
   };
   homebrew = {
     onActivation = {
