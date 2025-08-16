@@ -25,10 +25,10 @@ in {
     };
     # https://home-manager-options.extranix.com/?query=zsh.history
     history = {
-      size = 10000;
-      save = 10000;
+      size = 30000;
+      save = 30000;
       extended = true;
-      ignoreAllDups = false;
+      ignoreAllDups = true;
     };
     oh-my-zsh = {
       enable = true;
