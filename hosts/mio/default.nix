@@ -36,10 +36,13 @@ in {
       telegram.enable = true;
       wechat.enable = true;
     };
-  };
-  homebrew = {
-    onActivation = {
-      cleanup = "uninstall";
+    homelab = {
+      client.enable = true;
     };
   };
+  # homebrew = {
+  #   onActivation = {
+  #     cleanup = "uninstall";
+  #   };
+  # };
 }

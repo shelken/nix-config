@@ -17,6 +17,7 @@ in {
     homebrew = {
       brews = [
         "lima"
+        "azure-cli"
       ];
     };
   };

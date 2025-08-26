@@ -16,11 +16,11 @@ in {
       container.enable = true;
     };
   };
-  homebrew = {
-    onActivation = {
-      # autoUpdate = true;
-      # 'zap': uninstalls all formulae(and related files) not listed in the generated Brewfile
-      cleanup = "uninstall";
-    };
-  };
+  # homebrew = {
+  #   onActivation = {
+  #     # autoUpdate = true;
+  #     # 'zap': uninstalls all formulae(and related files) not listed in the generated Brewfile
+  #     cleanup = "uninstall";
+  #   };
+  # };
 }
