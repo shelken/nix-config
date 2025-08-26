@@ -10,7 +10,7 @@ after-login-command = []
 # 'after-startup-command' is run after 'after-login-command'
 # Available commands : https://nikitabobko.github.io/AeroSpace/commands
 after-startup-command = [
-  'exec-and-forget borders active_color=0xffCAD3F5 inactive_color=0xbb282E44 hidpi=on width=3.0'
+  #'exec-and-forget borders active_color=0xffCAD3F5 inactive_color=0xbb282E44 hidpi=on width=3.0'
 ]
 
 # Start AeroSpace at login
@@ -99,10 +99,10 @@ alt-comma = 'layout accordion horizontal vertical'
 # alt-k = 'focus up'
 # alt-l = 'focus right'
 
-alt-left  = 'focus left --ignore-floating'
-alt-down  = 'focus down --ignore-floating'
-alt-up    = 'focus up --ignore-floating'
-alt-right = 'focus right --ignore-floating'
+alt-left  = 'focus left --ignore-floating --boundaries-action wrap-around-the-workspace'
+alt-down  = 'focus down --ignore-floating --boundaries-action wrap-around-the-workspace'
+alt-up    = 'focus up --ignore-floating --boundaries-action wrap-around-the-workspace'
+alt-right = 'focus right --ignore-floating --boundaries-action wrap-around-the-workspace'
 # alt-left  = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors left'
 # alt-down  = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors down'
 # alt-up    = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors up'
@@ -245,12 +245,24 @@ run = ['layout floating']
 if.app-id = 'com.apple.TextEdit'
 run = ['layout floating']
 
-# [[on-window-detected]]
-# if.window-title-regex-substring = '(Picture in Picture|Picture-in-Picture|画中画)'
-# run = 'layout floating'
+[[on-window-detected]]
+if.window-title-regex-substring = '^Bitwarden$'
+run = 'layout floating'
 
 [[on-window-detected]]
 if.app-id = 'com.audirvana.Audirvana'
+run = ['layout floating']
+
+[[on-window-detected]]
+if.app-id = 'com.crossutility.quantumult-x'
+run = ['layout floating']
+
+[[on-window-detected]]
+if.app-id = 'com.liguangming.Shadowrocket'
+run = ['layout floating']
+
+[[on-window-detected]]
+if.app-id = 'app.motrix.native'
 run = ['layout floating']
 
 [[on-window-detected]]
