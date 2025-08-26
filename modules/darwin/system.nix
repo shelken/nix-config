@@ -108,6 +108,15 @@
         ".GlobalPreferences" = {
           # automatically switch to a new space when switching to the application
           AppleSpacesSwitchOnActivate = true;
+
+          AppleShowScrollBars = "WhenScrolling";
+
+          AppleIconAppearanceTheme = "RegularAutomatic"; #
+          AppleAccentColor = 6; # 粉色
+          AppleHighlightColor = "1.000000 0.749020 0.823529 Pink"; # 高亮色
+          # AppleIconAppearanceTintColor = "Blue";
+          AppleIconAppearanceTintColor = "Other";
+          AppleIconAppearanceCustomTintColor = "0.475000 0.822795 1.000000 0.845588";
         };
         NSGlobalDomain = {
           # Add a context menu item for showing the Web Inspector in web views
