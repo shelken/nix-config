@@ -1,9 +1,10 @@
 {
   pkgs,
   lib,
+  config,
   ...
 }: let
-  zshDotDir = ".config/zsh";
+  zshDotDir = "${config.xdg.configHome}/zsh";
 in {
   programs.zsh = {
     enable = true;

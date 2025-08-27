@@ -5,10 +5,8 @@
 }: {
   home.packages = with pkgs; [
     tldr
-    neofetch
     just
     asciinema
-    ctop
 
     # nix tool
     # https://github.com/nix-community/nix-melt

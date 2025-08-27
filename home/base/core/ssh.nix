@@ -1,6 +1,7 @@
 {myvars, ...}: {
   programs.ssh = {
     enable = true;
+    enableDefaultConfig = true;
     extraConfig = ''
       Host github.com
         User git
