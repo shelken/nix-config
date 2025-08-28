@@ -29,7 +29,7 @@
 
 # darwin
 
-![](assets/imgs/README_2024-06-23_01-25-22.png)
+![](https://cdn.jsdelivr.net/gh/shelken/picbed@main/uPic/2025-08/VRa3Gk_eXkZdS.png)
 
 ## 初始化
 
