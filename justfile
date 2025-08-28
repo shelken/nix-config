@@ -46,14 +46,15 @@ fmt:
   @nix fmt .
 
 # 清理无用的包
-gc duration="7d":
-  @nh clean all -K {{duration}}
+gc duration="0h":
+  @nh clean all -a --nogc -K {{duration}}
 
 # 清理所有
 # @nix-collect-garbage -d
 # @sudo nix-collect-garbage -d
+# @nix store --gc
 gc-all:
-  @nh clean all
+  @nh clean all -a
 
 # 生成镜像
 [linux]
