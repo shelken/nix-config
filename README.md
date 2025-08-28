@@ -109,6 +109,23 @@ just b
 
 尝试使用热点数据和使用Quantumult X来代理
 
+### 手动删除某个`/nix/store`中的编译结果出现`No such file or directory`时
+
+```shell
+sudo darwin-rebuild switch --flake .#sakamoto --show-trace --verbose
+building the system configuration...
+Using saved setting for 'experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
+/run/current-system/sw/bin/darwin-rebuild: line 248: /nix/store/8jfid13h8p5gmy7llb4kvp0m357lswd0-darwin-system-25.11.8df64f8/activate: No such file or directory
+```
+
+解决：理论上不是问题，只要随便一个变化就能跳过。如果想解决，可以随便加个小变化让版本切换。然后gc掉所有版本。然后执行
+
+```shell
+nix store delete /nix/store/8jfid13h8p5gmy7llb4kvp0m357lswd0-darwin-system-25.11.8df64f8
+```
+
+然后把变化撤销，重新switch
+
 # 部署
 
 > 在本地部署其他机器
