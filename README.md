@@ -54,7 +54,7 @@ git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-con
 echo "PROFILE=<profile-name>" >> .env
 
 # 5. 安装nix-darwin并配置
-nix run nix-darwin -- switch --flake .#$PROFILE
+sudo nix run nix-darwin/master#darwin-rebuild -- switch --flake .#$PROFILE
 
 # 6. 打开新标签，执行
 just sw

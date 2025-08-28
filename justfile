@@ -46,14 +46,14 @@ fmt:
   @nix fmt .
 
 # 清理无用的包
-gc duration="7d" *args="":
-  @nix-collect-garbage --delete-older-than {{ duration }} {{args}}
-  @sudo nix-collect-garbage --delete-older-than {{ duration }} {{args}}
+gc duration="7d":
+  @nh clean all -K {{duration}}
 
 # 清理所有
+# @nix-collect-garbage -d
+# @sudo nix-collect-garbage -d
 gc-all:
-  @nix-collect-garbage -d
-  @sudo nix-collect-garbage -d
+  @nh clean all
 
 # 生成镜像
 [linux]
@@ -179,26 +179,22 @@ raycast-import:
 # nixos 重建
 [linux]
 rebuild host=profile:
-  @nh os build -H {{host}} flake.nix
+  @nh os build -H {{host}} .
 
-# mac 构建; target对应当前主机名
+# mac 构建; host 对应当前主机名
 [macos]
-rebuild target=profile: set-proxy
-  #!/usr/bin/env bash
-  config_target=".#darwinConfigurations.{{target}}.system"
-  nom build $config_target --extra-experimental-features "nix-command flakes" 
+rebuild host=profile: set-proxy
+  @nh darwin build -H {{host}} .
 
 # nixos 重建(调试)
 [linux]
 rebuild-debug host=profile:
-  @nh os build -H {{host}} flake.nix -v
+  nh os build -H {{host}} . -v
 
 # 构建; 调试
 [macos]
-rebuild-debug target=profile *args="": set-proxy
-  #!/usr/bin/env bash
-  config_target=".#darwinConfigurations.{{target}}.system"
-  nix build $config_target --extra-experimental-features "nix-command flakes" -v {{args}}
+rebuild-debug host=profile args="": set-proxy
+  nh darwin build -H {{host}} . -v {{args}}
 
 # 交互式源码查看
 repl:
@@ -221,14 +217,12 @@ set-proxy:
 # nixos 重建
 [linux]
 switch host=profile: 
-  @nh os switch -a -H {{host}} flake.nix
+  @nh os switch -a -H {{host}} .
 
 # 应用配置; target对应当前主机名
 [macos]
-switch target=profile: set-proxy
-  #!/usr/bin/env bash
-  config_target=".#{{target}}"
-  sudo darwin-rebuild switch --flake $config_target
+switch host=profile: set-proxy
+  @nh darwin switch -a -H {{host}} .
 
 # 更新整个输入
 up:
