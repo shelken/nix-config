@@ -268,11 +268,11 @@
     };
 
     # secrets management
-    agenix = {
-      # lock with git commit at 0.15.0
-      url = "github:ryantm/agenix/564595d0ad4be7277e07fa63b5a991b3c645655d";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # agenix = {
+    #   # lock with git commit at 0.15.0
+    #   url = "github:ryantm/agenix/564595d0ad4be7277e07fa63b5a991b3c645655d";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
 
     sops-nix = {
       url = "github:Mic92/sops-nix";
