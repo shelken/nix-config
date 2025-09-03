@@ -1,7 +1,10 @@
 {myvars, ...}: {
   programs.ssh = {
     enable = true;
-    enableDefaultConfig = true;
+    enableDefaultConfig = false;
+    matchBlocks."*" = {
+      forwardAgent = false;
+    };
     extraConfig = ''
       Host github.com
         User git
