@@ -7,6 +7,10 @@
   ...
 }: let
   get-sops-file = file: secrets + "/sops/secrets/${file}";
+  user_readable = {
+    mode = "0500";
+    # owner = myvars.username;
+  };
 in {
   imports = [
     # agenix.darwinModules.default
@@ -30,15 +34,19 @@ in {
   home.sessionVariables.SOPS_AGE_KEY_FILE = config.sops.age.keyFile;
 
   sops.secrets = {
-    "deepseek/api-key" = {
-      # path = "${config.home.homeDirectory}/test2.txt";
-      # sopsFile = ../../../../sops/secrets/deepseek/default.yaml;
-      sopsFile = get-sops-file "${myvars.username}/default.yaml";
-    };
-    "github/cli-token" = {
-      sopsFile = get-sops-file "shelken/default.yaml";
-      path = "${config.home.homeDirectory}/.config/gh/access-token";
-    };
+    "deepseek/api-key" =
+      {
+        # path = "${config.home.homeDirectory}/test2.txt";
+        # sopsFile = ../../../../sops/secrets/deepseek/default.yaml;
+        sopsFile = get-sops-file "${myvars.username}/default.yaml";
+      }
+      // user_readable;
+    "github/cli-token" =
+      {
+        sopsFile = get-sops-file "shelken/default.yaml";
+        path = "${config.home.homeDirectory}/.config/gh/access-token";
+      }
+      // user_readable;
   };
 
   # if you changed this key, you need to regenerate all encrypt files from the decrypt contents!
@@ -48,10 +56,6 @@ in {
   # ];
 
   age.secrets = let
-    user_readable = {
-      mode = "0500";
-      # owner = myvars.username;
-    };
   in {
     # ---------------------------------------------
     # no one can read/write this file, even root.
