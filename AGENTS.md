@@ -49,3 +49,37 @@ flake。它旨在为多台机器创建可复现的、声明式的配置。
     (macOS) 命令将此 flake 中定义的配置应用到目标系统。`justfile` 很可能为这些命令提供了方便的别名。
 
 这种结构使得对复杂系统和用户环境的管理变得高度组织化、声明式且可复现。
+
+## 开发工作流
+
+### 代码格式化与检查
+
+本项目使用 `pre-commit` 来保证代码风格的统一和质量。`pre-commit` 的钩子（hooks）已在 `flake.nix`
+中定义，并通过 `direnv` 自动加载到开发环境中。
+
+在进行 `git commit` 之前，请务必手动运行一次检查，以确保所有文件都符合规范，避免提交失败。
+
+**操作步骤:**
+
+1.  确保您的系统中已经安装并配置好 `direnv`。
+2.  进入项目根目录，`direnv` 会自动加载 `flake.nix` 中定义的开发环境。
+3.  运行以下命令来执行所有的 pre-commit 钩子：
+
+    ```bash
+    pre-commit run --all-files
+    ```
+
+4.  如果钩子对文件进行了修改，请将修改后的文件重新添加到暂存区 (`git add .`)，然后再进行提交。
+
+### 提交信息规范
+
+为了保持提交历史的清晰和一致，请遵循 [Conventional Commits](https://www.conventionalcommits.org/)
+规范。
+
+- **格式:** `<type>(<scope>): <subject>`
+  - `<type>`: 提交类型 (如 `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`)。
+  - `(<scope>)`: 可选的作用域，用于说明本次提交影响的范围 (如 `home`, `modules`, `agent`)。
+  - `<subject>`: 简明扼要的英文标题。
+- **正文 (Body):**
+  - 使用中文编写，详细描述变更的原因、目的和具体内容。
+  - 与标题之间空一行。
