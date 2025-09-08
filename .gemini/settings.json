@@ -1,0 +1,8 @@
+{
+  "showMemoryUsage": true,
+  "showLineNumbers": true,
+  "contextFileName": "AGENTS.md",
+  "tools": {
+    "useRipgrep": true
+  }
+}
