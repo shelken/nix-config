@@ -99,7 +99,7 @@ nvim-clean:
 # github sha256计算
 prefetch-gh owner repo rev="HEAD":
     #!/usr/bin/env bash
-    json=$(nix-prefetch-github --no-deep-clone --quiet --rev {{ rev }} {{ owner }} {{ repo }})
+    json=$(nix run nixpkgs#nix-prefetch-github -- --no-deep-clone --quiet --rev {{ rev }} {{ owner }} {{ repo }})
     owner=$(echo "$json" | jq -r '.owner')
     repo=$(echo "$json" | jq -r '.repo')
     rev=$(echo "$json" | jq -r '.rev' | cut -c 1-8)
@@ -132,7 +132,7 @@ prefetch-gh2 repo rev="HEAD":
     echo "$user" "$repo"
   }
   read owner repo <<< $(parse_github_url {{ repo }})
-  json=$(nix-prefetch-git --no-deepClone --quiet --url "git@github.com:$owner/$repo" --rev {{rev}})
+  json=$(nix run nixpkgs#nix-prefetch-git -- --no-deepClone --quiet --url "git@github.com:$owner/$repo" --rev {{rev}})
   rev=$(echo "$json" | jq -r '.rev' | cut -c 1-8)
   hash=$(echo "$json" | jq -r '.hash')
   last_date=$(echo "$json" | jq -r '.date')
@@ -147,7 +147,7 @@ prefetch-gh2 repo rev="HEAD":
   EOF
 
 prefetch-git repo rev:
-  @nix-prefetch-git --no-deepClone --quiet --url 'git@github.com:{{ repo }}' --rev '{{ rev }}' --fetch-submodules
+  @nix run nixpkgs#nix-prefetch-git -- --no-deepClone --quiet --url 'git@github.com:{{ repo }}' --rev '{{ rev }}' --fetch-submodules
 
 # nix-prefetch-url, 用于pypi等
 prefetch-url url:
@@ -184,8 +184,8 @@ rebuild host=profile:
 
 # mac 构建; host 对应当前主机名
 [macos]
-rebuild host=profile: set-proxy
-  @nh darwin build -H {{host}} .
+rebuild host=profile $NH_NO_CHECKS="1":
+  @nh darwin build -H {{host}} . -- --extra-experimental-features "nix-command flakes"
 
 # nixos 重建(调试)
 [linux]
@@ -194,7 +194,7 @@ rebuild-debug host=profile:
 
 # 构建; 调试
 [macos]
-rebuild-debug host=profile args="": set-proxy
+rebuild-debug host=profile args="":
   nh darwin build -H {{host}} . -v {{args}}
 
 # 交互式源码查看
@@ -222,7 +222,7 @@ switch host=profile:
 
 # 应用配置; target对应当前主机名
 [macos]
-switch host=profile: set-proxy
+switch host=profile:
   @nh darwin switch -a -H {{host}} .
 
 # 更新整个输入

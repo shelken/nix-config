@@ -33,12 +33,16 @@
 
     #-- container
     dive # A tool for exploring each layer in a docker image
+    lazydocker # docker管理
 
     # misc
     protobuf
 
     # ts
     pnpm
+
+    # python
+    uv # python 管理（uvx）
   ];
 
   # for go goPath

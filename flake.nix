@@ -46,28 +46,29 @@
     args = {inherit inputs lib mylib myvars genSpecialArgs;};
     pve155Modules = {
       nixos-modules = map mylib.relativeToRoot [
+        "modules/nixos/desktop.nix"
         "hosts/pve155"
         # "modules/nixos/hyprland.nix"
       ];
       home-modules = map mylib.relativeToRoot [
-        "home/linux"
+        "home/linux/gui.nix"
       ];
     };
     pve156Modules = {
       nixos-modules = map mylib.relativeToRoot [
+        "modules/nixos/server.nix"
         "hosts/pve156"
       ];
       home-modules = map mylib.relativeToRoot [
-        "home/linux"
+        "home/linux/tui.nix"
       ];
     };
     workTestModules = {
       nixos-modules = map mylib.relativeToRoot [
-        "modules/nixos/base"
-        "modules/base.nix"
+        "modules/nixos/server.nix"
       ];
       home-modules = map mylib.relativeToRoot [
-        "home/linux"
+        "home/linux/tui.nix"
       ];
     };
     yuukoModules = {
@@ -215,9 +216,6 @@
             typos
             # code formatter
             nodePackages.prettier
-            # tools
-            nix-prefetch-git
-            nix-prefetch-github
           ];
           name = "dots";
           shellHook = ''
@@ -299,7 +297,7 @@
 
     # vscode-server
     vscode-server = {
-      url = "github:nix-community/nixos-vscode-server/fc900c16";
+      url = "github:nix-community/nixos-vscode-server";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

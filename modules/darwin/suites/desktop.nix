@@ -36,5 +36,7 @@ in {
         arrowBtnAction = 1; # 左右箭头按钮的功能 1 切换上下集 2 快进快退
       };
     };
+    ### font 配置，所有mac引用desktop默认开启fonts
+    shelken.modules.desktop.fonts.enable = true;
   };
 }

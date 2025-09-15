@@ -45,7 +45,10 @@ cat ~/.ssh/id_ed25519.pub
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # 2. install nix
+## linux
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+## mac 官方建议 使用官方pkg包
+## note：在此说明，linux目前使用nixos源，mac使用determinate的管理。此项配置分别在`nix.nix`文件中有体现
 
 # 3. clone repo
 git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-config

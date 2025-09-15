@@ -1,6 +1,5 @@
 {pkgs, ...}: {
   home.packages = with pkgs; [
-    neofetch
     #ranger # terminal file manager(batteries included, with image preview support)
 
     # archives
@@ -33,8 +32,6 @@
     #jq # A lightweight and flexible command-line JSON processor
     #yq-go # yaml processor https://github.com/mikefarah/yq
 
-    # misc
-    tldr
     #cowsay
     file
     which
@@ -55,10 +52,6 @@
     #hugo # static site generator
     #glow # markdown previewer in terminal
 
-    # container
-    #docker-slim
-    #docker-gc
-    ctop
     # A modern, maintained replacement for ls
     eza
   ];

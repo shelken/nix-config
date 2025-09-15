@@ -2,7 +2,7 @@
   imports =
     (mylib.scanPaths ./.)
     ++ [
-      ../../apps/btop.nix
+      ../../apps/btop
       ../../apps/yazi
       # ../../apps/tmux
       ../../apps/zsh

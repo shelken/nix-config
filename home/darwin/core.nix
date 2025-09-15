@@ -14,5 +14,6 @@
     comma # use `, cowsay hello` == `nix run nixpkgs#cowsay -- hello`
     bandwhich # 查看本地程序网络连接
     q # dns dig
+    asciinema # 终端录制命令与回放
   ];
 }

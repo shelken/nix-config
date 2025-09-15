@@ -4,10 +4,6 @@
   ...
 }: {
   home.packages = with pkgs; [
-    tldr
-    just
-    asciinema
-
     # nix tool
     # https://github.com/nix-community/nix-melt
     nix-melt # A TUI flake.lock viewer
@@ -37,15 +33,13 @@
         theme = "Catppuccin ${myvars.catppuccin_flavor}";
       };
       themes = {
-        # https://raw.githubusercontent.com/catppuccin/bat/main/themes/Catppuccin-mocha.tmTheme
+        # https://raw.githubusercontent.com/catppuccin/bat/main/themes/Catppuccin%20Mocha.tmTheme
         "Catppuccin ${myvars.catppuccin_flavor}" = {
-          # src = catppuccin-bat;
-          # file = "themes/Catppuccin-mocha.tmTheme";
           src = pkgs.fetchFromGitHub {
             owner = "catppuccin";
             repo = "bat"; # Bat uses sublime syntax for its themes
-            rev = "b19bea35a85a32294ac4732cad5b0dc6495bed32";
-            sha256 = "1y14nqhd6kxkkb053fvfa0rw72188gzmpzmnk6r3ishcq7d1dsiw";
+            rev = "6810349b";
+            hash = "sha256-lJapSgRVENTrbmpVyn+UQabC9fpV1G1e+CdlJ090uvg=";
           };
           # file = "themes/Catppuccin Mocha.tmTheme";
           file = "themes/Catppuccin ${myvars.catppuccin_flavor}.tmTheme";

@@ -1,0 +1,8 @@
+{}: {
+  imports = [
+    ./base
+    ../base
+
+    ./desktop
+  ];
+}

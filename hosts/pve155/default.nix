@@ -8,13 +8,7 @@
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
-
-    ../../modules/nixos/core-server.nix
-
-    ../../modules/desktop
   ];
-
-  #nixpkgs.overlays = import ../../../overlays args;
 
   # Enable binfmt emulation of aarch64-linux, this is required for cross compilation.
   #boot.binfmt.emulatedSystems = ["aarch64-linux" "riscv64-linux"];

@@ -12,4 +12,5 @@ binary = false
 extend-ignore-re = [
   "iterm2",
   "Deactive",
+  "Pn",
 ]
