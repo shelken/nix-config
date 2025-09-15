@@ -3,6 +3,19 @@
   "showLineNumbers": true,
   "contextFileName": "AGENTS.md",
   "tools": {
-    "useRipgrep": true
+    "useRipgrep": true,
+    "sandbox": true
+  },
+  "mcpServers": {
+    // "context7": {
+    //   "httpUrl": "https://mcp.context7.com/mcp",
+    //   "headers": {
+    //     "CONTEXT7_API_KEY": "$CONTEXT7_API_KEY"
+    //   }
+    // }
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "$CONTEXT7_API_KEY"]
+    }
   }
 }
