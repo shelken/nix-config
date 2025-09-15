@@ -112,7 +112,7 @@ in {
       "FelixKratz/formulae" # jankyborders
       # "localsend/localsend" # localsend
       "gromgit/fuse" # macfuse,mounty
-      "mihomo-party-org/clash-party"
+      "mihomo-party-org/mihomo-party"
       "nikitabobko/tap" # aerospace
       "bigwig-club/brew" # upic
       "mhaeuser/mhaeuser" # battery-toolkit
