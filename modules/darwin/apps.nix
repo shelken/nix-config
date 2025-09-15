@@ -112,7 +112,7 @@ in {
       "FelixKratz/formulae" # jankyborders
       # "localsend/localsend" # localsend
       "gromgit/fuse" # macfuse,mounty
-      "mihomo-party-org/mihomo-party"
+      "mihomo-party-org/clash-party"
       "nikitabobko/tap" # aerospace
       "bigwig-club/brew" # upic
       "mhaeuser/mhaeuser" # battery-toolkit
@@ -163,7 +163,7 @@ in {
       "karabiner-elements" # 快捷键映射
 
       # network
-      "mihomo-party"
+      "clash-party"
       "tailscale-app"
 
       # quicklook
