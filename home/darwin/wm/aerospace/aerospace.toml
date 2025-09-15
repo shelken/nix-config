@@ -16,6 +16,12 @@ after-startup-command = [
 # Start AeroSpace at login
 start-at-login = true
 
+# 切换时执行
+exec-on-workspace-change = [
+  '/bin/bash', '-c',
+  '~/.config/aerospace/scripts/pip-move.sh',
+]
+
 # Normalizations. See: https://nikitabobko.github.io/AeroSpace/guide#normalization
 enable-normalization-flatten-containers = true
 enable-normalization-opposite-orientation-for-nested-containers = true
@@ -208,7 +214,7 @@ run = 'layout floating'
 
 [[on-window-detected]]
 if.app-id = 'com.codeweavers.CrossOver'
-run = ['layout floating', 'move-node-to-workspace 5']
+run = ['layout floating']
 # [[on-window-detected]]
 # if.app-name-regex-substring = '^com.codeweavers.CrossOverHelper'
 # run = ['layout floating', 'move-node-to-workspace 5']
@@ -265,51 +271,51 @@ run = ['layout floating']
 if.app-id = 'app.motrix.native'
 run = ['layout floating']
 
-[[on-window-detected]]
-if.app-id = 'company.thebrowser.Browser'
-run = 'move-node-to-workspace 1'
-[[on-window-detected]]
-if.app-id = 'ea.browser.deta.surf'
-run = 'move-node-to-workspace 1'
-[[on-window-detected]]
-if.app-id = 'com.google.Chrome'
-run = 'move-node-to-workspace 1'
-[[on-window-detected]]
-if.app-id = 'com.apple.Safari'
-run = 'move-node-to-workspace 1'
+# [[on-window-detected]]
+# if.app-id = 'company.thebrowser.Browser'
+# run = 'move-node-to-workspace 1'
+# [[on-window-detected]]
+# if.app-id = 'ea.browser.deta.surf'
+# run = 'move-node-to-workspace 1'
+# [[on-window-detected]]
+# if.app-id = 'com.google.Chrome'
+# run = 'move-node-to-workspace 1'
+# [[on-window-detected]]
+# if.app-id = 'com.apple.Safari'
+# run = 'move-node-to-workspace 1'
 
-[[on-window-detected]]
-if.app-id = 'com.jetbrains.intellij'
-run = 'move-node-to-workspace 2'
-[[on-window-detected]]
-if.app-id = 'com.microsoft.VSCode'
-run = 'move-node-to-workspace 2'
-[[on-window-detected]]
-if.app-id = 'com.todesktop.230313mzl4w4u92' # cursor
-run = 'move-node-to-workspace 2'
-[[on-window-detected]]
-if.app-id = 'com.trae.app'
-run = 'move-node-to-workspace 2'
-[[on-window-detected]]
-if.app-id = 'net.kovidgoyal.kitty'
-run = ['move-node-to-workspace 2']
-[[on-window-detected]]
-if.app-id = 'md.obsidian' 
-run = 'move-node-to-workspace 2'
-[[on-window-detected]]
-if.app-id = 'com.apple.FinalCutTrial' 
-run = 'move-node-to-workspace 2'
+# [[on-window-detected]]
+# if.app-id = 'com.jetbrains.intellij'
+# run = 'move-node-to-workspace 2'
+# [[on-window-detected]]
+# if.app-id = 'com.microsoft.VSCode'
+# run = 'move-node-to-workspace 2'
+# [[on-window-detected]]
+# if.app-id = 'com.todesktop.230313mzl4w4u92' # cursor
+# run = 'move-node-to-workspace 2'
+# [[on-window-detected]]
+# if.app-id = 'com.trae.app'
+# run = 'move-node-to-workspace 2'
+# [[on-window-detected]]
+# if.app-id = 'net.kovidgoyal.kitty'
+# run = ['move-node-to-workspace 2']
+# [[on-window-detected]]
+# if.app-id = 'md.obsidian' 
+# run = 'move-node-to-workspace 2'
+# [[on-window-detected]]
+# if.app-id = 'com.apple.FinalCutTrial' 
+# run = 'move-node-to-workspace 2'
 
-[[on-window-detected]]
-if.app-id = 'com.tencent.xinWeChat'
-run = 'move-node-to-workspace 3'
+# [[on-window-detected]]
+# if.app-id = 'com.tencent.xinWeChat'
+# run = 'move-node-to-workspace 3'
 
-[[on-window-detected]]
-if.app-id = 'com.apple.ScreenSharing'
-run = ['layout floating', 'move-node-to-workspace 4']
-[[on-window-detected]]
-if.app-id = 'tv.parsec.www' 
-run = ['layout floating', 'move-node-to-workspace 4']
+# [[on-window-detected]]
+# if.app-id = 'com.apple.ScreenSharing'
+# run = ['layout floating', 'move-node-to-workspace 4']
+# [[on-window-detected]]
+# if.app-id = 'tv.parsec.www' 
+# run = ['layout floating', 'move-node-to-workspace 4']
 [[on-window-detected]]
 if.app-id = 'com.now.gg.BlueStacks' 
 run = ['layout floating']
