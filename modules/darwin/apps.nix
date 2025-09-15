@@ -128,8 +128,6 @@ in {
       # https://github.com/rgcr/m-cli
       "m-cli" #  Swiss Army Knife for macOS
       "proxychains-ng"
-      # `sudo tailscaled install-system-daemon`
-      "tailscale"
 
       # commands like `gsed` `gtar` are required by some tools
       "gnu-sed"
@@ -166,6 +164,7 @@ in {
 
       # network
       "mihomo-party"
+      "tailscale-app"
 
       # quicklook
       "qlmarkdown"
