@@ -13,12 +13,16 @@
   ...
 }: let
   inherit (inputs) home-manager;
+  host = builtins.getEnv "TARGET_HOST";
 in
   {name, ...}: {
     deployment = {
       inherit tags;
       targetUser = ssh-user;
-      targetHost = name; # hostName or IP address
+      targetHost =
+        if host == ""
+        then throw "TARGET_HOST environment variable must be set"
+        else host;
     };
 
     imports =

@@ -68,6 +68,27 @@
         "type": "github"
       }
     },
+    "disko": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1736864502,
+        "narHash": "sha256-ItkIZyebGvNH2dK9jVGzJHGPtb6BSWLN8Gmef16NeY0=",
+        "owner": "nix-community",
+        "repo": "disko",
+        "rev": "0141aabed359f063de7413f80d906e1d98c0c123",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "ref": "v1.11.0",
+        "repo": "disko",
+        "type": "github"
+      }
+    },
     "dot-astro-nvim": {
       "flake": false,
       "locked": {
@@ -383,6 +404,7 @@
         "catppuccin-btop": "catppuccin-btop",
         "catppuccin-lazygit": "catppuccin-lazygit",
         "catppuccin-yazi": "catppuccin-yazi",
+        "disko": "disko",
         "dotfiles": "dotfiles",
         "git-hooks": "git-hooks",
         "home-manager": "home-manager",

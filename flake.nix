@@ -36,7 +36,8 @@
           config.allowUnfree = true;
         };
         mylibx = import ./lib/extend.nix {
-          pkgs = import inputs.nixpkgs {inherit system;};
+          # pkgs = import inputs.nixpkgs {inherit system;};
+          pkgs = nixpkgs.legacyPackages.${system};
           secrets = inputs.secrets;
           inherit lib;
         };
@@ -44,88 +45,118 @@
         inherit (myvars) username userfullname useremail;
       };
     args = {inherit inputs lib mylib myvars genSpecialArgs;};
-    pve155Modules = {
-      nixos-modules = map mylib.relativeToRoot [
-        "modules/nixos/desktop.nix"
-        "hosts/pve155"
-        # "modules/nixos/hyprland.nix"
-      ];
-      home-modules = map mylib.relativeToRoot [
-        "home/linux/gui.nix"
-      ];
-    };
-    pve156Modules = {
-      nixos-modules = map mylib.relativeToRoot [
-        "modules/nixos/server.nix"
-        "hosts/pve156"
-      ];
-      home-modules = map mylib.relativeToRoot [
-        "home/linux/tui.nix"
-      ];
-    };
-    workTestModules = {
-      nixos-modules = map mylib.relativeToRoot [
-        "modules/nixos/server.nix"
-      ];
-      home-modules = map mylib.relativeToRoot [
-        "home/linux/tui.nix"
-      ];
-    };
-    yuukoModules = {
-      darwin-modules = map mylib.relativeToRoot [
-        "modules/darwin"
-        "hosts/yuuko"
-      ];
-      home-modules = map mylib.relativeToRoot [
-        "home/darwin"
-        "secrets/home.nix"
-        "hosts/yuuko/home.nix"
-      ];
-    };
-    sakamotoModules = {
-      darwin-modules = map mylib.relativeToRoot [
-        "modules/darwin"
-        "hosts/sakamoto"
-      ];
-      home-modules = map mylib.relativeToRoot [
-        "home/darwin"
-        "secrets/home.nix"
-        "hosts/sakamoto/home.nix"
-      ];
-    };
-    mioModules = {
-      darwin-modules = map mylib.relativeToRoot [
-        "modules/darwin"
-        "hosts/mio"
-      ];
-      home-modules = map mylib.relativeToRoot [
-        "home/darwin"
-        "secrets/home.nix"
-        "hosts/mio/home.nix"
-      ];
-    };
-    nanoModules = {
-      darwin-modules = map mylib.relativeToRoot [
-        "modules/darwin"
-        "hosts/nano"
-      ];
-      home-modules = map mylib.relativeToRoot [
-        "home/darwin"
-      ];
-    };
-    lingModules = {
-      darwin-modules = map mylib.relativeToRoot [
-        "modules/darwin"
-        "hosts/ling"
-      ];
-      home-modules = map mylib.relativeToRoot [
-        "home/darwin"
-        "hosts/ling/home.nix"
-      ];
-    };
+    pve155Modules =
+      {
+        system = "x86_64-linux";
+        nixos-modules = map mylib.relativeToRoot [
+          "modules/nixos/desktop.nix"
+          "hosts/pve155"
+          # "modules/nixos/hyprland.nix"
+        ];
+        home-modules = map mylib.relativeToRoot [
+          "home/linux/gui.nix"
+        ];
+      }
+      // args // {system = "x86_64-linux";};
+    pve156Modules =
+      {
+        system = "x86_64-linux";
+        nixos-modules = map mylib.relativeToRoot [
+          "modules/nixos/server.nix"
+          "hosts/pve156"
+        ];
+        home-modules = map mylib.relativeToRoot [
+          "home/linux/tui.nix"
+        ];
+      }
+      // args // {system = "x86_64-linux";};
+    armTest1Modules =
+      {
+        nixos-modules = map mylib.relativeToRoot [
+          "modules/nixos/desktop.nix"
+          "hosts/vm/arm-test-1"
+        ];
+        home-modules = map mylib.relativeToRoot [
+          "home/linux/gui.nix"
+        ];
+      }
+      // args // {system = "aarch64-linux";};
+    workTestModules =
+      {
+        nixos-modules = map mylib.relativeToRoot [
+          "modules/nixos/server.nix"
+        ];
+        home-modules = map mylib.relativeToRoot [
+          "home/linux/tui.nix"
+        ];
+      }
+      // args // {system = "x86_64-linux";};
+    yuukoModules =
+      {
+        darwin-modules = map mylib.relativeToRoot [
+          "modules/darwin"
+          "hosts/yuuko"
+        ];
+        home-modules = map mylib.relativeToRoot [
+          "home/darwin"
+          "secrets/home.nix"
+          "hosts/yuuko/home.nix"
+        ];
+      }
+      // args // {system = "aarch64-darwin";};
+    sakamotoModules =
+      {
+        darwin-modules = map mylib.relativeToRoot [
+          "modules/darwin"
+          "hosts/sakamoto"
+        ];
+        home-modules = map mylib.relativeToRoot [
+          "home/darwin"
+          "secrets/home.nix"
+          "hosts/sakamoto/home.nix"
+        ];
+      }
+      // args // {system = "aarch64-darwin";};
+    mioModules =
+      {
+        darwin-modules = map mylib.relativeToRoot [
+          "modules/darwin"
+          "hosts/mio"
+        ];
+        home-modules = map mylib.relativeToRoot [
+          "home/darwin"
+          "secrets/home.nix"
+          "hosts/mio/home.nix"
+        ];
+      }
+      // args // {system = "aarch64-darwin";};
+    nanoModules =
+      {
+        darwin-modules = map mylib.relativeToRoot [
+          "modules/darwin"
+          "hosts/nano"
+        ];
+        home-modules = map mylib.relativeToRoot [
+          "home/darwin"
+        ];
+      }
+      // args // {system = "x86_64-darwin";};
+    lingModules =
+      {
+        darwin-modules = map mylib.relativeToRoot [
+          "modules/darwin"
+          "hosts/ling"
+        ];
+        home-modules = map mylib.relativeToRoot [
+          "home/darwin"
+          "hosts/ling/home.nix"
+        ];
+      }
+      // args // {system = "aarch64-darwin";};
 
     allSystemAbove = [
       "x86_64-linux"
+      "aarch64-linux"
       "aarch64-darwin"
       "x86_64-darwin"
     ];
@@ -133,19 +164,20 @@
   in {
     # linux x86
     nixosConfigurations = {
-      nixos = mylib.nixosSystem (pve155Modules // args // {system = "x86_64-linux";});
-      pve156 = mylib.nixosSystem (pve156Modules // args // {system = "x86_64-linux";});
-      work-test = mylib.nixosSystem (workTestModules // args // {system = "x86_64-linux";});
+      nixos = mylib.nixosSystem pve155Modules;
+      pve156 = mylib.nixosSystem pve156Modules;
+      arm-test-1 = mylib.nixosSystem armTest1Modules;
+      work-test = mylib.nixosSystem workTestModules;
     };
 
     darwinConfigurations = {
       # mac mini
-      yuuko = mylib.macosSystem (yuukoModules // args // {system = "aarch64-darwin";});
-      sakamoto = mylib.macosSystem (sakamotoModules // args // {system = "aarch64-darwin";});
+      yuuko = mylib.macosSystem yuukoModules;
+      sakamoto = mylib.macosSystem sakamotoModules;
       # macbook air
-      mio = mylib.macosSystem (mioModules // args // {system = "aarch64-darwin";});
-      nano = mylib.macosSystem (nanoModules // args // {system = "x86_64-darwin";});
-      ling = mylib.macosSystem (lingModules // args // {system = "aarch64-darwin";});
+      mio = mylib.macosSystem mioModules;
+      nano = mylib.macosSystem nanoModules;
+      ling = mylib.macosSystem lingModules;
     };
 
     colmena =
@@ -162,11 +194,16 @@
       }
       // {
         pve156 = mylib.colmenaSystem (pve156Modules
-          // args
           // {
             tags = ["pve156"];
             ssh-user = myvars.username;
-            system = "x86_64-linux";
+          });
+      }
+      // {
+        arm-test-1 = mylib.colmenaSystem (armTest1Modules
+          // {
+            tags = ["arm-test-1"];
+            ssh-user = myvars.username;
           });
       };
 
@@ -216,6 +253,7 @@
             typos
             # code formatter
             nodePackages.prettier
+            nixos-anywhere
           ];
           name = "dots";
           shellHook = ''
@@ -247,33 +285,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    rime-main = {
-      # 霧凇拼音
-      url = "github:iDvel/rime-ice/main";
-      flake = false;
-    };
-
-    # hyprland
-    # hyprland = {
-    #   url = "github:hyprwm/Hyprland/v0.38.1";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
-
     # my dotfiles
     dotfiles = {
       url = "github:shelken/dotfiles.nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    # secrets management
-    # agenix = {
-    #   # lock with git commit at 0.15.0
-    #   url = "github:ryantm/agenix/564595d0ad4be7277e07fa63b5a991b3c645655d";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
-
-    sops-nix = {
-      url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -281,6 +295,12 @@
     secrets = {
       url = "git+ssh://git@github.com/shelken/secrets.nix.git?shallow=1";
       flake = false;
+    };
+
+    # disko
+    disko = {
+      url = "github:nix-community/disko/v1.11.0";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     # git-hooks; gen pre-commit-config
@@ -295,16 +315,22 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    rime-main = {
+      # 霧凇拼音
+      url = "github:iDvel/rime-ice/main";
+      flake = false;
+    };
+
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # vscode-server
     vscode-server = {
       url = "github:nix-community/nixos-vscode-server";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    # superfile = {
-    #   url = "github:yorukot/superfile";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
 
     #          ╭──────────────────────────────────────────────────────────╮
     #          │                          theme                           │

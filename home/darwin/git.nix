@@ -6,6 +6,9 @@
   inherit (lib) mkIf;
   cfg = config.shelken.secrets;
 in {
+  imports = [
+    ../apps/lazygit
+  ];
   config = mkIf cfg.enable {
     programs = {
       gh = {

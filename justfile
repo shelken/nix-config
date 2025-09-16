@@ -40,6 +40,18 @@ check-themes:
 deploy host mach:
   @nixos-rebuild switch --flake .#{{ host }} --target-host {{ mach }} --use-remote-sudo --verbose
 
+# deploy on macos by colmena
+[macos]
+deploy tag mach:
+  @TARGET_HOST={{ mach }} colmena apply -v --build-on-target --on @{{ tag }} --impure
+
+# nixos-anywhere 部署
+nixos-anywhere host mach:
+  @nixos-anywhere -f .#{{ host }} --target-host {{ mach }} --build-on remote \
+  --option substituters https://nix-cache.ooooo.space \
+  --debug \
+  --no-substitute-on-destination
+
 # 格式化
 fmt:
   @deadnix -e
@@ -60,6 +72,7 @@ gc-all:
 [linux]
 gen-image host format:
   #!/usr/bin/env bash
+  set -e
   nom build .#nixosConfigurations.{{host}}.config.formats.{{format}}
   d=$(readlink -f result)
   suffix="${d##*.}"
@@ -184,7 +197,7 @@ rebuild host=profile:
 
 # mac 构建; host 对应当前主机名
 [macos]
-rebuild host=profile $NH_NO_CHECKS="1":
+rebuild host=profile:
   @nh darwin build -H {{host}} . -- --extra-experimental-features "nix-command flakes"
 
 # nixos 重建(调试)

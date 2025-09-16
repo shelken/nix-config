@@ -12,9 +12,6 @@
   };
   flavor = lib.strings.toLower myvars.catppuccin_flavor;
 in {
-  imports = [
-    ../../apps/lazygit
-  ];
   programs.git = {
     enable = true;
     userName = myvars.username;

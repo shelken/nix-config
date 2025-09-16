@@ -15,5 +15,7 @@
     bandwhich # 查看本地程序网络连接
     q # dns dig
     asciinema # 终端录制命令与回放
+
+    nix-search-tv # 搜索home-manager options和 nixpkgs
   ];
 }
