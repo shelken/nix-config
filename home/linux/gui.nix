@@ -7,5 +7,6 @@
     ../apps/vscode-server
 
     ./base
+    ./gui
   ];
 }

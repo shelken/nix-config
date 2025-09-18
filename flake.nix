@@ -78,6 +78,7 @@
         ];
         home-modules = map mylib.relativeToRoot [
           "home/linux/gui.nix"
+          "hosts/vm/arm-test-1/home.nix"
         ];
       }
       // args // {system = "aarch64-linux";};
@@ -297,6 +298,14 @@
       flake = false;
     };
 
+    ###########################################################
+
+    # anyrun - a wayland launcher
+    anyrun = {
+      url = "github:/anyrun-org/anyrun/v25.9.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # disko
     disko = {
       url = "github:nix-community/disko/v1.11.0";
@@ -308,6 +317,8 @@
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    niri.url = "github:sodiboo/niri-flake";
 
     # generate iso/qcow2/docker/... image from nixos configuration
     nixos-generators = {

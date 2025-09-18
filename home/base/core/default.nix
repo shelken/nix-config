@@ -8,5 +8,6 @@
       ../../apps/zsh
       ../../apps/dev/direnv.nix
       ../../apps/fastfetch
+      ../../apps/zellij
     ];
 }

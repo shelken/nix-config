@@ -1,8 +1,11 @@
-{...}: {
-  imports = [
-    ./base
-    ../base
+{niri, ...}: {
+  imports =
+    [
+      ./base
+      ../base
 
-    ./desktop
-  ];
+      niri.nixosModules.niri
+      ./desktop
+    ]
+    ++ [{programs.niri.enable = true;}];
 }
