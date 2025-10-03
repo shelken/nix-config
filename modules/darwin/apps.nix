@@ -144,7 +144,8 @@ in {
       "squirrel-app" # input method for Chinese, rime-squirrel
 
       # browser
-      "google-chrome"
+      # "google-chrome"
+      "helium-browser"
 
       # IM & audio & remote desktop & meeting
 
