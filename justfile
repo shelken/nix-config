@@ -170,6 +170,9 @@ prefetch-url url:
 prefetch-url2 url:
   @nix-prefetch-url --print-path --unpack '{{ url }}' | awk 'NR>1{print $1}' | xargs nix-hash --type sha256 --sri
 
+prefetch-sha256 url:
+  @curl -sL '{{ url }}' | sha256sum
+
 # git pull
 pull:
   @git pull --rebase
