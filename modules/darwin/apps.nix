@@ -124,6 +124,7 @@ in {
       "curl" # no not install curl via nixpkgs, it's not working well on macOS!
       # "aria2" # download tool
       # "httpie" # http client
+      "xh" # same as httpie. but faster
 
       # https://github.com/rgcr/m-cli
       "m-cli" #  Swiss Army Knife for macOS
