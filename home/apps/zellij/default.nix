@@ -12,11 +12,11 @@
   inherit (lib) concatStrings;
   zellij-forgot = pkgs.stdenv.mkDerivation rec {
     pname = "zellij-forgot";
-    version = "0.4.0";
+    version = "0.4.2";
 
     src = builtins.fetchurl {
       url = "https://github.com/karimould/zellij-forgot/releases/download/${version}/zellij_forgot.wasm";
-      sha256 = "sha256:1hzdvyswi6gh4ngxnplay69w1n8wlk17yflfpwfhv6mdn0gcmlsr";
+      sha256 = "sha256:31194145519dbdc128685b456f970374378fa19fc9da742fbe4a321bace449db";
     };
     phases = ["installPhase"];
 
@@ -36,11 +36,11 @@
     '';
   zjstatus = pkgs.stdenv.mkDerivation rec {
     pname = "zjstatus";
-    version = "v0.17.0";
+    version = "v0.21.1";
 
     src = builtins.fetchurl {
       url = "https://github.com/dj95/zjstatus/releases/download/${version}/zjstatus.wasm";
-      sha256 = "sha256:1rbvazam9qdj2z21fgzjvbyp5mcrxw28nprqsdzal4dqbm5dy112";
+      sha256 = "sha256:dc1982a208c27f66871e69811458fbb1abdb15e28662fddb136b575d6564ae1a";
     };
     phases = ["installPhase"];
 
