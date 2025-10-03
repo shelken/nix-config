@@ -171,6 +171,20 @@
           # setupProcess = 1;
           "update-interval" = "Never";
         };
+        # Helium Browser
+        "net.imput.helium" = {
+          NSUserKeyEquivalents = {
+            "选择上一个标签" = "@←";
+            "选择下一个标签" = "@→";
+          };
+        };
+        # Chrome Browser
+        "com.google.Chrome" = {
+          NSUserKeyEquivalents = {
+            "选择上一个标签" = "@←";
+            "选择下一个标签" = "@→";
+          };
+        };
       };
 
       loginwindow = {

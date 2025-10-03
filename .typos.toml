@@ -13,4 +13,5 @@ extend-ignore-re = [
   "iterm2",
   "Deactive",
   "Pn",
+  "imput" # helium
 ]
