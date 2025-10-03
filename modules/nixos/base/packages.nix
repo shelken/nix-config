@@ -2,6 +2,7 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
+    gnused # GNU sed, very powerful(mainly for replacing text in files)
     # system call monitoring
     strace # system call monitoring
     ltrace # library call monitoring

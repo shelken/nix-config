@@ -17,7 +17,7 @@
     # Text Processing
     # Docs: https://github.com/learnbyexample/Command-line-text-processing
     gnugrep # GNU grep, provides `grep`/`egrep`/`fgrep`
-    gnused # GNU sed, very powerful(mainly for replacing text in files)
+    # gnused
     gawk # GNU awk, a pattern scanning and processing language
     jq # A lightweight and flexible command-line JSON processor
     yj # for mylibx
