@@ -5,45 +5,44 @@ in {
   networking.computerName = hostname;
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
-    wm = {
-      aerospace.enable = true; # 平铺窗口管理
-      iceBar.enable = true; # 菜单栏美化
-    };
-    suites = {
-      desktop.enable = true; # 桌面：
-    };
-    write = {
-      obsidian.enable = true;
-    };
-    dev = {
-      container.enable = true;
-      ide.enable = true;
-      navicat.enable = true;
-    };
-    tools = {
-      battery.enable = true;
-      cap.enable = false;
-      cherry-studio.enable = true;
-      download.enable = true;
-      gpt.enable = true;
-      image.enable = true;
-      music.enable = true;
-      others.enable = true;
-      rclone.enable = true;
-      typeswitch.enable = true;
-      virts.enable = false;
-    };
-    social = {
-      feishu.enable = false;
-      telegram.enable = true;
-      wechat.enable = true;
-    };
-    homelab = {
-      client.enable = true;
-    };
-    network = {
-      fl-clash.enable = true;
-    };
+    # window manager
+    wm.aerospace.enable = true; # 平铺窗口管理
+    wm.iceBar.enable = false; # 菜单栏美化
+
+    # suites
+    suites.desktop.enable = true;
+
+    # write
+    write.obsidian.enable = true;
+
+    # development
+    dev.container.enable = true; # docker/orbstack
+    dev.ide.enable = true;
+    dev.navicat.enable = true;
+
+    # tools
+    tools.battery.enable = true;
+    tools.cap.enable = false; # 录屏obs
+    tools.cherry-studio.enable = true;
+    tools.download.enable = true;
+    tools.gpt.enable = true;
+    tools.image.enable = true;
+    tools.music.enable = true;
+    tools.others.enable = true;
+    tools.rclone.enable = true;
+    tools.typeswitch.enable = true; # 根据app切换输入法
+    tools.virts.enable = false;
+
+    # social
+    social.feishu.enable = false;
+    social.telegram.enable = true;
+    social.wechat.enable = true;
+
+    # homelab
+    homelab.client.enable = true;
+
+    # network
+    network.fl-clash.enable = true;
   };
   # homebrew = {
   #   onActivation = {

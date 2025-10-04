@@ -5,45 +5,24 @@ in {
   networking.computerName = hostname;
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
-    wm = {
-      aerospace.enable = true; # 平铺窗口管理
-      iceBar.enable = true; # 菜单栏美化
-    };
-    suites = {
-      desktop.enable = true; # 桌面：
-    };
-    write = {
-      obsidian.enable = false;
-    };
-    dev = {
-      container.enable = true;
-      ide.enable = false;
-      navicat.enable = false;
-    };
-    tools = {
-      battery.enable = false;
-      cap.enable = true;
-      cherry-studio.enable = false;
-      download.enable = false;
-      gpt.enable = false;
-      image.enable = false;
-      music.enable = false;
-      others.enable = false; # altstore
-      rclone.enable = false;
-      typeswitch.enable = true;
-      virts.enable = true;
-    };
-    social = {
-      feishu.enable = false;
-      telegram.enable = false;
-      wechat.enable = false;
-    };
-    homelab = {
-      server.enable = true;
-    };
-    network = {
-      fl-clash.enable = true;
-    };
+    # window manager
+    wm.aerospace.enable = true; # 平铺窗口管理
+
+    # suites
+    suites.desktop.enable = true;
+
+    # development
+    dev.container.enable = true; # docker
+
+    # tools
+    tools.typeswitch.enable = true;
+    tools.virts.enable = true;
+
+    # homelab
+    homelab.server.enable = true;
+
+    # network
+    network.fl-clash.enable = true;
   };
   # homebrew = {
   #   onActivation = {

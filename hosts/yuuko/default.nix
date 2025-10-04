@@ -5,16 +5,11 @@ in {
   networking.computerName = hostname;
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
-    wm = {
-      aerospace.enable = true; # 平铺窗口管理
-      iceBar.enable = true; # 菜单栏美化
-    };
-    suites = {
-      desktop.enable = true; # 桌面：
-    };
-    dev = {
-      container.enable = true;
-    };
+    wm.aerospace.enable = true;
+
+    suites.desktop.enable = true;
+
+    dev.container.enable = true;
   };
   # homebrew = {
   #   onActivation = {
