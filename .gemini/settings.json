@@ -1,21 +1,27 @@
 {
-  "showMemoryUsage": true,
-  "showLineNumbers": true,
-  "contextFileName": "AGENTS.md",
-  "tools": {
-    "useRipgrep": true,
-    "sandbox": true
+  "context": {
+    "fileName": "AGENTS.md"
+  },
+  "ui": {
+    "showMemoryUsage": true,
+    "showLineNumbers": true
   },
   "mcpServers": {
-    // "context7": {
-    //   "httpUrl": "https://mcp.context7.com/mcp",
-    //   "headers": {
-    //     "CONTEXT7_API_KEY": "$CONTEXT7_API_KEY"
-    //   }
-    // }
     "context7": {
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp", "--api-key", "$CONTEXT7_API_KEY"]
+    },
+    "mcp-deepwiki": {
+      "command": "npx",
+      "args": ["-y", "mcp-deepwiki@latest"]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     }
+  },
+  "tools": {
+    "useRipgrep": true,
+    "sandbox": true
   }
 }
