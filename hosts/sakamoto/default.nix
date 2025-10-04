@@ -21,15 +21,16 @@ in {
       navicat.enable = false;
     };
     tools = {
+      battery.enable = false;
       cap.enable = true;
+      cherry-studio.enable = false;
       download.enable = false;
       gpt.enable = false;
-      cherry-studio.enable = false;
       image.enable = false;
       music.enable = false;
       others.enable = false; # altstore
       rclone.enable = false;
-      battery.enable = false;
+      typeswitch.enable = true;
       virts.enable = true;
     };
     social = {
@@ -39,6 +40,9 @@ in {
     };
     homelab = {
       server.enable = true;
+    };
+    network = {
+      fl-clash.enable = true;
     };
   };
   # homebrew = {

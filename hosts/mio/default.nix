@@ -21,15 +21,17 @@ in {
       navicat.enable = true;
     };
     tools = {
+      battery.enable = true;
       cap.enable = false;
+      cherry-studio.enable = true;
       download.enable = true;
       gpt.enable = true;
-      cherry-studio.enable = true;
       image.enable = true;
       music.enable = true;
       others.enable = true;
       rclone.enable = true;
-      battery.enable = true;
+      typeswitch.enable = true;
+      virts.enable = false;
     };
     social = {
       feishu.enable = false;
@@ -38,6 +40,9 @@ in {
     };
     homelab = {
       client.enable = true;
+    };
+    network = {
+      fl-clash.enable = true;
     };
   };
   # homebrew = {

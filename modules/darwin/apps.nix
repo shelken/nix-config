@@ -110,9 +110,7 @@ in {
 
       "hashicorp/tap" # terraform
       "FelixKratz/formulae" # jankyborders
-      # "localsend/localsend" # localsend
       "gromgit/fuse" # macfuse,mounty
-      "mihomo-party-org/mihomo-party"
       "nikitabobko/tap" # aerospace
       "bigwig-club/brew" # upic
       "mhaeuser/mhaeuser" # battery-toolkit
@@ -165,7 +163,6 @@ in {
       "karabiner-elements" # 快捷键映射
 
       # network
-      "clash-party"
       "tailscale-app"
 
       # quicklook

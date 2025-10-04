@@ -16,7 +16,6 @@ in {
   config = mkIf cfg.enable {
     homebrew = {
       casks = [
-        "easydict" # 翻译
         "betterdisplay" # 显示器
         "iina"
 
