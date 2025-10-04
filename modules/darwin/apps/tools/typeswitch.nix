@@ -25,12 +25,12 @@ in {
     };
     system.defaults.CustomUserPreferences."group.top.ygsgdbd.TypeSwitch" = {
       appInputMethodSettings = {
-        "com.microsoft.VSCode" = "com.apple.keylayout.US";
-        "com.raycast.macos" = "com.apple.keylayout.US";
+        "com.microsoft.VSCode" = "com.apple.keylayout.ABC";
+        "com.raycast.macos" = "com.apple.keylayout.ABC";
         "md.obsidian" = "im.rime.inputmethod.Squirrel.Hans";
         "net.imput.helium" = "im.rime.inputmethod.Squirrel.Hans";
-        "net.kovidgoyal.kitty" = "com.apple.keylayout.US";
-        "tv.parsec.www" = "com.apple.keylayout.US";
+        "net.kovidgoyal.kitty" = "com.apple.keylayout.ABC";
+        "tv.parsec.www" = "com.apple.keylayout.ABC";
       };
     };
   };
