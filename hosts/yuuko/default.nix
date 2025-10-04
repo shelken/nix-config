@@ -10,6 +10,8 @@ in {
     suites.desktop.enable = true;
 
     dev.container.enable = true;
+
+    tools.typeswitch.enable = true;
   };
   # homebrew = {
   #   onActivation = {
