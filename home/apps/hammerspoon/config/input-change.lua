@@ -38,10 +38,10 @@ end
 
 -- windowFocused > English
 set_app_input_method({
-  'Raycast',
-  'Spotlight',
-  '聚焦',
-  'Finder',
+  -- 'Raycast',
+  -- 'Spotlight',
+  -- '聚焦',
+  -- 'Finder',
   '访达',
   'kitty',
   'Code',

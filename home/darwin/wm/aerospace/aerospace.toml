@@ -298,6 +298,18 @@ run = ['layout floating']
 if.app-id = 'com.raycast.macos' 
 run = ['layout floating']
 
+[[on-window-detected]]
+if.app-id = 'org.hammerspoon.Hammerspoon' 
+run = ['layout floating']
+
+[[on-window-detected]]
+if.app-id = 'eu.exelban.Stats'
+run = ['layout floating']
+
+[[on-window-detected]]
+if.app-id = 'com.follow.clash'
+run = ['layout floating']
+
 # [[on-window-detected]]
 # if.app-id = 'company.thebrowser.Browser'
 # run = 'move-node-to-workspace 1'
