@@ -123,10 +123,10 @@ elif [[ "${1}" == 'i' ]]; then
       delay 0.5
 
       key code 36 # 输入地址后回车
-      delay 0.5
+      delay 1
 
-      key code 36
-      delay 0.3
+      key code 36 # 
+      delay 1
 
       key code 36 # 提示框确认
       delay 5
