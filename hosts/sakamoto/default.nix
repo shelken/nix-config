@@ -6,7 +6,7 @@ in {
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
     # window manager
-    wm.aerospace.enable = true; # 平铺窗口管理
+    tools.hammerspoon.enable = true;
 
     # suites
     suites.desktop.enable = true;
@@ -15,7 +15,6 @@ in {
     dev.container.enable = true; # docker
 
     # tools
-    tools.typeswitch.enable = true;
     tools.virts.enable = true;
 
     # homelab

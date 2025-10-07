@@ -276,6 +276,10 @@ run = ['layout floating']
 if.app-id = 'app.motrix.native'
 run = ['layout floating']
 
+[[on-window-detected]]
+if.app-id = 'com.now.gg.BlueStacks' 
+run = ['layout floating']
+
 # [[on-window-detected]]
 # if.app-id = 'company.thebrowser.Browser'
 # run = 'move-node-to-workspace 1'
@@ -324,9 +328,6 @@ run = ['move-node-to-workspace 2']
 # [[on-window-detected]]
 # if.app-id = 'tv.parsec.www' 
 # run = ['layout floating', 'move-node-to-workspace 4']
-[[on-window-detected]]
-if.app-id = 'com.now.gg.BlueStacks' 
-run = ['layout floating']
 
 # [workspace-to-monitor-force-assignment]
 # T = 1

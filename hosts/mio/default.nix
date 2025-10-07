@@ -6,7 +6,8 @@ in {
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
     # window manager
-    wm.aerospace.enable = true; # 平铺窗口管理
+    wm.aerospace.enable = false; # 用 Hammerspoon
+    tools.hammerspoon.enable = true;
     wm.iceBar.enable = false; # 菜单栏美化
 
     # suites
@@ -30,8 +31,8 @@ in {
     tools.music.enable = true;
     tools.others.enable = true;
     tools.rclone.enable = true;
-    tools.typeswitch.enable = true; # 根据app切换输入法
-    tools.virts.enable = false;
+    tools.typeswitch.enable = false; # 用 Hammerspoon
+    tools.virts.enable = false; # utm parallel
 
     # social
     social.feishu.enable = false;

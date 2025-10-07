@@ -5,6 +5,5 @@ in {
   networking.computerName = hostname;
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
-    tools.typeswitch.enable = true;
   };
 }
