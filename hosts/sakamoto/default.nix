@@ -6,6 +6,7 @@ in {
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
     # window manager
+    wm.aerospace.enable = true;
     tools.hammerspoon.enable = true;
 
     # suites

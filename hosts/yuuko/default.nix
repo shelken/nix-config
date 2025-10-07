@@ -5,6 +5,7 @@ in {
   networking.computerName = hostname;
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
+    wm.aerospace.enable = true;
     tools.hammerspoon.enable = true;
 
     suites.desktop.enable = true;

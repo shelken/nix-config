@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Required parameters:
 # @raycast.schemaVersion 1
@@ -11,7 +11,7 @@
 # @raycast.needsConfirmation false
 
 # Documentation:
-# @raycast.description
+# @raycast.description 将显示器切换到 HDMI2 接口
 # @raycast.author shelken
 # @raycast.authorURL https://raycast.com/shelken
 

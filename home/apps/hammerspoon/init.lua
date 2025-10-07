@@ -19,7 +19,7 @@ hs.loadSpoon("SpoonInstall")
 require("hs.ipc")
 
 -- 引用
-require("config.paperwm") -- 窗口管理
 require("config.app-shortcut") -- 快捷键
-require("config.test") -- 
 require("config.input-change") -- 
+-- require("config.paperwm") -- 窗口管理
+require("config.test") -- 

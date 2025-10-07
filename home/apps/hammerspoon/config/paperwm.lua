@@ -110,9 +110,16 @@ spoon.SpoonInstall:andUse("PaperWM", {
     }
 })
 
+local modal = hs.hotkey.modal.new({"alt", "shift", "cmd"}, "return", "new modal")
+modal:bind({}, "h", "new modal", function()
+end)
+modal:bind({}, "escape", "exit modal", function()
+    modal:exit()
+end)
+
+PaperWM = spoon.PaperWM
 -- 浮动窗口
 -- for _, win in ipairs(hs.window.allWindows()) do  print("ID: " .. win:id() .. ", App: " .. win:application():name() .. ", Title: " .. win:title() .. ", subRole: " .. win:subrole() .. ", role: " .. win:role() .. ", isStand: " .. tostring(win:isStandard()))end
-PaperWM = spoon.PaperWM
 PaperWM.window_filter:rejectApp("BetterDisplay")
 PaperWM.window_filter:rejectApp("App Store")
 PaperWM.window_filter:rejectApp("IINA")

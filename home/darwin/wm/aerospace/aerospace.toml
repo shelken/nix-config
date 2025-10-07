@@ -58,12 +58,12 @@ on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 #                 Monitor pattern is the same as for 'workspace-to-monitor-force-assignment'.
 #                 See: https://nikitabobko.github.io/AeroSpace/guide#assign-workspaces-to-monitors
 [gaps]
-inner.horizontal = 8
-inner.vertical =   8
-outer.left =       10
-outer.bottom =     10
-outer.top =        10
-outer.right =      10
+inner.horizontal = 4
+inner.vertical =   4
+outer.bottom =     4
+outer.top =        4
+outer.left =       4
+outer.right =      4
 
 # 'main' binding mode declaration
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
@@ -109,21 +109,25 @@ alt-left  = 'focus left --ignore-floating --boundaries-action wrap-around-the-wo
 alt-down  = 'focus down --ignore-floating --boundaries-action wrap-around-the-workspace'
 alt-up    = 'focus up --ignore-floating --boundaries-action wrap-around-the-workspace'
 alt-right = 'focus right --ignore-floating --boundaries-action wrap-around-the-workspace'
+
+#alt-cmd-right = 'focus right --ignore-floating'
+#alt-cmd-left  = 'focus left --ignore-floating'
+
 # alt-left  = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors left'
 # alt-down  = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors down'
 # alt-up    = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors up'
 # alt-right = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors right'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#move
-alt-ctrl-left  = ['join-with left']
-alt-ctrl-down  = ['join-with down']
-alt-ctrl-up    = ['join-with up']
-alt-ctrl-right = ['join-with right']
+cmd-ctrl-left  = ['join-with left']
+cmd-ctrl-down  = ['join-with down']
+cmd-ctrl-up    = ['join-with up']
+cmd-ctrl-right = ['join-with right']
 
-cmd-ctrl-left  = 'move left'
-cmd-ctrl-down  = 'move down'
-cmd-ctrl-up    = 'move up'
-cmd-ctrl-right = 'move right'
+alt-ctrl-left  = 'move left'
+alt-ctrl-down  = 'move down'
+alt-ctrl-up    = 'move up'
+alt-ctrl-right = 'move right'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#resize
 alt-shift-minus = 'resize smart -50'
@@ -156,6 +160,16 @@ alt-shift-7 = 'move-node-to-workspace --focus-follows-window 7'
 alt-shift-8 = 'move-node-to-workspace --focus-follows-window 8'
 alt-shift-9 = 'move-node-to-workspace --focus-follows-window 9'
 
+alt-ctrl-1 = 'move-node-to-workspace 1'
+alt-ctrl-2 = 'move-node-to-workspace 2'
+alt-ctrl-3 = 'move-node-to-workspace 3'
+alt-ctrl-4 = 'move-node-to-workspace 4'
+alt-ctrl-5 = 'move-node-to-workspace 5'
+alt-ctrl-6 = 'move-node-to-workspace 6'
+alt-ctrl-7 = 'move-node-to-workspace 7'
+alt-ctrl-8 = 'move-node-to-workspace 8'
+alt-ctrl-9 = 'move-node-to-workspace 9'
+
 # alt-shift-t = 'move-node-to-workspace --focus-follows-window T'
 # alt-shift-f = 'move-node-to-workspace --focus-follows-window F'
 # alt-shift-b = 'move-node-to-workspace --focus-follows-window B'
@@ -164,29 +178,25 @@ alt-shift-9 = 'move-node-to-workspace --focus-follows-window 9'
 alt-ctrl-enter = 'fullscreen' # 占满屏幕
 alt-ctrl-f     = ['layout floating tiling'] # 窗口 悬浮/平铺 切换
 
+# 前一个窗口和当前窗口 切换
 # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
-alt-tab = 'workspace-back-and-forth' # 前一个窗口和当前窗口 切换
+alt-tab = 'focus-back-and-forth'
+# alt-tab = 'workspace-back-and-forth'
 # See: https://nikitabobko.github.io/AeroSpace/commands#move-workspace-to-monitor
+# 将整个工作区移动到另一个显示器
 alt-shift-tab = 'move-workspace-to-monitor --wrap-around next'
 
+# 切换模式
 # See: https://nikitabobko.github.io/AeroSpace/commands#mode
 alt-shift-s = 'mode service' # 进入service模式
 alt-shift-r    = 'mode remote-desktop'  # 远程桌面模式
 
-# 快速打开应用
-alt-k = ['exec-and-forget open /Applications/Kitty.app']
-alt-w = ['exec-and-forget open /Applications/WeChat.app']
-# alt-b = ['exec-and-forget open -a "Google Chrome" --args --disable-features=ExtensionManifestV2Unsupported,ExtensionManifestV2Disabled']
-alt-b = ['exec-and-forget open -a "Helium"']
-alt-f = ['exec-and-forget open -a Finder']
-alt-c = ['exec-and-forget open -a Visual\ Studio\ Code']
-
-# 'service' binding mode declaration.
+# 服务模式：主要用来重载配置
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
 [mode.service.binding]
-esc = ['reload-config', 'mode main']
+alt-shift-s = 'mode main' # 返回
+esc = ['reload-config', 'mode main'] # 重载配置
 r = ['flatten-workspace-tree', 'mode main'] # reset layout
-# f = ['layout floating tiling', 'mode main'] # Toggle between floating and tiling layout
 backspace = ['close-all-windows-but-current', 'mode main']
 
 # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
@@ -197,8 +207,9 @@ alt-ctrl-down  = ['join-with down', 'mode main']
 alt-ctrl-up    = ['join-with up', 'mode main']
 alt-ctrl-right = ['join-with right', 'mode main']
 
+# 远程桌面模式：打开后忽略所有快捷键
 [mode.remote-desktop.binding]
-alt-shift-r = 'mode main'
+alt-shift-r = 'mode main' # 返回
 
 # 触发打开特定应用的窗口命令
 # [[on-window-detected]]
@@ -280,6 +291,10 @@ run = ['layout floating']
 if.app-id = 'com.now.gg.BlueStacks' 
 run = ['layout floating']
 
+[[on-window-detected]]
+if.app-id = 'com.raycast.macos' 
+run = ['layout floating']
+
 # [[on-window-detected]]
 # if.app-id = 'company.thebrowser.Browser'
 # run = 'move-node-to-workspace 1'
@@ -294,6 +309,7 @@ run = ['layout floating']
 # run = 'move-node-to-workspace 1'
 [[on-window-detected]]
 if.app-id = 'net.imput.helium'
+if.during-aerospace-startup = true
 run = 'move-node-to-workspace 1'
 
 # [[on-window-detected]]
@@ -301,6 +317,7 @@ run = 'move-node-to-workspace 1'
 # run = 'move-node-to-workspace 2'
 [[on-window-detected]]
 if.app-id = 'com.microsoft.VSCode'
+if.during-aerospace-startup = true
 run = 'move-node-to-workspace 4'
 # [[on-window-detected]]
 # if.app-id = 'com.todesktop.230313mzl4w4u92' # cursor
@@ -310,6 +327,7 @@ run = 'move-node-to-workspace 4'
 # run = 'move-node-to-workspace 2'
 [[on-window-detected]]
 if.app-id = 'net.kovidgoyal.kitty'
+if.during-aerospace-startup = true
 run = ['move-node-to-workspace 2']
 # [[on-window-detected]]
 # if.app-id = 'md.obsidian' 
