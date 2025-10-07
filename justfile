@@ -184,14 +184,15 @@ qip:
   @nix-store --gc --print-roots | rg -v '/proc/' | rg -Po '(?<= -> ).*' | xargs -o nix-tree
 
 # raycast 最新配置导出
+# e.g. just raycast-export ../nix/secrets.nix/raycast/
 [macos]
-raycast-export:
-  @./utils/script/capture-raycast-config.zsh e ./home/apps/raycast
+raycast-export output_dir:
+  @./utils/script/capture-raycast-config.zsh e {{ output_dir }}
 
 # raycast 最新配置导入
 [macos]
 raycast-import:
-  @./utils/script/capture-raycast-config.zsh i ./home/apps/raycast
+  @./utils/script/capture-raycast-config.zsh i ~/.config/raycast/latest.rayconfig
 
 # nixos 重建
 [linux]
