@@ -234,12 +234,12 @@ set-proxy:
 # nixos 重建
 [linux]
 switch host=profile: 
-  @nh os switch -a -H {{host}} .
+  @nh os switch -H {{host}} .
 
 # 应用配置; target对应当前主机名
 [macos]
 switch host=profile:
-  @nh darwin switch -a -H {{host}} .
+  @nh darwin switch -H {{host}} .
 
 # 更新整个输入
 up:

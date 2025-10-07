@@ -1,5 +1,7 @@
 # 自动化导出导入Raycast配置
 
+> 需要开启secret `config.shelken.secrets.enable = true` 才会有rayconfig文件
+
 > 导出导入前先把密码export
 
 ```shell

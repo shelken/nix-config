@@ -1,8 +1,17 @@
-{...}: let
+{
+  config,
+  lib,
+  secrets,
+  ...
+}: let
+  cfg = config.shelken.secrets;
+  rayconfig_path = "${secrets}/raycast/latest.rayconfig";
 in {
-  xdg.configFile = {
-    "raycast/latest.rayconfig" = {
-      source = ./latest.rayconfig;
+  config = lib.mkIf cfg.enable {
+    xdg.configFile = {
+      "raycast/latest.rayconfig" = {
+        source = rayconfig_path;
+      };
     };
   };
 }
