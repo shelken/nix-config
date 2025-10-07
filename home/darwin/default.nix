@@ -6,6 +6,7 @@
       ../base/home.nix
       # 特定应用
       ../apps/raycast
+      ../apps/hammerspoon
       ../apps/karabiner
       ../apps/chromium
       ../apps/neovim
