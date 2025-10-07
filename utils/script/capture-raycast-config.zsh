@@ -102,6 +102,12 @@ EOF
   success "Successfully exported raycast configs to: $(yellow "${target_file}")"
 elif [[ "${1}" == 'i' ]]; then
   ! is_file "${target_file}" && error "Couldn't find file: '$(yellow "${target_file}")' for import operation; Aborting!!!"
+  
+  # 解密
+  TEMP_DIR=$(mktemp -d)
+  trap "rm -rf \"$TEMP_DIR\"; echo \"临时目录已删除: $TEMP_DIR\"" EXIT ERR
+  OUTPUT_FILE="$TEMP_DIR/$(basename "$target_file" .rayconfig).gz"}
+  openssl enc -d -aes-256-cbc -nosalt -in "$target_file" -k "$RAYCAST_SETTINGS_PASSWORD" 2>/dev/null | tail -c +17 > "$OUTPUT_FILE"
 
   open raycast://extensions/raycast/raycast/import-settings-data
 
@@ -113,21 +119,17 @@ elif [[ "${1}" == 'i' ]]; then
       key code 5 using {command down, shift down}
       delay 0.3
 
-      keystroke "${target_dir}/latest.rayconfig"
-      delay 0.3
+      keystroke "$OUTPUT_FILE"
+      delay 0.5
 
-      key code 36
+      key code 36 # 输入地址后回车
       delay 0.5
 
       key code 36
       delay 0.3
 
-      keystroke "${RAYCAST_SETTINGS_PASSWORD}"
-      key code 36
-      delay 0.3
-
       key code 36 # 提示框确认
-      delay 5 
+      delay 5
 
       key code 36 
       delay 0.5
