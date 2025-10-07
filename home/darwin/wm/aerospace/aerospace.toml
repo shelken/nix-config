@@ -176,7 +176,10 @@ alt-ctrl-9 = 'move-node-to-workspace 9'
 # alt-shift-c = 'move-node-to-workspace --focus-follows-window C'
 
 alt-ctrl-enter = 'fullscreen' # 占满屏幕
-alt-ctrl-f     = ['layout floating tiling'] # 窗口 悬浮/平铺 切换
+alt-ctrl-f     = [
+  '''exec-and-forget aerospace layout floating && osascript -e 'tell application "System Events" to key code 120 using {control down, option down, command down}' || aerospace layout tiling
+  '''
+] # 窗口 悬浮/平铺 切换
 
 # 前一个窗口和当前窗口 切换
 # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
