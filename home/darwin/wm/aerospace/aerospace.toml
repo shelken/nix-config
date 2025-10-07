@@ -119,10 +119,10 @@ alt-right = 'focus right --ignore-floating --boundaries-action wrap-around-the-w
 # alt-right = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors right'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#move
-cmd-ctrl-left  = ['join-with left']
-cmd-ctrl-down  = ['join-with down']
-cmd-ctrl-up    = ['join-with up']
-cmd-ctrl-right = ['join-with right']
+alt-cmd-left  = ['join-with left']
+alt-cmd-down  = ['join-with down']
+alt-cmd-up    = ['join-with up']
+alt-cmd-right = ['join-with right']
 
 alt-ctrl-left  = 'move left'
 alt-ctrl-down  = 'move down'
@@ -205,10 +205,10 @@ backspace = ['close-all-windows-but-current', 'mode main']
 # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
 #s = ['layout sticky tiling', 'mode main']
 
-alt-ctrl-left  = ['join-with left', 'mode main']
-alt-ctrl-down  = ['join-with down', 'mode main']
-alt-ctrl-up    = ['join-with up', 'mode main']
-alt-ctrl-right = ['join-with right', 'mode main']
+alt-cmd-left  = ['join-with left', 'mode main']
+alt-cmd-down  = ['join-with down', 'mode main']
+alt-cmd-up    = ['join-with up', 'mode main']
+alt-cmd-right = ['join-with right', 'mode main']
 
 # 远程桌面模式：打开后忽略所有快捷键
 [mode.remote-desktop.binding]

@@ -14,9 +14,9 @@
     // move focus
     unbind "Alt h" "Alt j" "Alt k" "Alt l"
     unbind "Alt Left" "Alt Right" "Alt Down" "Alt Up"
-    bind "Super Left" { MoveFocusOrTab "Left"; }
-    bind "Super Right" { MoveFocusOrTab "Right"; }
-    bind "Super Down" { MoveFocus "Down"; }
-    bind "Super Up" { MoveFocus "Up"; }
+    bind "Super Shift Left" { MoveFocusOrTab "Left"; }
+    bind "Super Shift Right" { MoveFocusOrTab "Right"; }
+    bind "Super Shift Down" { MoveFocus "Down"; }
+    bind "Super Shift Up" { MoveFocus "Up"; }
   }
 // }
