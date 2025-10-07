@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 
+#
 # 使用前置说明：
 # 1. `export OPENLIST_PASSWORD=` 密码变量设置
 # 2.
