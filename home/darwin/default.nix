@@ -15,6 +15,7 @@
       ../apps/wezterm
       ../apps/squirrel
       ../apps/kitty
+      ../apps/screenshot
       ../apps/zellij
       ../apps/tailscale/base.nix
     ];

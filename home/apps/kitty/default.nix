@@ -57,6 +57,7 @@ in {
   };
   xdg.configFile."kitty/kitty.app.png" = {
     source = "${kitty-icon-pkgs}/kitty-light.png";
+    # source = "${pkgs.kitty-icon}/kitty-light.png";
   };
 
   programs.zsh.initContent = shellIntegrationInit.zsh;

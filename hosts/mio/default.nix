@@ -6,7 +6,7 @@ in {
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
     # window manager
-    wm.aerospace.enable = true; # 用 Hammerspoon
+    wm.aerospace.enable = true;
     tools.hammerspoon.enable = true;
     wm.iceBar.enable = false; # 菜单栏美化
 

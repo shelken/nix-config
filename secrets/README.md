@@ -64,5 +64,3 @@ nix run nixpkgs#ssh-to-age -- < ~/.ssh/id_ed25519.pub
 将生成的age公钥放入`.sops.yaml`中，根据`creation_rules`来配置哪些公钥读取哪些secrets
 
 每次编辑secrets时，使用命令`sops xxx/xxx.yaml`
-
-使用时调用`mylibx.get-sops-file`获取来自`secrets.nix`的secrets

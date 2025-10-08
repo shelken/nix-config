@@ -19,10 +19,7 @@ in {
       casks = [
         "aerospace"
       ];
-      brews = [
-        # janky borders; for aerospace; need macOS 14+
-        "borders"
-      ];
+      brews = [];
     };
   };
 }

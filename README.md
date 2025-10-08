@@ -167,4 +167,5 @@ just gen-image work-test qcow
 - [Nix Darwin Configuration Options](https://daiderd.com/nix-darwin/manual/index.html)
 - [NixOS Packages Search](https://search.nixos.org/packages)
 - [NixOS Options Search](https://search.nixos.org/options)
+- [NUR - 社区包搜索](https://nur.nix-community.org)
 - [NixOS 与 Flakes 一份非官方的新手指南](https://nixos-and-flakes.thiscute.world/zh) `*`中文教程

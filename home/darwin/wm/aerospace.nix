@@ -2,7 +2,6 @@
   lib,
   mylib,
   config,
-  pkgs,
   # options,
   ...
 }: let

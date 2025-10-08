@@ -190,7 +190,7 @@
           "Network_state" = 1;
           runAtLoginInitialized = 1;
           # setupProcess = 1;
-          "update-interval" = "Never";
+          # "update-interval" = "Never";
         };
         # Helium Browser
         "net.imput.helium" = {

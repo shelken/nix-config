@@ -18,22 +18,10 @@ end)
 hs.hotkey.bind({"alt"}, "F", function()
   hs.application.launchOrFocus("Finder")
 end)
-hs.hotkey.bind({"alt"}, "K", function()
-  -- local app = hs.application.get("kitty")
-    -- if app then
-    --     if not app:mainWindow() then
-    --         app:selectMenuItem({"kitty", "New OS window"})
-    --     elseif app:isFrontmost() then
-    --         app:hide()
-    --     else
-    --         app:activate()
-    --     end
-    -- else
-    --     toggleApp("kitty")
-    -- end
+hs.hotkey.bind({"alt", "shift"}, "K", function()
     hs.application.launchOrFocus("kitty")
 end)
-hs.hotkey.bind({"alt", "shift"}, "K", function()
+hs.hotkey.bind({"alt"}, "K", function()
   -- hs.alert.show("切换 kitty 悬浮窗")
   local cmd = "/Applications/kitty.app/Contents/MacOS/kitten"
   hs.task.new(cmd, 
