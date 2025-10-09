@@ -1,6 +1,8 @@
-{vscode-server, ...}: let
+{ vscode-server, ... }:
+let
   vscode-server-home = vscode-server + "/modules/vscode-server/home.nix";
-in {
+in
+{
   imports = [
     vscode-server-home
   ];

@@ -1,4 +1,5 @@
-{myvars, ...}: {
+{ myvars, ... }:
+{
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false;

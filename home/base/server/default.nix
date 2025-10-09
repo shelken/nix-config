@@ -1,4 +1,5 @@
-{config, ...}: {
+{ config, ... }:
+{
   config.shelken.neovim.minimal = true;
   imports = [
     ../core

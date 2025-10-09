@@ -4,11 +4,13 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.suites.desktop;
-in {
+in
+{
   options.shelken.suites.desktop = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };

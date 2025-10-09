@@ -3,11 +3,13 @@
   mylib,
   config,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.write.obsidian;
-in {
+in
+{
   options.shelken.write.obsidian = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };

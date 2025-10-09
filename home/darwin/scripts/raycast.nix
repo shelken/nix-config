@@ -1,4 +1,5 @@
-{...}: {
+{ ... }:
+{
   xdg.configFile = {
     "raycast/custom-commands" = {
       source = ./raycast;

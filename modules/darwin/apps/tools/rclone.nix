@@ -3,11 +3,13 @@
   mylib,
   config,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.tools.rclone;
-in {
+in
+{
   options.shelken.tools.rclone = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };

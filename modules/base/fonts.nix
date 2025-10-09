@@ -4,15 +4,18 @@
   lib,
   mylib,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.modules.desktop;
-in {
+in
+{
   options.shelken.modules.desktop = {
     fonts.enable = mkBoolOpt false "Rich Fonts - Add NerdFonts Icons, emojis & CJK Fonts";
   };
-  config.fonts.packages = with pkgs;
+  config.fonts.packages =
+    with pkgs;
     mkIf cfg.fonts.enable [
       # icon fonts
       material-design-icons

@@ -1,5 +1,7 @@
-{pkgs, ...}: let
-in {
+{ pkgs, ... }:
+let
+in
+{
   script = pkgs.writeShellScriptBin "reset-fcp-trial" ''
     swift ${pkgs.writeText "script.swift" ''
       // from https://gist.github.com/dannote/17e0396fe2e19c6e60c915838376d267

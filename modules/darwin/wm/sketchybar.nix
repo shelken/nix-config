@@ -1,6 +1,8 @@
-_: let
+_:
+let
   logFile = "/var/tmp/sketchybar.log";
-in {
+in
+{
   services.sketchybar = {
     enable = true;
     # extraPackages = with pkgs; [

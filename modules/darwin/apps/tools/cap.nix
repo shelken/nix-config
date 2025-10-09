@@ -3,12 +3,14 @@
   mylib,
   config,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.tools.cap;
   # 截屏录屏
-in {
+in
+{
   options.shelken.tools.cap = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };

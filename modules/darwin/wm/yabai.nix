@@ -7,13 +7,13 @@
   mylib,
   options,
   ...
-}: let
+}:
+let
   # 固定版本
   yabai = pkgs-unstable.yabai.overrideAttrs (_old: rec {
     version = "7.1.1";
     src =
-      if pkgs.stdenv.isAarch64
-      then
+      if pkgs.stdenv.isAarch64 then
         (pkgs.fetchzip {
           url = "https://github.com/koekeishiya/yabai/releases/download/v${version}/yabai-v${version}.tar.gz";
           hash = "sha256-LNOAT1vm6EEmcKdshMKjYWFfoRoRNbgZgjEpOTacWc8=";
@@ -30,7 +30,8 @@
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.wm.yabai;
-in {
+in
+{
   options.shelken.wm.yabai = {
     enable = mkBoolOpt false "Whether or not to enable yabai.";
   };

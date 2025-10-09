@@ -2,7 +2,8 @@
   config,
   pkgs,
   ...
-}: {
+}:
+{
   # security with polkit
   security.polkit.enable = true;
   # security with gnome-kering

@@ -3,13 +3,15 @@
   config,
   lib,
   ...
-}: let
+}:
+let
   config-path = ./config;
-in {
+in
+{
   # xdg.configFile."karabiner/karabiner.json" = {
   #   source = ./config/karabiner.json;
   # };
-  home.activation.SyncKarabinerConfig = lib.hm.dag.entryAfter ["writeBoundary"] ''
+  home.activation.SyncKarabinerConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     ${pkgs.rsync}/bin/rsync -az --delete --chmod=F600 --mkpath \
     ${config-path}/karabiner.json \
     ${config.xdg.configHome}/karabiner/karabiner.json

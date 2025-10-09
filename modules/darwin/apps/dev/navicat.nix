@@ -3,11 +3,13 @@
   mylib,
   config,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.dev.navicat;
-in {
+in
+{
   options.shelken.dev.navicat = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };

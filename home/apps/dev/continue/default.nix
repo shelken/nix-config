@@ -3,6 +3,8 @@
   config,
   myvars,
   ...
-}: let
-in {
+}:
+let
+in
+{
 }

@@ -3,7 +3,8 @@
   myvars,
   lib,
   ...
-}: {
+}:
+{
   xdg.portal = {
     enable = true;
 

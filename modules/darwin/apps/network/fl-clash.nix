@@ -3,11 +3,13 @@
   mylib,
   config,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.network.fl-clash;
-in {
+in
+{
   options.shelken.network.fl-clash = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };

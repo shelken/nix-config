@@ -1,7 +1,9 @@
-{...}: let
+{ ... }:
+let
   shellIntegrationInit = {
     zsh = builtins.readFile ./tailscale.zsh;
   };
-in {
+in
+{
   programs.zsh.initContent = shellIntegrationInit.zsh;
 }

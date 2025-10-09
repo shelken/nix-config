@@ -3,11 +3,13 @@
   mylib,
   config,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.social.feishu;
-in {
+in
+{
   options.shelken.social.feishu = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };

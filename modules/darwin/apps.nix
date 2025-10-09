@@ -37,12 +37,12 @@ let
     # HTTPS_PROXY = "http://127.0.0.1:7890";
   };
 
-  homebrew_env_script =
-    lib.attrsets.foldlAttrs
-    (acc: name: value: acc + "\nexport ${name}=${value}")
-    ""
-    (homebrew_mirror_env // local_proxy_env);
-in {
+  homebrew_env_script = lib.attrsets.foldlAttrs (
+    acc: name: value:
+    acc + "\nexport ${name}=${value}"
+  ) "" (homebrew_mirror_env // local_proxy_env);
+in
+{
   # Install packages from nix's official package repository.
   #
   # The packages installed here are available to all users, and are reproducible across machines, and are rollbackable.
@@ -57,15 +57,16 @@ in {
 
     # darwin only apps
   ];
-  environment.variables =
-    {
-      # Fix https://github.com/LnL7/nix-darwin/wiki/Terminfo-issues
-      TERMINFO_DIRS = map (path: path + "/share/terminfo") config.environment.profiles ++ ["/usr/share/terminfo"];
+  environment.variables = {
+    # Fix https://github.com/LnL7/nix-darwin/wiki/Terminfo-issues
+    TERMINFO_DIRS = map (path: path + "/share/terminfo") config.environment.profiles ++ [
+      "/usr/share/terminfo"
+    ];
 
-      EDITOR = "nvim";
-    }
-    # Set variables for you to manually install homebrew packages.
-    // homebrew_mirror_env;
+    EDITOR = "nvim";
+  }
+  # Set variables for you to manually install homebrew packages.
+  // homebrew_mirror_env;
 
   # Set environment variables for nix-darwin before run `brew bundle`.
   system.activationScripts.homebrew.text = lib.mkBefore ''

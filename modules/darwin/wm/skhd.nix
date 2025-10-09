@@ -6,13 +6,15 @@
   pkgs,
   options,
   ...
-}: let
+}:
+let
   homeDir = config.users.users."${myvars.username}".home;
   scriptsPath = ./skhd/scripts;
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.wm.skhd;
-in {
+in
+{
   options.shelken.wm.skhd = {
     enable = mkBoolOpt false "Whether or not to enable yabai.";
   };

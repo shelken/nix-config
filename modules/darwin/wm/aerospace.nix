@@ -4,11 +4,13 @@
   config,
   # options,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.wm.aerospace;
-in {
+in
+{
   options.shelken.wm.aerospace = {
     enable = mkBoolOpt false "Whether or not to enable aerospace.";
   };
@@ -19,7 +21,7 @@ in {
       casks = [
         "aerospace"
       ];
-      brews = [];
+      brews = [ ];
     };
   };
 }

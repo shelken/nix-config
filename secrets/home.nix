@@ -5,19 +5,20 @@
   secrets,
   config,
   ...
-}: let
+}:
+let
   get-sops-file = file: secrets + "/sops/secrets/${file}";
   user_readable = {
     mode = "0500";
     # owner = myvars.username;
   };
   get-default-sops-file = get-sops-file "${myvars.username}/default.yaml";
-  default-sops-secret =
-    {
-      sopsFile = get-default-sops-file;
-    }
-    // user_readable;
-in {
+  default-sops-secret = {
+    sopsFile = get-default-sops-file;
+  }
+  // user_readable;
+in
+{
   imports = [
     # agenix.darwinModules.default
     # agenix.homeManagerModules.default
@@ -40,24 +41,19 @@ in {
   home.sessionVariables.SOPS_AGE_KEY_FILE = config.sops.age.keyFile;
 
   sops.secrets = {
-    "deepseek/api-key" =
-      {}
-      // default-sops-secret;
-    "github/cli-token" =
-      {
-        path = "${config.home.homeDirectory}/.config/gh/access-token";
-      }
-      // default-sops-secret;
-    "wakatime/conf" =
-      {
-        path = "${config.home.homeDirectory}/.wakatime.cfg";
-      }
-      // default-sops-secret;
-    "asciinema/install-id" =
-      {
-        path = "${config.home.homeDirectory}/.config/asciinema/install-id";
-      }
-      // default-sops-secret;
+    "deepseek/api-key" = { } // default-sops-secret;
+    "github/cli-token" = {
+      path = "${config.home.homeDirectory}/.config/gh/access-token";
+    }
+    // default-sops-secret;
+    "wakatime/conf" = {
+      path = "${config.home.homeDirectory}/.wakatime.cfg";
+    }
+    // default-sops-secret;
+    "asciinema/install-id" = {
+      path = "${config.home.homeDirectory}/.config/asciinema/install-id";
+    }
+    // default-sops-secret;
   };
 
   # if you changed this key, you need to regenerate all encrypt files from the decrypt contents!

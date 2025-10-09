@@ -2,15 +2,18 @@
   pkgs,
   anyrun,
   ...
-}: let
+}:
+let
   anyrunPackages = anyrun.packages.${pkgs.system};
-in {
+in
+{
   imports = [
     (
-      {modulesPath, ...}: {
+      { modulesPath, ... }:
+      {
         # Important! We disable home-manager's module to avoid option
         # definition collisions
-        disabledModules = ["${modulesPath}/programs/anyrun.nix"];
+        disabledModules = [ "${modulesPath}/programs/anyrun.nix" ];
       }
     )
     anyrun.homeManagerModules.default

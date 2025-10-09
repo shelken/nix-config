@@ -3,11 +3,13 @@
   mylib,
   config,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.homelab.server;
-in {
+in
+{
   options.shelken.homelab.server = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };

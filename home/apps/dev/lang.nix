@@ -1,6 +1,8 @@
-{pkgs, ...}: let
+{ pkgs, ... }:
+let
   jdk = pkgs.jdk17;
-in {
+in
+{
   # java
   programs.java = {
     enable = true;

@@ -4,9 +4,11 @@
   lib,
   niri,
   ...
-} @ args: let
-  settings = {};
-in {
+}@args:
+let
+  settings = { };
+in
+{
   config = (
     lib.mkMerge [
       {

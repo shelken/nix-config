@@ -4,7 +4,8 @@
   niri,
   lib,
   ...
-}: {
+}:
+{
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
@@ -39,7 +40,7 @@
     #};
     #systemd-boot.enable = true;
     grub = {
-      devices = ["/dev/sda"];
+      devices = [ "/dev/sda" ];
       enable = true;
       efiSupport = true;
       useOSProber = true;
@@ -76,11 +77,11 @@
 
   security.sudo.extraRules = [
     {
-      users = [username];
+      users = [ username ];
       commands = [
         {
           command = "ALL";
-          options = ["NOPASSWD"];
+          options = [ "NOPASSWD" ];
         }
       ];
     }

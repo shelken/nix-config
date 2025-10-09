@@ -1,4 +1,4 @@
-{username, ...}:
+{ username, ... }:
 #############################################################
 #
 #  PVE 155
@@ -68,11 +68,11 @@
 
   security.sudo.extraRules = [
     {
-      users = [username];
+      users = [ username ];
       commands = [
         {
           command = "ALL";
-          options = ["NOPASSWD"];
+          options = [ "NOPASSWD" ];
         }
       ];
     }

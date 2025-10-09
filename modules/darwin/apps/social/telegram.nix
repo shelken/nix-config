@@ -3,11 +3,13 @@
   mylib,
   config,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.social.telegram;
-in {
+in
+{
   options.shelken.social.telegram = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };

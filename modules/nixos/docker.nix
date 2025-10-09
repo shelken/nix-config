@@ -1,4 +1,5 @@
-{...}: {
+{ ... }:
+{
   virtualisation.docker = {
     enable = true;
     # start dockerd on boot.

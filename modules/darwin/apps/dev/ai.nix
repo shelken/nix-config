@@ -3,11 +3,13 @@
   mylib,
   config,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.dev.ai;
-in {
+in
+{
   options.shelken.dev.ai = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };

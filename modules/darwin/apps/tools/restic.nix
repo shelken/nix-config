@@ -3,11 +3,13 @@
   mylib,
   config,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.tools.restic;
-in {
+in
+{
   options.shelken.tools.restic = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };

@@ -4,11 +4,13 @@
   config,
   # options,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.wm.iceBar;
-in {
+in
+{
   options.shelken.wm.iceBar = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };

@@ -1,4 +1,5 @@
-{lib, ...} @ args: let
+{ lib, ... }@args:
+let
   envExtra = ''
     export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin:$HOME/.cargo/bin:$HOME/go/bin:$HOME/.local/bin:$HOME/.npm-global/bin:$HOME/.krew/bin"
   '';
@@ -20,7 +21,8 @@
   #     true
   #   fi
   # '';
-in {
+in
+{
   # Homebrew's default install location:
   #   /opt/homebrew for Apple Silicon
   #   /usr/local for macOS Intel

@@ -3,11 +3,13 @@
   mylib,
   config,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.game.winx;
-in {
+in
+{
   options.shelken.game.winx = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };

@@ -4,11 +4,13 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.dev.glasskube;
-in {
+in
+{
   options.shelken.dev.glasskube = {
     enable = mkBoolOpt false "Whether or not to enable.";
   };
