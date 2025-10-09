@@ -18,10 +18,10 @@ end)
 hs.hotkey.bind({"alt"}, "F", function()
   hs.application.launchOrFocus("Finder")
 end)
-hs.hotkey.bind({"alt", "shift"}, "K", function()
+hs.hotkey.bind({"alt", "shift"}, "return", function()
     hs.application.launchOrFocus("kitty")
 end)
-hs.hotkey.bind({"alt"}, "K", function()
+hs.hotkey.bind({"alt"}, "return", function()
   -- hs.alert.show("切换 kitty 悬浮窗")
   local cmd = "/Applications/kitty.app/Contents/MacOS/kitten"
   hs.task.new(cmd, 
@@ -33,8 +33,8 @@ hs.hotkey.bind({"alt"}, "K", function()
     "-o", "start_as_hidden=no",
     "-o", "hide_on_focus_loss=yes",
     "-o", "lines=35",
-    "-o", "columns=112",
-    "-o", "background_opacity=0.55",
+    "-o", "columns=126",
+    "-o", "background_opacity=0.65",
   }):start()
 end)
 hs.hotkey.bind({"alt"}, "W", function()
