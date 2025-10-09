@@ -19,11 +19,23 @@ in
   };
 
   config = mkIf cfg.enable {
+    home.activation.HammerspoonLoginItem = lib.hm.dag.entryAfter [ "writeBoundary" ] (
+      mylib.mkLoginItemString { app_name = "Hammerspoon"; }
+    );
     home.file = {
       ".hammerspoon/Spoons/SpoonInstall.spoon" = {
         source = pkgs.fetchzip {
           url = "https://github.com/Hammerspoon/Spoons/raw/master/Spoons/SpoonInstall.spoon.zip";
           hash = "sha256-3f0d4znNuwZPyqKHbZZDlZ3gsuaiobhHPsefGIcpCSE=";
+        };
+      };
+      ".hammerspoon/Spoons/PaperWM.spoon" = {
+        source = pkgs.fetchFromGitHub {
+          owner = "mogenson";
+          repo = "PaperWM.spoon";
+          rev = "c7247801b2a3f4aac63f475ef677b367a310b8fd";
+          fetchSubmodules = false;
+          sha256 = "sha256-or92pm1rEzg0iTwTpqpzSjStO/TgSDa3n9B+earlGrA=";
         };
       };
       ".hammerspoon/config" = {
