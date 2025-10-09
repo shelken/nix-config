@@ -27,15 +27,6 @@ local function set_app_input_method(app_name, set_input_method_function, event)
     end)
 end
 
--- appInputMethodSettings =     {
---         "com.microsoft.VSCode" = "com.apple.keylayout.ABC";
---         "com.raycast.macos" = "com.apple.keylayout.ABC";
---         "md.obsidian" = "im.rime.inputmethod.Squirrel.Hans";
---         "net.imput.helium" = "im.rime.inputmethod.Squirrel.Hans";
---         "net.kovidgoyal.kitty" = "com.apple.keylayout.ABC";
---         "tv.parsec.www" = "com.apple.keylayout.ABC";
---     };
-
 -- 检查名字：直接在Raycast中查看
 
 -- windowFocused > English

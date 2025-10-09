@@ -5,8 +5,4 @@
     # ../../apps/squirrel
     ../../apps/kitty
   ];
-
-  home.packages = with pkgs; [
-    kitty
-  ];
 }

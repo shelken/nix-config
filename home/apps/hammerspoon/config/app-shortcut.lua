@@ -23,8 +23,8 @@ hs.hotkey.bind({"alt", "shift"}, "return", function()
 end)
 hs.hotkey.bind({"alt"}, "return", function()
   -- hs.alert.show("切换 kitty 悬浮窗")
-  local cmd = "/Applications/kitty.app/Contents/MacOS/kitten"
-  hs.task.new(cmd, 
+  local cmd = "~/Applications/Home Manager Apps/kitty.app/Contents/MacOS/kitten"
+  hs.task.new(cmd,
     function() print("结束") end, 
     function() return false end, 
     {"quick-access-terminal", 

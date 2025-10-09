@@ -165,7 +165,7 @@ in
       "syntax-highlight"
 
       # Development
-      "kitty"
+      # "kitty"
       "visual-studio-code"
       # "wezterm"
     ];
