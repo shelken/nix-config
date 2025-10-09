@@ -1,41 +1,8 @@
 {
-  myvars,
-  lib,
   pkgs,
-  config,
-  hostname,
   ...
 }:
 let
-  theme = "catppuccin-${lib.strings.toLower myvars.catppuccin_flavor}";
-  # origin_file = builtins.readFile ./config.kdl;
-  keybinds-config = builtins.readFile ./keybinds.kdl;
-  inherit (lib) concatStrings;
-  zellij-forgot = pkgs.stdenvNoCC.mkDerivation rec {
-    pname = "zellij-forgot";
-    version = "0.4.2";
-
-    src = builtins.fetchurl {
-      url = "https://github.com/karimould/zellij-forgot/releases/download/${version}/zellij_forgot.wasm";
-      sha256 = "sha256:31194145519dbdc128685b456f970374378fa19fc9da742fbe4a321bace449db";
-    };
-    phases = [ "installPhase" ];
-
-    installPhase = ''
-      mkdir -p $out/bin
-      cp $src $out/bin/zellij_forgot.wasm
-    '';
-  };
-  layout_dir =
-    if builtins.pathExists ./layouts/${hostname} then
-      ''
-        default_layout "default"
-        layout_dir "${config.home.homeDirectory}/.config/zellij/layouts/${hostname}"
-      ''
-    else
-      ''
-        default_layout "basic"
-      '';
   zjstatus = pkgs.stdenvNoCC.mkDerivation rec {
     pname = "zjstatus";
     version = "v0.21.1";
@@ -48,7 +15,8 @@ let
 
     installPhase = ''
       mkdir -p $out/bin
-      cp $src $out/bin/zjstatus.wasm
+      cp $src $out/bin/zjstatus
+      chmod +x $out/bin/zjstatus
     '';
   };
 in
@@ -62,6 +30,7 @@ in
 
   xdg.configFile = {
     "zellij/layouts".source = ./layouts;
+    "zellij/plugins/zjstatus.wasm".source = "${zjstatus}/bin/zjstatus";
     "zellij/config.kdl" = {
       # text = concatStrings [
       #   ''
@@ -76,17 +45,6 @@ in
       #     //键盘绑定
       #     keybinds {
       #       ${keybinds-config}
-
-      #       // 参考：https://github.com/nixypanda/dotfiles/blob/f5d4bb5a1efd006f1db3e29965a12dea09f10356/modules/zellij/default.nix#L56C11-L63C12
-      #       // 插件：命令提示
-      #       shared_except "locked" {
-      #         bind "Ctrl y" {
-      #           LaunchOrFocusPlugin "file:${zellij-forgot}/bin/zellij_forgot.wasm" {
-      #             "LOAD_ZELLIJ_BINDINGS" "true"
-      #             floating true
-      #           }
-      #         }
-      #       }
       #     }
       #   ''
       #   # origin_file
@@ -101,4 +59,24 @@ in
       source = ./config.kdl;
     };
   };
+
+  # 切换目录时变更tab name
+  programs.zsh.initContent = ''
+    zellij_tab_name_update() {
+    if [[ -n $ZELLIJ ]]; then
+        local current_dir=$PWD
+        if [[ $current_dir == $HOME ]]; then
+            current_dir="~"
+        else
+            # current_dir=\$\{current_dir##*/\}
+            current_dir=$(basename "$current_dir")
+        fi
+        command nohup zellij action rename-tab $current_dir >/dev/null 2>&1
+        fi
+    }
+
+    zellij_tab_name_update
+    chpwd_functions+=(zellij_tab_name_update)
+  '';
+
 }
