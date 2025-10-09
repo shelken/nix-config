@@ -290,6 +290,7 @@
               # code formatter
               nodePackages.prettier
               nixos-anywhere
+              nvfetcher
             ];
             name = "dots";
             shellHook = ''

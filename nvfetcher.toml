@@ -1,0 +1,12 @@
+[kitty-icon]
+src.github_tag = "DinkDonk/kitty-icon"
+fetch.github = "DinkDonk/kitty-icon"
+
+[paperwm-spoon]
+src.git = "https://github.com/mogenson/PaperWM.spoon"
+src.branch = "main"
+fetch.github = "mogenson/PaperWM.spoon"
+
+# [hammerspoon]
+# src.github = "Hammerspoon/hammerspoon"
+# fetch.url = "https://github.com/Hammerspoon/hammerspoon/releases/download/$ver/Hammerspoon-$ver.zip"

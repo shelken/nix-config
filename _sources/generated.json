@@ -1,0 +1,44 @@
+{
+  "kitty-icon": {
+    "cargoLocks": null,
+    "date": null,
+    "extract": null,
+    "name": "kitty-icon",
+    "passthru": null,
+    "pinned": false,
+    "src": {
+      "deepClone": false,
+      "fetchSubmodules": false,
+      "leaveDotGit": false,
+      "name": null,
+      "owner": "DinkDonk",
+      "repo": "kitty-icon",
+      "rev": "v1.1.0",
+      "sha256": "sha256-q5wNdFRMvQDx3DlO7zdy/xPJbqcNlm4iVKaBwjxlSMs=",
+      "sparseCheckout": [],
+      "type": "github"
+    },
+    "version": "v1.1.0"
+  },
+  "paperwm-spoon": {
+    "cargoLocks": null,
+    "date": "2025-09-26",
+    "extract": null,
+    "name": "paperwm-spoon",
+    "passthru": null,
+    "pinned": false,
+    "src": {
+      "deepClone": false,
+      "fetchSubmodules": false,
+      "leaveDotGit": false,
+      "name": null,
+      "owner": "mogenson",
+      "repo": "PaperWM.spoon",
+      "rev": "c7247801b2a3f4aac63f475ef677b367a310b8fd",
+      "sha256": "sha256-or92pm1rEzg0iTwTpqpzSjStO/TgSDa3n9B+earlGrA=",
+      "sparseCheckout": [],
+      "type": "github"
+    },
+    "version": "c7247801b2a3f4aac63f475ef677b367a310b8fd"
+  }
+}
