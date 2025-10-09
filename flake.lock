@@ -23,71 +23,23 @@
         "type": "github"
       }
     },
-    "catppuccin-bat": {
-      "flake": false,
+    "catppuccin": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
       "locked": {
-        "lastModified": 1734996624,
-        "narHash": "sha256-6fWoCH90IGumAMc4buLRWL0N61op+AuMNN9CAR9/OdI=",
+        "lastModified": 1759572023,
+        "narHash": "sha256-2fzYq/m2PXie5WZO5LhyiZrTIUdUFp1SCLZAwvPL5xo=",
         "owner": "catppuccin",
-        "repo": "bat",
-        "rev": "699f60fc8ec434574ca7451b444b880430319941",
+        "repo": "nix",
+        "rev": "eeada12912d80d04733383d231a9d66172858718",
         "type": "github"
       },
       "original": {
         "owner": "catppuccin",
-        "ref": "699f60fc",
-        "repo": "bat",
-        "type": "github"
-      }
-    },
-    "catppuccin-btop": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1727050041,
-        "narHash": "sha256-mEGZwScVPWGu+Vbtddc/sJ+mNdD2kKienGZVUcTSl+c=",
-        "owner": "catppuccin",
-        "repo": "btop",
-        "rev": "f437574b600f1c6d932627050b15ff5153b58fa3",
-        "type": "github"
-      },
-      "original": {
-        "owner": "catppuccin",
-        "ref": "f437574b",
-        "repo": "btop",
-        "type": "github"
-      }
-    },
-    "catppuccin-lazygit": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1745275813,
-        "narHash": "sha256-4eJEOEfwLBc4EoQ32TpuhXS3QDvQ8FtT7EgpotEKV7o=",
-        "owner": "catppuccin",
-        "repo": "lazygit",
-        "rev": "c24895902ec2a3cb62b4557f6ecd8e0afeed95d5",
-        "type": "github"
-      },
-      "original": {
-        "owner": "catppuccin",
-        "ref": "c2489590",
-        "repo": "lazygit",
-        "type": "github"
-      }
-    },
-    "catppuccin-yazi": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1749216915,
-        "narHash": "sha256-hjqmNxIr/KCN9k5ZT7O994BeWdp56NP7aS34+nZ/fQQ=",
-        "owner": "catppuccin",
-        "repo": "yazi",
-        "rev": "1a8c939e47131f2c4bd07a2daea7773c29e2a774",
-        "type": "github"
-      },
-      "original": {
-        "owner": "catppuccin",
-        "ref": "1a8c939e",
-        "repo": "yazi",
+        "repo": "nix",
         "type": "github"
       }
     },
@@ -307,11 +259,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1756261190,
-        "narHash": "sha256-eiy0klFK5EVJLNilutR7grsZN/7Itj9DyD75eyOf83k=",
+        "lastModified": 1759853171,
+        "narHash": "sha256-uqbhyXtqMbYIiMqVqUhNdSuh9AEEkiasoK3mIPIVRhk=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "77f348da3176dc68b20a73dab94852a417daf361",
+        "rev": "1a09eb84fa9e33748432a5253102d01251f72d6d",
         "type": "github"
       },
       "original": {
@@ -533,10 +485,7 @@
     "root": {
       "inputs": {
         "anyrun": "anyrun",
-        "catppuccin-bat": "catppuccin-bat",
-        "catppuccin-btop": "catppuccin-btop",
-        "catppuccin-lazygit": "catppuccin-lazygit",
-        "catppuccin-yazi": "catppuccin-yazi",
+        "catppuccin": "catppuccin",
         "disko": "disko",
         "dotfiles": "dotfiles",
         "git-hooks": "git-hooks",

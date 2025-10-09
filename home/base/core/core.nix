@@ -1,16 +1,11 @@
+{ pkgs, ... }:
 {
-  pkgs,
-  myvars,
-  ...
-}: {
   home.packages = with pkgs; [
     # nix tool
     # https://github.com/nix-community/nix-melt
     nix-melt # A TUI flake.lock viewer
     # https://github.com/utdemir/nix-tree
     nix-tree # A TUI to visualize the dependency graph of a nix derivation
-    nix-prefetch-git
-    nix-prefetch-github
     nix-output-monitor # nom
     nh # Yet another nix cli helper
   ];
@@ -30,20 +25,6 @@
       enable = true;
       config = {
         pager = "less -FR";
-        theme = "Catppuccin ${myvars.catppuccin_flavor}";
-      };
-      themes = {
-        # https://raw.githubusercontent.com/catppuccin/bat/main/themes/Catppuccin%20Mocha.tmTheme
-        "Catppuccin ${myvars.catppuccin_flavor}" = {
-          src = pkgs.fetchFromGitHub {
-            owner = "catppuccin";
-            repo = "bat"; # Bat uses sublime syntax for its themes
-            rev = "6810349b";
-            hash = "sha256-lJapSgRVENTrbmpVyn+UQabC9fpV1G1e+CdlJ090uvg=";
-          };
-          # file = "themes/Catppuccin Mocha.tmTheme";
-          file = "themes/Catppuccin ${myvars.catppuccin_flavor}.tmTheme";
-        };
       };
     };
 

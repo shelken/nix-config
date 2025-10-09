@@ -4,12 +4,14 @@
   config,
   lib,
   ...
-}: let
+}:
+let
   cfg = config.shelken.neovim;
-in {
-  home.packages = with pkgs;
-    lib.optionals (!cfg.minimal)
-    [
+in
+{
+  home.packages =
+    with pkgs;
+    lib.optionals (!cfg.minimal) [
       # c
       # gcc # 插件需要
       # c/c++ tools with clang-tools, the unwrapped version won't
@@ -26,21 +28,20 @@ in {
       # ruff-lsp has been deprecated, use `ruff server` instead
       # ruff-lsp
       (python311.withPackages (
-        ps:
-          with ps; [
-            pip
-            # ruff
-            black # python formatter
-          ]
+        ps: with ps; [
+          pip
+          # ruff
+          black # python formatter
+        ]
       ))
 
       #-- nix
       nil
       nixd
+      nixfmt
       # rnix-lsp  # has been remove
       statix # Lints and suggestions for the nix programming language
       deadnix # Find and remove unused code in .nix source files
-      alejandra # Nix Code Formatter
 
       #-- go
       go

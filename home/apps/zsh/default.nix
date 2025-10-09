@@ -3,9 +3,11 @@
   lib,
   config,
   ...
-}: let
+}:
+let
   zshDotDir = "${config.xdg.configHome}/zsh";
-in {
+in
+{
   programs.zsh = {
     enable = true;
     # 自定义配置目录
@@ -56,33 +58,37 @@ in {
       ];
       # custom = omzCustomPath;
     };
-    initContent = let
-      firstInit = lib.mkBefore ''
-        # 性能分析
-        # zmodload zsh/zprof
+    initContent =
+      let
+        firstInit = lib.mkBefore ''
+          # 性能分析
+          # zmodload zsh/zprof
 
-        setopt AUTO_CD
-        setopt INTERACTIVE_COMMENTS
-        setopt HIST_FCNTL_LOCK
-        setopt SHARE_HISTORY
-        setopt EXTENDED_HISTORY
-        unsetopt AUTO_REMOVE_SLASH
-      '';
-      defaultInit = ''
-        bindkey '^f' autosuggest-accept
+          setopt AUTO_CD
+          setopt INTERACTIVE_COMMENTS
+          setopt HIST_FCNTL_LOCK
+          setopt SHARE_HISTORY
+          setopt EXTENDED_HISTORY
+          unsetopt AUTO_REMOVE_SLASH
+        '';
+        defaultInit = ''
+          bindkey '^f' autosuggest-accept
 
-        # p10k custom
-        POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION='🤘'
-        # mitigation: https://github.com/romkatv/powerlevel10k?tab=readme-ov-file#mitigation
-        POWERLEVEL9K_TERM_SHELL_INTEGRATION=true
+          # p10k custom
+          POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION='🤘'
+          # mitigation: https://github.com/romkatv/powerlevel10k?tab=readme-ov-file#mitigation
+          POWERLEVEL9K_TERM_SHELL_INTEGRATION=true
 
-        ################
-        # 特定机器配置 #
-        ################
-        [[ -s "$HOME/.specific.zsh" ]] && source $HOME/.specific.zsh
-      '';
-    in
-      lib.mkMerge [firstInit defaultInit];
+          ################
+          # 特定机器配置 #
+          ################
+          [[ -s "$HOME/.specific.zsh" ]] && source $HOME/.specific.zsh
+        '';
+      in
+      lib.mkMerge [
+        firstInit
+        defaultInit
+      ];
     plugins = [
       {
         # A prompt will appear the first time to configure it properly
@@ -118,21 +124,6 @@ in {
     enable = true;
     enableZshIntegration = true;
     defaultCommand = "fd --type f";
-    colors = {
-      # catppuccins mocha
-      bg = "#1e1e2e";
-      "bg+" = "#313244";
-      fg = "#cdd6f4";
-      "fg+" = "#cdd6f4";
-      hl = "#f38ba8";
-      "hl+" = "#f38ba8";
-      header = "#f38ba8";
-      spinner = "#f5e0dc";
-      pointer = "#f5e0dc";
-      marker = "#f5e0dc";
-      info = "#cba6f7";
-      prompt = "#cba6f7";
-    };
   };
 
   fonts.fontconfig.enable = true;

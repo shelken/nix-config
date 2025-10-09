@@ -5,12 +5,13 @@
   config,
   hostname,
   ...
-}: let
+}:
+let
   theme = "catppuccin-${lib.strings.toLower myvars.catppuccin_flavor}";
   # origin_file = builtins.readFile ./config.kdl;
   keybinds-config = builtins.readFile ./keybinds.kdl;
   inherit (lib) concatStrings;
-  zellij-forgot = pkgs.stdenv.mkDerivation rec {
+  zellij-forgot = pkgs.stdenvNoCC.mkDerivation rec {
     pname = "zellij-forgot";
     version = "0.4.2";
 
@@ -18,7 +19,7 @@
       url = "https://github.com/karimould/zellij-forgot/releases/download/${version}/zellij_forgot.wasm";
       sha256 = "sha256:31194145519dbdc128685b456f970374378fa19fc9da742fbe4a321bace449db";
     };
-    phases = ["installPhase"];
+    phases = [ "installPhase" ];
 
     installPhase = ''
       mkdir -p $out/bin
@@ -26,15 +27,16 @@
     '';
   };
   layout_dir =
-    if builtins.pathExists ./layouts/${hostname}
-    then ''
-      default_layout "default"
-      layout_dir "${config.home.homeDirectory}/.config/zellij/layouts/${hostname}"
-    ''
-    else ''
-      default_layout "basic"
-    '';
-  zjstatus = pkgs.stdenv.mkDerivation rec {
+    if builtins.pathExists ./layouts/${hostname} then
+      ''
+        default_layout "default"
+        layout_dir "${config.home.homeDirectory}/.config/zellij/layouts/${hostname}"
+      ''
+    else
+      ''
+        default_layout "basic"
+      '';
+  zjstatus = pkgs.stdenvNoCC.mkDerivation rec {
     pname = "zjstatus";
     version = "v0.21.1";
 
@@ -42,61 +44,61 @@
       url = "https://github.com/dj95/zjstatus/releases/download/${version}/zjstatus.wasm";
       sha256 = "sha256:dc1982a208c27f66871e69811458fbb1abdb15e28662fddb136b575d6564ae1a";
     };
-    phases = ["installPhase"];
+    phases = [ "installPhase" ];
 
     installPhase = ''
       mkdir -p $out/bin
       cp $src $out/bin/zjstatus.wasm
     '';
   };
-in {
+in
+{
   programs.zellij = {
     enable = true;
-    # settings = {
-    #   theme = theme;
-    # };
-    enableBashIntegration = false;
-    enableZshIntegration = false;
+    enableBashIntegration = true;
+    enableZshIntegration = true;
   };
+  catppuccin.zellij.enable = false;
 
   xdg.configFile = {
     "zellij/layouts".source = ./layouts;
     "zellij/config.kdl" = {
-      text = concatStrings [
-        ''
-          // 主题配色
-          theme "${theme}"
+      # text = concatStrings [
+      #   ''
+      #     // 主题配色
+      #     theme "${theme}"
 
-          session_serialization true
-          simplified_ui false
-        ''
-        layout_dir
-        ''
-          //键盘绑定
-          keybinds {
-            ${keybinds-config}
+      #     session_serialization true
+      #     simplified_ui false
+      #   ''
+      #   layout_dir
+      #   ''
+      #     //键盘绑定
+      #     keybinds {
+      #       ${keybinds-config}
 
-            // 参考：https://github.com/nixypanda/dotfiles/blob/f5d4bb5a1efd006f1db3e29965a12dea09f10356/modules/zellij/default.nix#L56C11-L63C12
-            // 插件：命令提示
-            shared_except "locked" {
-              bind "Ctrl y" {
-                LaunchOrFocusPlugin "file:${zellij-forgot}/bin/zellij_forgot.wasm" {
-                  "LOAD_ZELLIJ_BINDINGS" "true"
-                  floating true
-                }
-              }
-            }
-          }
-        ''
-        # origin_file
-        ''
-          plugins {
-            zjstatus location="file:${zjstatus}/bin/zjstatus.wasm" {
-                ${builtins.readFile ./zjstatus/catpuccin.kdl}
-            }
-          }
-        ''
-      ];
+      #       // 参考：https://github.com/nixypanda/dotfiles/blob/f5d4bb5a1efd006f1db3e29965a12dea09f10356/modules/zellij/default.nix#L56C11-L63C12
+      #       // 插件：命令提示
+      #       shared_except "locked" {
+      #         bind "Ctrl y" {
+      #           LaunchOrFocusPlugin "file:${zellij-forgot}/bin/zellij_forgot.wasm" {
+      #             "LOAD_ZELLIJ_BINDINGS" "true"
+      #             floating true
+      #           }
+      #         }
+      #       }
+      #     }
+      #   ''
+      #   # origin_file
+      #   ''
+      #     plugins {
+      #       zjstatus location="file:${zjstatus}/bin/zjstatus.wasm" {
+      #           ${builtins.readFile ./zjstatus/catpuccin.kdl}
+      #       }
+      #     }
+      #   ''
+      # ];
+      source = ./config.kdl;
     };
   };
 }

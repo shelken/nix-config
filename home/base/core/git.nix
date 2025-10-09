@@ -1,17 +1,17 @@
 {
+  config,
+  lib,
   myvars,
   pkgs,
-  lib,
   ...
-}: let
-  catppuccin-delta-theme-path = pkgs.fetchFromGitHub {
-    owner = "catppuccin";
-    repo = "delta";
-    rev = "e9e21cff";
-    hash = "sha256-04po0A7bVMsmYdJcKL6oL39RlMLij1lRKvWl5AUXJ7Q=";
-  };
-  flavor = lib.strings.toLower myvars.catppuccin_flavor;
-in {
+}:
+let
+in
+{
+  home.activation.removeExistingGitconfig = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+    rm -f ${config.home.homeDirectory}/.gitconfig
+  '';
+
   programs.git = {
     enable = true;
     userName = myvars.username;
@@ -27,7 +27,6 @@ in {
         path = "~/work/.gitconfig";
         # condition = "gitdir:~/work/";
       }
-      {path = "${catppuccin-delta-theme-path}/catppuccin.gitconfig";}
     ];
     extraConfig = {
       init.defaultBranch = "main";
@@ -68,7 +67,6 @@ in {
       };
       delta = {
         navigate = true;
-        features = "catppuccin-${flavor}";
         side-by-side = true;
         hyperlinks = true;
       };
@@ -81,14 +79,30 @@ in {
     };
     # 差异对比增强
     difftastic.enable = false; # https://github.com/Wilfred/difftastic.
-    delta.enable = false;
+    delta.enable = true;
   };
 
   home.packages = with pkgs; [
     onefetch # 显式当前git项目的详细信息
-    git-cliff #
+    git-cliff
     git-filter-repo # 清除git大文件，修改历史
+    tig
   ];
+
+  programs.lazygit = {
+    enable = true;
+    settings = {
+      # diff with delta
+      gui = {
+        timeFormat = "2006-01-02 15:04";
+        shortTimeFormat = "15:04";
+      };
+      git.paging = {
+        colorArg = "always";
+        pager = "delta --dark --paging=never";
+      };
+    };
+  };
 
   home.sessionVariables = {
     # COMOJI_EMOJI_FORMAT = "true";

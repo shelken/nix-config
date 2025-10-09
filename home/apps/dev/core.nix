@@ -1,8 +1,10 @@
 {
   pkgs,
   pkgs-unstable,
+  config,
   ...
-}: {
+}:
+{
   home.sessionVariables = {
     # for go
     GOPROXY = "https://goproxy.io";
@@ -48,7 +50,10 @@
   # for go goPath
   programs.go = {
     enable = true;
-    goPath = "go";
-    goBin = "go/bin";
+    env = {
+      GOPATH = [
+        "${config.home.homeDirectory}/go"
+      ];
+    };
   };
 }

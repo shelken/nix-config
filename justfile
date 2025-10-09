@@ -25,16 +25,6 @@ aerospace-test:
 add:
   @git add .
 
-# 检查theme
-check-themes:
-  #!/usr/bin/env bash
-  array=("btop" "bat" "squirrel" "lazygit" "wezterm" "yazi" "tmux")
-  for i in "${array[@]}"; do
-    # echo $(gh repo view catppuccin/"$i" --json name,updatedAt)
-    (just prefetch-gh2 catppuccin/$i) &
-  done
-  wait
-
 # nixos deploy
 [linux]
 deploy host mach:
