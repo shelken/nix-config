@@ -25,6 +25,7 @@ in
     enable = true;
     enableBashIntegration = true;
     enableZshIntegration = true;
+    attachExistingSession = true;
   };
   catppuccin.zellij.enable = false;
 
