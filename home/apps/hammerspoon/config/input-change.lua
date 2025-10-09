@@ -36,6 +36,8 @@ end
 --         "tv.parsec.www" = "com.apple.keylayout.ABC";
 --     };
 
+-- 检查名字：直接在Raycast中查看
+
 -- windowFocused > English
 set_app_input_method({
   -- 'Raycast',
@@ -59,6 +61,8 @@ set_app_input_method({
   "Notes",
   "备忘录",
   "Obsidian",
+  "Cherry Studio",
+  "ChatGPT",
 }, Chinese)
 
 
