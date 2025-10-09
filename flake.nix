@@ -2,7 +2,10 @@
   description = "My flake configuration";
 
   nixConfig = {
-    experimental-features = ["nix-command" "flakes"];
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
     #substituters = [
     #  # replace official cache with a mirror located in China
     #  # "https://mirrors.ustc.edu.cn/nix-channels/store"
@@ -18,35 +21,39 @@
     # ];
   };
 
-  outputs = inputs @ {
-    self,
-    nixpkgs,
-    ...
-  }: let
-    inherit (inputs.nixpkgs) lib;
-    mylib = import ./lib {inherit lib;};
-    myvars = import ./vars {inherit lib;};
+  outputs =
+    inputs@{
+      self,
+      nixpkgs,
+      ...
+    }:
+    let
+      inherit (inputs.nixpkgs) lib;
+      mylib = import ./lib { inherit lib; };
+      myvars = import ./vars { inherit lib; };
 
-    genSpecialArgs = system:
-      inputs
-      // {
-        pkgs-unstable = import inputs.nixpkgs-unstable {
-          inherit system; # refer the `system` parameter form outer scope recursively
-          # To use chrome, we need to allow the installation of non-free software
-          config.allowUnfree = true;
+      genSpecialArgs =
+        system:
+        inputs
+        // {
+          pkgs-unstable = import inputs.nixpkgs-unstable {
+            inherit system; # refer the `system` parameter form outer scope recursively
+            # To use chrome, we need to allow the installation of non-free software
+            config.allowUnfree = true;
+          };
+          inherit mylib myvars system;
+          inherit (myvars) username userfullname useremail;
         };
-        mylibx = import ./lib/extend.nix {
-          # pkgs = import inputs.nixpkgs {inherit system;};
-          pkgs = nixpkgs.legacyPackages.${system};
-          secrets = inputs.secrets;
-          inherit lib;
-        };
-        inherit mylib myvars system;
-        inherit (myvars) username userfullname useremail;
+      args = {
+        inherit
+          inputs
+          lib
+          mylib
+          myvars
+          genSpecialArgs
+          ;
       };
-    args = {inherit inputs lib mylib myvars genSpecialArgs;};
-    pve155Modules =
-      {
+      pve155Modules = {
         system = "x86_64-linux";
         nixos-modules = map mylib.relativeToRoot [
           "modules/nixos/desktop.nix"
@@ -57,9 +64,11 @@
           "home/linux/gui.nix"
         ];
       }
-      // args // {system = "x86_64-linux";};
-    pve156Modules =
-      {
+      // args
+      // {
+        system = "x86_64-linux";
+      };
+      pve156Modules = {
         system = "x86_64-linux";
         nixos-modules = map mylib.relativeToRoot [
           "modules/nixos/server.nix"
@@ -69,9 +78,11 @@
           "home/linux/tui.nix"
         ];
       }
-      // args // {system = "x86_64-linux";};
-    armTest1Modules =
-      {
+      // args
+      // {
+        system = "x86_64-linux";
+      };
+      armTest1Modules = {
         nixos-modules = map mylib.relativeToRoot [
           "modules/nixos/desktop.nix"
           "hosts/vm/arm-test-1"
@@ -81,9 +92,11 @@
           "hosts/vm/arm-test-1/home.nix"
         ];
       }
-      // args // {system = "aarch64-linux";};
-    workTestModules =
-      {
+      // args
+      // {
+        system = "aarch64-linux";
+      };
+      workTestModules = {
         nixos-modules = map mylib.relativeToRoot [
           "modules/nixos/server.nix"
         ];
@@ -91,9 +104,11 @@
           "home/linux/tui.nix"
         ];
       }
-      // args // {system = "x86_64-linux";};
-    yuukoModules =
-      {
+      // args
+      // {
+        system = "x86_64-linux";
+      };
+      yuukoModules = {
         darwin-modules = map mylib.relativeToRoot [
           "modules/darwin"
           "hosts/yuuko"
@@ -104,9 +119,11 @@
           "hosts/yuuko/home.nix"
         ];
       }
-      // args // {system = "aarch64-darwin";};
-    sakamotoModules =
-      {
+      // args
+      // {
+        system = "aarch64-darwin";
+      };
+      sakamotoModules = {
         darwin-modules = map mylib.relativeToRoot [
           "modules/darwin"
           "hosts/sakamoto"
@@ -117,9 +134,11 @@
           "hosts/sakamoto/home.nix"
         ];
       }
-      // args // {system = "aarch64-darwin";};
-    mioModules =
-      {
+      // args
+      // {
+        system = "aarch64-darwin";
+      };
+      mioModules = {
         darwin-modules = map mylib.relativeToRoot [
           "modules/darwin"
           "hosts/mio"
@@ -130,9 +149,11 @@
           "hosts/mio/home.nix"
         ];
       }
-      // args // {system = "aarch64-darwin";};
-    nanoModules =
-      {
+      // args
+      // {
+        system = "aarch64-darwin";
+      };
+      nanoModules = {
         darwin-modules = map mylib.relativeToRoot [
           "modules/darwin"
           "hosts/nano"
@@ -141,9 +162,11 @@
           "home/darwin"
         ];
       }
-      // args // {system = "x86_64-darwin";};
-    lingModules =
-      {
+      // args
+      // {
+        system = "x86_64-darwin";
+      };
+      lingModules = {
         darwin-modules = map mylib.relativeToRoot [
           "modules/darwin"
           "hosts/ling"
@@ -153,67 +176,78 @@
           "hosts/ling/home.nix"
         ];
       }
-      // args // {system = "aarch64-darwin";};
+      // args
+      // {
+        system = "aarch64-darwin";
+      };
 
-    allSystemAbove = [
-      "x86_64-linux"
-      "aarch64-linux"
-      "aarch64-darwin"
-      "x86_64-darwin"
-    ];
-    forAllSystems = func: (nixpkgs.lib.genAttrs allSystemAbove func);
-  in {
-    # linux x86
-    nixosConfigurations = {
-      nixos = mylib.nixosSystem pve155Modules;
-      pve156 = mylib.nixosSystem pve156Modules;
-      arm-test-1 = mylib.nixosSystem armTest1Modules;
-      work-test = mylib.nixosSystem workTestModules;
-    };
+      allSystemAbove = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+        "x86_64-darwin"
+      ];
+      forAllSystems = func: (nixpkgs.lib.genAttrs allSystemAbove func);
+    in
+    {
+      # linux x86
+      nixosConfigurations = {
+        nixos = mylib.nixosSystem pve155Modules;
+        pve156 = mylib.nixosSystem pve156Modules;
+        arm-test-1 = mylib.nixosSystem armTest1Modules;
+        work-test = mylib.nixosSystem workTestModules;
+      };
 
-    darwinConfigurations = {
-      # mac mini
-      yuuko = mylib.macosSystem yuukoModules;
-      sakamoto = mylib.macosSystem sakamotoModules;
-      # macbook air
-      mio = mylib.macosSystem mioModules;
-      nano = mylib.macosSystem nanoModules;
-      ling = mylib.macosSystem lingModules;
-    };
+      darwinConfigurations = {
+        # mac mini
+        yuuko = mylib.macosSystem yuukoModules;
+        sakamoto = mylib.macosSystem sakamotoModules;
+        # macbook air
+        mio = mylib.macosSystem mioModules;
+        nano = mylib.macosSystem nanoModules;
+        ling = mylib.macosSystem lingModules;
+      };
 
-    colmena =
-      {
+      colmena = {
         meta = (
           let
             system = "x86_64-linux";
-          in {
+          in
+          {
             # colmena's default nixpkgs & specialArgs
-            nixpkgs = import nixpkgs {inherit system;};
+            nixpkgs = import nixpkgs { inherit system; };
             specialArgs = genSpecialArgs system;
           }
         );
       }
       // {
-        pve156 = mylib.colmenaSystem (pve156Modules
+        pve156 = mylib.colmenaSystem (
+          pve156Modules
           // {
-            tags = ["pve156"];
+            tags = [ "pve156" ];
             ssh-user = myvars.username;
-          });
+          }
+        );
       }
       // {
-        arm-test-1 = mylib.colmenaSystem (armTest1Modules
+        arm-test-1 = mylib.colmenaSystem (
+          armTest1Modules
           // {
-            tags = ["arm-test-1"];
+            tags = [ "arm-test-1" ];
             ssh-user = myvars.username;
-          });
+          }
+        );
       };
 
-    checks = forAllSystems (
-      system: {
+      checks = forAllSystems (system: {
+        #ref: https://devenv.sh/?q=git-hooks.hooks
         pre-commit-check = inputs.git-hooks.lib.${system}.run {
           src = ./.;
           hooks = {
-            alejandra.enable = true; # formatter
+            nixfmt-rfc-style = {
+              enable = true;
+              settings.width = 100;
+            };
             typos = {
               enable = true;
               settings = {
@@ -232,41 +266,41 @@
             # statix.enable = true; # lints and suggestions for Nix code(auto suggestions)
           };
         };
-      }
-    );
+      });
 
-    # Development Shells
-    devShells = forAllSystems (
-      system: let
-        pkgs = nixpkgs.legacyPackages.${system};
-      in {
-        default = pkgs.mkShell {
-          packages = with pkgs; [
-            # fix https://discourse.nixos.org/t/non-interactive-bash-errors-from-flake-nix-mkshell/33310
-            bashInteractive
-            # deploy
-            colmena
-            # Nix-related
-            alejandra
-            deadnix
-            statix
-            # spell checker
-            typos
-            # code formatter
-            nodePackages.prettier
-            nixos-anywhere
-          ];
-          name = "dots";
-          shellHook = ''
-            ${self.checks.${system}.pre-commit-check.shellHook}
-          '';
-        };
-      }
-    );
+      # Development Shells
+      devShells = forAllSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          default = pkgs.mkShell {
+            packages = with pkgs; [
+              # fix https://discourse.nixos.org/t/non-interactive-bash-errors-from-flake-nix-mkshell/33310
+              bashInteractive
+              # deploy
+              colmena
+              # Nix-related
+              nixfmt
+              deadnix
+              statix
+              # spell checker
+              typos
+              # code formatter
+              nodePackages.prettier
+              nixos-anywhere
+            ];
+            name = "dots";
+            shellHook = ''
+              ${self.checks.${system}.pre-commit-check.shellHook}
+            '';
+          };
+        }
+      );
 
-    formatter =
-      forAllSystems (system: nixpkgs.legacyPackages.${system}.alejandra);
-  };
+      formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.nixfmt);
+    };
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -306,6 +340,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # https://github.com/catppuccin/nix
+    catppuccin = {
+      url = "github:catppuccin/nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # disko
     disko = {
       url = "github:nix-community/disko/v1.11.0";
@@ -341,30 +381,6 @@
     vscode-server = {
       url = "github:nix-community/nixos-vscode-server";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    #          ╭──────────────────────────────────────────────────────────╮
-    #          │                          theme                           │
-    #          ╰──────────────────────────────────────────────────────────╯
-    # btop主题
-    catppuccin-btop = {
-      url = "github:catppuccin/btop/f437574b";
-      flake = false;
-    };
-
-    catppuccin-bat = {
-      url = "github:catppuccin/bat/699f60fc";
-      flake = false;
-    };
-
-    catppuccin-yazi = {
-      url = "github:catppuccin/yazi/1a8c939e";
-      flake = false;
-    };
-
-    catppuccin-lazygit = {
-      url = "github:catppuccin/lazygit/c2489590";
-      flake = false;
     };
   };
 }

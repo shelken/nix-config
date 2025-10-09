@@ -3,7 +3,8 @@
   lib,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib) concatStrings;
   theme = "Catppuccin-${myvars.catppuccin_flavor}.conf";
   origin_file = builtins.readFile ./kitty.conf;
@@ -30,7 +31,8 @@
     rev = "0bdece53";
     hash = "sha256-TLltUcfJpY+3rwvHYgtN4zBpbBnLBYyzDu90UMnxwoc=";
   };
-in {
+in
+{
   # programs.kitty = {
   #   enable = false; # 用 homebrew 安装
   #   theme = theme;
@@ -45,15 +47,14 @@ in {
   xdg.configFile."kitty/kitty.conf" = {
     text = concatStrings [
       ''
-        # 主题配色
-        include ${pkgs.kitty-themes}/share/kitty-themes/themes/${theme}
-      ''
-      ''
         # Shell integration
         shell_integration ${shell_integration}
       ''
       origin_file
     ];
+  };
+  xdg.configFile."kitty/current-theme.conf" = {
+    source = "${pkgs.kitty-themes}/share/kitty-themes/themes/${theme}";
   };
   xdg.configFile."kitty/kitty.app.png" = {
     source = "${kitty-icon-pkgs}/kitty-light.png";
@@ -64,6 +65,6 @@ in {
   programs.bash.initExtra = shellIntegrationInit.bash;
 
   home.sessionVariables = {
-    TERM = "xterm-256color";
+    # TERM = "xterm-256color";
   };
 }

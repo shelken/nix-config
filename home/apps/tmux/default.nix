@@ -1,13 +1,13 @@
 {
   pkgs,
   lib,
-  myvars,
   ...
-}: let
+}:
+let
   inherit (lib) concatStrings;
   baseConf = builtins.readFile (pkgs.dot-tmux + "/tmux.conf");
-  theme = lib.strings.toLower myvars.catppuccin_flavor;
-in {
+in
+{
   programs.tmux = {
     enable = true;
     keyMode = "vi"; # emacs or vi
@@ -45,7 +45,6 @@ in {
           set -g @catppuccin_status_fill "all"
           set -g @catppuccin_status_connect_separator "yes"
           # set -g @catppuccin_date_time_text "%Y-%m-%d"
-          set -g @catppuccin_flavour ${theme}
         '';
       }
     ];

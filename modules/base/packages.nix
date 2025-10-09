@@ -1,4 +1,5 @@
-{pkgs, ...}: {
+{ pkgs, ... }:
+{
   environment.systemPackages = with pkgs; [
     tealdeer # a very fast version of tldr
     fastfetch
@@ -20,7 +21,7 @@
     # gnused
     gawk # GNU awk, a pattern scanning and processing language
     jq # A lightweight and flexible command-line JSON processor
-    yj # for mylibx
+    # yj
 
     # networking tools
     mtr # A network diagnostic tool
