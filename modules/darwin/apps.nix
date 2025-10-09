@@ -146,16 +146,10 @@ in
       # "google-chrome"
       "helium-browser"
 
-      # IM & audio & remote desktop & meeting
-
       # Misc
       "raycast" # macOS 12+ (HotKey: alt/option + space)search, calculate and run scripts(with many plugins)
       "stats" # beautiful system status monitor in menu bar
-      # "appcleaner" # app uninstall
       "pearcleaner" # pearcleaner
-      # "applite" # homebrew ui; need macOS 13+
-      # "hiddenbar" # menubar plugin
-      # "picgo" # picbed
       "the-unarchiver" # zip,unzip
       "parsec"
       "mac-mouse-fix" # 鼠标滚动
