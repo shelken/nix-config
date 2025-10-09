@@ -35,19 +35,24 @@ in
       "cmd+shift+m" = "toggle_maximized";
       "cmd+shift+f" = "show_scrollback";
 
-      "cmd+[" = "previous_tab";
-      "cmd+]" = "next_tab";
-
       "cmd+c" = "copy_to_clipboard";
       "cmd+v" = "paste_from_clipboard";
       "cmd+shift+v" = "paste_from_selection";
 
       "cmd+enter" = "launch --cwd=current";
 
+      "cmd+[" = "previous_tab";
+      "cmd+]" = "next_tab";
+
       "cmd+ctrl+up" = "move_window up";
       "cmd+ctrl+left" = "move_window left";
       "cmd+ctrl+right" = "move_window right";
       "cmd+ctrl+down" = "move_window down";
+
+      "cmd+left" = "neighboring_window left";
+      "cmd+right" = "neighboring_window right";
+      "cmd+up" = "neighboring_window up";
+      "cmd+down" = "neighboring_window down";
 
       "alt+shift+left" = "resize_window narrower 2";
       "alt+shift+right" = "resize_window wider 2";
