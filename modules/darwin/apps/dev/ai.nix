@@ -18,6 +18,7 @@ in
     homebrew = {
       brews = [
         "ollama"
+        "gemini-cli"
       ];
       # casks = [
       #   "" #

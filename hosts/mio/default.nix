@@ -20,6 +20,7 @@ in
 
     # development
     dev.container.enable = true; # docker/orbstack
+    dev.ai.enable = true;
     dev.ide.enable = true;
     dev.navicat.enable = true;
 
