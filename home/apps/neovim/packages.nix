@@ -27,7 +27,7 @@ in
       ruff
       # ruff-lsp has been deprecated, use `ruff server` instead
       # ruff-lsp
-      (python311.withPackages (
+      (python313.withPackages (
         ps: with ps; [
           pip
           # ruff

@@ -3,6 +3,7 @@
   mylib,
   pkgs,
   config,
+  pkgs-unstable,
   ...
 }:
 let
@@ -30,16 +31,17 @@ in
 
     programs.neovim = {
       enable = true;
+      package = pkgs-unstable.neovim-unwrapped;
       defaultEditor = true;
 
       viAlias = true;
       vimAlias = true;
     }
     // lib.optionalAttrs (!cfg.minimal) {
-      withPython3 = true;
-      withNodeJs = true;
-      extraLuaPackages = ps: [ ps.magick ]; # for nvim image plugin https://github.com/3rd/image.nvim
-      extraPackages = [ pkgs.imagemagick ]; # for nvim image plugin https://github.com/3rd/image.nvim
+      # withPython3 = true;
+      # withNodeJs = true;
+      # extraLuaPackages = ps: [ ps.magick ]; # for nvim image plugin https://github.com/3rd/image.nvim
+      # extraPackages = [ pkgs.imagemagick ]; # for nvim image plugin https://github.com/3rd/image.nvim
     };
 
     # Disable catppuccin to avoid conflict with my non-nix config.
