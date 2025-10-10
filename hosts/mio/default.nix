@@ -47,9 +47,10 @@ in
     # network
     network.fl-clash.enable = true;
   };
-  # homebrew = {
-  #   onActivation = {
-  #     cleanup = "uninstall";
-  #   };
-  # };
+  homebrew = {
+    onActivation = {
+      autoUpdate = false;
+      cleanup = "uninstall";
+    };
+  };
 }

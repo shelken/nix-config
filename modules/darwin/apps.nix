@@ -87,7 +87,7 @@ in
     enable = true; # disable homebrew for fast deploy
 
     onActivation = {
-      autoUpdate = true;
+      autoUpdate = lib.mkDefault false;
       # 'zap': uninstalls all formulae(and related files) not listed in the generated Brewfile
       # cleanup = "uninstall";
     };
