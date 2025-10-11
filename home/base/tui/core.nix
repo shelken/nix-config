@@ -33,5 +33,9 @@
 
     # nix
     nh # Yet another nix cli helper
+
+    # net
+    q # dns dig
+    nali # `traceroute 1.1.1.1 | nali` show geo location
   ];
 }
