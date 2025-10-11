@@ -32,10 +32,15 @@ flake。它旨在为多台机器创建可复现的、声明式的配置。
   `desktop`、`nvidia`、`secrets`）。这有助于提高模块化程度和代码复用率。
 - `lib/`: 包含在整个 flake 中用于构建系统配置的辅助函数和库代码。
 - `overlays/`: 用于自定义现有的 Nix 软件包或引入新包。
+- `vars/`: 存储在不同配置间共享的变量（例如网络设置）。
 
 ### 秘密管理
 
 - `secrets/`: 用于管理敏感信息，很可能使用了 `agenix` 或 `sops-nix` 之类的工具。
+
+### 包源管理
+
+- `_sources/` & `nvfetcher.toml`: 使用 `nvfetcher` 管理和锁定非 Nixpkgs 软件包的版本。
 
 ### 工具与自动化
 

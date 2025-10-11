@@ -56,12 +56,12 @@
       pve155Modules = {
         system = "x86_64-linux";
         nixos-modules = map mylib.relativeToRoot [
-          "modules/nixos/desktop.nix"
+          "modules/nixos/server.nix"
           "hosts/pve155"
           # "modules/nixos/hyprland.nix"
         ];
         home-modules = map mylib.relativeToRoot [
-          "home/linux/gui.nix"
+          "home/linux/core.nix"
         ];
       }
       // args
@@ -75,7 +75,7 @@
           "hosts/pve156"
         ];
         home-modules = map mylib.relativeToRoot [
-          "home/linux/tui.nix"
+          "home/linux/core.nix"
         ];
       }
       // args

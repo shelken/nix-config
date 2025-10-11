@@ -50,6 +50,7 @@ in
         "mvn" # 自动补全及alias; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/mvn/README.md
         "pip"
         "qrcode" # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/qrcode/README.md
+        "rclone"
         "rsync"
         "sudo" # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/sudo/README.md
         "ssh"
@@ -106,11 +107,6 @@ in
         name = "powerlevel10k-config";
         src = lib.cleanSource ./p10k;
         file = "p10k.zsh";
-      }
-      {
-        name = "rclone-auto-complete";
-        src = ../rclone;
-        file = "rclone.zsh";
       }
       {
         name = "my-zsh-scripts";

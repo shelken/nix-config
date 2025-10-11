@@ -1,4 +1,5 @@
-_: {
+{ ... }:
+{
   programs.direnv = {
     enable = true;
     nix-direnv.enable = true;
@@ -10,8 +11,4 @@ _: {
       };
     };
   };
-  # home.packages = [
-  #   # devenv.packages."${pkgs.system}".devenv
-  #   # pkgs.cachix
-  # ];
 }

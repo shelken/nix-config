@@ -15,7 +15,7 @@ let
 in
 {
   options.shelken.neovim = {
-    minimal = mkBoolOpt false "是否启用astroNvim";
+    minimal = mkBoolOpt false "最小化安装nvim（不带配置）";
   };
 
   imports = [
@@ -38,13 +38,11 @@ in
       vimAlias = true;
     }
     // lib.optionalAttrs (!cfg.minimal) {
-      # withPython3 = true;
-      # withNodeJs = true;
       # extraLuaPackages = ps: [ ps.magick ]; # for nvim image plugin https://github.com/3rd/image.nvim
       # extraPackages = [ pkgs.imagemagick ]; # for nvim image plugin https://github.com/3rd/image.nvim
     };
 
     # Disable catppuccin to avoid conflict with my non-nix config.
-    catppuccin.nvim.enable = false;
+    catppuccin.nvim.enable = mkIf (!cfg.minimal) false;
   };
 }

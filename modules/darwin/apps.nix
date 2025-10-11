@@ -155,7 +155,7 @@ in
       "mac-mouse-fix" # 鼠标滚动
 
       # keyborader
-      "karabiner-elements" # 快捷键映射
+      # "karabiner-elements" # 快捷键映射
 
       # network
       "tailscale-app"
@@ -165,9 +165,7 @@ in
       "syntax-highlight"
 
       # Development
-      # "kitty"
       "visual-studio-code"
-      # "wezterm"
     ];
   };
 }

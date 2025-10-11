@@ -3,21 +3,8 @@
   imports = [
     ../base/core
     ../base/tui
+    ../base/gui
     ../base/home.nix
   ]
-  ++ (mylib.scanPaths ./.)
-  ++ [
-    # 特定应用
-    ../apps/raycast
-    ../apps/hammerspoon
-    ../apps/karabiner
-    ../apps/chromium
-    ../apps/neovim
-    ../apps/dev
-    ../apps/wezterm
-    ../apps/squirrel
-    ../apps/kitty
-    ../apps/screenshot
-    ../apps/tailscale/base.nix
-  ];
+  ++ (mylib.scanPaths ./.);
 }

@@ -3,8 +3,8 @@
     ../base/core
     ../base/home.nix
 
-    ../base/server
-    ../apps/vscode-server
+    ../base/tui
+    ../base/gui
 
     ./base
     ./gui

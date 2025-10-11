@@ -20,7 +20,6 @@ in
         "altserver"
 
         # "bbackupp"
-        # "wezterm"
       ];
     };
   };

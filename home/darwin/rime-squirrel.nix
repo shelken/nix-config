@@ -13,6 +13,7 @@ let
     builtins.map (custom_file: {
       "${rimeDir}/${custom_file}" = {
         source = "${rime-config}/custom/${custom_file}";
+        force = true;
       };
     }) custom_file_list
   );
@@ -22,6 +23,7 @@ in
     "${rimeDir}" = {
       source = rime-main;
       recursive = true;
+      force = true;
     };
   }
   // custom_attrs;
