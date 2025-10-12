@@ -38,6 +38,7 @@
 
     primaryUser = "${myvars.username}";
 
+    # ref: https://mynixos.com/nix-darwin/options/system.defaults
     defaults = {
       menuExtraClock.Show24Hour = true; # show 24 hour clock
 
@@ -125,14 +126,14 @@
         # 系统快捷键
         "com.apple.symbolichotkeys" = {
           AppleSymbolicHotKeys = {
-            # "60" = {
-            #   # 输入法 Disable '^ + Space' for selecting the previous input source
-            #   enabled = false;
-            # };
-            # "61" = {
-            #   # 输入法 Disable '^ + Option + Space' for selecting the next input source
-            #   enabled = false;
-            # };
+            "60" = {
+              # 输入法 Disable '^ + Space' for selecting the previous input source
+              enabled = false;
+            };
+            "61" = {
+              # 输入法 Disable '^ + Option + Space' for selecting the next input source
+              enabled = false;
+            };
             # 聚焦 Disable 'Cmd + Space' for Spotlight Search
             "64" = {
               enabled = false;

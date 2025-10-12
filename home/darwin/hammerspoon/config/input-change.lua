@@ -3,8 +3,10 @@ hs.hotkey.bind({'ctrl', 'cmd'}, ".", function()
     hs.pasteboard.setContents(hs.window.focusedWindow():application():bundleID())
     hs.alert.show("App bundleID:    " .. hs.window.focusedWindow():application():bundleID() .. "\nApp name:      " ..
                       hs.window.focusedWindow():application():name() .. "\nIM source id:  " ..
-                      hs.keycodes.currentSourceID() .. "\nFront App id:  " ..
-                      hs.application.frontmostApplication():bundleID(), hs.alert.defaultStyle, hs.screen.mainScreen(), 3)
+                      hs.keycodes.currentSourceID() .. "\nIM Layout:  " ..
+                      hs.keycodes.currentLayout() .. "\nIM Method:  " ..
+                      tostring(hs.keycodes.currentMethod()) .. "\nFront App id:  " ..
+                      hs.application.frontmostApplication():bundleID(), hs.alert.defaultStyle, hs.screen.mainScreen(), 5)
 end)
 
 -- -- activated 时切换到指定的输入法，deactivated 时恢复之前的状态
@@ -22,15 +24,18 @@ input_method_layout = {
     [input_sources.english] = "ABC"
 }
 
+-- hs.keycodes.currentSourceID 切换有问题(从ABC手动换回RIME会出现rime没有正常加载只能输出字母)，使用setmethod或setlayout来操作。
 local function Chinese()
     -- print("切换到中文")
     -- hs.keycodes.currentSourceID(input_sources.chinese)
+    hs.keycodes.setLayout(input_method_layout[input_sources.english])
     hs.keycodes.setMethod(input_method_layout[input_sources.chinese])
 end
 local function English()
     -- print("切换到英文")
     -- hs.keycodes.currentSourceID(input_sources.english)
     hs.keycodes.setLayout(input_method_layout[input_sources.english])
+    -- hs.keycodes.setMethod(nil)
 end
 
 local function set_app_input_method(app_name, set_input_method_function, event)
@@ -66,7 +71,7 @@ set_app_input_method({
   "Obsidian",
   "Cherry Studio",
   "ChatGPT",
-  
+
   'Helium',
   'Google Chrome',
   'Safari',
@@ -82,3 +87,15 @@ set_app_input_method({
 {
   hs.window.filter.windowCreated,
 })
+
+-- 切换中英输入法
+local function toggle_input_source()
+    local current_source_id = hs.keycodes.currentSourceID()
+    if current_source_id == input_sources.chinese then
+        English()
+    else
+        Chinese()
+    end
+end
+
+hs.hotkey.bind({"ctrl"}, "space", toggle_input_source)
