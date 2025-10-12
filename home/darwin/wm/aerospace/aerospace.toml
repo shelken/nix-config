@@ -218,7 +218,20 @@ alt-cmd-right = ['join-with right', 'mode main']
 alt-shift-r = 'mode main' # 返回
 
 # ============特定APP窗口配置==================
+#e.g.
+# [[on-window-detected]]
+#     if.app-id = 'com.apple.systempreferences'
+#     if.app-name-regex-substring = 'settings'
+#     if.window-title-regex-substring = 'substring'
+#     if.workspace = 'workspace-name'
+#     if.during-aerospace-startup = true
+#     check-further-callbacks = true
+#     run = ['layout floating', 'move-node-to-workspace S']  # The callback itself
 
+# PWA
+[[on-window-detected]]
+if.app-name-regex-substring = '^NewsNow$'
+run = 'move-node-to-workspace 1Browser'
 [[on-window-detected]]
 if.app-id = 'net.imput.helium'
 run = 'move-node-to-workspace 1Browser'

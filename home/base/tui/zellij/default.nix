@@ -23,8 +23,8 @@ in
 {
   programs.zellij = {
     enable = true;
-    enableBashIntegration = true;
-    enableZshIntegration = true;
+    enableBashIntegration = false; # 连接自动进入很烦，有不少问题
+    enableZshIntegration = false;
     attachExistingSession = false;
   };
   catppuccin.zellij.enable = false;
