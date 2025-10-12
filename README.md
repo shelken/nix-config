@@ -163,6 +163,7 @@ just gen-image work-test qcow
 - [ryan4yin's nix-config](https://github.com/ryan4yin/nix-config) `*`主要配置来源
 - [khaneliman/khanelinix](https://github.com/khaneliman/khanelinix) `*`使用 Snowfall 感觉不错
 - [catppuccin/catppuccin](https://github.com/catppuccin/catppuccin) `*`主题配色
+- [Web结构化展示nix-darwin,home-manager,nixos等所有的选项（很实用直观）](https://mynixos.com/flakes)
 - [Home Manager Options](https://home-manager-options.extranix.com)
 - [Nix Darwin Configuration Options](https://daiderd.com/nix-darwin/manual/index.html)
 - [NixOS Packages Search](https://search.nixos.org/packages)
