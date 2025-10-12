@@ -17,12 +17,12 @@ in
   config = mkIf cfg.enable {
     homebrew = {
       brews = [
-        "ollama"
+        # "ollama"
         "gemini-cli"
       ];
-      # casks = [
-      #   "" #
-      # ];
+      casks = [
+        "ollama-app"
+      ];
     };
   };
 }
