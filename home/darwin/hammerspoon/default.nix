@@ -29,6 +29,12 @@ in
           hash = "sha256-3f0d4znNuwZPyqKHbZZDlZ3gsuaiobhHPsefGIcpCSE=";
         };
       };
+      # ".hammerspoon/Spoons/InputSourceSwitch.spoon" = {
+      #   source = pkgs.fetchzip {
+      #     url = "https://github.com/Hammerspoon/Spoons/raw/master/Spoons/InputSourceSwitch.spoon.zip";
+      #     hash = "sha256-Gb+IpUHqIOVxNBOp7wjs1nQ9AIvtPNe7Vx2OemN8NO0=";
+      #   };
+      # };
       ".hammerspoon/Spoons/PaperWM.spoon" = {
         source = pkgs.fetchFromGitHub {
           owner = "mogenson";

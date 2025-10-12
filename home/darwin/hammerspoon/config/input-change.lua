@@ -1,21 +1,36 @@
-local input_sources = {
+-- 当选中某窗口按下 ctrl+command+. 时会显示应用的路径、名字等信息
+hs.hotkey.bind({'ctrl', 'cmd'}, ".", function()
+    hs.pasteboard.setContents(hs.window.focusedWindow():application():bundleID())
+    hs.alert.show("App bundleID:    " .. hs.window.focusedWindow():application():bundleID() .. "\nApp name:      " ..
+                      hs.window.focusedWindow():application():name() .. "\nIM source id:  " ..
+                      hs.keycodes.currentSourceID() .. "\nFront App id:  " ..
+                      hs.application.frontmostApplication():bundleID(), hs.alert.defaultStyle, hs.screen.mainScreen(), 3)
+end)
+
+-- -- activated 时切换到指定的输入法，deactivated 时恢复之前的状态
+-- lastID = ""
+
+-- -- 这里指定中文和英文输入法的 ID
+input_sources = {
     chinese = "im.rime.inputmethod.Squirrel.Hans",
-    english = "com.apple.keylayout.ABC",
+    english = "com.apple.keylayout.ABC"
+    -- chinese = "com.apple.inputmethod.SCIM.ITABC",
+    -- english = "com.apple.keylayout.US"
+}
+input_method_layout = {
+    [input_sources.chinese] = "Squirrel - Simplified",
+    [input_sources.english] = "ABC"
 }
 
-local function switch_input_source(source_id, source_name)
-    if hs.keycodes.currentSourceID() ~= source_id then
-        print("切换输入法为 " .. source_name)
-        hs.keycodes.currentSourceID(source_id)
-    end
-end
-
 local function Chinese()
-    switch_input_source(input_sources.chinese, "RIME")
+    -- print("切换到中文")
+    -- hs.keycodes.currentSourceID(input_sources.chinese)
+    hs.keycodes.setMethod(input_method_layout[input_sources.chinese])
 end
-
 local function English()
-    switch_input_source(input_sources.english, "ABC")
+    -- print("切换到英文")
+    -- hs.keycodes.currentSourceID(input_sources.english)
+    hs.keycodes.setLayout(input_method_layout[input_sources.english])
 end
 
 local function set_app_input_method(app_name, set_input_method_function, event)
@@ -38,9 +53,6 @@ set_app_input_method({
   '访达',
   'kitty',
   'Code',
-  'Helium',
-  'Google Chrome',
-  'Safari',
   'Parsec',
 }, English)
 
@@ -54,6 +66,10 @@ set_app_input_method({
   "Obsidian",
   "Cherry Studio",
   "ChatGPT",
+  
+  'Helium',
+  'Google Chrome',
+  'Safari',
 }, Chinese)
 
 
