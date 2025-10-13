@@ -24,6 +24,7 @@
 
     # misc
     protobuf
+    #oha  #压测工具: https://github.com/hatoo/oha
 
     # ts
     pnpm

@@ -70,22 +70,18 @@
     wl-clipboard
   ];
 
-  services = {
-    gvfs.enable = true; # Mount, trash, and other functionalities
-    tumbler.enable = true; # Thumbnail support for images
-  };
+  services.gvfs.enable = true; # Mount, trash, and other functionalities
+  services.tumbler.enable = true; # Thumbnail support for images
 
-  programs = {
-    # dconf is a low-level configuration system.
-    dconf.enable = true;
+  # dconf is a low-level configuration system.
+  programs.dconf.enable = true;
 
-    # thunar file manager(part of xfce) related options
-    thunar = {
-      enable = true;
-      plugins = with pkgs.xfce; [
-        thunar-archive-plugin
-        thunar-volman
-      ];
-    };
+  # thunar file manager(part of xfce) related options
+  programs.thunar = {
+    enable = true;
+    plugins = with pkgs.xfce; [
+      thunar-archive-plugin
+      thunar-volman
+    ];
   };
 }
