@@ -89,7 +89,7 @@ in
     onActivation = {
       autoUpdate = lib.mkDefault false;
       # 'zap': uninstalls all formulae(and related files) not listed in the generated Brewfile
-      # cleanup = "uninstall";
+      cleanup = lib.mkDefault "uninstall";
     };
 
     # Applications to install from Mac App Store using mas.
