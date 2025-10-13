@@ -104,9 +104,6 @@ in
     };
 
     taps = [
-      #"homebrew/cask-fonts"
-      "homebrew/services"
-      #"homebrew/cask-versions"
       "shelken/tap" # self tap
 
       "hashicorp/tap" # terraform
@@ -118,6 +115,8 @@ in
     ];
 
     brews = [
+      "just"
+      "mas"
       # `brew install`
       "wget" # download tool
       "curl" # no not install curl via nixpkgs, it's not working well on macOS!

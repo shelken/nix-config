@@ -47,6 +47,24 @@ rec {
       /usr/bin/osascript -e 'tell application "System Events" to make login item at end with properties {path:"${appPath}", hidden:${hiddenAppleScript}}'
     '';
 
+  mkLaunchCommand =
+    {
+      name,
+      commandFile,
+      overrideAttr ? { },
+    }:
+    {
+      enable = true;
+      config = {
+        Label = "space.ooooo.${name}";
+        ProgramArguments = [ ''${commandFile}'' ];
+        RunAtLoad = true;
+        StandardOutPath = "/tmp/nix-hm-logs/${name}.log";
+        StandardErrorPath = "/tmp/nix-hm-logs/${name}.err.log";
+      }
+      // overrideAttr;
+    };
+
   # 创建的密钥仅自己可读取（500）
   # 可覆盖属性
   # 返回 attrset
