@@ -25,12 +25,13 @@
     inputs@{
       self,
       nixpkgs,
+      secrets,
       ...
     }:
     let
       inherit (inputs.nixpkgs) lib;
-      mylib = import ./lib { inherit lib; };
       myvars = import ./vars { inherit lib; };
+      mylib = import ./lib { inherit lib secrets myvars; };
 
       genSpecialArgs =
         system:

@@ -1,8 +1,13 @@
-{ lib, ... }:
+{
+  lib,
+  secrets,
+  myvars,
+  ...
+}:
 let
   inherit (lib) mkOption types;
 in
-{
+rec {
   colmenaSystem = import ./colmenaSystem.nix;
   macosSystem = import ./macosSystem.nix;
   nixosSystem = import ./nixosSystem.nix;
@@ -41,4 +46,26 @@ in
       echo >&2 'Add LoginItem for ${app_name}'
       /usr/bin/osascript -e 'tell application "System Events" to make login item at end with properties {path:"${appPath}", hidden:${hiddenAppleScript}}'
     '';
+
+  # 创建的密钥仅自己可读取（500）
+  # 可覆盖属性
+  # 返回 attrset
+  mkDefaultSecret =
+    overrides@{ ... }:
+    {
+      sopsFile = secrets + "/sops/secrets/${myvars.username}/default.yaml";
+      mode = "0500";
+    }
+    // overrides;
+
+  # 创建的密钥仅自己可读取（500）
+  mkSopsSecrets =
+    secretsList:
+    lib.listToAttrs (
+      map (name: {
+        inherit name;
+        value = mkDefaultSecret { };
+      }) secretsList
+    );
+
 }
