@@ -65,6 +65,9 @@ outer.top =        4
 outer.left =       4
 outer.right =      4
 
+# =======================
+# 主模式
+# =======================
 # 'main' binding mode declaration
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
 # 'main' binding mode must be always presented
@@ -180,7 +183,7 @@ alt-ctrl-0 = 'move-node-to-workspace 0Other'
 
 alt-ctrl-enter = 'fullscreen' # 占满屏幕
 alt-ctrl-f     = [
-  '''exec-and-forget aerospace layout floating && osascript -e 'tell application "System Events" to key code 120 using {control down, option down, command down}' || aerospace layout tiling
+  '''exec-and-forget aerospace layout floating && osascript -e 'tell application "System Events" to key code 120 using {control down, option down, command down}' || aerospace layout accordion tiling
   '''
 ] # 窗口 悬浮/平铺 切换
 
@@ -197,7 +200,16 @@ alt-shift-tab = 'move-workspace-to-monitor --wrap-around next'
 alt-shift-s = 'mode service' # 进入service模式
 alt-shift-r    = 'mode remote-desktop'  # 远程桌面模式
 
+# APP快捷键
+alt-b = 'exec-and-forget open -a "Helium"'
+alt-c = 'exec-and-forget open -a "Visual Studio Code"'
+alt-f = 'exec-and-forget open -a "Finder"'
+alt-shift-enter = 'exec-and-forget open -a "kitty"'
+alt-w = 'exec-and-forget open -a "WeChat"'
+
+# =======================
 # 服务模式：主要用来重载配置
+# =======================
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
 [mode.service.binding]
 alt-shift-s = 'mode main' # 返回
@@ -213,11 +225,17 @@ alt-cmd-down  = ['join-with down', 'mode main']
 alt-cmd-up    = ['join-with up', 'mode main']
 alt-cmd-right = ['join-with right', 'mode main']
 
+
+# =============================
 # 远程桌面模式：打开后忽略所有快捷键
+# ============================
 [mode.remote-desktop.binding]
 alt-shift-r = 'mode main' # 返回
 
-# ============特定APP窗口配置==================
+
+# =============================
+# 特定APP窗口配置
+# ============================
 #e.g.
 # [[on-window-detected]]
 #     if.app-id = 'com.apple.systempreferences'

@@ -15,6 +15,10 @@ in
   programs.kitty = {
     enable = true; # 用 homebrew 安装
 
+    darwinLaunchOptions = [
+      # "--directory=/Users/${myvars.username}"
+    ];
+
     font = {
       name = "JetBrainsMono Nerd Font Mono";
       size = 18;

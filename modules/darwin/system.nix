@@ -1,5 +1,4 @@
 {
-  pkgs,
   myvars,
   ...
 }:
@@ -126,10 +125,10 @@
         # 系统快捷键
         "com.apple.symbolichotkeys" = {
           AppleSymbolicHotKeys = {
-            "60" = {
-              # 输入法 Disable '^ + Space' for selecting the previous input source
-              enabled = false;
-            };
+            # "60" = {
+            #   # 输入法 Disable '^ + Space' for selecting the previous input source
+            #   enabled = lib.mkDefault true;
+            # };
             "61" = {
               # 输入法 Disable '^ + Option + Space' for selecting the next input source
               enabled = false;

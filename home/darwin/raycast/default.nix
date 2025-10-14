@@ -16,8 +16,8 @@ in
         source = rayconfig_path;
       };
     };
-    home.activation.RaycastLoginItem = lib.hm.dag.entryAfter [ "writeBoundary" ] (
-      mylib.mkLoginItemString { app_name = "Raycast"; }
-    );
+    # home.activation.RaycastLoginItem = lib.hm.dag.entryAfter [ "writeBoundary" ] (
+    #   mylib.mkLoginItemString { app_name = "Raycast"; }
+    # );
   };
 }

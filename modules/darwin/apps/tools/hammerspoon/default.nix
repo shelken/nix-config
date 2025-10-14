@@ -20,5 +20,10 @@ in
         "hammerspoon"
       ];
     };
+    system.defaults.CustomUserPreferences."com.apple.symbolichotkeys".AppleSymbolicHotKeys = {
+      "60" = {
+        enabled = false;
+      };
+    };
   };
 }

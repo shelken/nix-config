@@ -146,7 +146,6 @@ in
       "helium-browser"
 
       # Misc
-      "raycast" # macOS 12+ (HotKey: alt/option + space)search, calculate and run scripts(with many plugins)
       "stats" # beautiful system status monitor in menu bar
       "pearcleaner" # pearcleaner
       "the-unarchiver" # zip,unzip

@@ -21,6 +21,8 @@ in
         "betterdisplay" # 显示器
         "iina"
 
+        "raycast"
+
         # "microsoft-remote-desktop"
         # "vnc-viewer"
 
@@ -32,11 +34,18 @@ in
         DiskSpeedTest = 425264550; # 硬盘测速
       };
     };
-    system.defaults.CustomUserPreferences = {
-      "com.colliderli.iina" = {
-        arrowBtnAction = 1; # 左右箭头按钮的功能 1 切换上下集 2 快进快退
-      };
+
+    #==============
+    launchd.user.agents.raycast = {
+      command = ''"/Applications/Raycast.app/Contents/MacOS/Raycast"'';
+      serviceConfig.RunAtLoad = true;
     };
+
+    # =============
+    system.defaults.CustomUserPreferences."com.colliderli.iina" = {
+      arrowBtnAction = 1; # 左右箭头按钮的功能 1 切换上下集 2 快进快退
+    };
+
     ### font 配置，所有mac引用desktop默认开启fonts
     shelken.modules.desktop.fonts.enable = true;
   };

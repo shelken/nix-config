@@ -9,7 +9,7 @@ in
   shelken = {
     # window manager
     wm.aerospace.enable = true;
-    tools.hammerspoon.enable = true;
+    tools.hammerspoon.enable = false;
 
     # suites
     suites.desktop.enable = true;
