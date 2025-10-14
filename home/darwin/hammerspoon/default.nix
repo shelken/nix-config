@@ -19,9 +19,9 @@ in
   };
 
   config = mkIf cfg.enable {
-    home.activation.HammerspoonLoginItem = lib.hm.dag.entryAfter [ "writeBoundary" ] (
-      mylib.mkLoginItemString { app_name = "Hammerspoon"; }
-    );
+    # home.activation.HammerspoonLoginItem = lib.hm.dag.entryAfter [ "writeBoundary" ] (
+    #   mylib.mkLoginItemString { app_name = "Hammerspoon"; }
+    # );
     # launchd.agents.hammerspoon = mylib.mkLaunchCommand {
     #   name = "hammerspoon";
     #   commandFile = "/Applications/Hammerspoon.app/Contents/MacOS/Hammerspoon";

@@ -32,12 +32,17 @@ in
         # Wechat = 836500024;
         # Xnip = 1221250572; # 截图
         DiskSpeedTest = 425264550; # 硬盘测速
+        "1Capture" = 6742318274; # screenshot/截图
       };
     };
 
     #==============
     launchd.user.agents.raycast = {
       command = ''"/Applications/Raycast.app/Contents/MacOS/Raycast"'';
+      serviceConfig.RunAtLoad = true;
+    };
+    launchd.user.agents.oneCapture = {
+      command = ''"/Applications/1Capture.app/Contents/MacOS/1Capture"'';
       serviceConfig.RunAtLoad = true;
     };
 
