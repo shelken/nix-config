@@ -39,13 +39,14 @@ in
         "com.raycast.macos" = english;
         "net.kovidgoyal.kitty" = english;
         "tv.parsec.www" = english;
+        ## 浏览器
+        "com.apple.Safari" = english;
+        "com.google.Chrome" = english;
+        "net.imput.helium" = english;
         #-- 中文
         "com.apple.Notes" = chinese;
-        "com.apple.Safari" = chinese;
-        "com.google.Chrome" = chinese;
         "com.tencent.xinWeChat" = chinese;
         "md.obsidian" = chinese;
-        "net.imput.helium" = chinese;
         "ru.keepcoder.Telegram" = chinese;
         "com.kangfenmao.CherryStudio" = chinese;
         "com.openai.chat" = chinese;
