@@ -19,12 +19,7 @@ in
     # 语法高亮
     syntaxHighlighting.enable = true;
     shellAliases = {
-      ll = "eza --icons -l -T -L=1";
-      mkdir = "mkdir -p";
       record = "asciinema rec --overwrite -i 1 --rows 28 --cols 140";
-      #update = "sudo nixos-rebuild switch";
-      proxy = "export https_proxy=http://127.1:7896 http_proxy=http://127.1:7896";
-      unproxy = "unset https_proxy http_proxy";
     };
     # https://home-manager-options.extranix.com/?query=zsh.history
     history = {

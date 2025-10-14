@@ -34,7 +34,7 @@ in
     tools.music.enable = true;
     tools.others.enable = true;
     tools.rclone.enable = true;
-    tools.typeswitch.enable = false; # 用 Hammerspoon
+    tools.typeswitch.enable = true;
     tools.virts.enable = false; # utm parallel
 
     # social

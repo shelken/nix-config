@@ -23,6 +23,7 @@ in
   home.shellAliases = {
     # idea = "open -a '/Applications/IntelliJ IDEA.app/Contents/MacOS/idea' ."; # 使用idea打开当前目录
     ns = "nix-search-tv print | fzf --preview 'nix-search-tv preview {}' --scheme history";
+    deq = "sudo xattr -r -d com.apple.quarantine";
   };
 
   # home.activation.AppHotKey = lib.hm.dag.entryAfter ["writeBoundary"] ''

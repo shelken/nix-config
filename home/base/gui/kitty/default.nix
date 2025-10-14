@@ -13,7 +13,7 @@ let
 in
 {
   programs.kitty = {
-    enable = true; # 用 homebrew 安装
+    enable = true;
 
     darwinLaunchOptions = [
       # "--directory=/Users/${myvars.username}"

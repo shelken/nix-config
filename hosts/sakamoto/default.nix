@@ -19,6 +19,7 @@ in
 
     # tools
     tools.virts.enable = true;
+    tools.typeswitch.enable = true;
 
     # homelab
     homelab.server.enable = true;

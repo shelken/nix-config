@@ -1,8 +1,29 @@
 { config, ... }:
 let
+  proxy_fun = ''
+    function proxy() {
+      local default_proxy="http://127.1:7890"
+      local final_proxy="''${PROXY:-$default_proxy}"
+
+      export HTTP_PROXY="$final_proxy"
+      export HTTPS_PROXY="$final_proxy"
+      export http_proxy="$final_proxy"
+      export https_proxy="$final_proxy"
+
+      echo "✅ 代理设置完成："
+      echo "  HTTP_PROXY:  $HTTP_PROXY"
+      echo "  HTTPS_PROXY: $HTTPS_PROXY"
+    }
+    function unproxy() {
+      unset PROXY https_proxy http_proxy HTTPS_PROXY HTTP_PROXY
+    }
+  '';
+
   shellAliases = {
     urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
     urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
+
+    mkdir = "mkdir -p";
   };
 
   localBin = "${config.home.homeDirectory}/.local/bin";
@@ -12,6 +33,7 @@ let
   krewBin = "${config.home.homeDirectory}/.krew/bin";
 
   envExtra = ''
+    ${proxy_fun}
     export PATH="$PATH:${localBin}:${goBin}:${rustBin}:${npmBin}:${krewBin}"
   '';
 in
