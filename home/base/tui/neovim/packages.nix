@@ -68,7 +68,9 @@ in
       taplo # TOML language server / formatter / validator
       nodePackages.yaml-language-server
       # sqlfluff # SQL linter
-      actionlint # GitHub Actions linter
+
+      #FIXME issue: https://github.com/NixOS/nixpkgs/issues/449970
+      #actionlint # GitHub Actions linter
       buf # bufls
       tree-sitter # common language parser/highlighter
       nodePackages.prettier # common code formatter
