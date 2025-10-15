@@ -1,4 +1,4 @@
-{ config, ... }:
+{ config, lib, ... }:
 let
   proxy_fun = ''
     function proxy() {
@@ -33,8 +33,15 @@ let
   krewBin = "${config.home.homeDirectory}/.krew/bin";
 
   envExtra = ''
-    ${proxy_fun}
     export PATH="$PATH:${localBin}:${goBin}:${rustBin}:${npmBin}:${krewBin}"
+  '';
+
+  initContent = ''
+    ${proxy_fun}
+    ################
+    # 特定机器配置 #
+    ################
+    [[ -s "$HOME/.specific.zsh" ]] && source $HOME/.specific.zsh
   '';
 in
 {
@@ -42,10 +49,12 @@ in
     enable = true;
     enableCompletion = true;
     bashrcExtra = envExtra;
+    initExtra = lib.mkOrder 1001 initContent;
   };
   programs.zsh = {
     enable = true;
-    inherit envExtra;
+    envExtra = envExtra;
+    initContent = lib.mkOrder 1001 initContent;
   };
 
   home.shellAliases = shellAliases;

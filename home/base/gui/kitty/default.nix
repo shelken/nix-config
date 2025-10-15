@@ -65,6 +65,9 @@ in
     };
 
     settings = {
+      # 允许远程控制例如执行`kitty @ --new-tab --cwd /path/to/your/directory`
+      # ref: https://sw.kovidgoyal.net/kitty/remote-control/
+      allow_remote_control = "no";
       cursor_trail = 3;
       macos_show_window_title_in = "none";
 

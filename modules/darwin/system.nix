@@ -221,7 +221,7 @@
       enableKeyMapping = false; # enable key mapping so that we can use `option` as `control`
 
       # NOTE: do NOT support remap capslock to both control and escape at the same time
-      # remapCapsLockToControl = true; # remap caps lock to control, useful for emac users
+      # remapCapsLockToControl = true; # remap caps lock to control, useful for emacs users
       # remapCapsLockToEscape = true; # remap caps lock to escape, useful for vim users
 
       # swap left command and left alt

@@ -23,7 +23,7 @@ exec-on-workspace-change = [
 ]
 
 # Normalizations. See: https://nikitabobko.github.io/AeroSpace/guide#normalization
-enable-normalization-flatten-containers = true
+enable-normalization-flatten-containers                         = true
 enable-normalization-opposite-orientation-for-nested-containers = true
 
 # See: https://nikitabobko.github.io/AeroSpace/guide#layouts
@@ -59,11 +59,11 @@ on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 #                 See: https://nikitabobko.github.io/AeroSpace/guide#assign-workspaces-to-monitors
 [gaps]
 inner.horizontal = 4
-inner.vertical =   4
-outer.bottom =     4
-outer.top =        4
-outer.left =       4
-outer.right =      4
+inner.vertical   = 4
+outer.bottom     = 4
+outer.top        = 4
+outer.left       = 4
+outer.right      = 4
 
 # =======================
 # 主模式
@@ -182,9 +182,9 @@ alt-ctrl-0 = 'move-node-to-workspace 0Other'
 # alt-shift-c = 'move-node-to-workspace --focus-follows-window C'
 
 alt-ctrl-enter = 'fullscreen' # 占满屏幕
-alt-ctrl-f     = [
+alt-ctrl-f = [
   '''exec-and-forget aerospace layout floating && osascript -e 'tell application "System Events" to key code 120 using {control down, option down, command down}' || aerospace layout accordion tiling
-  '''
+  ''',
 ] # 窗口 悬浮/平铺 切换
 
 # 前一个窗口和当前窗口 切换
@@ -197,25 +197,42 @@ alt-shift-tab = 'move-workspace-to-monitor --wrap-around next'
 
 # 切换模式
 # See: https://nikitabobko.github.io/AeroSpace/commands#mode
-alt-shift-s = 'mode service' # 进入service模式
-alt-shift-r    = 'mode remote-desktop'  # 远程桌面模式
+alt-shift-s = 'mode service'        # 进入service模式
+alt-shift-r = 'mode remote-desktop' # 远程桌面模式
 
 # APP快捷键
-alt-b = 'exec-and-forget open -a "Helium"'
-alt-c = 'exec-and-forget open -a "Visual Studio Code"'
-alt-f = 'exec-and-forget open -a "Finder"'
+alt-b           = 'exec-and-forget open -a "Helium"'
+alt-c           = 'exec-and-forget open -a "Visual Studio Code"'
+alt-f           = 'exec-and-forget open -a "Finder"'
 alt-shift-enter = 'exec-and-forget open -a "kitty"'
-alt-w = 'exec-and-forget open -a "WeChat"'
+alt-w           = 'exec-and-forget open -a "WeChat"'
+alt-enter       = '''exec-and-forget osascript -e 'do shell script "kitten quick-access-terminal --detach ~"' '''
 
 # =======================
 # 服务模式：主要用来重载配置
 # =======================
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
 [mode.service.binding]
-alt-shift-s = 'mode main' # 返回
-esc = ['reload-config', 'mode main'] # 重载配置
-r = ['flatten-workspace-tree', 'mode main'] # reset layout
-backspace = ['close-all-windows-but-current', 'mode main']
+alt-shift-s = 'mode main'                                    # 返回
+esc         = ['reload-config', 'mode main']                 # 重载配置
+r           = ['flatten-workspace-tree', 'mode main']        # reset layout
+backspace   = ['close-all-windows-but-current', 'mode main']
+
+# 复制当前显示的app bundleid，然后alert后2秒消失，并复制到剪切板
+period = ['''
+exec-and-forget \
+sh -c ~/.config/aerospace/scripts/get-app-bundleid.sh
+''', 'mode main']
+
+k = ['''
+exec-and-forget \
+sh -c ~/.config/aerospace/scripts/open-terminal-in-finder-path.sh
+''', 'mode main']
+
+comma = ['''
+exec-and-forget \
+echo "test"
+''', 'mode main'] # for test
 
 # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
 #s = ['layout sticky tiling', 'mode main']
@@ -225,13 +242,11 @@ alt-cmd-down  = ['join-with down', 'mode main']
 alt-cmd-up    = ['join-with up', 'mode main']
 alt-cmd-right = ['join-with right', 'mode main']
 
-
 # =============================
 # 远程桌面模式：打开后忽略所有快捷键
 # ============================
 [mode.remote-desktop.binding]
 alt-shift-r = 'mode main' # 返回
-
 
 # =============================
 # 特定APP窗口配置
@@ -249,70 +264,75 @@ alt-shift-r = 'mode main' # 返回
 # PWA
 [[on-window-detected]]
 if.app-name-regex-substring = '^NewsNow$'
-run = 'move-node-to-workspace 1Browser'
+run                         = 'move-node-to-workspace 1Browser'
 [[on-window-detected]]
 if.app-id = 'net.imput.helium'
-run = 'move-node-to-workspace 1Browser'
+run       = 'move-node-to-workspace 1Browser'
 [[on-window-detected]]
 if.app-id = 'com.google.Chrome'
-run = 'move-node-to-workspace 1Browser'
+run       = 'move-node-to-workspace 1Browser'
 
 [[on-window-detected]]
-if.app-id = 'com.jetbrains.intellij' # IDEA
-run = 'move-node-to-workspace 2Code'
+if.app-id = 'com.jetbrains.intellij'       # IDEA
+run       = 'move-node-to-workspace 2Code'
 [[on-window-detected]]
-if.app-id = 'com.microsoft.VSCode' # VSCode
-run = 'move-node-to-workspace 2Code'
+if.app-id = 'com.microsoft.VSCode'         # VSCode
+run       = 'move-node-to-workspace 2Code'
 [[on-window-detected]]
 if.app-id = 'com.todesktop.230313mzl4w4u92' # cursor
-run = 'move-node-to-workspace 2Code'
+run       = 'move-node-to-workspace 2Code'
 
 [[on-window-detected]]
 if.app-id = 'net.kovidgoyal.kitty'
-run = ['move-node-to-workspace 3Terminal']
+run       = ['move-node-to-workspace 3Terminal']
 [[on-window-detected]]
 if.app-id = 'com.apple.Terminal'
-run = ['layout floating', 'move-node-to-workspace 3Terminal']
+run       = ['layout floating', 'move-node-to-workspace 3Terminal']
 
 [[on-window-detected]]
 if.app-id = 'com.tencent.xinWeChat'
-run = ['move-node-to-workspace 4Chat']
+run       = ['move-node-to-workspace 4Chat']
 [[on-window-detected]]
 if.app-id = 'com.tencent.qq'
-run = 'move-node-to-workspace 4Chat'
+run       = 'move-node-to-workspace 4Chat'
 [[on-window-detected]]
 if.app-id = 'ru.keepcoder.Telegram'
-run = 'move-node-to-workspace 4Chat'
+run       = 'move-node-to-workspace 4Chat'
 
 [[on-window-detected]]
-if.app-id = 'md.obsidian' 
-run = ['layout floating', 'move-node-to-workspace 5Write']
+if.app-id = 'md.obsidian'
+run       = ['layout floating', 'move-node-to-workspace 5Write']
 
 [[on-window-detected]]
 if.app-id = 'com.apple.Music'
-run = ['move-node-to-workspace 6Music']
+run       = ['move-node-to-workspace 6Music']
 [[on-window-detected]]
 if.app-id = 'com.audirvana.Audirvana'
-run = ['move-node-to-workspace 6Music']
+run       = ['move-node-to-workspace 6Music']
 
 [[on-window-detected]]
 if.app-id = 'com.apple.finder'
-run = ['layout floating', 'move-node-to-workspace 9File']
+run       = ['layout floating', 'move-node-to-workspace 9File']
 [[on-window-detected]]
 if.app-id = 'com.apple.Preview'
-run = ['layout floating', 'move-node-to-workspace 9File']
+run       = ['layout floating', 'move-node-to-workspace 9File']
 
 [[on-window-detected]]
 if.app-id = 'com.apple.ScreenSharing'
-run = ['layout floating', 'move-node-to-workspace 0Other']
+run       = ['layout floating', 'move-node-to-workspace 0Other']
 [[on-window-detected]]
 if.app-id = 'tv.parsec.www'
-run = ['layout floating', 'move-node-to-workspace 0Other']
+run       = ['layout floating', 'move-node-to-workspace 0Other']
 [[on-window-detected]]
 if.app-id = 'app.motrix.native'
-run = ['layout floating', 'move-node-to-workspace 0Other']
+run       = ['layout floating', 'move-node-to-workspace 0Other']
 
 # Make all windows float by default
 [[on-window-detected]]
 check-further-callbacks = true
-run = ['layout floating']
+run                     = ['layout floating']
+
+[exec]
+inherit-env-vars = true
+[exec.env-vars]
+PATH = '/etc/profiles/per-user/shelken/bin:/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}'

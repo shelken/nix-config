@@ -19,6 +19,10 @@ in
       brews = [
         # "ollama"
         # "gemini-cli"
+
+        # "rust"
+        # "ripgrep"
+        "codex"
       ];
       casks = [
         "ollama-app"
