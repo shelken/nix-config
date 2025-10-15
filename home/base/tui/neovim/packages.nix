@@ -79,7 +79,7 @@ in
       chafa # for alpha.nvim
 
       #-- Cloud
-      nodePackages.dockerfile-language-server-nodejs
+      dockerfile-language-server
       # terraform  # install via brew on macOS
       terraform-ls
       hadolint # Dockerfile linter
