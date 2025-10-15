@@ -187,26 +187,26 @@ raycast-import:
 # nixos 重建
 [linux]
 rebuild host=profile:
-  @nix build ".#nixosConfigurations.{{host}}"
-  # @nh os build -H {{host}} .
+  # @nix build ".#nixosConfigurations.{{host}}"
+  @nh os build -H {{host}} .
 
 # mac 构建; host 对应当前主机名
 [macos]
 rebuild host=profile:
-  @nix build ".#darwinConfigurations.{{host}}.system" --extra-experimental-features "nix-command flakes"
-  #@nh darwin build -H {{host}} . -- --extra-experimental-features "nix-command flakes"
+  # @nix build ".#darwinConfigurations.{{host}}.system" --extra-experimental-features "nix-command flakes"
+  @nh darwin build -H {{host}} . -- --extra-experimental-features "nix-command flakes"
 
 # nixos 重建(调试)
 [linux]
 rebuild-debug host=profile:
-  nom build ".#nixosConfigurations.{{host}}.config.system.build.toplevel" --show-trace --verbose
-  #nh os build -H {{host}} . -v
+  # nom build ".#nixosConfigurations.{{host}}.config.system.build.toplevel" --show-trace --verbose
+  nh os build -H {{host}} . -v
 
 # 构建; 调试
 [macos]
 rebuild-debug host=profile args="":
-  nom build ".#darwinConfigurations.{{host}}.system" --extra-experimental-features "nix-command flakes" --show-trace --verbose
-  #nh darwin build -H {{host}} . -v {{args}}
+  # nom build ".#darwinConfigurations.{{host}}.system" --extra-experimental-features "nix-command flakes" --show-trace --verbose
+  nh darwin build -H {{host}} . -v {{args}}
 
 # 交互式源码查看
 repl:
@@ -229,14 +229,14 @@ set-proxy:
 # nixos 重建
 [linux]
 switch host=profile: 
-  nixos-rebuild switch --sudo --flake $".#{{host}}" --show-trace --verbose
-  # @nh os switch -H {{host}} .
+  # nixos-rebuild switch --sudo --flake $".#{{host}}" --show-trace --verbose
+  @nh os switch -H {{host}} .
 
 # 应用配置; target对应当前主机名
 [macos]
 switch host=profile: rebuild-debug
-  sudo -E ./result/sw/bin/darwin-rebuild switch --flake ".#{{host}}" --show-trace --verbose
-  #nh darwin switch -H {{host}} . -v
+  # sudo -E ./result/sw/bin/darwin-rebuild switch --flake ".#{{host}}" --show-trace --verbose
+  nh darwin switch -H {{host}} . -v
 
 # 更新整个输入
 up:
