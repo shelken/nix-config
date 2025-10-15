@@ -20,6 +20,9 @@ in
       brews = [
         "lima"
       ];
+      casks = [
+        "ollama-app"
+      ];
     };
   };
 }
