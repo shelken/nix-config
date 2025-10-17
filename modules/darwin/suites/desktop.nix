@@ -17,6 +17,10 @@ in
 
   config = mkIf cfg.enable {
     homebrew = {
+      brews = [
+        # "ffmpeg"
+        # "yt-dlp"
+      ];
       casks = [
         "betterdisplay" # 显示器
         "iina"
