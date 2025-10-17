@@ -6,4 +6,6 @@
     ../base/gui
     ../base/home.nix
   ];
+
+  xdg.enable = true;
 }
