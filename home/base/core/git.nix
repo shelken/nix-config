@@ -69,6 +69,7 @@ in
         navigate = true;
         side-by-side = true;
         hyperlinks = true;
+        dark = true;
       };
     };
     aliases = {
