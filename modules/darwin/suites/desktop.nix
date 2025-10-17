@@ -26,6 +26,7 @@ in
         "iina"
 
         "raycast"
+        "zed" # editor
 
         # "microsoft-remote-desktop"
         # "vnc-viewer"
