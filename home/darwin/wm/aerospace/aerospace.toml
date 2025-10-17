@@ -121,12 +121,6 @@ alt-right = 'focus right --ignore-floating --boundaries-action wrap-around-the-w
 # alt-up    = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors up'
 # alt-right = 'focus --boundaries all-monitors-outer-frame --boundaries-action wrap-around-all-monitors right'
 
-# See: https://nikitabobko.github.io/AeroSpace/commands#move
-alt-cmd-left  = ['join-with left']
-alt-cmd-down  = ['join-with down']
-alt-cmd-up    = ['join-with up']
-alt-cmd-right = ['join-with right']
-
 alt-ctrl-left  = 'move left'
 alt-ctrl-down  = 'move down'
 alt-ctrl-up    = 'move up'
@@ -218,6 +212,11 @@ esc         = ['reload-config', 'mode main']                 # 重载配置
 r           = ['flatten-workspace-tree', 'mode main']        # reset layout
 backspace   = ['close-all-windows-but-current', 'mode main']
 
+left  = ['join-with left', 'mode main']
+down  = ['join-with down', 'mode main']
+up    = ['join-with up', 'mode main']
+right = ['join-with right', 'mode main']
+
 # 复制当前显示的app bundleid，然后alert后2秒消失，并复制到剪切板
 period = ['''
 exec-and-forget \
@@ -237,10 +236,6 @@ echo "test"
 # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
 #s = ['layout sticky tiling', 'mode main']
 
-alt-cmd-left  = ['join-with left', 'mode main']
-alt-cmd-down  = ['join-with down', 'mode main']
-alt-cmd-up    = ['join-with up', 'mode main']
-alt-cmd-right = ['join-with right', 'mode main']
 
 # =============================
 # 远程桌面模式：打开后忽略所有快捷键
@@ -308,7 +303,7 @@ if.app-id = 'com.apple.Music'
 run       = ['move-node-to-workspace 6Music']
 [[on-window-detected]]
 if.app-id = 'com.audirvana.Audirvana'
-run       = ['move-node-to-workspace 6Music']
+run       = ['layout floating', 'move-node-to-workspace 6Music']
 
 [[on-window-detected]]
 if.app-id = 'com.apple.finder'

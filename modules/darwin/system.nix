@@ -48,11 +48,11 @@
         # do not automatically rearrange spaces based on most recent use.
         mru-spaces = false;
 
-        # customize Hot Corners(触发角, 鼠标移动到屏幕角落时触发的动作)
-        # wvous-tl-corner = 2; # top-left - Mission Control
+        # customize Hot Corners(触发角, 鼠标移动到屏幕角落时触发的动作) 1为无动作
+        wvous-tl-corner = 1; # top-left - Mission Control
         wvous-tr-corner = 4; # top-right - Desktop
         wvous-bl-corner = 11; # bottom-left - Launchpad
-        # wvous-br-corner = 14; # bottom-right - Quick Note
+        wvous-br-corner = 1; # bottom-right - Quick Note
       };
 
       # customize finder
@@ -121,27 +121,6 @@
         NSGlobalDomain = {
           # Add a context menu item for showing the Web Inspector in web views
           WebKitDeveloperExtras = true;
-        };
-        # 系统快捷键
-        "com.apple.symbolichotkeys" = {
-          AppleSymbolicHotKeys = {
-            # "60" = {
-            #   # 输入法 Disable '^ + Space' for selecting the previous input source
-            #   enabled = lib.mkDefault true;
-            # };
-            "61" = {
-              # 输入法 Disable '^ + Option + Space' for selecting the next input source
-              enabled = false;
-            };
-            # 聚焦 Disable 'Cmd + Space' for Spotlight Search
-            "64" = {
-              enabled = false;
-            };
-            # 访达搜索窗口 Disable 'Cmd + Alt + Space' for Finder search window
-            "65" = {
-              enabled = false;
-            };
-          };
         };
         "com.apple.finder" = {
           AppleShowAllFiles = true;

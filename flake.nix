@@ -245,6 +245,7 @@
         pre-commit-check = inputs.git-hooks.lib.${system}.run {
           src = ./.;
           hooks = {
+            #NOTE 目前不支持配置垂直对其
             nixfmt-rfc-style = {
               enable = true;
               settings.width = 100;
