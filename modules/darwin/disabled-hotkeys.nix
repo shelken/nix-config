@@ -64,7 +64,7 @@ let
   );
 in
 {
-  system.CustomUserPreferences."com.apple.symbolichotkeys" = {
+  system.defaults.CustomUserPreferences."com.apple.symbolichotkeys" = {
     AppleSymbolicHotKeys = appleSymbolicHotkeysSettings;
   };
 }
