@@ -16,12 +16,18 @@ nix-darwin.lib.darwinSystem {
   inherit system specialArgs;
   modules =
     darwin-modules
-    # 保证命令执行与当前flake的input的nixpkgs包一致
-    # ++ [
-    #   ({lib, ...}: {
-    #     nixpkgs.pkgs = import nixpkgs-darwin {inherit system;};
-    #   })
-    # ]
+    ++ [
+      (
+        { lib, ... }:
+        {
+          nixpkgs.pkgs = import nixpkgs-darwin {
+            inherit system; # refer the `system` parameter form outer scope recursively
+            # To use chrome/claude-cli, we need to allow the installation of non-free software
+            config.allowUnfree = true;
+          };
+        }
+      )
+    ]
     ++ (lib.optionals ((lib.lists.length home-modules) > 0) [
       home-manager.darwinModules.home-manager
       (

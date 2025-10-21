@@ -5,8 +5,6 @@
   pkgs,
   ...
 }:
-let
-in
 {
   home.activation.removeExistingGitconfig = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
     rm -f ${config.home.homeDirectory}/.gitconfig

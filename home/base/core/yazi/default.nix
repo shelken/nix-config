@@ -2,8 +2,6 @@
   pkgs,
   ...
 }:
-let
-in
 {
   programs.yazi = {
     enable = true;
