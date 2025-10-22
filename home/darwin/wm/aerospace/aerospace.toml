@@ -18,8 +18,8 @@ start-at-login = true
 
 # 切换时执行
 exec-on-workspace-change = [
-  # '/bin/bash', '-c',
-  # '~/.config/aerospace/scripts/pip-move.sh',
+  '/bin/bash', '-c',
+  'as-pip-move',
 ]
 
 # Normalizations. See: https://nikitabobko.github.io/AeroSpace/guide#normalization
@@ -200,6 +200,7 @@ alt-c           = 'exec-and-forget open -a "Visual Studio Code"'
 alt-f           = 'exec-and-forget open -a "Finder"'
 alt-shift-enter = 'exec-and-forget open -a "kitty"'
 alt-w           = 'exec-and-forget open -a "WeChat"'
+alt-space       = 'exec-and-forget open -a "Claude"'
 alt-enter       = '''exec-and-forget osascript -e 'do shell script "kitten quick-access-terminal --detach ~"' '''
 
 # =======================
@@ -220,12 +221,12 @@ right = ['join-with right', 'mode main']
 # 复制当前显示的app bundleid，然后alert后2秒消失，并复制到剪切板
 period = ['''
 exec-and-forget \
-sh -c ~/.config/aerospace/scripts/get-app-bundleid.sh
+as-get-app-bundleid
 ''', 'mode main']
 
 k = ['''
 exec-and-forget \
-sh -c ~/.config/aerospace/scripts/open-terminal-in-finder-path.sh
+as-open-terminal-in-finder-path
 ''', 'mode main']
 
 comma = ['''
