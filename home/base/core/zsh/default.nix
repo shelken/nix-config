@@ -18,9 +18,6 @@ in
     autosuggestion.enable = true;
     # 语法高亮
     syntaxHighlighting.enable = true;
-    shellAliases = {
-      record = "asciinema rec --overwrite -i 1 --rows 28 --cols 140";
-    };
     # https://home-manager-options.extranix.com/?query=zsh.history
     history = {
       size = 30000;

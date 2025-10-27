@@ -25,6 +25,7 @@
     # misc
     protobuf
     #oha  #压测工具: https://github.com/hatoo/oha
+    asciinema # 终端录制命令与回放
 
     # ts
     pnpm
@@ -39,4 +40,8 @@
     q # dns dig
     nali # `traceroute 1.1.1.1 | nali` show geo location
   ];
+
+  home.shellAliases = {
+    record = "asciinema rec --overwrite -i 1 --rows 28 --cols 140";
+  };
 }

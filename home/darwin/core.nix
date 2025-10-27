@@ -13,8 +13,9 @@
     superfile # like yazi
     comma # use `, cowsay hello` == `nix run nixpkgs#cowsay -- hello`
 
-    asciinema # 终端录制命令与回放
-
-    nix-search-tv # 搜索home-manager options和 nixpkgs
+    nix-search-tv # 查询各种（nixpkgs,home-manager,nur)下的包或选项
   ];
+  home.shellAliases = {
+    ns = "nix-search-tv print | fzf --preview 'nix-search-tv preview {}' --scheme history";
+  };
 }

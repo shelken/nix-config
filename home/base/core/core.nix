@@ -8,7 +8,9 @@
     git = true;
     icons = "auto";
   };
-  programs.zsh.shellAliases.ll = "eza --icons -l -T -L=1";
+  home.shellAliases = {
+    ll = "eza --icons -l -T -L=1";
+  };
 
   # a cat(1) clone with syntax highlighting and Git integration.
   # cat 替代
