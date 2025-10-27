@@ -9,6 +9,7 @@
     dev.ai.enable = true;
 
     tools.hammerspoon.enable = false;
+    tools.backup.enable = true;
     secrets.enable = true;
   };
 }

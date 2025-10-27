@@ -35,7 +35,7 @@ in
     tools.ntfs.enable = false;
     tools.others.enable = true;
     tools.rclone.enable = true;
-    tools.restic.enable = true;
+    tools.backup.enable = true;
     tools.typeswitch.enable = true;
     tools.virts.enable = false; # utm parallel
 
