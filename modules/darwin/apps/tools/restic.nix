@@ -16,6 +16,9 @@ in
 
   config = mkIf cfg.enable {
     homebrew = {
+      brews = [
+        "restic"
+      ];
       casks = [
         "restic-browser"
       ];

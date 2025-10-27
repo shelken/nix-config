@@ -32,8 +32,10 @@ in
     tools.gpt.enable = true;
     tools.image.enable = true;
     tools.music.enable = true;
+    tools.ntfs.enable = false;
     tools.others.enable = true;
     tools.rclone.enable = true;
+    tools.restic.enable = true;
     tools.typeswitch.enable = true;
     tools.virts.enable = false; # utm parallel
 
