@@ -30,9 +30,9 @@ let
       esac
       IMAGE_URL="$1"
     elif [ $# -eq 3 ]; then
-      OS="$1"
-      ARCH="$2"
-      IMAGE_URL="$3"
+      IMAGE_URL="$1"
+      OS="$2"
+      ARCH="$3"
     else
       echo "Error: Invalid number of arguments"
       show_usage
