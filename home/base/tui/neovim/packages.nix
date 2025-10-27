@@ -70,7 +70,7 @@ in
       # sqlfluff # SQL linter
 
       #FIXME issue: https://github.com/NixOS/nixpkgs/issues/449970
-      #actionlint # GitHub Actions linter
+      actionlint # GitHub Actions linter
       buf # bufls
       tree-sitter # common language parser/highlighter
       nodePackages.prettier # common code formatter
