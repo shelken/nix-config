@@ -196,7 +196,7 @@ alt-shift-r = 'mode remote-desktop' # 远程桌面模式
 
 # APP快捷键
 alt-b           = 'exec-and-forget open -a "Helium"'
-alt-c           = 'exec-and-forget open -a "Visual Studio Code"'
+alt-c           = 'exec-and-forget zed'
 alt-f           = 'exec-and-forget open -a "Finder"'
 alt-shift-enter = 'exec-and-forget open -a "kitty"'
 alt-w           = 'exec-and-forget open -a "WeChat"'
