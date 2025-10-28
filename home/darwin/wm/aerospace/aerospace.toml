@@ -17,10 +17,7 @@ after-startup-command = [
 start-at-login = true
 
 # 切换时执行
-exec-on-workspace-change = [
-  '/bin/bash', '-c',
-  'as-pip-move',
-]
+exec-on-workspace-change = ['/bin/bash', '-c', 'as-pip-move']
 
 # Normalizations. See: https://nikitabobko.github.io/AeroSpace/guide#normalization
 enable-normalization-flatten-containers                         = true
@@ -275,7 +272,7 @@ run       = 'move-node-to-workspace 2Code'
 if.app-id = 'com.microsoft.VSCode'         # VSCode
 run       = 'move-node-to-workspace 2Code'
 [[on-window-detected]]
-if.app-id = 'dev.zed.Zed'         # VSCode
+if.app-id = 'dev.zed.Zed'                  # VSCode
 run       = 'move-node-to-workspace 2Code'
 [[on-window-detected]]
 if.app-id = 'com.todesktop.230313mzl4w4u92' # cursor

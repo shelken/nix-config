@@ -1,10 +1,8 @@
 [files]
-ignore-dot = true
+ignore-dot   = true
 ignore-files = true
 # 忽略文件
-extend-exclude = [
-  "*.zsh"
-]
+extend-exclude = ["*.zsh"]
 
 [default]
 binary = false
@@ -13,7 +11,7 @@ extend-ignore-re = [
   "iterm2",
   "Deactive",
   "Pn",
-  "imput", # helium
+  "imput",    # helium
 
   # catppuccin theme colors
   "11111b",

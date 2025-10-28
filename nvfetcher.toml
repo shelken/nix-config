@@ -1,10 +1,10 @@
 [kitty-icon]
 src.github_tag = "DinkDonk/kitty-icon"
-fetch.github = "DinkDonk/kitty-icon"
+fetch.github   = "DinkDonk/kitty-icon"
 
 [paperwm-spoon]
-src.git = "https://github.com/mogenson/PaperWM.spoon"
-src.branch = "main"
+src.git      = "https://github.com/mogenson/PaperWM.spoon"
+src.branch   = "main"
 fetch.github = "mogenson/PaperWM.spoon"
 
 # [hammerspoon]

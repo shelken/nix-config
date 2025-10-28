@@ -1,14 +1,14 @@
 "$schema" = "https://yazi-rs.github.io/schemas/yazi.json"
 
 [mgr]
-ratio = [2, 7, 7]
-show_hidden = true
+ratio        = [2, 7, 7]
+show_hidden  = true
 show_symlink = true
 
 # markdown preview
 [[plugin.prepend_previewers]]
 name = "*.md"
-run = "glow"
+run  = "glow"
 
 [preview]
 tab_size = 3

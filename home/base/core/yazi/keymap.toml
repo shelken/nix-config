@@ -3,9 +3,8 @@
 # 一次Esc退出输入框
 [[input.prepend_keymap]]
 desc = "Cancel input"
-on = ["<Esc>"]
-run = "close"
+on   = ["<Esc>"]
+run  = "close"
 
 [tasks]
-prepend_keymap = [
-]
+prepend_keymap = []

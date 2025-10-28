@@ -1,75 +1,75 @@
 [[on-window-detected]]
 if.app-id = 'com.apple.AppStore'
-run = 'layout floating'
+run       = 'layout floating'
 
 [[on-window-detected]]
 if.app-id = 'com.apple.ActivityMonitor'
-run = 'layout floating'
+run       = 'layout floating'
 
 [[on-window-detected]]
 if.app-id = 'com.apple.Photos'
-run = 'layout floating'
+run       = 'layout floating'
 
 [[on-window-detected]]
 if.app-id = 'com.apple.reminders'
-run = 'layout floating'
+run       = 'layout floating'
 
 [[on-window-detected]]
 if.app-id = 'com.apple.MobileSMS'
-run = 'layout floating'
+run       = 'layout floating'
 
 [[on-window-detected]]
 if.app-id = 'com.apple.Music'
-run = 'layout floating'
+run       = 'layout floating'
 
 [[on-window-detected]]
 if.app-id = 'com.colliderli.iina'
-run = ['layout floating']
+run       = ['layout floating']
 
 [[on-window-detected]]
 if.app-id = 'com.apple.FontBook'
-run = 'layout floating'
+run       = 'layout floating'
 
 [[on-window-detected]]
 if.app-id = 'com.codeweavers.CrossOver'
-run = ['layout floating']
+run       = ['layout floating']
 
 [[on-window-detected]]
 if.app-id = 'com.apple.TextEdit'
-run = ['layout floating']
+run       = ['layout floating']
 
 [[on-window-detected]]
 if.window-title-regex-substring = '^Bitwarden$'
-run = 'layout floating'
+run                             = 'layout floating'
 
 [[on-window-detected]]
 if.app-id = 'com.audirvana.Audirvana'
-run = ['layout floating']
+run       = ['layout floating']
 
 [[on-window-detected]]
 if.app-id = 'com.crossutility.quantumult-x'
-run = ['layout floating']
+run       = ['layout floating']
 
 [[on-window-detected]]
 if.app-id = 'com.liguangming.Shadowrocket'
-run = ['layout floating']
+run       = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'com.now.gg.BlueStacks' 
-run = ['layout floating']
+if.app-id = 'com.now.gg.BlueStacks'
+run       = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'com.raycast.macos' 
-run = ['layout floating']
+if.app-id = 'com.raycast.macos'
+run       = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'org.hammerspoon.Hammerspoon' 
-run = ['layout floating']
+if.app-id = 'org.hammerspoon.Hammerspoon'
+run       = ['layout floating']
 
 [[on-window-detected]]
 if.app-id = 'eu.exelban.Stats'
-run = ['layout floating']
+run       = ['layout floating']
 
 [[on-window-detected]]
 if.app-id = 'com.follow.clash'
-run = ['layout floating']
+run       = ['layout floating']
