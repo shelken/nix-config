@@ -116,7 +116,7 @@ prefetch-gh owner repo rev="HEAD":
     };
     EOF
 
-# github 
+# github
 prefetch-gh2 repo rev="HEAD":
   #!/usr/bin/env bash
   function parse_github_url {
@@ -204,9 +204,9 @@ rebuild-debug host=profile:
 
 # 构建; 调试
 [macos]
-rebuild-debug host=profile args="":
-  # nom build ".#darwinConfigurations.{{host}}.system" --extra-experimental-features "nix-command flakes" --show-trace --verbose
-  nh darwin build -H {{host}} . -v {{args}}
+rebuild-debug *args:
+  # nom build ".#darwinConfigurations.{{profile}}.system" --extra-experimental-features "nix-command flakes" --show-trace --verbose
+  nh darwin build -H {{profile}} . -v -- {{args}}
 
 # 交互式源码查看
 repl:
@@ -228,15 +228,15 @@ set-proxy:
 
 # nixos 重建
 [linux]
-switch host=profile: 
+switch host=profile:
   # nixos-rebuild switch --sudo --flake $".#{{host}}" --show-trace --verbose
   @nh os switch -H {{host}} .
 
 # 应用配置; target对应当前主机名
 [macos]
-switch host=profile: rebuild-debug
-  # sudo -E ./result/sw/bin/darwin-rebuild switch --flake ".#{{host}}" --show-trace --verbose
-  nh darwin switch -H {{host}} . -v
+switch *args: rebuild-debug
+  # sudo -E ./result/sw/bin/darwin-rebuild switch --flake ".#{{profile}}" --show-trace --verbose
+  nh darwin switch -H {{profile}} . -v -- {{args}}
 
 # 更新整个输入
 up:
