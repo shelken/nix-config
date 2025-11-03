@@ -201,6 +201,20 @@ in
 
   };
   config = lib.mkIf cfg.enable {
+    home.packages = with pkgs; [
+      kopia
+      (writeShellApplication {
+        name = "kopia-backup";
+        runtimeInputs = [
+          kopia
+          gum
+        ];
+        text = ''
+          ${backupScript}
+        '';
+      })
+    ];
+
     # 使用工具 及 开启secret
     shelken.tools.backup.enable = true;
     shelken.secrets.enable = true;
