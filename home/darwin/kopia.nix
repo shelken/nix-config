@@ -10,8 +10,6 @@
 let
   cfg = config.shelken.backup;
   backupScript = pkgs.writeShellScript "kopia-backup.sh" ''
-    #!/usr/bin/env bash
-
     notify() {
       /usr/bin/osascript -e "display notification \"$2\" with title \"$1\"" || true
     }
@@ -210,6 +208,11 @@ in
           gum
         ];
         text = ''
+          # 设置环境变量（如果未设置）
+          export KOPIA_PASSWORD_FILE="''${KOPIA_PASSWORD_FILE:-"${config.sops.secrets.kopia-password.path}"}"
+          export KOPIA_CONFIG_PATH="''${KOPIA_CONFIG_PATH:-"${
+            config.sops.templates."kopia-repository.config".path
+          }"}"
           ${backupScript}
         '';
       })
