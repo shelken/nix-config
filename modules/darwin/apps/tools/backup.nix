@@ -18,11 +18,9 @@ in
     homebrew = {
       brews = [
         "restic"
-        "kopia"
       ];
       casks = [
         "restic-browser"
-        "kopiaui"
       ];
     };
   };

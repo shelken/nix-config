@@ -2,6 +2,7 @@
   mylib,
   lib,
   config,
+  pkgs,
   ...
 }:
 let
@@ -12,11 +13,9 @@ in
     enable = mylib.mkBoolOpt false "Whether or not use.";
   };
   config = lib.mkIf cfg.enable {
-    programs.bash.initExtra = ''
-      eval "$(kopia --completion-script-bash)"
-    '';
-    programs.zsh.initContent = ''
-      eval "$(kopia --completion-script-zsh)"
-    '';
+    home.packages = with pkgs; [
+      kopia
+      # kopia-ui
+    ];
   };
 }

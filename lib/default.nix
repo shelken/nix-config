@@ -51,7 +51,7 @@ rec {
     {
       name,
       commandFile,
-      overrideAttr ? { },
+      config ? { },
     }:
     {
       enable = true;
@@ -62,7 +62,7 @@ rec {
         StandardOutPath = "/tmp/nix-hm-logs/${name}.log";
         StandardErrorPath = "/tmp/nix-hm-logs/${name}.err.log";
       }
-      // overrideAttr;
+      // config;
     };
 
   # 创建的密钥仅自己可读取（500）

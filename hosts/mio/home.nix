@@ -4,12 +4,14 @@
   #   inherit (myvars.networking.ssh) extraConfig;
   # };
   shelken = {
-    wm.aerospace.enable = true;
-
+    backup = {
+      enable = true;
+      backupPaths = [ ];
+    };
     dev.ai.enable = true;
-
+    secrets.enable = true;
     tools.hammerspoon.enable = false;
     tools.backup.enable = true;
-    secrets.enable = true;
+    wm.aerospace.enable = true;
   };
 }
