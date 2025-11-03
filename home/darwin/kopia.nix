@@ -38,31 +38,33 @@ let
     # 配置策略
     log info "Setting up backup policies"
 
-    # 应用配置的策略
+    # 应用配置的策略（跳过global策略）
     ${toString (
       lib.concatMapStringsSep "\n" (policyName: ''
-        log info "Applying policy: ${policyName}"
-        ${pkgs.kopia}/bin/kopia policy set \
-          ${lib.optionalString (policyName == "global") "--global"} \
-          ${lib.optionalString (policyName != "global") "\"${policyName}\""} \
-          --compression="${cfg.policy."${policyName}".compression}" \
-          ${
-            toString (
-              lib.concatMapStringsSep " \\\n          " (ignore: "--add-ignore \"${ignore}\"") (
-                cfg.policy."${policyName}".ignores
+        ${lib.optionalString (policyName != "global") ''
+          log info "Applying policy: ${policyName}"
+          ${pkgs.kopia}/bin/kopia policy set \
+            ${lib.optionalString (policyName == "global") "--global"} \
+            ${lib.optionalString (policyName != "global") "\"${policyName}\""} \
+            --compression="${cfg.policy."${policyName}".compression}" \
+            ${
+              toString (
+                lib.concatMapStringsSep " \\\n          " (ignore: "--add-ignore \"${ignore}\"") (
+                  cfg.policy."${policyName}".ignores
+                )
               )
-            )
-          } \
-          ${
-            toString (
-              lib.concatMapStringsSep " \\\n          " (
-                retentionType:
-                "--keep-${retentionType} ${toString (cfg.policy."${policyName}".retention."${retentionType}")}"
-              ) (builtins.attrNames cfg.policy."${policyName}".retention)
-            )
-          } || {
-          log warn "Failed to set policy for ${policyName}"
-        }
+            } \
+            ${
+              toString (
+                lib.concatMapStringsSep " \\\n          " (
+                  retentionType:
+                  "--keep-${retentionType} ${toString (cfg.policy."${policyName}".retention."${retentionType}")}"
+                ) (builtins.attrNames cfg.policy."${policyName}".retention)
+              )
+            } || {
+            log warn "Failed to set policy for ${policyName}"
+          }
+        ''}
       '') (builtins.attrNames cfg.policy)
     )}
 
@@ -177,19 +179,11 @@ in
       default = {
         "${myvars.username}@${hostname}" = { };
       };
-      description = "备份策略配置";
+      description = ''
+        备份策略配置，不支持global配置，默认使用 user@host 的方式进行「全局」配置
+        各用户和host独立
+      '';
       example = {
-        global = {
-          compression = "zstd";
-          ignores = [
-            "*.tmp"
-            "*.log"
-          ];
-          retention = {
-            latest = 24;
-            daily = 7;
-          };
-        };
         "user@host" = {
           compression = "zstd-fastest";
           ignores = [
@@ -197,7 +191,7 @@ in
             ".cache"
           ];
         };
-        "/specific/path" = {
+        "user@host:/specific/path" = {
           retention = {
             daily = 30;
           };
