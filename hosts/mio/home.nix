@@ -13,5 +13,6 @@
     tools.hammerspoon.enable = false;
     tools.backup.enable = true;
     wm.aerospace.enable = true;
+    wm.hyprspace.enable = true;
   };
 }
