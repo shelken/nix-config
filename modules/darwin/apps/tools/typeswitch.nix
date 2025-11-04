@@ -60,9 +60,9 @@ in
     };
 
     # before: sudo xattr -r -d com.apple.quarantine /Applications/TypeSwitch.app
-    launchd.user.agents.typeswitch = {
-      command = ''"/Applications/TypeSwitch.app/Contents/MacOS/TypeSwitch"'';
-      serviceConfig.RunAtLoad = true;
-    };
+    # launchd.user.agents.typeswitch = {
+    #   command = ''"/Applications/TypeSwitch.app/Contents/MacOS/TypeSwitch"'';
+    #   serviceConfig.RunAtLoad = true;
+    # };
   };
 }
