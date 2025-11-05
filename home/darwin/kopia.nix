@@ -29,7 +29,7 @@ let
     # 添加随机延迟，防止多设备同时触发（0-10分钟随机）
     # 如果 CANCEL_RANDOM=true 则跳过随机延迟
     if [ "$CANCEL_RANDOM" != "true" ]; then
-      random_delay=$(od -An -N2 -i /dev/urandom | awk '{print $1 % 600}')
+      random_delay=$(od -An -N2 -t u2 /dev/urandom | xargs | awk '{print $1 % 600}')
       log info "Random delay: $random_delay seconds（如果要跳过delay设置CANCEL_RANDOM=true）"
       sleep $random_delay
     else
