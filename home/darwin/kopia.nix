@@ -26,6 +26,16 @@ let
 
     log info "=== Backup Started ==="
 
+    # 添加随机延迟，防止多设备同时触发（0-10分钟随机）
+    # 如果 CANCEL_RANDOM=true 则跳过随机延迟
+    if [ "$CANCEL_RANDOM" != "true" ]; then
+      random_delay=$(od -An -N2 -i /dev/urandom | awk '{print $1 % 600}')
+      log info "Random delay: $random_delay seconds（如果要跳过delay设置CANCEL_RANDOM=true）"
+      sleep $random_delay
+    else
+      log info "Random delay skipped (CANCEL_RANDOM=true)"
+    fi
+
     # 检查仓库连接
     ${pkgs.kopia}/bin/kopia repository status &>/dev/null || {
       log error "Repository not connected"
@@ -115,6 +125,35 @@ in
         ''"''${config.home.homeDirectory}/Documents"''
         ''"''${config.home.homeDirectory}/Pictures"''
         ''"''${config.home.homeDirectory}/important-file.txt"''
+      ];
+    };
+    calendarInterval = lib.mkOption {
+      type = with lib.types; listOf (attrsOf int);
+      # 基于所有hostname按hash排序在2-8点均匀分布
+      default =
+        let
+          schedule = mylib.calcUniformSchedule {
+            inherit hostname;
+            startHour = 2;
+            endHour = 8;
+          };
+        in
+        [
+          {
+            Hour = schedule.hour;
+            Minute = schedule.minute;
+          }
+        ];
+      description = "启动日历间隔，定义备份执行的时间";
+      example = [
+        {
+          Hour = 2;
+          Minute = 30;
+        }
+        {
+          Hour = 14;
+          Minute = 45;
+        }
       ];
     };
     #TODO 增加删除处理
@@ -292,25 +331,7 @@ in
         RunAtLoad = false;
         Debug = false;
         KeepAlive = false;
-        # 每 6h 运行
-        StartCalendarInterval = [
-          {
-            Hour = 1;
-            Minute = 0;
-          }
-          {
-            Hour = 7;
-            Minute = 0;
-          }
-          {
-            Hour = 13;
-            Minute = 0;
-          }
-          {
-            Hour = 19;
-            Minute = 0;
-          }
-        ];
+        StartCalendarInterval = cfg.calendarInterval;
         EnvironmentVariables = {
           KOPIA_PASSWORD_FILE = "${config.sops.secrets.kopia-password.path}";
           KOPIA_CONFIG_PATH = "${config.sops.templates."kopia-repository.config".path}";
@@ -318,5 +339,4 @@ in
       };
     };
   };
-
 }

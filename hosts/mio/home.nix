@@ -1,4 +1,4 @@
-{ ... }:
+{ config, ... }:
 {
   # programs.ssh = {
   #   inherit (myvars.networking.ssh) extraConfig;
@@ -6,7 +6,9 @@
   shelken = {
     backup = {
       enable = true;
-      backupPaths = [ ];
+      backupPaths = [
+        "${config.home.homeDirectory}/Code"
+      ];
     };
     dev.ai.enable = true;
     secrets.enable = true;
