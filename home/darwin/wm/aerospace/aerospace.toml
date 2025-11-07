@@ -131,8 +131,8 @@ alt-shift-equal = 'resize smart +50'
 alt-1 = 'workspace 1Browser'
 alt-2 = 'workspace 2Code'
 alt-3 = 'workspace 3Terminal'
-alt-4 = 'workspace 4Chat'
-alt-5 = 'workspace 5Write'
+alt-4 = 'workspace 4Write'
+alt-5 = 'workspace 5Chat'
 alt-6 = 'workspace 6Music'
 alt-7 = 'workspace 7'
 alt-8 = 'workspace 8'
@@ -148,8 +148,8 @@ alt-0 = 'workspace 0Other'
 alt-shift-1 = 'move-node-to-workspace --focus-follows-window 1Browser'
 alt-shift-2 = 'move-node-to-workspace --focus-follows-window 2Code'
 alt-shift-3 = 'move-node-to-workspace --focus-follows-window 3Terminal'
-alt-shift-4 = 'move-node-to-workspace --focus-follows-window 4Chat'
-alt-shift-5 = 'move-node-to-workspace --focus-follows-window 5Write'
+alt-shift-4 = 'move-node-to-workspace --focus-follows-window 4Write'
+alt-shift-5 = 'move-node-to-workspace --focus-follows-window 5Chat'
 alt-shift-6 = 'move-node-to-workspace --focus-follows-window 6Music'
 alt-shift-7 = 'move-node-to-workspace --focus-follows-window 7'
 alt-shift-8 = 'move-node-to-workspace --focus-follows-window 8'
@@ -159,8 +159,8 @@ alt-shift-0 = 'move-node-to-workspace --focus-follows-window 0Other'
 alt-ctrl-1 = 'move-node-to-workspace 1Browser'
 alt-ctrl-2 = 'move-node-to-workspace 2Code'
 alt-ctrl-3 = 'move-node-to-workspace 3Terminal'
-alt-ctrl-4 = 'move-node-to-workspace 4Chat'
-alt-ctrl-5 = 'move-node-to-workspace 5Write'
+alt-ctrl-4 = 'move-node-to-workspace 4Write'
+alt-ctrl-5 = 'move-node-to-workspace 5Chat'
 alt-ctrl-6 = 'move-node-to-workspace 6Music'
 alt-ctrl-7 = 'move-node-to-workspace 7'
 alt-ctrl-8 = 'move-node-to-workspace 8'
@@ -173,10 +173,13 @@ alt-ctrl-0 = 'move-node-to-workspace 0Other'
 # alt-shift-c = 'move-node-to-workspace --focus-follows-window C'
 
 alt-ctrl-enter = 'fullscreen' # 占满屏幕
+#alt-ctrl-f = [
+#  '''exec-and-forget aerospace layout floating && osascript -e 'tell application "System Events" to key code 120 using {control down, option down, command down}' || aerospace layout accordion tiling
+#  ''',
+#] # 窗口 悬浮/平铺 切换
 alt-ctrl-f = [
-  '''exec-and-forget aerospace layout floating && osascript -e 'tell application "System Events" to key code 120 using {control down, option down, command down}' || aerospace layout accordion tiling
-  ''',
-] # 窗口 悬浮/平铺 切换
+  'layout floating tiling',
+] # 窗口 悬浮/accordion 切换
 
 # 前一个窗口和当前窗口 切换
 # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
@@ -287,17 +290,17 @@ run       = ['layout floating', 'move-node-to-workspace 3Terminal']
 
 [[on-window-detected]]
 if.app-id = 'com.tencent.xinWeChat'
-run       = ['move-node-to-workspace 4Chat']
+run       = ['move-node-to-workspace 5Chat']
 [[on-window-detected]]
 if.app-id = 'com.tencent.qq'
-run       = 'move-node-to-workspace 4Chat'
+run       = 'move-node-to-workspace 5Chat'
 [[on-window-detected]]
 if.app-id = 'ru.keepcoder.Telegram'
-run       = 'move-node-to-workspace 4Chat'
+run       = 'move-node-to-workspace 5Chat'
 
 [[on-window-detected]]
 if.app-id = 'md.obsidian'
-run       = ['layout floating', 'move-node-to-workspace 5Write']
+run       = ['layout floating', 'move-node-to-workspace 4Write']
 
 [[on-window-detected]]
 if.app-id = 'com.apple.Music'
