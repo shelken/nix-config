@@ -49,6 +49,9 @@ in
 
     # network
     network.fl-clash.enable = true;
+
+    # tasks
+    tasks.loon.enable = true;
   };
   homebrew = {
     onActivation = {
