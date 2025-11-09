@@ -143,6 +143,10 @@ in
             Hour = schedule.hour;
             Minute = schedule.minute;
           }
+          {
+            Hour = schedule.hour + 12;
+            Minute = schedule.minute;
+          }
         ];
       description = "启动日历间隔，定义备份执行的时间";
       example = [
