@@ -36,6 +36,8 @@ let
       log info "Random delay skipped (CANCEL_RANDOM=true)"
     fi
 
+    log debug "KOPIA_PASSWORD_FILE: $KOPIA_PASSWORD_FILE"
+    log debug "KOPIA_CONFIG_PATH: $KOPIA_CONFIG_PATH"
     # 检查仓库连接
     ${pkgs.kopia}/bin/kopia repository status &>/dev/null || {
       log error "Repository not connected"
@@ -333,7 +335,7 @@ in
       commandFile = backupScript;
       config = {
         RunAtLoad = false;
-        Debug = false;
+        Debug = true;
         KeepAlive = false;
         StartCalendarInterval = cfg.calendarInterval;
         EnvironmentVariables = {
