@@ -26,6 +26,7 @@ in
       ];
       casks = [
         "ollama-app"
+        "lm-studio"
       ];
     };
   };
