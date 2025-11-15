@@ -48,7 +48,8 @@ in
     homelab.client.enable = true;
 
     # network
-    network.fl-clash.enable = true;
+    network.fl-clash.enable = false;
+    network.loon.enable = true;
 
     # tasks
     tasks.loon.enable = true;
