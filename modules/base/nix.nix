@@ -21,7 +21,7 @@
     # substituers that will be considered before the official ones(https://cache.nixos.org)
     substituters = [
       #"https://mirrors.ustc.edu.cn/nix-channels/store"
-      "https://nix-cache.ooooo.space"
+      # "https://nix-cache.ooooo.space"
       "https://mirrors.ustc.edu.cn/nix-channels/store"
 
       "https://nix-community.cachix.org"
