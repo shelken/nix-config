@@ -507,16 +507,15 @@
       "locked": {
         "lastModified": 1762084578,
         "narHash": "sha256-7KOgTFD9j8N7jIMsmbwOlCWaOrD5PBG6oeDiSXPRzsg=",
-        "ref": "refs/heads/main",
+        "owner": "shelken",
+        "repo": "secrets.nix",
         "rev": "bab6c17a1f49b88c730b62c5e4c66af1a591afff",
-        "shallow": true,
-        "type": "git",
-        "url": "ssh://git@github.com/shelken/secrets.nix.git"
+        "type": "github"
       },
       "original": {
-        "shallow": true,
-        "type": "git",
-        "url": "ssh://git@github.com/shelken/secrets.nix.git"
+        "owner": "shelken",
+        "repo": "secrets.nix",
+        "type": "github"
       }
     },
     "sops-nix": {
