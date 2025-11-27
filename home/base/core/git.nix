@@ -12,8 +12,6 @@
 
   programs.git = {
     enable = true;
-    userName = myvars.username;
-    userEmail = myvars.useremail;
     ignores = [
       ".DS_Store"
     ];
@@ -26,7 +24,9 @@
         # condition = "gitdir:~/work/";
       }
     ];
-    extraConfig = {
+    settings = {
+      user.email = myvars.useremail;
+      user.name = myvars.username;
       init.defaultBranch = "main";
       pull.rebase = true;
       log.date = "format:'%Y-%m-%d %H:%M:%S'";
@@ -69,16 +69,18 @@
         hyperlinks = true;
         dark = true;
       };
+      alias = {
+        # git change-commits GIT_COMMITTER_NAME "old name" "new name"
+        change-commits = "!f() { VAR=$1; OLD=$2; NEW=$3; shift 3; git filter-branch --env-filter \"if [[ \\\"$`echo $VAR`\\\" = '$OLD' ]]; then export $VAR='$NEW'; fi\" $@; }; f ";
+        # search config
+        cs = "config --get-regexp";
+      };
     };
-    aliases = {
-      # git change-commits GIT_COMMITTER_NAME "old name" "new name"
-      change-commits = "!f() { VAR=$1; OLD=$2; NEW=$3; shift 3; git filter-branch --env-filter \"if [[ \\\"$`echo $VAR`\\\" = '$OLD' ]]; then export $VAR='$NEW'; fi\" $@; }; f ";
-      # search config
-      cs = "config --get-regexp";
-    };
-    # 差异对比增强
-    difftastic.enable = false; # https://github.com/Wilfred/difftastic.
-    delta.enable = true;
+  };
+
+  programs.delta = {
+    enable = true;
+    enableGitIntegration = true;
   };
 
   home.packages = with pkgs; [

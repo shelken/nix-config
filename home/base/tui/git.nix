@@ -8,7 +8,7 @@ in
     enable = true;
     gitCredentialHelper.enable = false;
   };
-  programs.git.extraConfig.credential = {
+  programs.git.settings.credential = {
     # 加空白是先清除system定义的osxkeychain
     "https://github.com" = {
       helper = [
