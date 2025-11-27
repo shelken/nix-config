@@ -8,18 +8,9 @@ in
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
     wm.aerospace.enable = true;
-    tools.hammerspoon.enable = false;
     tools.typeswitch.enable = true;
-
     suites.desktop.enable = true;
-
     dev.container.enable = true;
+    network.fl-clash.enable = true;
   };
-  # homebrew = {
-  #   onActivation = {
-  #     # autoUpdate = true;
-  #     # 'zap': uninstalls all formulae(and related files) not listed in the generated Brewfile
-  #     cleanup = "uninstall";
-  #   };
-  # };
 }

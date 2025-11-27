@@ -4,9 +4,10 @@
   #   inherit (myvars.networking.ssh) extraConfig;
   # };
   shelken = {
-    wm.aerospace.enable = true;
-    tools.hammerspoon.enable = false;
-    dev.minikube.enable = true;
+    dev.ai.enable = false;
     secrets.enable = true;
+    tools.hammerspoon.enable = false;
+    tools.backup.enable = false;
+    wm.aerospace.enable = true;
   };
 }
