@@ -2,7 +2,6 @@
 {
   environment.systemPackages = with pkgs; [
     tealdeer # a very fast version of tldr
-    fastfetch
     just
     neovim
     git # used by nix flakes
