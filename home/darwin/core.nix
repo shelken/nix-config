@@ -10,7 +10,7 @@
     glab # gitlab cli
 
     rclone # web driver
-    superfile # like yazi
+    # superfile # like yazi
     comma # use `, cowsay hello` == `nix run nixpkgs#cowsay -- hello`
 
     nix-search-tv # 查询各种（nixpkgs,home-manager,nur)下的包或选项
