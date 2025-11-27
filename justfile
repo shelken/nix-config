@@ -49,14 +49,14 @@ fmt:
 
 # 清理无用的包
 gc duration="0h":
-  @nh clean all -a --nogc -K {{duration}}
+  @nix run nixpkgs#nh -- clean all -a --nogc -K {{duration}}
 
 # 清理所有
 # @nix-collect-garbage -d
 # @sudo nix-collect-garbage -d
 # @nix store --gc
 gc-all:
-  @nh clean all -a
+  @nix run nixpkgs#nh -- clean all -a
 
 # 生成镜像
 [linux]
@@ -188,25 +188,25 @@ raycast-import:
 [linux]
 rebuild host=profile:
   # @nix build ".#nixosConfigurations.{{host}}"
-  @nh os build -H {{host}} .
+  @nix run nixpkgs#nh -- os build -H {{host}} .
 
 # mac 构建; host 对应当前主机名
 [macos]
 rebuild host=profile:
   # @nix build ".#darwinConfigurations.{{host}}.system" --extra-experimental-features "nix-command flakes"
-  @nh darwin build -H {{host}} . -- --extra-experimental-features "nix-command flakes"
+  @nix run nixpkgs#nh -- darwin build -H {{host}} . -- --extra-experimental-features "nix-command flakes"
 
 # nixos 重建(调试)
 [linux]
 rebuild-debug host=profile:
   # nom build ".#nixosConfigurations.{{host}}.config.system.build.toplevel" --show-trace --verbose
-  nh os build -H {{host}} . -v
+  nix run nixpkgs#nh -- os build -H {{host}} . -v
 
 # 构建; 调试
 [macos]
 rebuild-debug *args:
   # nom build ".#darwinConfigurations.{{profile}}.system" --extra-experimental-features "nix-command flakes" --show-trace --verbose
-  nh darwin build -H {{profile}} . -v -- {{args}}
+  nix run nixpkgs#nh -- darwin build -H {{profile}} . -v -- {{args}}
 
 # 交互式源码查看
 repl:
@@ -219,7 +219,7 @@ rollback:
 
 # 搜索包
 search pkg num='10':
-  @nh search -l {{num}} -c nixos-unstable {{pkg}}
+  @nix run nixpkgs#nh -- search -l {{num}} -c nixos-unstable {{pkg}}
 
 # mac更新前调整nix到代理
 [macos]
@@ -230,13 +230,13 @@ set-proxy:
 [linux]
 switch host=profile:
   # nixos-rebuild switch --sudo --flake $".#{{host}}" --show-trace --verbose
-  @nh os switch -H {{host}} .
+  @nix run nixpkgs#nh -- os switch -H {{host}} .
 
 # 应用配置; target对应当前主机名
 [macos]
 switch *args: rebuild-debug
   # sudo -E ./result/sw/bin/darwin-rebuild switch --flake ".#{{profile}}" --show-trace --verbose
-  nh darwin switch -H {{profile}} . -v -- {{args}}
+  nix run nixpkgs#nh -- darwin switch -H {{profile}} . -v -- {{args}}
 
 # 更新整个输入
 up:
