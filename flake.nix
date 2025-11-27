@@ -293,7 +293,7 @@
               nodePackages.prettier
               nixos-anywhere
               nvfetcher
-              nh
+              # nh # 不要引入，会把nix放进来
             ];
             name = "dots";
             shellHook = ''
