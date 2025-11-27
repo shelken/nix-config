@@ -1,4 +1,9 @@
-{ pkgs, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 let
   skopeo-image-size = pkgs.writeShellScriptBin "skopeo-image-size" ''
     #!/usr/bin/env bash
@@ -89,21 +94,23 @@ let
   '';
 in
 {
-  home.packages =
-    (with pkgs; [
-      dive # A tool for exploring each layer in a docker image
-      lazydocker # docker管理
-      skopeo
-    ])
-    ++ [
-      skopeo-image-size
-    ];
+  config = lib.mkIf config.shelken.dev.cloud-native.enable {
+    home.packages =
+      (with pkgs; [
+        dive # A tool for exploring each layer in a docker image
+        lazydocker # docker管理
+        skopeo
+      ])
+      ++ [
+        skopeo-image-size
+      ];
 
-  programs.k9s.enable = true;
-  # catppuccin.k9s.transparent = true;
+    programs.k9s.enable = true;
+    # catppuccin.k9s.transparent = true;
 
-  programs.kubecolor = {
-    enable = true;
-    enableAlias = true;
+    programs.kubecolor = {
+      enable = true;
+      enableAlias = true;
+    };
   };
 }

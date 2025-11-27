@@ -10,8 +10,11 @@
         "${config.home.homeDirectory}/Code"
       ];
     };
+
     dev.ai.enable = true;
     dev.ide.enable = true;
+    dev.cloud-native.enable = true;
+
     secrets.enable = true;
     tools.hammerspoon.enable = false;
     tools.backup.enable = true;
