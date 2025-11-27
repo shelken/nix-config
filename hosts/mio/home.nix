@@ -11,6 +11,7 @@
       ];
     };
     dev.ai.enable = true;
+    dev.ide.enable = true;
     secrets.enable = true;
     tools.hammerspoon.enable = false;
     tools.backup.enable = true;
