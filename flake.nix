@@ -293,6 +293,7 @@
               nodePackages.prettier
               nixos-anywhere
               nvfetcher
+              nh
             ];
             name = "dots";
             shellHook = ''
