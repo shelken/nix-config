@@ -1,8 +1,9 @@
 { ... }:
 {
-  programs.fastfetch = {
-    enable = true;
-  };
+  # 编译太久
+  # programs.fastfetch = {
+  #   enable = true;
+  # };
   xdg.configFile = {
     "fastfetch/config.jsonc" = {
       source = ./config.jsonc;

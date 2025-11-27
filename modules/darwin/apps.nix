@@ -87,7 +87,7 @@ in
     enable = true; # disable homebrew for fast deploy
 
     onActivation = {
-      autoUpdate = lib.mkDefault false;
+      autoUpdate = lib.mkDefault true;
       # 'zap': uninstalls all formulae(and related files) not listed in the generated Brewfile
       cleanup = lib.mkDefault "uninstall";
     };
@@ -116,6 +116,7 @@ in
 
     brews = [
       "just"
+      "fastfetch"
       "mas"
       # `brew install`
       "wget" # download tool
@@ -144,6 +145,7 @@ in
       # browser
       # "google-chrome"
       "helium-browser"
+      "chatgpt-atlas"
 
       # Misc
       "stats" # beautiful system status monitor in menu bar
