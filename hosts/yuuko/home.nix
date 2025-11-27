@@ -9,5 +9,6 @@
     tools.hammerspoon.enable = false;
     tools.backup.enable = false;
     wm.aerospace.enable = true;
+    neovim.minimal = true;
   };
 }
