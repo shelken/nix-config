@@ -38,13 +38,14 @@ in
     # 重新调整密码
     home.activation.postRclone = lib.hm.dag.entryAfter [ "sops-nix" ] ''
       RCLONE_PATH=${config.xdg.configHome}/rclone/rclone.conf
+      RCLONE_TEMPLATE_PATH=${config.xdg.configHome}/sops-nix/secrets/rendered/rclone.conf
 
       # 检查模板文件是否存在
-      if [ ! -f "${config.sops.templates."rclone.conf".path}" ]; then
+      if [ ! -f "$RCLONE_TEMPLATE_PATH" ]; then
         exit 0
       fi
 
-      cp -f ${config.sops.templates."rclone.conf".path} $RCLONE_PATH
+      cp -f $RCLONE_TEMPLATE_PATH $RCLONE_PATH
 
       RCLONE_DRIVE_DAV_PASSWORD=$(cat ${config.sops.secrets."drive/rclone/pass".path})
       RCLONE_DRIVE_DAV_PASSWORD_OBSCURED=$(${pkgs.rclone}/bin/rclone obscure "$RCLONE_DRIVE_DAV_PASSWORD")
