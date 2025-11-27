@@ -98,10 +98,12 @@
         timeFormat = "2006-01-02 15:04";
         shortTimeFormat = "15:04";
       };
-      git.paging = {
-        colorArg = "always";
-        pager = "delta --dark --paging=never";
-      };
+      git.pagers = [
+        {
+          colorArg = "always";
+          pager = "delta --dark --paging=never";
+        }
+      ];
     };
   };
 
