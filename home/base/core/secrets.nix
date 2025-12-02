@@ -13,6 +13,7 @@ let
   enabledSecrets = [
     "github/cli-token"
     "chat-api/api-key"
+    "context7/api-key"
     "deepseek/api-key"
     "dashscope/api-key"
     "gemini/api-key"
@@ -41,7 +42,10 @@ in
         export GH_TOKEN="$(cat ${config.sops.secrets."github/cli-token".path})"
         export GITHUB_TOKEN="$(cat ${config.sops.secrets."github/cli-token".path})"
         # ai api key
+        export ANTHROPIC_BASE_URL="https://open.bigmodel.cn/api/anthropic" # 目前使用智谱
+        export ANTHROPIC_AUTH_TOKEN="$(cat ${config.sops.secrets."zhipu/api-key".path})"
         export CHAT_API_KEY="$(cat ${config.sops.secrets."chat-api/api-key".path})"
+        export CONTEXT7_API_KEY="$(cat ${config.sops.secrets."context7/api-key".path})"
         export DEEPSEEK_API_KEY="$(cat ${config.sops.secrets."deepseek/api-key".path})"
         export DASHSCOPE_API_KEY="$(cat ${config.sops.secrets."dashscope/api-key".path})"
         export GEMINI_API_KEY="$(cat ${config.sops.secrets."gemini/api-key".path})"
