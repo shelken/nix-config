@@ -5,3 +5,5 @@ result/
 .env
 .pre-commit-config.yaml
 .idea
+
+.claude/*.local.json
