@@ -1,60 +1,115 @@
-**注意：本文档使用中文编写。**
+# CLAUDE.md
 
-# 记忆
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this
+repository.
 
-- 对话默认使用中文
+## 项目概述
 
-# 项目概述
+这是一个个人 Nix 配置仓库，用于管理多个 macOS（通过 nix-darwin）和 Linux（NixOS）系统的配置。采用 Flakes 架构，支持 8+ 台不同主机。
 
-本仓库是一个用于管理系统配置（NixOS 和 darwin/macOS）及用户环境（home-manager）的 Nix
-flake。它旨在为多台机器创建可复现的、声明式的配置。
+## 常用命令
 
-## 关键组件
+所有命令通过 `justfile` 管理。当前使用的 profile 在 `.env` 文件中定义：`PROFILE=<主机名>`。
 
-### Flake 核心文件
+### 构建和应用配置
 
-- `flake.nix`: Flake 的入口文件。它定义了项目的输入（如
-  `nixpkgs`）和输出，包括 NixOS 配置、macOS 配置和 home-manager 配置。
-- `flake.lock`: 锁定所有输入的精确版本，确保可复现性。
+- `just switch` 或 `just sw` - 应用当前配置到本地机器
+- `just rebuild` 或 `just b` - 构建系统但不应用
+- `just rebuild-debug` 或 `just bd` - 调试模式构建
 
-### 主机与用户配置
+### 代码质量和维护
 
-- `hosts/`: 包含特定于主机的配置。每个子目录（例如
-  `ling`、`mio`）对应一台不同的主机，并通过导入模块来定义其独特的系统设置。
-- `home/`: 使用 `home-manager` 管理用户级别的配置。
-  - `home/apps/`: 包含各个应用的配置（例如 `neovim`、`kitty`、`zsh`）。
-  - `home/base/`: 定义跨系统共享的基础 home-manager 配置。
-  - `home/darwin/` & `home/linux/`: 平台特定的 home-manager 配置。
+- `just fmt` - 格式化代码（deadnix + nix fmt）
+- `just up` - 更新所有 flake 输入
+- `just upp <输入名>` - 更新指定 flake 输入
+- `just gc` - 清理无用包（默认最近 0 小时）
+- `just gc-all` - 清理所有无用包
 
-### 可复用模块与逻辑
+### 部署
 
-- `modules/`: 一系列可复用的 NixOS 和 darwin 模块，用于封装特定功能（例如
-  `desktop`、`nvidia`、`secrets`）。这有助于提高模块化程度和代码复用率。
-- `lib/`: 包含在整个 flake 中用于构建系统配置的辅助函数和库代码。
-- `overlays/`: 用于自定义现有的 Nix 软件包或引入新包。
-- `vars/`: 存储在不同配置间共享的变量（例如网络设置）。
+- `just deploy <主机> <目标机器>` - 远程部署配置
+  - Linux：使用 `nixos-rebuild switch` 远程部署
+  - macOS：使用 `colmena apply` 基于标签部署
+- `just nixos-anywhere <主机> <目标机器>` - 使用 nixos-anywhere 部署到裸机
+
+### 开发和测试
+
+- `just search <包名>` - 在 nixos-unstable 中搜索包
+- `just prefetch-gh <所有者>/<仓库>` - 生成带哈希的 fetchFromGitHub 表达式
+- `just gen-image <主机> <格式>` - 生成系统镜像（ISO、QCOW2 等）
+- `just ls-gen`（仅 macOS）- 显示配置生成历史
+
+### 配置测试
+
+- `just aerospace-test` - 测试 aerospace 窗口管理器配置
+- `just continue-test` - 测试 Continue.dev 配置
+- `just wez-test` - 测试 WezTerm 配置
+
+## 高级架构
+
+### Flake 架构模式
+
+配置采用模块化设计，每个主机配置组合：
+
+1. **平台模块**：`modules/darwin/`（macOS）或 `modules/nixos/`（Linux）
+2. **主机特定模块**：`hosts/<主机名>/`
+3. **Home Manager 模块**：`home/darwin/` 或 `home/linux/` + `hosts/<主机名>/home.nix`
+4. **秘密配置**：`secrets/home.nix`（通过外部 GitHub 仓库管理）
+
+### 自定义库系统（`lib/`）
+
+- `mylib.scanPaths` - 自动扫描目录中所有 `.nix` 文件并导入
+- `mylib.nixosSystem` / `mylib.macosSystem` - 自定义系统构建函数，传递特殊参数
+- `mylib.relativeToRoot` - 创建相对于仓库根目录的路径
+- `mylib.mkBoolOpt` - 创建布尔选项的辅助函数
+- `mylib.calcUniformSchedule` - 为主机计算均匀分布的计划时间
+
+### 变量集中管理
+
+- 用户信息、网络配置等全局变量存储在 `vars/` 目录
+- 通过 `myvars` 在所有配置中共享
+- 网络配置分离：`vars/networking.nix`（全局） + `hosts/<主机名>/networking.nix`（主机特定）
 
 ### 秘密管理
 
-- `secrets/`: 用于管理敏感信息，很可能使用了 `agenix` 或 `sops-nix` 之类的工具。
+- 使用外部 GitHub 仓库 `shelken/secrets.nix` 管理敏感信息
+- 作为 flake 输入引入：`secrets.url = "github:shelken/secrets.nix"`
+- 需要在 `~/.config/nix/nix.conf` 或 `/etc/nix/nix.custom.conf` 中配置 GitHub 访问令牌
 
-### 包源管理
+### 平台差异处理
 
-- `_sources/` & `nvfetcher.toml`: 使用 `nvfetcher` 管理和锁定非 Nixpkgs 软件包的版本。
+- **macOS**：使用 nix-darwin，通过 `darwin-rebuild` 管理
+- **Linux**：使用 NixOS，通过 `nixos-rebuild` 管理
+- `justfile` 通过条件语句自动检测平台并执行相应命令
 
-### 工具与自动化
+### 配置生成模式
 
-- `justfile`: 定义了一系列用于管理 flake 的命令和任务，例如构建配置、应用更改和运行更新。
-- `.github/workflows/`: 包含用于自动化的 GitHub Actions 工作流，例如与上游仓库同步。
-- `utils/`: 包含各种实用工具脚本。
+在 `flake.nix` 中，每个主机配置采用以下模式：
 
-## 工作原理
+```nix
+sakamotoModules = {
+  darwin-modules = map mylib.relativeToRoot [
+    "modules/darwin"          # 平台通用模块
+    "hosts/sakamoto"          # 主机特定配置
+  ];
+  home-modules = map mylib.relativeToRoot [
+    "home/darwin"             # 平台用户配置
+    "secrets/home.nix"        # 秘密配置
+    "hosts/sakamoto/home.nix" # 主机用户配置
+  ];
+};
+```
 
-1.  **主机 (Hosts)**: 每台机器在 `hosts` 目录下都有一个专门的配置。
-2.  **模块 (Modules)**: 主机配置从 `modules` 目录导入模块，以启用和配置系统服务与功能。
-3.  **Home-Manager**: 用户特定的设置、dotfiles 和软件包通过 `home-manager` 进行管理，其配置在 `home`
-    目录中定义。
-4.  **构建 (Building)**: 使用 `nixos-rebuild` (NixOS) 或 `darwin-rebuild`
-    (macOS) 命令将此 flake 中定义的配置应用到目标系统。`justfile` 很可能为这些命令提供了方便的别名。
+### 开发工具集成
 
-这种结构使得对复杂系统和用户环境的管理变得高度组织化、声明式且可复现。
+- 预提交钩子配置在 `.pre-commit-config.yaml`
+- 代码格式化：deadnix + nix fmt
+- 拼写检查：typos
+- 非 Nix 文件格式化：prettier
+
+## 重要注意事项
+
+1. **环境设置**：必须在 `.env` 文件中设置 `PROFILE=<主机名>`，命令依赖此变量
+2. **秘密访问**：需要 GitHub 访问令牌才能获取 secrets.nix 仓库
+3. **平台特定**：某些命令仅适用于特定平台（通过 `[linux]` 或 `[macos]` 标记）
+4. **部署差异**：Linux 和 macOS 使用不同的部署工具和策略
