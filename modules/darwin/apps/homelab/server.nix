@@ -21,7 +21,6 @@ in
         "lima"
       ];
       casks = [
-        "ollama-app"
       ];
     };
   };
