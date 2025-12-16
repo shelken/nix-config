@@ -7,10 +7,16 @@ in
   networking.computerName = hostname;
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
-    wm.aerospace.enable = true;
-    tools.typeswitch.enable = true;
-    suites.desktop.enable = true;
     dev.container.enable = true;
+
+    homelab.server.enable = true;
+
     network.fl-clash.enable = true;
+
+    suites.desktop.enable = true;
+
+    tools.typeswitch.enable = true;
+
+    wm.aerospace.enable = true;
   };
 }

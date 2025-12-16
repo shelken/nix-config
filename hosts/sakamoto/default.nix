@@ -7,25 +7,18 @@ in
   networking.computerName = hostname;
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
-    # window manager
-    wm.aerospace.enable = true;
-    tools.hammerspoon.enable = false;
-
-    # suites
-    suites.desktop.enable = true;
-
-    # development
     dev.container.enable = true; # docker
 
-    # tools
-    tools.virts.enable = true;
-    tools.typeswitch.enable = true;
-
-    # homelab
     homelab.server.enable = true;
 
-    # network
     network.fl-clash.enable = true;
+
+    suites.desktop.enable = true;
+
+    tools.typeswitch.enable = true;
+    tools.virts.enable = true;
+
+    wm.aerospace.enable = true;
   };
   # homebrew = {
   #   onActivation = {
