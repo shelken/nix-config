@@ -38,7 +38,7 @@ deploy tag mach:
 # nixos-anywhere 部署
 nixos-anywhere host mach:
   @nixos-anywhere -f .#{{ host }} --target-host {{ mach }} --build-on remote \
-  --option substituters https://nix-cache.ooooo.space \
+  --option substituters https://proxy.ooooo.space/cache.nixos.org \
   --debug \
   --no-substitute-on-destination
 

@@ -56,6 +56,10 @@ git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-con
 # 4. specify the profile that defined in flake.nix
 echo "PROFILE=<profile-name>" >> .env
 
+# 加速
+echo "substituters = https://mirrors.ustc.edu.cn/nix-channels/store https://cache.nixos.org" | sudo tee -a /etc/nix/nix.custom.conf
+sudo launchctl stop systems.determinate.nix-daemon && sudo launchctl start systems.determinate.nix-daemon
+
 # 5. 安装nix-darwin并配置
 sudo nix run nix-darwin/master#darwin-rebuild -- switch --flake .#$PROFILE
 
@@ -81,12 +85,21 @@ just b
 
 ```bash
 
+# on mac
+sudo darwin-uninstaller
 # uninstall nix
 /nix/nix-installer uninstall
 
 ```
 
 ## 常见问题
+
+### 启用 secret 时，无法引入`shelken/secrets.nix`
+
+将 `access-tokens = github.com=ghp_xxx` 写入
+`~/.config/nix/nix.conf`/`/etc/nix/nix.custom.conf`(determinate-nix)
+
+`echo "access-tokens = github.com=ghp_xxx" | sudo tee -a /etc/nix/nix.custom.conf`
 
 ### font 文件 一直在等lock
 
