@@ -21,6 +21,7 @@ in
         # "zed"
         # "cursor"
         # "trae"
+        "antigravity"
       ];
     };
   };

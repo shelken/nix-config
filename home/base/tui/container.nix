@@ -105,7 +105,27 @@ in
         skopeo-image-size
       ];
 
-    programs.k9s.enable = true;
+    programs.k9s = {
+      enable = true;
+
+      plugins = {
+        # 为选中的pod在当前命名空间创建调试容器
+        # 参见 https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container
+        debug = {
+          shortCut = "Shift-D";
+          description = "Add debug container";
+          dangerous = true;
+          scopes = [ "containers" ];
+          command = "bash";
+          background = false;
+          confirm = true;
+          args = [
+            "-c"
+            "kubectl debug -it --context $CONTEXT -n=$NAMESPACE $POD --target=$NAME --image=nicolaka/netshoot:v0.14 --profile=sysadmin --share-processes -- bash"
+          ];
+        };
+      };
+    };
     # catppuccin.k9s.transparent = true;
 
     programs.kubecolor = {

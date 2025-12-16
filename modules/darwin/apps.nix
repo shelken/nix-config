@@ -143,7 +143,7 @@ in
       "squirrel-app" # input method for Chinese, rime-squirrel
 
       # browser
-      # "google-chrome"
+      "google-chrome"
       "helium-browser"
       "chatgpt-atlas"
 

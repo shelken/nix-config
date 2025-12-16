@@ -23,6 +23,7 @@ in
         # "rust"
         # "ripgrep"
         "codex"
+        "kimi-cli"
       ];
       casks = [
         "ollama-app"
