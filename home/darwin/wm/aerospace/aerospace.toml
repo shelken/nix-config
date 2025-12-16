@@ -177,9 +177,7 @@ alt-ctrl-enter = 'fullscreen' # 占满屏幕
 #  '''exec-and-forget aerospace layout floating && osascript -e 'tell application "System Events" to key code 120 using {control down, option down, command down}' || aerospace layout accordion tiling
 #  ''',
 #] # 窗口 悬浮/平铺 切换
-alt-ctrl-f = [
-  'layout floating tiling',
-] # 窗口 悬浮/accordion 切换
+alt-ctrl-f = ['layout floating tiling'] # 窗口 悬浮/accordion 切换
 
 # 前一个窗口和当前窗口 切换
 # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
@@ -267,6 +265,9 @@ run       = 'move-node-to-workspace 1Browser'
 [[on-window-detected]]
 if.app-id = 'com.google.Chrome'
 run       = 'move-node-to-workspace 1Browser'
+[[on-window-detected]]
+if.app-id = 'com.openai.atlas'
+run       = 'move-node-to-workspace 1Browser'
 
 [[on-window-detected]]
 if.app-id = 'com.jetbrains.intellij'       # IDEA
@@ -279,6 +280,9 @@ if.app-id = 'dev.zed.Zed'                  # VSCode
 run       = 'move-node-to-workspace 2Code'
 [[on-window-detected]]
 if.app-id = 'com.todesktop.230313mzl4w4u92' # cursor
+run       = 'move-node-to-workspace 2Code'
+[[on-window-detected]]
+if.app-id = 'com.google.antigravity'
 run       = 'move-node-to-workspace 2Code'
 
 [[on-window-detected]]
