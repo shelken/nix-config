@@ -1,6 +1,4 @@
 { ... }:
-let
-in
 {
   # replacement of htop/nmon
   programs.btop = {

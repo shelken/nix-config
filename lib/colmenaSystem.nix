@@ -16,7 +16,7 @@ let
   inherit (inputs) home-manager;
   host = builtins.getEnv "TARGET_HOST";
 in
-{ name, ... }:
+{ ... }:
 {
   deployment = {
     inherit tags;

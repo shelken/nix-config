@@ -1,7 +1,5 @@
-{ pkgs, ... }:
-let
-in
-(_self: super: {
+{ ... }:
+(_self: _super: {
   # tmuxPlugins.catppuccin =
   #   super.tmuxPlugins.catppuccin.overrideAttrs
   #   (_: {

@@ -1,13 +1,9 @@
 {
   pkgs,
-  config,
   lib,
   niri,
   ...
-}@args:
-let
-  settings = { };
-in
+}:
 {
   config = (
     lib.mkMerge [

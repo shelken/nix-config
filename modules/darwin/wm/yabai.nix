@@ -5,7 +5,6 @@
   pkgs-unstable,
   lib,
   mylib,
-  options,
   ...
 }:
 let

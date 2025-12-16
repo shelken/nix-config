@@ -5,18 +5,6 @@
   config,
   ...
 }:
-let
-  # get-sops-file = file: secrets + "/sops/secrets/${file}";
-  # user_readable = {
-  #   mode = "0500";
-  #   # owner = myvars.username;
-  # };
-  # get-default-sops-file = get-sops-file "${myvars.username}/default.yaml";
-  # default-sops-secret = {
-  #   sopsFile = get-default-sops-file;
-  # }
-  # // user_readable;
-in
 {
   imports = [
     # agenix.darwinModules.default

@@ -3,8 +3,6 @@
   config,
   ...
 }:
-let
-in
 {
   config = lib.mkIf config.shelken.dev.ai.enable {
     #TODO 配置

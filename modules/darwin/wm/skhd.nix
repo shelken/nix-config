@@ -4,7 +4,6 @@
   lib,
   mylib,
   pkgs,
-  options,
   ...
 }:
 let

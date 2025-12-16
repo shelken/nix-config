@@ -18,7 +18,7 @@ nix-darwin.lib.darwinSystem {
     darwin-modules
     ++ [
       (
-        { lib, ... }:
+        { ... }:
         {
           nixpkgs.pkgs = import nixpkgs-darwin {
             inherit system; # refer the `system` parameter form outer scope recursively

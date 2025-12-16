@@ -1,6 +1,4 @@
 { ... }:
-let
-in
 {
   programs.brave = {
     enable = false;

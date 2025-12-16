@@ -1,8 +1,6 @@
 {
   username,
   disko,
-  niri,
-  lib,
   ...
 }:
 {

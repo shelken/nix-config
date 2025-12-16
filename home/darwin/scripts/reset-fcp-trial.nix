@@ -1,6 +1,4 @@
 { pkgs, ... }:
-let
-in
 {
   script = pkgs.writeShellScriptBin "reset-fcp-trial" ''
     swift ${pkgs.writeText "script.swift" ''

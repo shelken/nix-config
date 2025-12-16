@@ -1,8 +1,6 @@
 {
   ...
 }:
-let
-in
 {
   programs.gh = {
     enable = true;

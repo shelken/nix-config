@@ -1,4 +1,4 @@
-{ pkgs, ... }@args:
+{ pkgs, ... }:
 let
   idea = import ./idea.nix { inherit pkgs; };
   reset-fcp-trial = import ./reset-fcp-trial.nix { inherit pkgs; };
