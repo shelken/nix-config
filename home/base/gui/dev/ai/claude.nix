@@ -4,5 +4,6 @@
     programs.claude-code = {
       enable = true;
     };
+    programs.bun.enable = true;
   };
 }
