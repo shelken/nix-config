@@ -8,6 +8,10 @@
   ...
 }:
 let
+  ## 开启webui
+  ## export KOPIA_PASSWORD=$(cat ~/.config/sops-nix/secrets/kopia-password)
+  ## export KOPIA_CONFIG_PATH=~/.config/sops-nix/secrets/rendered/kopia-repository.config
+  ## kopia server start --ui --insecure --without-password
   cfg = config.shelken.backup;
   backupScript = pkgs.writeShellScript "kopia-backup.sh" ''
     notify() {
