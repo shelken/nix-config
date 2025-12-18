@@ -59,5 +59,12 @@ in
     # Generate config file
     home-manager.users.${myvars.username}.home.file.".config/inputsourcepro/config.json".text =
       configJson;
+
+    system.defaults.CustomUserPreferences = {
+      "space.ooooo.Input-Source-Pro.Beta" = {
+        ## 恢复策略：恢复之前使用的输入法
+        isRestorePreviouslyUsedInputSource = true;
+      };
+    };
   };
 }
