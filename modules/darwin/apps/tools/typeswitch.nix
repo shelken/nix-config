@@ -20,9 +20,6 @@ in
 
   config = mkIf cfg.enable {
     homebrew = {
-      taps = [
-        "shelken/tap"
-      ];
       casks = [
         "typeswitch"
       ];
