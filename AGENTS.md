@@ -1,5 +1,11 @@
 # 项目记忆 (Project Context)
 
+### git提交规则（**最高优先级**）
+
+- 使用`Conventional Commits`规范。形如`<type>[optional scope]: <description>`
+- 提交信息应分点，简洁明了，避免冗长。
+- **标题英文，内容中文**
+
 ### 架构概览
 
 这是一个基于 Nix Flakes 的多平台配置仓库，管理 macOS (nix-darwin) 和 Linux (NixOS)。
