@@ -42,13 +42,13 @@ in
         export GH_TOKEN="$(cat ${config.sops.secrets."github/cli-token".path})"
         export GITHUB_TOKEN="$(cat ${config.sops.secrets."github/cli-token".path})"
         # ai api key
-        export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic" # 目前使用Deepseek
-        export ANTHROPIC_AUTH_TOKEN="$(cat ${config.sops.secrets."deepseek/api-key".path})"
-        #export ANTHROPIC_API_KEY="$ANTHROPIC_AUTH_TOKEN"
-        export ANTHROPIC_MODEL=deepseek-chat
-        export API_TIMEOUT_MS=600000
-        export ANTHROPIC_SMALL_FAST_MODEL=deepseek-chat
-        export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+        # export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic" # 目前使用Deepseek
+        # export ANTHROPIC_AUTH_TOKEN="$(cat ${config.sops.secrets."deepseek/api-key".path})"
+        # export ANTHROPIC_API_KEY="$ANTHROPIC_AUTH_TOKEN"
+        # export ANTHROPIC_MODEL=deepseek-chat
+        # export API_TIMEOUT_MS=600000
+        # export ANTHROPIC_SMALL_FAST_MODEL=deepseek-chat
+        # export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
         export CHAT_API_KEY="$(cat ${config.sops.secrets."chat-api/api-key".path})"
         export CONTEXT7_API_KEY="$(cat ${config.sops.secrets."context7/api-key".path})"
         export DEEPSEEK_API_KEY="$(cat ${config.sops.secrets."deepseek/api-key".path})"

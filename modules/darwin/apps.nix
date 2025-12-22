@@ -112,6 +112,7 @@ in
       "nikitabobko/tap" # aerospace
       "bigwig-club/brew" # upic
       "mhaeuser/mhaeuser" # battery-toolkit
+      "farion1231/ccswitch" # cc-switch
     ];
 
     brews = [
@@ -166,6 +167,7 @@ in
 
       # Development
       "visual-studio-code"
+      "cc-switch"
     ];
   };
 }
