@@ -276,7 +276,10 @@ run       = 'move-node-to-workspace 2Code'
 if.app-id = 'com.microsoft.VSCode'         # VSCode
 run       = 'move-node-to-workspace 2Code'
 [[on-window-detected]]
-if.app-id = 'dev.zed.Zed'                  # VSCode
+if.app-id = 'dev.zed.Zed'
+run       = 'move-node-to-workspace 2Code'
+[[on-window-detected]]
+if.app-id = 'dev.zed.Zed-Preview'
 run       = 'move-node-to-workspace 2Code'
 [[on-window-detected]]
 if.app-id = 'com.todesktop.230313mzl4w4u92' # cursor

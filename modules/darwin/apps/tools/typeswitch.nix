@@ -34,6 +34,7 @@ in
         "com.apple.Spotlight" = english;
         "com.microsoft.VSCode" = english;
         "dev.zed.Zed" = english;
+        "dev.zed.Zed-Preview" = english;
         "com.apple.dt.Xcode" = english;
         "com.raycast.macos" = english; # raycast
         "net.kovidgoyal.kitty" = english;

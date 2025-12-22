@@ -19,6 +19,7 @@ let
       "com.apple.finder" = english;
       "com.microsoft.VSCode" = english;
       "dev.zed.Zed" = english;
+      "dev.zed.Zed-Preview" = english;
       "com.apple.dt.Xcode" = english;
       "net.kovidgoyal.kitty" = english;
       "tv.parsec.www" = english;
