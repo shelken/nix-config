@@ -51,7 +51,8 @@ fmt:
 
 # 清理无用的包
 gc duration="0h":
-    @nix run nixpkgs#nh -- clean all -a --nogc -K {{ duration }}
+    @nix run nixpkgs#nh -- clean all -a -K {{ duration }}
+    @nix store gc
 
 # 清理所有
 # @nix-collect-garbage -d
@@ -60,6 +61,7 @@ gc duration="0h":
 # @nix store --gc
 gc-all:
     @nix run nixpkgs#nh -- clean all -a
+    @nix store gc
 
 # 生成镜像
 [linux]
