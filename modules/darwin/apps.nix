@@ -167,7 +167,7 @@ in
 
       # Development
       "visual-studio-code"
-      "cc-switch"
+      "farion1231/ccswitch/cc-switch"
     ];
   };
 }
