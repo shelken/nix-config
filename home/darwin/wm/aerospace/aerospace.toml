@@ -198,7 +198,6 @@ alt-c           = 'exec-and-forget zed'
 alt-f           = 'exec-and-forget open -a "Finder"'
 alt-shift-enter = 'exec-and-forget open -a "kitty"'
 alt-w           = 'exec-and-forget open -a "WeChat"'
-alt-space       = 'exec-and-forget open -a "Claude"'
 alt-enter       = '''exec-and-forget osascript -e 'do shell script "kitten quick-access-terminal --detach ~"' '''
 
 # =======================
