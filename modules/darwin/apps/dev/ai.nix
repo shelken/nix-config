@@ -24,10 +24,14 @@ in
         # "ripgrep"
         "codex"
         "kimi-cli"
+
+        "max-sixty/worktrunk/wt" # 一个 Git Worktree 管理 CLI，旨在让 Worktree 的使用像分支一样简单。
       ];
       casks = [
         "ollama-app"
         "lm-studio"
+
+        "alma"
       ];
     };
   };
