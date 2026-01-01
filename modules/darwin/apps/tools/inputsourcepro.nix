@@ -37,6 +37,7 @@ let
       "com.anthropic.claudefordesktop" = chinese;
       "com.apple.MobileSMS" = chinese;
       "com.apple.systempreferences" = chinese;
+      "com.yetone.alma" = chinese;
     };
   };
 in
