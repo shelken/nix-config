@@ -31,6 +31,8 @@ in
         "ollama-app"
         "lm-studio"
 
+        "claude-code"
+
         "alma"
       ];
     };

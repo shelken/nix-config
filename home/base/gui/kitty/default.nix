@@ -30,8 +30,8 @@ in
     };
 
     extraConfig = ''
-      # claude
-      map --when-focus-on title:claude shift+enter send_text normal,application \n
+      # claude(supported >= 2.1.0)
+      # map --when-focus-on title:claude shift+enter send_text normal,application \n
     '';
 
     keybindings = {
