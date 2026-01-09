@@ -40,20 +40,18 @@ in
       RCLONE_PATH=${config.xdg.configHome}/rclone/rclone.conf
       RCLONE_TEMPLATE_PATH=${config.xdg.configHome}/sops-nix/secrets/rendered/rclone.conf
 
-      # 检查模板文件是否存在
-      if [ ! -f "$RCLONE_TEMPLATE_PATH" ]; then
-        exit 0
+      # 检查模板文件是否存在，不存在则跳过（不能用 exit，会终止整个 activation）
+      if [ -f "$RCLONE_TEMPLATE_PATH" ]; then
+        cp -f $RCLONE_TEMPLATE_PATH $RCLONE_PATH
+
+        RCLONE_DRIVE_DAV_PASSWORD=$(cat ${config.sops.secrets."drive/rclone/pass".path})
+        RCLONE_DRIVE_DAV_PASSWORD_OBSCURED=$(${pkgs.rclone}/bin/rclone obscure "$RCLONE_DRIVE_DAV_PASSWORD")
+
+        ${pkgs.gnused}/bin/sed -i \
+              -e "s|@RCLONE_DRIVE_DAV_PASSWORD_OBSCURED@|$RCLONE_DRIVE_DAV_PASSWORD_OBSCURED|g" \
+              $RCLONE_PATH
+        chmod 600 $RCLONE_PATH
       fi
-
-      cp -f $RCLONE_TEMPLATE_PATH $RCLONE_PATH
-
-      RCLONE_DRIVE_DAV_PASSWORD=$(cat ${config.sops.secrets."drive/rclone/pass".path})
-      RCLONE_DRIVE_DAV_PASSWORD_OBSCURED=$(${pkgs.rclone}/bin/rclone obscure "$RCLONE_DRIVE_DAV_PASSWORD")
-
-      ${pkgs.gnused}/bin/sed -i \
-            -e "s|@RCLONE_DRIVE_DAV_PASSWORD_OBSCURED@|$RCLONE_DRIVE_DAV_PASSWORD_OBSCURED|g" \
-            $RCLONE_PATH
-      chmod 600 $RCLONE_PATH
     '';
 
   };
