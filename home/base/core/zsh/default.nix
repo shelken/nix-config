@@ -24,6 +24,8 @@ in
       save = 30000;
       extended = true;
       ignoreAllDups = true;
+      append = true;
+      share = true;
     };
     oh-my-zsh = {
       enable = true;
