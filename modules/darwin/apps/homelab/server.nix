@@ -21,6 +21,8 @@ in
         "lima"
       ];
       casks = [
+        "lm-studio"
+        "osaurus"
       ];
     };
   };
