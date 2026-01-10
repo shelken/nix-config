@@ -267,6 +267,9 @@ run       = 'move-node-to-workspace 1Browser'
 [[on-window-detected]]
 if.app-id = 'com.openai.atlas'
 run       = 'move-node-to-workspace 1Browser'
+[[on-window-detected]]
+if.app-id = 'com.apple.Safari'
+run       = 'move-node-to-workspace 1Browser'
 
 [[on-window-detected]]
 if.app-id = 'com.jetbrains.intellij'       # IDEA
