@@ -31,9 +31,10 @@ let
   rustBin = "${config.home.homeDirectory}/.cargo/bin";
   npmBin = "${config.home.homeDirectory}/.npm-global/bin";
   krewBin = "${config.home.homeDirectory}/.krew/bin";
+  lmstudioBin = "${config.home.homeDirectory}/.lmstudio/bin";
 
   envExtra = ''
-    export PATH="$PATH:${localBin}:${goBin}:${rustBin}:${npmBin}:${krewBin}"
+    export PATH="$PATH:${localBin}:${goBin}:${rustBin}:${npmBin}:${krewBin}:${lmstudioBin}"
   '';
 
   initContent = ''
