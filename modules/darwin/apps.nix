@@ -114,6 +114,7 @@ in
       "mhaeuser/mhaeuser" # battery-toolkit
       "farion1231/ccswitch" # cc-switch
       "max-sixty/worktrunk" # worktrunk
+      "anomalyco/tap" # opencode
     ];
 
     brews = [
