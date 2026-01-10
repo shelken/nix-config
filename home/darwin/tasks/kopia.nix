@@ -265,6 +265,19 @@ in
           ${backupScript}
         '';
       })
+      (writeShellApplication {
+        name = "kopia-ui";
+        runtimeInputs = [ kopia ];
+        text = ''
+          KOPIA_PASSWORD="$(cat "''${KOPIA_PASSWORD_FILE:-"${config.sops.secrets.kopia-password.path}"}")"
+          export KOPIA_PASSWORD
+          export KOPIA_CONFIG_PATH="''${KOPIA_CONFIG_PATH:-"${
+            config.sops.templates."kopia-repository.config".path
+          }"}"
+          echo "Starting Kopia UI at http://localhost:51515"
+          kopia server start --ui --insecure --without-password "$@"
+        '';
+      })
     ];
 
     # 使用工具 及 开启secret
