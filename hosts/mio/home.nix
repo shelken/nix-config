@@ -12,6 +12,8 @@
     };
 
     dev.ai.enable = true;
+    dev.ai.claudePreset = "cpa-gemini-claude";
+
     dev.ide.enable = true;
     dev.cloud-native.enable = true;
 
