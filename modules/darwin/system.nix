@@ -141,12 +141,13 @@
           DSDontWriteUSBStores = true;
         };
         "com.apple.spaces" = {
-          "spans-displays" = 0; # disable Displays have separate spaces
+          "spans-displays" = 1; # 禁用显示器具有单独空间 1 为禁用 即让一个空间横跨所有显示器（AeroSpace 推荐）；0为启用，系统默认，菜单栏独立
         };
         "com.apple.WindowManager" = {
+          AppWindowGroupingBehavior = 1; # 窗口按应用成组
           EnableStandardClickToShowDesktop = 0; # Click wallpaper to reveal desktop
-          StandardHideDesktopIcons = 0; # Show items on desktop
           HideDesktop = 0; # Do not hide items on desktop & stage manager
+          StandardHideDesktopIcons = 0; # Show items on desktop
           StageManagerHideWidgets = 0;
           StandardHideWidgets = 0;
         };
