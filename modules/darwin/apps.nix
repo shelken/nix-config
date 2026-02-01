@@ -148,7 +148,7 @@ in
       # browser
       "google-chrome"
       "helium-browser"
-      "chatgpt-atlas"
+      # "chatgpt-atlas"
 
       # Misc
       "stats" # beautiful system status monitor in menu bar
