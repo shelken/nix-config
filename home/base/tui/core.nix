@@ -41,6 +41,8 @@
     nali # `traceroute 1.1.1.1 | nali` show geo location
   ];
 
+  programs.npm.enable = true;
+
   home.shellAliases = {
     record = "asciinema rec --overwrite -i 1 --rows 28 --cols 140";
   };
