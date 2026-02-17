@@ -10,7 +10,7 @@ in
     # window manager
     wm.aerospace.enable = true;
     tools.hammerspoon.enable = false;
-    wm.iceBar.enable = false; # 菜单栏美化
+    wm.thaw.enable = true;
 
     # suites
     suites.desktop.enable = true;
