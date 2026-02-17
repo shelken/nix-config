@@ -38,6 +38,7 @@ in
     tools.backup.enable = true;
     tools.typeswitch.enable = false;
     tools.inputsourcepro.enable = true;
+    tools.remote-control.enable = true;
 
     tools.virts.enable = false; # utm parallel
 
