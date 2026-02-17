@@ -505,11 +505,11 @@
     "secrets": {
       "flake": false,
       "locked": {
-        "lastModified": 1768329156,
-        "narHash": "sha256-3lDcOKRndoPeHFY7QQ7YXiNCAQL1lrWGRAk0Mw8R/1o=",
+        "lastModified": 1768423886,
+        "narHash": "sha256-0NvZCIlEiZP/viUGv9pGusCRROeEXoUNci/xaprlB7U=",
         "owner": "shelken",
         "repo": "secrets.nix",
-        "rev": "2cc47fe33e965829e28ed4c188c03c842db8d02f",
+        "rev": "4a204e81cc84b7bc36759f9b02fdcc5295d5e2b0",
         "type": "github"
       },
       "original": {
