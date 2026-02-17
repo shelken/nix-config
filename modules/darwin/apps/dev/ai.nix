@@ -32,7 +32,10 @@ in
         "ollama-app"
         "lm-studio"
 
+        "droid"
         "claude-code"
+
+        "shelken/tap/antigravity-tools"
 
         "alma"
         "osaurus"
