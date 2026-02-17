@@ -162,6 +162,7 @@ in
 
       # network
       "tailscale-app"
+      "zerotier-one"
 
       # quicklook
       "qlmarkdown"
