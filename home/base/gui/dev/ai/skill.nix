@@ -45,10 +45,14 @@ in
   options.shelken.dev.ai = {
     skillTargets = mkOption {
       type = types.listOf types.str;
-      default = [ ".claude/skills" ];
+      default = [
+        ".claude/skills"
+        ".gemini/antigravity/skills"
+      ];
       description = "Target directories for skill symlinks (relative to ~/)";
       example = [
         ".claude/skills"
+        ".gemini/antigravity/skills"
         ".config/opencode/skills"
       ];
     };

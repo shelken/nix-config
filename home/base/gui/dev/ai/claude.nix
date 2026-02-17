@@ -61,31 +61,31 @@ let
     cpa-gemini-claude = {
       provider = "cli-proxy-api";
       models = {
-        ANTHROPIC_DEFAULT_HAIKU_MODEL = "qwen3-coder-plus";
-        ANTHROPIC_DEFAULT_OPUS_MODEL = "claude-opus-4-5-thinking";
+        ANTHROPIC_DEFAULT_HAIKU_MODEL = "gemini-3-flash-preview(high)";
+        ANTHROPIC_DEFAULT_OPUS_MODEL = "claude-opus-4-5-thinking(high)";
         ANTHROPIC_DEFAULT_SONNET_MODEL = "claude-sonnet-4-5";
-        ANTHROPIC_MODEL = "claude-opus-4-5-thinking";
-        ANTHROPIC_REASONING_MODEL = "claude-opus-4-5-thinking";
+        ANTHROPIC_MODEL = "claude-opus-4-5-thinking(high)";
+        ANTHROPIC_REASONING_MODEL = "claude-opus-4-5-thinking(high)";
       };
     };
     anti-tools = {
       provider = "anti-tools";
       models = {
-        ANTHROPIC_DEFAULT_HAIKU_MODEL = "gemini-2.5-flash-lite";
-        ANTHROPIC_DEFAULT_OPUS_MODEL = "claude-opus-4-5-thinking";
-        ANTHROPIC_DEFAULT_SONNET_MODEL = "claude-sonnet-4-5";
-        ANTHROPIC_MODEL = "claude-opus-4-5-thinking";
-        ANTHROPIC_REASONING_MODEL = "claude-opus-4-5-thinking";
+        ANTHROPIC_DEFAULT_HAIKU_MODEL = "gemini-3-pro-high";
+        ANTHROPIC_DEFAULT_OPUS_MODEL = "gemini-3-pro-high";
+        ANTHROPIC_DEFAULT_SONNET_MODEL = "gemini-3-pro-high";
+        ANTHROPIC_MODEL = "gemini-3-pro-high";
+        ANTHROPIC_REASONING_MODEL = "gemini-3-pro-high";
       };
     };
     cpa-gemini = {
       provider = "cli-proxy-api";
       models = {
-        ANTHROPIC_DEFAULT_HAIKU_MODEL = "gemini-3-flash-preview";
-        ANTHROPIC_DEFAULT_OPUS_MODEL = "gemini-3-pro-preview";
+        ANTHROPIC_DEFAULT_HAIKU_MODEL = "gemini-3-flash-preview(high)";
+        ANTHROPIC_DEFAULT_OPUS_MODEL = "gemini-3-pro-preview(high)";
         ANTHROPIC_DEFAULT_SONNET_MODEL = "gemini-3-pro-preview";
-        ANTHROPIC_MODEL = "gemini-3-pro-preview";
-        ANTHROPIC_REASONING_MODEL = "gemini-3-pro-preview";
+        ANTHROPIC_MODEL = "gemini-3-pro-preview(high)";
+        ANTHROPIC_REASONING_MODEL = "gemini-3-pro-preview(high)";
       };
     };
     cpa-codex = {
@@ -103,7 +103,7 @@ let
         # gpt-5.2-codex
         ANTHROPIC_DEFAULT_HAIKU_MODEL = "gpt-5.1-codex-mini";
         ANTHROPIC_DEFAULT_OPUS_MODEL = "gpt-5.2-codex(high)";
-        ANTHROPIC_DEFAULT_SONNET_MODEL = "gpt-5.1(high)";
+        ANTHROPIC_DEFAULT_SONNET_MODEL = "gpt-5.1";
         ANTHROPIC_MODEL = "gpt-5.2-codex(high)";
         ANTHROPIC_REASONING_MODEL = "gpt-5.2-codex(high)";
       };
@@ -169,27 +169,27 @@ let
       ];
     };
     extraKnownMarketplaces = {
-      "everything-claude-code" = {
-        "source" = {
-          "source" = "github";
-          "repo" = "affaan-m/everything-claude-code";
-        };
-      };
-      "planning-with-files" = {
-        "source" = {
-          "source" = "github";
-          "repo" = "OthmanAdi/planning-with-files";
-        };
-      };
+      # "everything-claude-code" = {
+      #   "source" = {
+      #     "source" = "github";
+      #     "repo" = "affaan-m/everything-claude-code";
+      #   };
+      # };
+      # "planning-with-files" = {
+      #   "source" = {
+      #     "source" = "github";
+      #     "repo" = "OthmanAdi/planning-with-files";
+      #   };
+      # };
     };
     enabledPlugins = {
-      "everything-claude-code@everything-claude-code" = true;
-      "planning-with-files@planning-with-files" = true;
+      "everything-claude-code@everything-claude-code" = false;
+      "planning-with-files@planning-with-files" = false;
       "code-simplifier@claude-plugins-official" = true;
 
-      "superpowers-developing-for-claude-code@superpowers-marketplace" = false;
-      "superpowers-lab@superpowers-marketplace" = false;
-      "superpowers@superpowers-marketplace" = false;
+      "superpowers-developing-for-claude-code@superpowers-marketplace" = true;
+      "superpowers-lab@superpowers-marketplace" = true;
+      "superpowers@superpowers-marketplace" = true;
     };
   };
 in
@@ -211,7 +211,7 @@ in
       # 基础配置（始终生效）
       {
         programs.claude-code = {
-          enable = true;
+          enable = false;
           package = null; # 使用 Homebrew 安装的 claude-code
           settings = baseSettings // {
             env = selectedEnv;
@@ -221,7 +221,7 @@ in
         programs.bun.enable = true;
 
         # 添加 claude wrapper 到 PATH（优先级高于 Homebrew）
-        home.packages = lib.mkIf config.programs.mcp.enable [ claudeWrapper ];
+        home.packages = [ claudeWrapper ];
       }
 
       # secrets 相关配置（仅在需要时生效）
