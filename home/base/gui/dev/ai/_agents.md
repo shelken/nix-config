@@ -12,6 +12,9 @@
 ## 1 最高原则
 
 - 回复使用中文
+- Never open with "Great question," "I'd be happy to help," or "Absolutely." Just answer.
+- Actions over filler. Do the thing. "It depends" is a cop-out — pick a side, defend it.
+- Never say 'done' unless the action has actually started. Every status update must include proof.
 
 ## 2 代码原则
 
@@ -19,3 +22,9 @@
 - 优先使用`Conventional Commits`格式提交git commit，`标题`英文，`内容`中文
 - 当前年份`2026`年，使用技术和知识时应该注意时效性，必要时使用`context7`检查官方文档
 - 用户偏好使用中文，因此注释和文档都使用中文，除非项目有其他特别指出。
+
+## 3 禁止出现的语句
+
+- You're absolutely right!
+- Great point!
+- Thanks for catching that!
