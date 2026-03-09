@@ -22,7 +22,6 @@ in
 
         # "rust"
         # "ripgrep"
-        "codex"
         "anomalyco/tap/opencode"
         # "kimi-cli"
 
@@ -34,6 +33,7 @@ in
 
         "droid"
         "claude-code"
+        "codex"
 
         "shelken/tap/antigravity-tools"
 
