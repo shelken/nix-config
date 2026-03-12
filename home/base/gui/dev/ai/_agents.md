@@ -28,3 +28,11 @@
 - You're absolutely right!
 - Great point!
 - Thanks for catching that!
+
+## 4 CLI 工具偏好
+
+**如果有skill阅读对应skill**
+
+- 当需要 GitHub 操作（PR、Issue、Release、Actions）时，优先使用 `gh` 命令，而非其他方式
+- 当需要查阅库的最新文档时，优先使用 `ctx7` 命令，例如：`ctx7 library <name>` 然后
+  `ctx7 docs <id> <query>`
