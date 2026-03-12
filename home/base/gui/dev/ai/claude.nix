@@ -9,24 +9,6 @@ let
   cfg = config.shelken.dev.ai;
   secretsEnabled = config.shelken.secrets.enable;
 
-  # MCP 配置文件路径
-  mcpConfigPath = "${config.xdg.configHome}/mcp/mcp.json";
-
-  # 创建 claude wrapper script（注入 --mcp-config）
-  claudeWrapper = pkgs.writeShellScriptBin "claude" ''
-    REAL_CLAUDE="/opt/homebrew/bin/claude"
-    if [ ! -x "$REAL_CLAUDE" ]; then
-      echo "Error: Claude Code not found at $REAL_CLAUDE" >&2
-      exit 1
-    fi
-
-    if [ -f "${mcpConfigPath}" ]; then
-      exec "$REAL_CLAUDE" --mcp-config "${mcpConfigPath}" "$@"
-    else
-      exec "$REAL_CLAUDE" "$@"
-    fi
-  '';
-
   # ============ Provider 定义（代理/认证方式）============
   providers = {
     # 自建代理服务
@@ -136,8 +118,10 @@ let
         "Bash(git --no-pager log:*)"
         "Bash(git --no-pager show:*)"
         "Bash(git rev-parse:*)"
-        "mcp__context7"
-        "mcp__github"
+        "Bash(gh:*)"
+        "Bash(ctx7:*)"
+        "Skill(context7-cli:*)"
+        "Skill(github-cli:*)"
         "Skill(superpowers:*)"
         "Skill(openspec:*)"
         "Skill(everything-claude-code:*)"
@@ -217,11 +201,6 @@ in
             env = selectedEnv;
           };
         };
-
-        programs.bun.enable = true;
-
-        # 添加 claude wrapper 到 PATH（优先级高于 Homebrew）
-        home.packages = [ claudeWrapper ];
       }
 
       # secrets 相关配置（仅在需要时生效）
