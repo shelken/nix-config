@@ -1,0 +1,23 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | xargs -I{} sh -c 'case \"{}\" in *.nix) nixfmt --width 100 \"{}\" ;; esac'"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | xargs -I{} sh -c 'case \"{}\" in *.md|*.yaml|*.yml|*.json) prettier --config \"${CLAUDE_PROJECT_DIR}/.prettierrc.yaml\" --write \"{}\" ;; esac'"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | xargs -I{} sh -c 'typos --config \"${CLAUDE_PROJECT_DIR}/.typos.toml\" \"{}\" --write-changes 2>/dev/null || true'"
+          }
+        ]
+      }
+    ]
+  }
+}
