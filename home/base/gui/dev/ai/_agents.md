@@ -36,3 +36,13 @@
 - 当需要 GitHub 操作（PR、Issue、Release、Actions）时，优先使用 `gh` 命令，而非其他方式
 - 当需要查阅库的最新文档时，优先使用 `ctx7` 命令，例如：`ctx7 library <name>` 然后
   `ctx7 docs <id> <query>`
+
+## 5 Compact Instructions
+
+When compressing, preserve in priority order:
+
+1. Architecture decisions (NEVER summarize)
+2. Modified files and their key changes
+3. Current verification status (pass/fail)
+4. Open TODOs and rollback notes
+5. Tool outputs (can delete, keep pass/fail only)
