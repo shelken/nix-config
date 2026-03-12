@@ -171,8 +171,8 @@ let
       "planning-with-files@planning-with-files" = false;
       "code-simplifier@claude-plugins-official" = true;
 
-      "superpowers-developing-for-claude-code@superpowers-marketplace" = true;
-      "superpowers-lab@superpowers-marketplace" = true;
+      "superpowers-developing-for-claude-code@superpowers-marketplace" = false;
+      "superpowers-lab@superpowers-marketplace" = false;
       "superpowers@superpowers-marketplace" = true;
     };
   };
