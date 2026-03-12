@@ -12,13 +12,12 @@ let
   skillsSourcePath = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/skills";
 
   skillDirs = builtins.attrNames (
-    lib.filterAttrs (name: type: type == "directory") (builtins.readDir ./skills)
+    lib.filterAttrs (_: v: v == "directory") (builtins.readDir ./skills)
   );
 
-  # Generate skill symlinks for a single target path
-  mkSkillLinks =
-    targetPath:
-    builtins.listToAttrs (
+  allSkillLinks = lib.listToAttrs (
+    lib.concatMap (
+      targetPath:
       map (name: {
         name = "${targetPath}/${name}";
         value = {
@@ -26,15 +25,12 @@ let
           force = true;
         };
       }) skillDirs
-    );
+    ) cfg.skillTargets
+  );
 
-  # Merge all target paths
-  allSkillLinks = lib.foldl' (acc: path: acc // mkSkillLinks path) { } cfg.skillTargets;
-
-  # Remote skills download script
   remoteSkillsScript = pkgs.writeShellScript "download-remote-skills" ''
     set -euo pipefail
-    ${lib.concatMapStringsSep "\n" (skill: ''
+    ${lib.concatMapStrings (skill: ''
       mkdir -p "${skillsSourcePath}/${skill.name}"
       echo "Downloading skill: ${skill.name}"
       ${pkgs.curl}/bin/curl -fsSL -o "${skillsSourcePath}/${skill.name}/${skill.fileName}" "${skill.url}"
@@ -47,6 +43,8 @@ in
       type = types.listOf types.str;
       default = [
         ".claude/skills"
+        ".agents/skills"
+        ".codex/skills"
         ".gemini/antigravity/skills"
       ];
       description = "Target directories for skill symlinks (relative to ~/)";
@@ -80,7 +78,7 @@ in
         }
       );
       default = [
-        # 太烧token
+        # 优先持久化到skills目录下而不是remote
         # {
         #   name = "agent-browser";
         #   url = "https://raw.githubusercontent.com/vercel-labs/agent-browser/main/skills/agent-browser/SKILL.md";
