@@ -44,7 +44,7 @@
   programs.npm.enable = true;
   programs.npm.settings = {
     prefix = "\${HOME}/.npm-global";
-    registry = "https://registry.npmmirror.com";
+    # registry = "https://registry.npmmirror.com";
   };
 
   home.shellAliases = {
