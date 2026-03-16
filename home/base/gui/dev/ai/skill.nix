@@ -43,9 +43,7 @@ in
       type = types.listOf types.str;
       default = [
         ".claude/skills"
-        ".agents/skills"
-        ".codex/skills"
-        ".gemini/antigravity/skills"
+        ".agents/skills" # codex,opencode,gemini,antigravity
       ];
       description = "Target directories for skill symlinks (relative to ~/)";
       example = [
@@ -90,6 +88,9 @@ in
 
   config = mkIf cfg.enable {
     home.file = allSkillLinks;
+
+    # 手动命令
+    # npx skills add github/repo --skill [skill-name] --yes -a codex claude-code opencode gemini-cli
 
     # Download remote skills on activation
     home.activation.downloadRemoteSkills = lib.mkIf (cfg.remoteSkills != [ ]) (
