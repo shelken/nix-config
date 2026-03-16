@@ -91,6 +91,9 @@ in
 
     # 手动命令
     # npx skills add github/repo --skill [skill-name] --yes -a codex claude-code opencode gemini-cli
+    # # chrome-cdp
+    # npx skills add https://github.com/pasky/chrome-cdp-skill --skill chrome-cdp --yes -a codex claude-code opencode gemini-cli
+    # url开启：chrome://inspect/#remote-debugging
 
     # Download remote skills on activation
     home.activation.downloadRemoteSkills = lib.mkIf (cfg.remoteSkills != [ ]) (
