@@ -65,7 +65,7 @@ in
 
     system.defaults.CustomUserPreferences = {
       "space.ooooo.Input-Source-Pro.Beta" = {
-        isRestorePreviouslyUsedInputSource = true; # 恢复策略：恢复之前使用的输入法
+        isRestorePreviouslyUsedInputSource = false; # 恢复策略：恢复之前使用的输入法
         isActiveWhenSwitchApp = false; # 切换应用时显示
       };
     };
