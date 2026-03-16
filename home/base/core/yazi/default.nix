@@ -7,6 +7,7 @@
     enable = true;
     enableZshIntegration = true;
     enableBashIntegration = true;
+    shellWrapperName = "yy";
   };
 
   home.packages = with pkgs; [
