@@ -284,6 +284,9 @@ run       = 'move-node-to-workspace 2Code'
 if.app-id = 'dev.zed.Zed-Preview'
 run       = 'move-node-to-workspace 2Code'
 [[on-window-detected]]
+if.app-id = 'com.openai.codex'
+run       = 'move-node-to-workspace 2Code'
+[[on-window-detected]]
 if.app-id = 'com.conductor.app'
 run       = 'move-node-to-workspace 2Code'
 [[on-window-detected]]
