@@ -119,6 +119,18 @@ sudo darwin-uninstaller
 
 尝试使用热点数据和使用Quantumult X来代理
 
+### Homebrew Cask 已安装，但每次 `brew bundle` 仍然重复安装
+
+例如 `squirrel-app` 改名自 `squirrel`，如果 `Caskroom`
+里残留旧目录，会导致 Homebrew 每次都判定未安装。
+
+解决：
+
+```bash
+rm -rf "$(brew --prefix)/Caskroom/squirrel"
+brew info squirrel-app
+```
+
 ### go 编译出错
 
 ![](assets/imgs/README_2024-11-16_21-25-22.png)
