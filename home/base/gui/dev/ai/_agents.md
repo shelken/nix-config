@@ -30,7 +30,7 @@
 
 ## 代码原则
 
-- 遵守FAILFAST原则，不写大量的兼容、防御性代码
+- 遵守FAILFAST原则，不写大量的兼容、防御性、补丁式代码
 - 简洁性代码高于一切，只写必要的代码，任何丑陋的冗余代码都是最严重的错误
 - 写代码前有任何不明白的问题，先停下来澄清问题再写代码
 - 优先使用`Conventional Commits`格式提交git commit，`标题`英文，`内容`中文
@@ -44,6 +44,7 @@
 - 当需要 GitHub 操作（PR、Issue、Release、Actions）时，优先使用 `gh` 命令，而非其他方式
 - 当需要查阅库的最新文档时，优先使用 `ctx7` 命令，例如：`ctx7 library <name>` 然后
   `ctx7 docs <id> <query>`
+- 涉及敏感数据文件的读取，只允许使用jq获取文件结构，例如：`cat auth.json | jq 'keys'`
 
 ## Compact Instructions
 
