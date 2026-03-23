@@ -54,133 +54,130 @@
           genSpecialArgs
           ;
       };
-      pve155Modules = {
-        system = "x86_64-linux";
-        nixos-modules = map mylib.relativeToRoot [
-          "modules/nixos/server.nix"
-          "hosts/pve155"
-          # "modules/nixos/hyprland.nix"
-        ];
-        home-modules = map mylib.relativeToRoot [
-          "home/linux/core.nix"
-        ];
-      }
-      // args
-      // {
-        system = "x86_64-linux";
+      mkHost = cfg: cfg // args;
+      hosts = {
+        pve155 = mkHost {
+          type = "nixos";
+          system = "x86_64-linux";
+          nixos-modules = map mylib.relativeToRoot [
+            "modules/nixos/server.nix"
+            "hosts/pve155"
+            # "modules/nixos/hyprland.nix"
+          ];
+          home-modules = map mylib.relativeToRoot [
+            "home/linux/core.nix"
+          ];
+        };
+        pve156 = mkHost {
+          type = "nixos";
+          colmena = true;
+          system = "x86_64-linux";
+          nixos-modules = map mylib.relativeToRoot [
+            "modules/nixos/server.nix"
+            "hosts/pve156"
+          ];
+          home-modules = map mylib.relativeToRoot [
+            "home/linux/core.nix"
+          ];
+        };
+        arm-test-1 = mkHost {
+          type = "nixos";
+          colmena = true;
+          system = "aarch64-linux";
+          nixos-modules = map mylib.relativeToRoot [
+            "modules/nixos/desktop.nix"
+            "hosts/vm/arm-test-1"
+          ];
+          home-modules = map mylib.relativeToRoot [
+            "home/linux/gui.nix"
+            "hosts/vm/arm-test-1/home.nix"
+          ];
+        };
+        work-test = mkHost {
+          type = "nixos";
+          system = "x86_64-linux";
+          nixos-modules = map mylib.relativeToRoot [
+            "modules/nixos/server.nix"
+          ];
+          home-modules = map mylib.relativeToRoot [
+            "home/linux/tui.nix"
+          ];
+        };
+        yuuko = mkHost {
+          type = "darwin";
+          system = "aarch64-darwin";
+          darwin-modules = map mylib.relativeToRoot [
+            "modules/darwin"
+            "hosts/yuuko"
+          ];
+          home-modules = map mylib.relativeToRoot [
+            "home/darwin"
+            "secrets/home.nix"
+            "hosts/yuuko/home.nix"
+          ];
+        };
+        sakamoto = mkHost {
+          type = "darwin";
+          system = "aarch64-darwin";
+          darwin-modules = map mylib.relativeToRoot [
+            "modules/darwin"
+            "hosts/sakamoto"
+          ];
+          home-modules = map mylib.relativeToRoot [
+            "home/darwin"
+            "secrets/home.nix"
+            "hosts/sakamoto/home.nix"
+          ];
+        };
+        mio = mkHost {
+          type = "darwin";
+          system = "aarch64-darwin";
+          darwin-modules = map mylib.relativeToRoot [
+            "modules/darwin"
+            "hosts/mio"
+          ];
+          home-modules = map mylib.relativeToRoot [
+            "home/darwin"
+            "secrets/home.nix"
+            "hosts/mio/home.nix"
+          ];
+        };
+        nano = mkHost {
+          type = "darwin";
+          system = "x86_64-darwin";
+          darwin-modules = map mylib.relativeToRoot [
+            "modules/darwin"
+            "hosts/nano"
+          ];
+          home-modules = map mylib.relativeToRoot [
+            "home/darwin"
+          ];
+        };
+        ling = mkHost {
+          type = "darwin";
+          system = "aarch64-darwin";
+          darwin-modules = map mylib.relativeToRoot [
+            "modules/darwin"
+            "hosts/ling"
+          ];
+          home-modules = map mylib.relativeToRoot [
+            "home/darwin"
+            "hosts/ling/home.nix"
+          ];
+        };
       };
-      pve156Modules = {
-        system = "x86_64-linux";
-        nixos-modules = map mylib.relativeToRoot [
-          "modules/nixos/server.nix"
-          "hosts/pve156"
-        ];
-        home-modules = map mylib.relativeToRoot [
-          "home/linux/core.nix"
-        ];
-      }
-      // args
-      // {
-        system = "x86_64-linux";
-      };
-      armTest1Modules = {
-        nixos-modules = map mylib.relativeToRoot [
-          "modules/nixos/desktop.nix"
-          "hosts/vm/arm-test-1"
-        ];
-        home-modules = map mylib.relativeToRoot [
-          "home/linux/gui.nix"
-          "hosts/vm/arm-test-1/home.nix"
-        ];
-      }
-      // args
-      // {
-        system = "aarch64-linux";
-      };
-      workTestModules = {
-        nixos-modules = map mylib.relativeToRoot [
-          "modules/nixos/server.nix"
-        ];
-        home-modules = map mylib.relativeToRoot [
-          "home/linux/tui.nix"
-        ];
-      }
-      // args
-      // {
-        system = "x86_64-linux";
-      };
-      yuukoModules = {
-        darwin-modules = map mylib.relativeToRoot [
-          "modules/darwin"
-          "hosts/yuuko"
-        ];
-        home-modules = map mylib.relativeToRoot [
-          "home/darwin"
-          "secrets/home.nix"
-          "hosts/yuuko/home.nix"
-        ];
-      }
-      // args
-      // {
-        system = "aarch64-darwin";
-      };
-      sakamotoModules = {
-        darwin-modules = map mylib.relativeToRoot [
-          "modules/darwin"
-          "hosts/sakamoto"
-        ];
-        home-modules = map mylib.relativeToRoot [
-          "home/darwin"
-          "secrets/home.nix"
-          "hosts/sakamoto/home.nix"
-        ];
-      }
-      // args
-      // {
-        system = "aarch64-darwin";
-      };
-      mioModules = {
-        darwin-modules = map mylib.relativeToRoot [
-          "modules/darwin"
-          "hosts/mio"
-        ];
-        home-modules = map mylib.relativeToRoot [
-          "home/darwin"
-          "secrets/home.nix"
-          "hosts/mio/home.nix"
-        ];
-      }
-      // args
-      // {
-        system = "aarch64-darwin";
-      };
-      nanoModules = {
-        darwin-modules = map mylib.relativeToRoot [
-          "modules/darwin"
-          "hosts/nano"
-        ];
-        home-modules = map mylib.relativeToRoot [
-          "home/darwin"
-        ];
-      }
-      // args
-      // {
-        system = "x86_64-darwin";
-      };
-      lingModules = {
-        darwin-modules = map mylib.relativeToRoot [
-          "modules/darwin"
-          "hosts/ling"
-        ];
-        home-modules = map mylib.relativeToRoot [
-          "home/darwin"
-          "hosts/ling/home.nix"
-        ];
-      }
-      // args
-      // {
-        system = "aarch64-darwin";
-      };
+
+      darwinHosts = lib.filterAttrs (_: v: v.type == "darwin") hosts;
+      nixosHosts = lib.filterAttrs (_: v: v.type == "nixos") hosts;
+      homeHosts = lib.filterAttrs (_: v: v ? "home-modules") hosts;
+
+      colmenaHosts = lib.filterAttrs (_: v: v.colmena or false) hosts;
+
+      colmenaDefaultSystem =
+        if colmenaHosts == { } then
+          "x86_64-linux"
+        else
+          (builtins.head (map (h: h.system) (lib.attrValues colmenaHosts)));
 
       allSystemAbove = [
         "x86_64-linux"
@@ -191,28 +188,14 @@
       forAllSystems = func: (nixpkgs.lib.genAttrs allSystemAbove func);
     in
     {
-      # linux x86
-      nixosConfigurations = {
-        nixos = mylib.nixosSystem pve155Modules;
-        pve156 = mylib.nixosSystem pve156Modules;
-        arm-test-1 = mylib.nixosSystem armTest1Modules;
-        work-test = mylib.nixosSystem workTestModules;
-      };
-
-      darwinConfigurations = {
-        # mac mini
-        yuuko = mylib.macosSystem yuukoModules;
-        sakamoto = mylib.macosSystem sakamotoModules;
-        # macbook air
-        mio = mylib.macosSystem mioModules;
-        nano = mylib.macosSystem nanoModules;
-        ling = mylib.macosSystem lingModules;
-      };
+      nixosConfigurations = lib.mapAttrs (_: v: mylib.nixosSystem v) nixosHosts;
+      darwinConfigurations = lib.mapAttrs (_: v: mylib.macosSystem v) darwinHosts;
+      homeConfigurations = lib.mapAttrs (name: v: mylib.mkHomeConfig name v) homeHosts;
 
       colmena = {
         meta = (
           let
-            system = "x86_64-linux";
+            system = colmenaDefaultSystem;
           in
           {
             # colmena's default nixpkgs & specialArgs
@@ -221,24 +204,16 @@
           }
         );
       }
-      // {
-        pve156 = mylib.colmenaSystem (
-          pve156Modules
+      // lib.mapAttrs (
+        name: v:
+        mylib.colmenaSystem (
+          v
           // {
-            tags = [ "pve156" ];
+            tags = [ name ];
             ssh-user = myvars.username;
           }
-        );
-      }
-      // {
-        arm-test-1 = mylib.colmenaSystem (
-          armTest1Modules
-          // {
-            tags = [ "arm-test-1" ];
-            ssh-user = myvars.username;
-          }
-        );
-      };
+        )
+      ) colmenaHosts;
 
       checks = forAllSystems (system: {
         #ref: https://devenv.sh/?q=git-hooks.hooks

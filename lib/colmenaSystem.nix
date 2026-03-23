@@ -18,6 +18,7 @@ let
 in
 { ... }:
 {
+  nixpkgs.hostPlatform = lib.mkDefault system;
   deployment = {
     inherit tags;
     targetUser = ssh-user;

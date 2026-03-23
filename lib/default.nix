@@ -11,6 +11,8 @@ rec {
   colmenaSystem = import ./colmenaSystem.nix;
   macosSystem = import ./macosSystem.nix;
   nixosSystem = import ./nixosSystem.nix;
+  homeSystem = import ./homeSystem.nix;
+  mkHomeConfig = name: modules: homeSystem (modules // { hostname = name; });
   relativeToRoot = lib.path.append ../.;
   # 扫入当前目录所有除default.nix的以nix结尾的文件，以及第一层目录
   # 返回一个目录list
@@ -57,7 +59,7 @@ rec {
       enable = true;
       config = {
         Label = "space.ooooo.${name}";
-        ProgramArguments = [ ''${commandFile}'' ];
+        ProgramArguments = [ "${commandFile}" ];
         RunAtLoad = true;
         StandardOutPath = "/tmp/nix-hm-logs/${name}.log";
         StandardErrorPath = "/tmp/nix-hm-logs/${name}.err.log";
