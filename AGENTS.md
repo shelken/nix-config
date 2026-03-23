@@ -37,10 +37,30 @@ just repl <host>         # 例如: just repl sakamoto
 just search <pkg>        # 搜索 nixpkgs
 ```
 
+## 安全测试命令（不触发 switch/deploy）
+
+```bash
+# Home Manager（只构建，不激活）
+nix build .#homeConfigurations.<host>.config.home.activationPackage
+
+# nix-darwin（只构建）
+nix build .#darwinConfigurations.<host>.system
+
+# NixOS（只构建）
+nix build .#nixosConfigurations.<host>.config.system.build.toplevel
+
+# Colmena 输出检查
+nix eval .#colmena --apply 'x: builtins.attrNames x'
+
+# Colmena host 结构校验（需要 TARGET_HOST 但不会部署）
+TARGET_HOST=dummy nix eval .#colmena.<host>.deployment.targetHost
+```
+
 **注意**: 首次使用需要在 `.env` 文件中设置 `PROFILE=<hostname>`。
 
 ## Git 提交规则（最高优先级）
 
+- add 和 commit 前先在 direnv 环境运行一次 pre-commit（例如：`direnv exec . pre-commit run -a`）
 - 使用 `Conventional Commits` 规范：`<type>[optional scope]: <description>`
 - 提交信息应分点简洁，**标题英文，内容中文**
 
