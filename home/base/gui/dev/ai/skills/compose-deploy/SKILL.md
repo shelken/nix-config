@@ -1,6 +1,8 @@
 ---
 name: compose-deploy
-description: Use when 需要通过 task compose:deploy:* 或 compose:sync:* 部署/更新 VPS 或 sakamoto，且命令依赖 flake+direnv 环境或出现“task: command not found”
+description:
+  Use when 需要通过 task compose:deploy:* 或 compose:sync:* 部署/更新 VPS 或 sakamoto，且命令依赖
+  flake+direnv 环境或出现'task:command not found'
 ---
 
 # Compose Deploy (VPS / sakamoto)
