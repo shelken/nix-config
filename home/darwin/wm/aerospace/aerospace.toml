@@ -193,7 +193,7 @@ alt-shift-s = 'mode service'        # 进入service模式
 alt-shift-r = 'mode remote-desktop' # 远程桌面模式
 
 # APP快捷键
-alt-b           = 'exec-and-forget open -a "Helium"'
+alt-b           = 'exec-and-forget open -a "Helium" --args "--remote-debugging-port=9333"'
 alt-c           = 'exec-and-forget zed'
 alt-f           = 'exec-and-forget open -a "Finder"'
 alt-shift-enter = 'exec-and-forget open -a "kitty"'
@@ -282,6 +282,9 @@ if.app-id = 'dev.zed.Zed'
 run       = 'move-node-to-workspace 2Code'
 [[on-window-detected]]
 if.app-id = 'dev.zed.Zed-Preview'
+run       = 'move-node-to-workspace 2Code'
+[[on-window-detected]]
+if.app-id = 'com.yetone.alma'
 run       = 'move-node-to-workspace 2Code'
 [[on-window-detected]]
 if.app-id = 'com.openai.codex'

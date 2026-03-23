@@ -7,3 +7,4 @@ result/
 .idea
 
 .claude/*.local.json
+.alma-snapshots
