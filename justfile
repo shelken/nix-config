@@ -245,6 +245,11 @@ switch *args: rebuild-debug
     # sudo -E ./result/sw/bin/darwin-rebuild switch --flake ".#{{ profile }}" --show-trace --verbose
     nix run nixpkgs#nh -- darwin switch -H {{ profile }} . -v -- {{ args }}
 
+# 仅应用 Home Manager
+[macos]
+hm *args:
+    nix run nixpkgs#nh -- home switch -c {{ profile }} . -v -- {{ args }}
+
 # 更新整个输入
 up:
     @nix flake update
