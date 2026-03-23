@@ -29,6 +29,10 @@ let
       targetPath = ".config/opencode";
       fileName = "AGENTS.md";
     }
+    {
+      targetPath = ".factory";
+      fileName = "AGENTS.md";
+    }
   ];
 
   # Generate symlinks for all agents targets
