@@ -90,10 +90,11 @@ in
     home.file = allSkillLinks;
 
     # 手动命令
-    # npx skills add github/repo --skill [skill-name] --yes -a codex claude-code opencode gemini-cli
-    # # chrome-cdp
-    # npx skills add https://github.com/pasky/chrome-cdp-skill --skill chrome-cdp --yes -a codex claude-code opencode gemini-cli
-    # url开启：chrome://inspect/#remote-debugging
+    # npx skills update
+    # npx skills add github/repo -g -y -a claude-code codex --skill [skill-name]
+    # npx skills add obra/superpowers -g -y -a claude-code codex --skill brainstorming systematic-debugging writing-plans test-driven-development executing-plans subagent-driven-development writing-skills
+    # npx skills add microsoft/playwright-cli -g -y -a claude-code codex --skill playwright-cli
+    # npx skills add pbakaus/impeccable -g -y -a claude-code codex --skill audit critique extract harden normalize onboard optimize teach-impeccable
 
     # Download remote skills on activation
     home.activation.downloadRemoteSkills = lib.mkIf (cfg.remoteSkills != [ ]) (
