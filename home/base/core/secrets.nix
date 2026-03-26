@@ -41,6 +41,7 @@ in
       shellInit = ''
         export GH_TOKEN="$(cat ${config.sops.secrets."github/cli-token".path})"
         export GITHUB_TOKEN="$GH_TOKEN"
+        export HOMEBREW_GITHUB_API_TOKEN="$(cat ${config.sops.secrets."github/cli-token".path})"
         # 如果没有 login session，用 token 做一次 login
         if ! gh auth status --hostname github.com &>/dev/null; then
           echo "$GH_TOKEN" | gh auth login --with-token
