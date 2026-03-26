@@ -75,9 +75,13 @@ just sw
 # before run, you should have just. `brew install just`
 # switch
 just switch
+just sw
 
 # only build result
 just b
+
+# only home manager switch
+just hm
 
 ```
 

@@ -10,6 +10,9 @@
 # 构建并应用配置 (macOS/NixOS)
 just sw                  # 或 just switch
 
+# home-manager 构建并应用配置 (macOS)
+just hm
+
 # 仅构建不应用
 just b                   # 或 just rebuild
 
