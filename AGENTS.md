@@ -61,8 +61,8 @@ TARGET_HOST=dummy nix eval .#colmena.<host>.deployment.targetHost
 ## Git 提交规则（最高优先级）
 
 - add 和 commit 前先在 direnv 环境运行一次 pre-commit（例如：`direnv exec . pre-commit run -a`）
-- 使用 `Conventional Commits` 规范：`<type>[optional scope]: <description>`
-- 提交信息应分点简洁，**标题英文，内容中文**
+- 优先使用`Conventional Commits`格式提交git commit，标题 **英文**，内容
+  **中文**，如果有`git-commit`技能，读取`git-commit`作为补充
 
 ## 架构概览
 
