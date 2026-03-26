@@ -80,7 +80,7 @@
 
   programs.delta = {
     enable = true;
-    enableGitIntegration = true;
+    enableGitIntegration = false;
   };
 
   home.packages = with pkgs; [
