@@ -40,12 +40,8 @@ in
     let
       shellInit = ''
         export GH_TOKEN="$(cat ${config.sops.secrets."github/cli-token".path})"
-        export GITHUB_TOKEN="$GH_TOKEN"
+        export GITHUB_TOKEN="$(cat ${config.sops.secrets."github/cli-token".path})"
         export HOMEBREW_GITHUB_API_TOKEN="$(cat ${config.sops.secrets."github/cli-token".path})"
-        # 如果没有 login session，用 token 做一次 login
-        if ! gh auth status --hostname github.com &>/dev/null; then
-          echo "$GH_TOKEN" | gh auth login --with-token
-        fi
         # ai api key
         export CONTEXT7_API_KEY="$(cat ${config.sops.secrets."context7/api-key".path})"
         export DEEPSEEK_API_KEY="$(cat ${config.sops.secrets."deepseek/api-key".path})"
