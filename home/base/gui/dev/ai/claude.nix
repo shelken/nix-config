@@ -102,34 +102,16 @@ let
   # env 配置只包含模型（敏感字段通过 shell 环境变量提供）
   selectedEnv = if selectedPreset != null then selectedPreset.models else { };
 
+  # 从外部 JSON 加载 Claude Code allow 权限（JSON 顶层必须是字符串数组）
+  # 文件示例：["Bash(ls:*)", "Bash(git status:*)", "Skill(brainstorming)"]
+  allowPermissions = builtins.fromJSON (builtins.readFile ./claude-allow-permissions.json);
+
   # 基础 settings 配置
   baseSettings = {
     "$schema" = "https://json.schemastore.org/claude-code-settings.json";
     includeCoAuthoredBy = false;
     permissions = {
-      allow = [
-        "Bash(mkdir:*)"
-        "Bash(grep:*)"
-        "Bash(find:*)"
-        "Bash(rg:*)"
-        "Bash(ls:*)"
-        "Bash(git --no-pager status:*)"
-        "Bash(git --no-pager diff:*)"
-        "Bash(git --no-pager log:*)"
-        "Bash(git --no-pager show:*)"
-        "Bash(git rev-parse:*)"
-        "Bash(gh:*)"
-        "Bash(ctx7:*)"
-        "Bash(jq:*)"
-        "Bash(sed:*)"
-        "Skill(context7-cli:*)"
-        "Skill(code-context:*)"
-        "Skill(github-cli:*)"
-        "Skill(superpowers:*)"
-        "Skill(openspec:*)"
-        "Skill(everything-claude-code:*)"
-        "Bash(awk:*)"
-      ];
+      allow = allowPermissions;
     };
     hooks = {
       Notification = [

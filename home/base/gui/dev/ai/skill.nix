@@ -92,7 +92,7 @@ in
     # 手动命令
     # npx skills update
     # npx skills add github/repo -g -y -a claude-code codex --skill [skill-name]
-    # npx skills add obra/superpowers -g -y -a claude-code codex --skill brainstorming systematic-debugging writing-plans test-driven-development executing-plans subagent-driven-development writing-skills
+    # npx skills add obra/superpowers -g -y -a claude-code codex --skill brainstorming systematic-debugging writing-plans test-driven-development executing-plans subagent-driven-development
     # npx skills add microsoft/playwright-cli -g -y -a claude-code codex --skill playwright-cli
     # npx skills add pbakaus/impeccable -g -y -a claude-code codex --skill audit critique extract harden normalize onboard optimize teach-impeccable
 
