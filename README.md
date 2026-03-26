@@ -53,7 +53,7 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 # 3. clone repo
 git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-config
 
-# 4. specify the profile that defined in flake.nix
+# 4. specify the profile defined in flake.nix
 echo "PROFILE=<profile-name>" >> .env
 
 # 加速
