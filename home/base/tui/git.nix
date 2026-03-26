@@ -1,4 +1,5 @@
 {
+  pkgs,
   ...
 }:
 {
@@ -11,19 +12,19 @@
     "https://github.com" = {
       helper = [
         ""
-        "!gh auth git-credential"
+        "!${pkgs.gh}/bin/gh auth git-credential"
       ];
     };
     "https://gist.github.com" = {
       helper = [
         ""
-        "!gh auth git-credential"
+        "!${pkgs.gh}/bin/gh auth git-credential"
       ];
     };
     "https://mirrors.tuna.tsinghua.edu.cn" = {
       helper = [
         ""
-        "!gh auth git-credential"
+        "!${pkgs.gh}/bin/gh auth git-credential"
       ];
     };
   };
