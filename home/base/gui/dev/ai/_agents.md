@@ -36,6 +36,6 @@
 - 当需要 GitHub 操作（PR、Issue、Release、Actions）时，优先使用 `gh` 命令，而非其他方式
 - 当需要查阅库的最新文档时，优先使用 `ctx7` 命令，例如：`ctx7 library <name>` 然后
   `ctx7 docs <id> <query>`
-- 需要调用网站/本地工具时，优先用 `opencli`：先
-  `OPENCLI_CDP_ENDPOINT="http://127.0.0.1:9333" opencli list` 发现可用命令,
+- 需要调用网站搜索(使用用户真实浏览器，获取高质量内容、绕过机器人限制)时，读取skill`fetch-any`（如果有）
+- 使用`opencli`前加上`OPENCLI_CDP_ENDPOINT="http://127.0.0.1:9333"`
 - 涉及敏感数据文件的读取，只允许使用jq获取文件结构，例如：`cat auth.json | jq 'keys'`
