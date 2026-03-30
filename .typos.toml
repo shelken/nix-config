@@ -31,4 +31,6 @@ extend-ignore-re = [
   "f5e0dc",
   "f9e2af",
   "fab387",
+
+  "198c2ba3",
 ]

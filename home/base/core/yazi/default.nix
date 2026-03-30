@@ -30,6 +30,9 @@
     "yazi/keymap.toml" = {
       source = ./keymap.toml;
     };
+    "yazi/vfs.toml" = {
+      source = ./vfs.toml;
+    };
     "yazi/init.lua" = {
       source = ./init.lua;
     };
@@ -48,6 +51,14 @@
         repo = "glow.yazi";
         rev = "c76bf4fb";
         hash = "sha256-DPud1Mfagl2z490f5L69ZPnZmVCa0ROXtFeDbEegBBU=";
+      };
+    };
+    "yazi/plugins/projects.yazi" = {
+      source = pkgs.fetchFromGitHub {
+        owner = "MasouShizuka";
+        repo = "projects.yazi";
+        rev = "198c2ba3";
+        hash = "sha256-Grvtx+N1DpdpMaVuDwaHu3S7zu6pQtmu1twvFIowbLM=";
       };
     };
     # "yazi/plugins/mime.yazi" = {

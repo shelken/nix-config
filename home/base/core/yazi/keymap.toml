@@ -6,5 +6,42 @@ desc = "Cancel input"
 on   = ["<Esc>"]
 run  = "close"
 
+# 新建本地tab
+[[mgr.prepend_keymap]]
+desc = "新建本地 tab"
+on   = ["<C-t>"]
+run  = "tab_create ~"
+
+# plugins projects.yazi
+[[mgr.prepend_keymap]]
+on   = ["P", "s"]
+run  = "plugin projects save"
+desc = "保存当前项目"
+[[mgr.prepend_keymap]]
+on   = ["P", "l"]
+run  = "plugin projects load"
+desc = "加载项目"
+[[mgr.prepend_keymap]]
+on   = ["P", "P"]
+run  = "plugin projects load_last"
+desc = "加载上一个项目"
+[[mgr.prepend_keymap]]
+on   = ["P", "d"]
+run  = "plugin projects delete"
+desc = "删除项目"
+[[mgr.prepend_keymap]]
+on   = ["P", "D"]
+run  = "plugin projects delete_all"
+desc = "删除所有项目"
+[[mgr.prepend_keymap]]
+on   = ["P", "m"]
+run  = "plugin projects 'merge current'"
+desc = "合并当前标签页到其他项目"
+[[mgr.prepend_keymap]]
+on   = ["P", "M"]
+run  = "plugin projects 'merge all'"
+desc = "合并当前项目到其他项目"
+
+
 [tasks]
 prepend_keymap = []
