@@ -269,6 +269,8 @@
               nixos-anywhere
               nvfetcher
               # nh # 不要引入，会把nix放进来
+              nix-prefetch-github
+              nix-prefetch-git
             ];
             name = "dots";
             shellHook = ''

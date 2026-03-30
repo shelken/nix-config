@@ -110,7 +110,7 @@ nvim-clean:
 # github sha256计算
 prefetch-gh owner repo rev="HEAD":
     #!/usr/bin/env bash
-    json=$(nix run nixpkgs#nix-prefetch-github -- --no-deep-clone --quiet --rev {{ rev }} {{ owner }} {{ repo }})
+    json=$(nix-prefetch-github -- --no-deep-clone --quiet --rev {{ rev }} {{ owner }} {{ repo }})
     owner=$(echo "$json" | jq -r '.owner')
     repo=$(echo "$json" | jq -r '.repo')
     rev=$(echo "$json" | jq -r '.rev' | cut -c 1-8)
@@ -143,7 +143,7 @@ prefetch-gh2 repo rev="HEAD":
       echo "$user" "$repo"
     }
     read owner repo <<< $(parse_github_url {{ repo }})
-    json=$(nix run nixpkgs#nix-prefetch-git -- --no-deepClone --quiet --url "git@github.com:$owner/$repo" --rev {{ rev }})
+    json=$(nix-prefetch-git -- --no-deepClone --quiet --url "git@github.com:$owner/$repo" --rev {{ rev }})
     rev=$(echo "$json" | jq -r '.rev' | cut -c 1-8)
     hash=$(echo "$json" | jq -r '.hash')
     last_date=$(echo "$json" | jq -r '.date')
@@ -158,7 +158,7 @@ prefetch-gh2 repo rev="HEAD":
     EOF
 
 prefetch-git repo rev:
-    @nix run nixpkgs#nix-prefetch-git -- --no-deepClone --quiet --url 'git@github.com:{{ repo }}' --rev '{{ rev }}' --fetch-submodules
+    @nix-prefetch-git -- --no-deepClone --quiet --url 'git@github.com:{{ repo }}' --rev '{{ rev }}' --fetch-submodules
 
 # nix-prefetch-url, 用于pypi等
 prefetch-url url:
