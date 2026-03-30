@@ -80,6 +80,12 @@ in
         functionsInit = ''
           fpath=( ${functionsDir} $fpath )
           autoload -Uz ${functionsDir}/*(:t)
+          # compinit 已由 oh-my-zsh 提前运行，手动注册 functions/_* 补全函数
+          # 命名规范：_<command>.zsh → _<command>，自动 compdef _<command> <command>
+          for _hmf in ${functionsDir}/_*(N:t); do
+            compdef "$_hmf" "''${_hmf#_}"
+          done
+          unset _hmf
         '';
         defaultInit = ''
           bindkey '^f' autosuggest-accept
