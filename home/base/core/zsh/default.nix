@@ -6,8 +6,19 @@
 }:
 let
   zshDotDir = "${config.xdg.configHome}/zsh";
+  functionsDir = "${zshDotDir}/functions";
+  functionFiles = lib.filesystem.listFilesRecursive ./functions;
 in
 {
+  xdg.configFile = lib.listToAttrs (
+    map (f: {
+      name = "zsh/functions/${lib.removeSuffix ".zsh" (baseNameOf f)}";
+      value = {
+        source = f;
+      };
+    }) (lib.filter (f: lib.hasSuffix ".zsh" (toString f)) functionFiles)
+  );
+
   programs.zsh = {
     enable = true;
     # 自定义配置目录
@@ -66,6 +77,10 @@ in
           setopt EXTENDED_HISTORY
           unsetopt AUTO_REMOVE_SLASH
         '';
+        functionsInit = ''
+          fpath=( ${functionsDir} $fpath )
+          autoload -Uz ${functionsDir}/*(:t)
+        '';
         defaultInit = ''
           bindkey '^f' autosuggest-accept
 
@@ -77,6 +92,7 @@ in
       in
       lib.mkMerge [
         firstInit
+        functionsInit
         defaultInit
       ];
     plugins = [
@@ -96,11 +112,6 @@ in
         name = "powerlevel10k-config";
         src = lib.cleanSource ./p10k;
         file = "p10k.zsh";
-      }
-      {
-        name = "my-zsh-scripts";
-        src = ./scripts;
-        file = "scripts.zsh";
       }
     ];
   };
