@@ -2,13 +2,17 @@
   pkgs,
   lib,
   config,
+  mylib,
   ...
 }:
 let
   jdk = pkgs.jdk17;
 in
 {
-  config = lib.mkIf config.shelken.dev.ide.enable {
+  options.shelken.dev.java = {
+    enable = mylib.mkBoolOpt false "Whether or not use.";
+  };
+  config = lib.mkIf config.shelken.dev.java.enable {
     # java
     programs.java = {
       enable = true;

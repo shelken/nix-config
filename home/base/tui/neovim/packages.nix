@@ -66,14 +66,14 @@ in
       markdown-oxide # lsp for markdown
       glow # markdown preview
       taplo # TOML language server / formatter / validator
-      nodePackages.yaml-language-server
+      yaml-language-server
       # sqlfluff # SQL linter
 
       #FIXME issue: https://github.com/NixOS/nixpkgs/issues/449970
       actionlint # GitHub Actions linter
       buf # bufls
       tree-sitter # common language parser/highlighter
-      nodePackages.prettier # common code formatter
+      prettier # common code formatter
       lazygit
       pngpaste # for img-clip plugins on mac
       chafa # for alpha.nvim
@@ -87,14 +87,14 @@ in
 
       #-- frontend
       #javascript/typescript --#
-      nodePackages.nodejs
-      nodePackages.typescript
-      nodePackages.typescript-language-server
+      nodejs
+      typescript
+      typescript-language-server
       # html/css lsp
-      nodePackages.vscode-langservers-extracted
+      vscode-langservers-extracted
 
       #-- bash
-      nodePackages.bash-language-server
+      bash-language-server
       shellcheck
       shfmt
     ]

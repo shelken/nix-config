@@ -17,7 +17,7 @@
     # dev.ai.claudePreset = "cpa-gemini-claude";
     # dev.ai.claudePreset = "anti-tools";
 
-    dev.ide.enable = true;
+    dev.go.enable = true;
     dev.cloud-native.enable = true;
 
     secrets.enable = true;

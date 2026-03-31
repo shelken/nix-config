@@ -2,10 +2,14 @@
   pkgs,
   lib,
   config,
+  mylib,
   ...
 }:
 {
-  config = lib.mkIf config.shelken.dev.ide.enable {
+  options.shelken.dev.go = {
+    enable = mylib.mkBoolOpt false "Whether or not use.";
+  };
+  config = lib.mkIf config.shelken.dev.go.enable {
     home.sessionVariables = {
       # for go
       GOPROXY = "https://goproxy.io";

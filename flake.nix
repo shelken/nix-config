@@ -265,7 +265,7 @@
               # spell checker
               typos
               # code formatter
-              nodePackages.prettier
+              prettier
               nixos-anywhere
               nvfetcher
               # nh # 不要引入，会把nix放进来
