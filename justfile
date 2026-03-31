@@ -60,16 +60,18 @@ fmt:
     @nix fmt .
 
 # 清理无用的包
-gc duration="0h":
+gc duration="1d":
     # @nix run nixpkgs#nh -- clean all -a -K {{ duration }}
-    @nh clean all -a -K {{ duration }}
+    # @nh clean all -a -K {{ duration }}
+    @sudo nix profile wipe-history --older-than {{ duration }} --profile /nix/var/nix/profiles/system
+    @nix profile wipe-history --older-than {{ duration }} --profile ~/.local/state/nix/profiles/home-manager
     @nix store gc
 
 # 清理所有
 # @nix-collect-garbage -d
 # @sudo nix-collect-garbage -d
 
-# @nix store --gc
+# 清理所有(系统/项目)
 gc-all:
     # @nix run nixpkgs#nh -- clean all -a
     @nh clean all -a
