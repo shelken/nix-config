@@ -27,6 +27,16 @@ aerospace-test:
 add:
     @git add .
 
+# 列出不在 nix 管理内的 brew 包（只列出，不删除）
+[macos]
+brew-diff:
+    @brew bundle cleanup --file=$(nix path-info /run/current-system --recursive 2>/dev/null | grep Brewfile | head -1)
+
+# 查看本次构建哪些需要编译、哪些直接下载
+[macos]
+build-dry host=profile:
+    @nix build ".#darwinConfigurations.{{ host }}.system" --dry-run
+
 # nixos deploy
 [linux]
 deploy host mach:
