@@ -76,6 +76,7 @@
         cs = "config --get-regexp";
       };
     };
+    signing.format = null;
   };
 
   programs.delta = {
