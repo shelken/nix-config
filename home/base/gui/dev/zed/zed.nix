@@ -1,13 +1,34 @@
 {
+  config,
   hostname,
+  lib,
   ...
 }:
+let
+  snippetsSourcePath = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/zed/snippets";
+  snippetFiles = builtins.attrNames (
+    lib.filterAttrs (name: type: type == "regular" && lib.strings.hasSuffix ".json" name) (
+      builtins.readDir ./snippets
+    )
+  );
+  snippetLinks = lib.listToAttrs (
+    map (name: {
+      name = ".config/zed/snippets/${name}";
+      value = {
+        source = config.lib.file.mkOutOfStoreSymlink "${snippetsSourcePath}/${name}";
+        force = true;
+      };
+    }) snippetFiles
+  );
+in
 {
   catppuccin.zed.enable = false;
+  home.file = snippetLinks;
   programs.zed-editor = {
     enable = true;
     package = null; # homebrew
     mutableUserSettings = true;
+    mutableUserKeymaps = true;
     userSettings = {
       # Zed settings
       #
@@ -431,5 +452,35 @@
         show_other_hints = true;
       };
     };
+
+    userKeymaps = [
+      {
+        context = "AgentPanel";
+        bindings = {
+          "cmd-1" = "project_panel::ToggleFocus";
+        };
+      }
+      {
+        context = "Editor";
+        bindings = {
+          "cmd-g b" = "git::Blame";
+          "ctrl-tab" = "editor::ShowCompletions";
+        };
+      }
+      {
+        context = "GitPanel";
+        bindings = {
+          "cmd-shift-k" = "git::Push";
+        };
+      }
+      {
+        context = "Workspace";
+        bindings = {
+          "cmd-1" = "project_panel::ToggleFocus";
+          "cmd-2" = "git_panel::ToggleFocus";
+          "cmd-3" = "terminal_panel::Toggle";
+        };
+      }
+    ];
   };
 }

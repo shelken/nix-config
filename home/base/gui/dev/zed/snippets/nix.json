@@ -1,0 +1,84 @@
+{
+  "base": {
+    "prefix": "base",
+    "body": ["{ ... }:", "{", "  $0", "}"],
+    "description": "init"
+  },
+  "darwin": {
+    "prefix": "darwin",
+    "body": [
+      "{ ... }:",
+      "{",
+      "system.defaults.CustomUserPreferences = {",
+      "};",
+      "homebrew = {",
+      "brews = [",
+      "];",
+      "casks = [",
+      "];",
+      "masApps = {",
+      "};",
+      "};",
+      "launchd.user.agents.\"\" = {",
+      "command = ''\"\"'';",
+      "serviceConfig.RunAtLoad = true;",
+      "};",
+      "$0",
+      "}"
+    ],
+    "description": "darwin模板"
+  },
+  "options": {
+    "prefix": "options",
+    "body": [
+      "{ mylib, lib, config, ... }:",
+      "let",
+      "cfg = config.shelken.${1:name};",
+      "in",
+      "{",
+      "options.shelken.${1:name} = {",
+      "enable = mylib.mkBoolOpt false \"Whether or not use to enable.\";",
+      "};",
+      "config = lib.mkIf cfg.enable {",
+      "$0",
+      "};",
+      "}"
+    ],
+    "description": "options模板"
+  },
+  "home-file": {
+    "prefix": "home-file",
+    "body": ["home.file = {", "  $0", "};"],
+    "description": "home-file 模板"
+  },
+  "home-packages": {
+    "prefix": "home-packages",
+    "body": ["home.packages = with pkgs; [", "  $0", "];"],
+    "description": "home-packages 模板"
+  },
+  "imports": {
+    "prefix": "imports",
+    "body": ["imports = (mylib.scanPaths ./.);"],
+    "description": "imports 模板"
+  },
+  "home-programs": {
+    "prefix": "home-programs",
+    "body": ["programs.${1:name} = {", "  enable = true;", "  $0", "};"],
+    "description": "home-programs 模板"
+  },
+  "sessionVariables": {
+    "prefix": "sessionVariables",
+    "body": ["home.sessionVariables = {", "  $0", "};"],
+    "description": "sessionVariables 模板"
+  },
+  "shellAliases": {
+    "prefix": "shellAliases",
+    "body": ["home.shellAliases = {", "  $0", "};"],
+    "description": "shellAliases 模板"
+  },
+  "xdg.configFile": {
+    "prefix": "xdg.configFile",
+    "body": ["xdg.configFile = {", "  \"$1\" = {", "    source = $2;", "  };", "};"],
+    "description": "xdg.configFile 模板"
+  }
+}
