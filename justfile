@@ -270,7 +270,7 @@ switch *args: rebuild-debug
 [macos]
 hm *args:
     # nix run nixpkgs#nh -- home switch -c {{ profile }} . -v -- {{ args }}
-    nh home switch -c {{ profile }} . -v -- {{ args }}
+    nh home switch -c {{ profile }} . -v --show-activation-logs -- {{ args }}
 
 # 更新整个输入
 up:
