@@ -385,20 +385,6 @@ in
       };
 
       lsp = {
-        nixd = {
-          settings = {
-            options = {
-              "nix-darwin" = {
-                expr = "(builtins.getFlake (builtins.toString ./.)).darwinConfigurations.${hostname}.options";
-              };
-
-              "home-manager" = {
-                expr = "(builtins.getFlake (builtins.toString ./.)).homeConfigurations.${hostname}.options";
-              };
-            };
-          };
-        };
-
         "yaml-language-server" = {
           settings = {
             yaml = {

@@ -1,0 +1,16 @@
+{
+  "lsp": {
+    "nixd": {
+      "settings": {
+        "options": {
+          "nix-darwin": {
+            "expr": "(builtins.getFlake (builtins.toString ./.)).darwinConfigurations.mio.options"
+          },
+          "home-manager": {
+            "expr": "(builtins.getFlake (builtins.toString ./.)).darwinConfigurations.mio.options.home-manager.users.type.getSubOptions []"
+          }
+        }
+      }
+    }
+  }
+}
