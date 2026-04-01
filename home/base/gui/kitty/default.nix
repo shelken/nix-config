@@ -41,13 +41,15 @@ in
       "cmd+w" = "close_tab";
 
       "cmd+shift+m" = "toggle_maximized";
+      "cmd+shift+l" = "next_layout";
       "cmd+shift+f" = "show_scrollback";
 
       "cmd+c" = "copy_to_clipboard";
       "cmd+v" = "paste_from_clipboard";
       "cmd+shift+v" = "paste_from_selection";
 
-      "cmd+enter" = "launch --cwd=current";
+      "cmd+enter" = "launch --location=hsplit --cwd=current";
+      "cmd+shift+enter" = "launch --location=vsplit --cwd=current";
 
       "cmd+[" = "previous_tab";
       "cmd+]" = "next_tab";
@@ -88,6 +90,8 @@ in
       tab_title_template = "{title}{' :{}:'.format(num_windows) if num_windows > 1 else ''}";
 
       macos_option_as_alt = "yes";
+
+      enabled_layouts = "splits,stack";
     };
 
     quickAccessTerminalConfig = {
