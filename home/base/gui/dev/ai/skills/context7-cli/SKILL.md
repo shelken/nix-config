@@ -34,8 +34,8 @@ npx ctx7@latest <command>
 
 ```bash
 # Documentation
-ctx7 library <name> <query>           # Step 1: resolve library ID
-ctx7 docs <libraryId> <query>         # Step 2: fetch docs
+ctx7 library [options] <name> [query]           # Step 1: resolve library ID
+ctx7 docs [options] <libraryId> <query>         # Step 2: fetch docs
 
 # Skills
 ctx7 skills install /owner/repo       # Install from a repo (interactive)

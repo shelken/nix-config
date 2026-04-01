@@ -38,8 +38,8 @@ command -v deepwiki >/dev/null 2>&1 || npm install -g @seflless/deepwiki
 ### Context7
 
 ```bash
-ctx7 library <name> <query>
-ctx7 docs <libraryId> <query>
+ctx7 library [options] <name> [query]
+ctx7 docs [options] <libraryId> <query>
 ```
 
 ### DeepWiki
