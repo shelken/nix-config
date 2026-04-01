@@ -1,0 +1,435 @@
+{
+  hostname,
+  ...
+}:
+{
+  catppuccin.zed.enable = false;
+  programs.zed-editor = {
+    enable = true;
+    package = null; # homebrew
+    mutableUserSettings = true;
+    userSettings = {
+      # Zed settings
+      #
+      # For information on how to configure Zed, see the Zed
+      # documentation: https://zed.dev/docs/configuring-zed
+      #
+      # To see all of Zed's default settings without changing your
+      # custom settings, run `zed: open default settings` from the
+      # command palette (cmd-shift-p / ctrl-shift-p)
+
+      completions = {
+        words_min_length = 2;
+      };
+
+      language_models = {
+        anthropic = {
+          api_url = "https://cpa.ooooo.space";
+          available_models = [
+            # {
+            #   name = "gpt-5.3-codex";
+            #   display_name = "GPT-5.3 Codex";
+            #   max_tokens = 400000;
+            #   max_output_tokens = 128000;
+            # }
+            # {
+            #   name = "gpt-5.3-codex(high)";
+            #   display_name = "GPT-5.3 Codex High";
+            #   max_tokens = 400000;
+            #   max_output_tokens = 128000;
+            # }
+            # {
+            #   name = "gpt-5.2-codex(high)";
+            #   display_name = "GPT-5.2 Codex High";
+            #   max_tokens = 400000;
+            #   max_output_tokens = 128000;
+            # }
+            # {
+            #   name = "gpt-5.2-codex";
+            #   display_name = "GPT-5.2 Codex";
+            #   max_tokens = 400000;
+            #   max_output_tokens = 128000;
+            # }
+            # {
+            #   name = "gpt-5.2";
+            #   display_name = "GPT-5.2";
+            #   max_tokens = 400000;
+            #   max_output_tokens = 128000;
+            # }
+            # {
+            #   name = "gpt-5.2(high)";
+            #   display_name = "GPT-5.2 High";
+            #   max_tokens = 400000;
+            #   max_output_tokens = 128000;
+            # }
+            # {
+            #   name = "gpt-5.4";
+            #   display_name = "GPT-5.4";
+            #   max_tokens = 1000000;
+            #   max_output_tokens = 128000;
+            # }
+            # {
+            #   name = "gpt-5.4(high)";
+            #   display_name = "GPT-5.4 High";
+            #   max_tokens = 1000000;
+            #   max_output_tokens = 128000;
+            # }
+            # {
+            #   name = "gpt-5.1-codex-mini";
+            #   display_name = "GPT-5.1-Codex Mini";
+            #   max_tokens = 1000000;
+            #   max_output_tokens = 128000;
+            # }
+          ];
+        };
+
+        openai = {
+          api_url = "https://cpa.ooooo.space/v1";
+          available_models = [
+            {
+              name = "gpt-5.3-codex";
+              display_name = "GPT-5.3 Codex";
+              max_tokens = 400000;
+              max_output_tokens = 128000;
+              reasoning_effort = "high";
+              capabilities = {
+                chat_completions = false;
+              };
+            }
+            {
+              name = "gpt-5.2-codex";
+              display_name = "GPT-5.2 Codex";
+              max_tokens = 400000;
+              max_output_tokens = 128000;
+              reasoning_effort = "high";
+              capabilities = {
+                chat_completions = false;
+              };
+            }
+            {
+              name = "gpt-5.2";
+              display_name = "GPT-5.2";
+              max_tokens = 400000;
+              max_output_tokens = 128000;
+              reasoning_effort = "high";
+              capabilities = {
+                chat_completions = false;
+              };
+            }
+            {
+              name = "gpt-5.4";
+              display_name = "GPT-5.4";
+              max_tokens = 1000000;
+              max_output_tokens = 128000;
+              reasoning_effort = "high";
+              capabilities = {
+                chat_completions = false;
+              };
+            }
+            {
+              name = "gpt-5.1-codex-mini";
+              display_name = "GPT-5.1-Codex Mini";
+              max_tokens = 1000000;
+              max_output_tokens = 128000;
+            }
+          ];
+        };
+
+        openai_compatible = {
+          # "kimi-code" = {
+          #   api_url = "https://api.kimi.com/coding/v1";
+          #   available_models = [
+          #     {
+          #       name = "kimi-for-coding";
+          #       max_tokens = 262144;
+          #       max_output_tokens = 32768;
+          #       max_completion_tokens = 262144;
+          #       capabilities = {
+          #         tools = true;
+          #         images = true;
+          #         parallel_tool_calls = true;
+          #         prompt_cache_key = true;
+          #         chat_completions = true;
+          #       };
+          #     }
+          #   ];
+          # };
+
+          "OpenCode Zen" = {
+            api_url = "https://opencode.ai/zen/v1";
+            available_models = [
+              {
+                name = "minimax-m2.1-free";
+                max_tokens = 204800;
+                max_output_tokens = 32000;
+                max_completion_tokens = 204800;
+                capabilities = {
+                  tools = true;
+                  images = false;
+                  parallel_tool_calls = false;
+                  prompt_cache_key = false;
+                  chat_completions = true;
+                };
+              }
+              {
+                name = "minimax-m2.5-free";
+                max_tokens = 204800;
+                max_output_tokens = 32000;
+                max_completion_tokens = 204800;
+                capabilities = {
+                  tools = true;
+                  images = false;
+                  parallel_tool_calls = false;
+                  prompt_cache_key = false;
+                  chat_completions = true;
+                };
+              }
+            ];
+          };
+        };
+      };
+
+      agent = {
+        play_sound_when_agent_done = true;
+        dock = "right";
+
+        tool_permissions = {
+          default = "allow";
+        };
+
+        # inline_assistant_model = {
+        #   # provider = "deepseek";
+        #   # model = "deepseek-chat";
+        # };
+
+        # commit_message_model = {
+        #   provider = "deepseek";
+        #   model = "deepseek-chat";
+        #   # provider = "OpenCode Zen";
+        #   # model = "minimax-m2.5-free";
+        # };
+
+        # thread_summary_model = {
+        #   provider = "openai";
+        #   model = "gpt-5.1-codex-mini";
+        # };
+
+        model_parameters = [
+          # 代码生成/数学解题      0.0
+          # 数据抽取/分析        1.0
+          # 通用对话            1.3
+          # 翻译                1.3
+          # 创意类写作/诗歌创作  1.5
+          {
+            provider = "deepseek";
+            temperature = 0.0;
+          }
+        ];
+      };
+
+      git_panel = {
+        tree_view = true;
+        sort_by_path = false;
+      };
+
+      icon_theme = {
+        mode = "system";
+        light = "Catppuccin Macchiato";
+        dark = "Catppuccin Macchiato";
+      };
+
+      # ssh_connections = [
+      # ];
+
+      ui_font_family = "JetBrainsMono Nerd Font Mono";
+      buffer_font_family = "JetBrainsMono Nerd Font Mono";
+
+      terminal = {
+        font_size = 15.0;
+      };
+
+      telemetry = {
+        diagnostics = false;
+        metrics = false;
+      };
+
+      # proxy = "http://127.0.0.1:7890";
+
+      git = {
+        inline_blame = {
+          enabled = true;
+        };
+      };
+
+      base_keymap = "VSCode";
+
+      status_bar = {
+        "experimental.show" = true;
+      };
+
+      minimap = {
+        show = "auto";
+      };
+
+      hover_popover_enabled = true;
+      autosave = "on_focus_change";
+
+      file_types = {
+        css = [ "*.wxss" ];
+        just = [ "justfile" ];
+        javascript = [ "*.wxs" ];
+        applescript = [ "*.scpt" ];
+        json5 = [ ".renovaterc.json5" ];
+        caddyfile = [ "Caddyfile" ];
+        jsonc = [ "*.cjson" ];
+      };
+
+      linked_edits = true;
+      tab_size = 2;
+      ui_font_size = 18.0;
+      buffer_font_size = 16.0;
+
+      theme = {
+        mode = "system";
+        light = "Catppuccin Macchiato";
+        dark = "Catppuccin Macchiato";
+      };
+
+      agent_servers = {
+        "claude-acp" = {
+          type = "registry";
+          env = {
+            CLAUDE_CODE_EXECUTABLE = "/opt/homebrew/bin/claude";
+          };
+        };
+
+        # opencode = {
+        #   type = "custom";
+        #   command = "/opt/homebrew/bin/opencode";
+        #   args = [ "acp" ];
+        # };
+
+        "codex-acp" = {
+          default_config_options = {
+            mode = "full-access";
+          };
+          favorite_config_option_values = {
+            mode = [ "full-access" ];
+            model = [ "gpt-5.4" ];
+          };
+          type = "registry";
+        };
+
+        # kimi = {
+        #   type = "custom";
+        #   command = "kimi";
+        #   args = [ "acp" ];
+        #   env = { };
+        # };
+      };
+
+      languages = {
+        Nix = {
+          formatter = {
+            external = {
+              command = "nixfmt";
+              arguments = [ "--width=100" ];
+            };
+          };
+          language_servers = [
+            "nixd"
+            "!nil"
+          ];
+        };
+
+        "Shell Script" = {
+          tab_size = 4;
+        };
+
+        TOML = {
+          formatter = {
+            external = {
+              command = "taplo";
+              arguments = [
+                "format"
+                "-"
+              ];
+            };
+          };
+        };
+
+        YAML = {
+          format_on_save = "off";
+        };
+      };
+
+      lsp = {
+        nixd = {
+          settings = {
+            options = {
+              "nix-darwin" = {
+                expr = "(builtins.getFlake (builtins.toString ./.)).darwinConfigurations.${hostname}.options";
+              };
+
+              "home-manager" = {
+                expr = "(builtins.getFlake (builtins.toString ./.)).homeConfigurations.${hostname}.options";
+              };
+            };
+          };
+        };
+
+        "yaml-language-server" = {
+          settings = {
+            yaml = {
+              schemas = {
+                # 为特定的 YAML 文件类型指定 schema
+              };
+              completion = true;
+              hover = true;
+              validate = true;
+            };
+          };
+        };
+      };
+
+      auto_install_extensions = {
+        ansible = true;
+        basher = true;
+        caddyfile = true;
+        catppuccin = true;
+        "catppuccin-icons" = true;
+        csv = true;
+        "docker-compose" = true;
+        dockerfile = true;
+        "git-firefly" = true;
+        html = true;
+        ini = true;
+        json5 = true;
+        just = true;
+        log = true;
+        lua = true;
+        make = true;
+        "markdown-oxide" = true;
+        "mcp-server-context7" = true;
+        "mcp-server-exa-search" = true;
+        mermaid = true;
+        nginx = true;
+        nix = true;
+        ruby = true;
+        sql = true;
+        swift = true;
+        terraform = false;
+        toml = true;
+        wakatime = true;
+        xml = true;
+      };
+
+      inlay_hints = {
+        enabled = true;
+        show_type_hints = true;
+        show_parameter_hints = true;
+        show_other_hints = true;
+      };
+    };
+  };
+}
