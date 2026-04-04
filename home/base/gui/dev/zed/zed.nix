@@ -152,6 +152,9 @@ in
               display_name = "GPT-5.1-Codex Mini";
               max_tokens = 1000000;
               max_output_tokens = 128000;
+              capabilities = {
+                chat_completions = false;
+              };
             }
           ];
         };
