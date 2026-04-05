@@ -5,11 +5,11 @@
 let
   zjstatus = pkgs.stdenvNoCC.mkDerivation rec {
     pname = "zjstatus";
-    version = "v0.21.1";
+    version = "v0.22.0";
 
     src = builtins.fetchurl {
       url = "https://github.com/dj95/zjstatus/releases/download/${version}/zjstatus.wasm";
-      sha256 = "sha256:dc1982a208c27f66871e69811458fbb1abdb15e28662fddb136b575d6564ae1a";
+      sha256 = "sha256:4de426d20b1cbf861272e927aeeb5b49d92c17f0e2bb9d173f85bf7f0154dd53";
     };
     phases = [ "installPhase" ];
 
