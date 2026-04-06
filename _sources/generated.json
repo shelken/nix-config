@@ -1,6 +1,6 @@
 {
   "kitty-icon": {
-    "cargoLocks": null,
+    "cargoLock": null,
     "date": null,
     "extract": null,
     "name": "kitty-icon",
@@ -20,11 +20,11 @@
     },
     "version": "v1.1.0"
   },
-  "paperwm-spoon": {
-    "cargoLocks": null,
-    "date": "2025-09-26",
+  "projects-yazi": {
+    "cargoLock": null,
+    "date": "2026-02-15",
     "extract": null,
-    "name": "paperwm-spoon",
+    "name": "projects-yazi",
     "passthru": null,
     "pinned": false,
     "src": {
@@ -32,13 +32,49 @@
       "fetchSubmodules": false,
       "leaveDotGit": false,
       "name": null,
-      "owner": "mogenson",
-      "repo": "PaperWM.spoon",
-      "rev": "c7247801b2a3f4aac63f475ef677b367a310b8fd",
-      "sha256": "sha256-or92pm1rEzg0iTwTpqpzSjStO/TgSDa3n9B+earlGrA=",
+      "owner": "MasouShizuka",
+      "repo": "projects.yazi",
+      "rev": "198c2ba30e4916ca275d2a08bd329fcf32735866",
+      "sha256": "sha256-Grvtx+N1DpdpMaVuDwaHu3S7zu6pQtmu1twvFIowbLM=",
       "sparseCheckout": [],
       "type": "github"
     },
-    "version": "c7247801b2a3f4aac63f475ef677b367a310b8fd"
+    "version": "198c2ba30e4916ca275d2a08bd329fcf32735866"
+  },
+  "yazi-plugins": {
+    "cargoLock": null,
+    "date": "2026-04-02",
+    "extract": null,
+    "name": "yazi-plugins",
+    "passthru": null,
+    "pinned": false,
+    "src": {
+      "deepClone": false,
+      "fetchSubmodules": false,
+      "leaveDotGit": false,
+      "name": null,
+      "owner": "yazi-rs",
+      "repo": "plugins",
+      "rev": "e84f4fe5122b659544b4984e6b7daf14383dbe8f",
+      "sha256": "sha256-FVVUU9c3VQBvfjwBBilbBS8ygU4U97L2DwdT4s55OW0=",
+      "sparseCheckout": [],
+      "type": "github"
+    },
+    "version": "e84f4fe5122b659544b4984e6b7daf14383dbe8f"
+  },
+  "zjstatus": {
+    "cargoLock": null,
+    "date": null,
+    "extract": null,
+    "name": "zjstatus",
+    "passthru": null,
+    "pinned": false,
+    "src": {
+      "name": null,
+      "sha256": "sha256-TeQm0gscv4YScuknrutbSdksF/Diu50XP4W/fwFU3VM=",
+      "type": "url",
+      "url": "https://github.com/dj95/zjstatus/releases/download/v0.22.0/zjstatus.wasm"
+    },
+    "version": "v0.22.0"
   }
 }

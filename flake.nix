@@ -35,6 +35,12 @@
 
       genSpecialArgs =
         system:
+        let
+          pkgs = import (if lib.hasSuffix "darwin" system then inputs.nixpkgs-darwin else inputs.nixpkgs) {
+            inherit system;
+            config.allowUnfree = true;
+          };
+        in
         inputs
         // {
           pkgs-unstable = import inputs.nixpkgs-unstable {
@@ -42,6 +48,9 @@
             # To use chrome, we need to allow the installation of non-free software
             config.allowUnfree = true;
           };
+
+          sources = pkgs.callPackage ./_sources/generated.nix { };
+
           inherit mylib myvars system;
           inherit (myvars) username userfullname useremail;
         };

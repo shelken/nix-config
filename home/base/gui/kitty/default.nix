@@ -1,15 +1,7 @@
 {
-  pkgs,
+  sources,
   ...
 }:
-let
-  kitty-icon-pkgs = pkgs.fetchFromGitHub {
-    owner = "DinkDonk";
-    repo = "kitty-icon";
-    rev = "0bdece53";
-    hash = "sha256-TLltUcfJpY+3rwvHYgtN4zBpbBnLBYyzDu90UMnxwoc=";
-  };
-in
 {
   programs.kitty = {
     enable = true;
@@ -120,8 +112,7 @@ in
   #   source = "${pkgs.kitty-themes}/share/kitty-themes/themes/${theme}";
   # };
   xdg.configFile."kitty/kitty.app.png" = {
-    source = "${kitty-icon-pkgs}/kitty-light.png";
-    # source = "${pkgs.kitty-icon}/kitty-light.png";
+    source = "${sources.kitty-icon.src}/kitty-light.png";
   };
 
   home.sessionVariables = {

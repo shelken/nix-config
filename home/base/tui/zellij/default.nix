@@ -1,25 +1,7 @@
 {
-  pkgs,
+  sources,
   ...
 }:
-let
-  zjstatus = pkgs.stdenvNoCC.mkDerivation rec {
-    pname = "zjstatus";
-    version = "v0.22.0";
-
-    src = builtins.fetchurl {
-      url = "https://github.com/dj95/zjstatus/releases/download/${version}/zjstatus.wasm";
-      sha256 = "sha256:4de426d20b1cbf861272e927aeeb5b49d92c17f0e2bb9d173f85bf7f0154dd53";
-    };
-    phases = [ "installPhase" ];
-
-    installPhase = ''
-      mkdir -p $out/bin
-      cp $src $out/bin/zjstatus
-      chmod +x $out/bin/zjstatus
-    '';
-  };
-in
 {
   programs.zellij = {
     enable = true;
@@ -31,7 +13,10 @@ in
 
   xdg.configFile = {
     "zellij/layouts".source = ./layouts;
-    "zellij/plugins/zjstatus.wasm".source = "${zjstatus}/bin/zjstatus";
+    "zellij/plugins/zjstatus.wasm" = {
+      source = sources.zjstatus.src;
+      executable = true;
+    };
     "zellij/config.kdl" = {
       # text = concatStrings [
       #   ''
@@ -51,7 +36,7 @@ in
       #   # origin_file
       #   ''
       #     plugins {
-      #       zjstatus location="file:${zjstatus}/bin/zjstatus.wasm" {
+      #       zjstatus location="file:${sources.zjstatus.src}" {
       #           ${builtins.readFile ./zjstatus/catpuccin.kdl}
       #       }
       #     }

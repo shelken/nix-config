@@ -2,10 +2,24 @@
 src.github_tag = "DinkDonk/kitty-icon"
 fetch.github   = "DinkDonk/kitty-icon"
 
-[paperwm-spoon]
-src.git      = "https://github.com/mogenson/PaperWM.spoon"
+# [paperwm-spoon]
+# src.git      = "https://github.com/mogenson/PaperWM.spoon"
+# src.branch   = "main"
+# fetch.github = "mogenson/PaperWM.spoon"
+
+[zjstatus]
+src.github = "dj95/zjstatus"
+fetch.url  = "https://github.com/dj95/zjstatus/releases/download/$ver/zjstatus.wasm"
+
+[yazi-plugins]
+src.git      = "https://github.com/yazi-rs/plugins"
 src.branch   = "main"
-fetch.github = "mogenson/PaperWM.spoon"
+fetch.github = "yazi-rs/plugins"
+
+[projects-yazi]
+src.git      = "https://github.com/MasouShizuka/projects.yazi"
+src.branch   = "main"
+fetch.github = "MasouShizuka/projects.yazi"
 
 # [hammerspoon]
 # src.github = "Hammerspoon/hammerspoon"
