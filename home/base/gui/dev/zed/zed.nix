@@ -409,7 +409,7 @@ in
         catppuccin = true;
         "catppuccin-icons" = true;
         csv = true;
-        "docker-compose" = true;
+        "docker-compose" = false; # https://github.com/zed-industries/zed/issues/12122#issuecomment-2613014716
         dockerfile = true;
         "git-firefly" = true;
         html = true;
