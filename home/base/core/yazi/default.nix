@@ -1,5 +1,6 @@
 {
   pkgs,
+  sources,
   ...
 }:
 {
@@ -8,6 +9,11 @@
     enableZshIntegration = true;
     enableBashIntegration = true;
     shellWrapperName = "yy";
+    plugins = {
+      piper = "${sources.yazi-plugins.src}/piper.yazi";
+      projects = "${sources.projects-yazi.src}";
+      # mime = "${sources.yazi-plugins.src}/mime.yazi";
+    };
   };
 
   home.packages = with pkgs; [
@@ -36,46 +42,5 @@
     "yazi/init.lua" = {
       source = ./init.lua;
     };
-    # not good
-    # "yazi/plugins/fg.yazi" = {
-    #   source = pkgs.fetchFromGitHub {
-    #     owner = "DreamMaoMao";
-    #     repo = "fg.yazi";
-    #     rev = "cc53d56";
-    #     sha256 = "sha256-xUZdmDZhbUzX5Ka2xogRQJI52EL81n9ZLrcxDacgfN0=";
-    #   };
-    # };
-    "yazi/plugins/glow.yazi" = {
-      source = pkgs.fetchFromGitHub {
-        owner = "Reledia";
-        repo = "glow.yazi";
-        rev = "c76bf4fb";
-        hash = "sha256-DPud1Mfagl2z490f5L69ZPnZmVCa0ROXtFeDbEegBBU=";
-      };
-    };
-    "yazi/plugins/projects.yazi" = {
-      source = pkgs.fetchFromGitHub {
-        owner = "MasouShizuka";
-        repo = "projects.yazi";
-        rev = "198c2ba3";
-        hash = "sha256-Grvtx+N1DpdpMaVuDwaHu3S7zu6pQtmu1twvFIowbLM=";
-      };
-    };
-    # "yazi/plugins/mime.yazi" = {
-    #   source = pkgs.fetchFromGitHub {
-    #     owner = "DreamMaoMao";
-    #     repo = "mime.yazi";
-    #     rev = "8e866b9c";
-    #     hash = "sha256-RGev5ecsBrzJHlooWw24FWZMjpwUshPMGRUc4UIh5mg=";
-    #   };
-    # };
-    # "yazi/plugins/preview.yazi" = {
-    #   source = pkgs.fetchFromGitHub {
-    #     owner = "Urie96";
-    #     repo = "preview.yazi";
-    #     rev = "eab63ea";
-    #     sha256 = "sha256-WhAZyME8IVEmGQTAIxUSMDXPf0xqqAHixYfT8lXBtIQ=";
-    #   };
-    # };
   };
 }
