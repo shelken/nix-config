@@ -8,7 +8,7 @@ let
   inherit (lib) mkIf mkOption types;
   cfg = config.shelken.dev.ai;
 
-  agentsSourcePath = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/_agents.md";
+  agentsSourcePath = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/_agents_en.md";
 
   # CLI tools and their agents file configurations
   # Format: { targetPath = "relative/path"; fileName = "FILENAME.md"; }
