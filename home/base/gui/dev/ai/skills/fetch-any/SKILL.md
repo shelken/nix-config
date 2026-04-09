@@ -1,20 +1,15 @@
 ---
 name: fetch-any
 description:
-  当任务涉及 `opencli`、`npx defuddle parse`、`playwright-cli`
+  当任务涉及 `npx defuddle parse`、`playwright-cli`
   这些命令，或要搜索网页内容、抓取具体网页正文时使用。尤其是需要用真实浏览器搜索和获取难以获取的网站
 ---
 
 具体做法分开放在：
 
-- [references/search.md](references/search.md)
 - [references/fetch.md](references/fetch.md)
 
 ## 什么情况调用什么
-
-### 需要搜索结果时
-
-看 [references/search.md](references/search.md)
 
 适用情况：
 
