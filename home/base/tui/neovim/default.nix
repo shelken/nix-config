@@ -33,6 +33,8 @@ in
       enable = true;
       package = pkgs-unstable.neovim-unwrapped;
       defaultEditor = true;
+      withRuby = true;
+      withPython3 = true;
 
       viAlias = true;
       vimAlias = true;
