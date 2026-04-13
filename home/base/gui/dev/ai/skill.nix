@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   sources,
   ...
 }:
@@ -25,7 +26,6 @@ let
 
     # JuliusBrussee/caveman
     caveman = "${sources.caveman.src}/skills/caveman";
-    caveman-compress = "${sources.caveman.src}/caveman-compress";
     caveman-help = "${sources.caveman.src}/skills/caveman-help";
 
     # luoling8192/ai-coding-principles
@@ -51,7 +51,7 @@ let
     # pbakaus/impeccable
     audit = "${sources.impeccable.src}/.claude/skills/audit";
     critique = "${sources.impeccable.src}/.claude/skills/critique";
-    harden = "${sources.impeccable.src}/.claude/skills/harden";
+    # harden = "${sources.impeccable.src}/.claude/skills/harden"; # 2.1.1 issue in codex: invalid YAML: mapping values are not allowed in this context at line 2 column 46
     impeccable = "${sources.impeccable.src}/.claude/skills/impeccable";
     optimize = "${sources.impeccable.src}/.claude/skills/optimize";
     polish = "${sources.impeccable.src}/.claude/skills/polish";
@@ -65,6 +65,18 @@ let
     # vercel-labs/skills
     find-skills = "${sources.vercel-labs-skills.src}/skills/find-skills";
   };
+
+  # 单文件来源统一包装成目录，skill 目标形态与目录来源保持一致，避免目录内再挂单文件链接。
+  normalizeFetchedSkillSource =
+    name: sourcePath:
+    if lib.pathIsDirectory sourcePath then
+      sourcePath
+    else
+      pkgs.writeTextDir (builtins.unsafeDiscardStringContext (builtins.baseNameOf (toString sourcePath))) (
+        builtins.readFile sourcePath
+      );
+
+  fetchedSkillDirectories = lib.mapAttrs normalizeFetchedSkillSource fetchedSkillSources;
 
   localSkillDirs = builtins.attrNames (
     lib.filterAttrs (
@@ -92,24 +104,13 @@ let
 
   fetchedSkillLinks = lib.concatMap (
     targetPath:
-    lib.mapAttrsToList (
-      name: sourcePath:
-      let
-        fileName = builtins.unsafeDiscardStringContext (baseNameOf (toString sourcePath));
-        targetName =
-          if lib.pathIsDirectory sourcePath then
-            "${targetPath}/${name}"
-          else
-            "${targetPath}/${name}/${fileName}";
-      in
-      {
-        name = targetName;
-        value = {
-          source = sourcePath;
-          force = true;
-        };
-      }
-    ) fetchedSkillSources
+    lib.mapAttrsToList (name: sourcePath: {
+      name = "${targetPath}/${name}";
+      value = {
+        source = sourcePath;
+        force = true;
+      };
+    }) fetchedSkillDirectories
   ) cfg.skillTargets;
 
   allSkillLinks = lib.listToAttrs (localSkillLinks ++ fetchedSkillLinks);
