@@ -1,2 +1,3 @@
 flake.lock
 **/snippets/**
+_sources/**

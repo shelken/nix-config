@@ -6,6 +6,78 @@
   dockerTools,
 }:
 {
+  ai-coding-principles = {
+    pname = "ai-coding-principles";
+    version = "27db986fd2790ad1a1818a7f1b2c5d91b3843b8e";
+    src = fetchFromGitHub {
+      owner = "luoling8192";
+      repo = "ai-coding-principles";
+      rev = "27db986fd2790ad1a1818a7f1b2c5d91b3843b8e";
+      fetchSubmodules = false;
+      sha256 = "sha256-fkaO77jOmg9q3jEZe64SWgNWb2PUX9C1KvRDg4H+w8Y=";
+    };
+    date = "2026-03-26";
+  };
+  anthropics-skills = {
+    pname = "anthropics-skills";
+    version = "12ab35c2eb5668c95810e6a6066f40f4218adc39";
+    src = fetchFromGitHub {
+      owner = "anthropics";
+      repo = "skills";
+      rev = "12ab35c2eb5668c95810e6a6066f40f4218adc39";
+      fetchSubmodules = false;
+      sha256 = "sha256-H/oorOl5cch7bnziDz7gHNBv5Q0OAwFbk9w1WLku2kk=";
+    };
+    date = "2026-04-09";
+  };
+  context7-cli = {
+    pname = "context7-cli";
+    version = "c31528d0cde3d00cbb542ae44fde59f3fd7144dc";
+    src = fetchFromGitHub {
+      owner = "upstash";
+      repo = "context7";
+      rev = "c31528d0cde3d00cbb542ae44fde59f3fd7144dc";
+      fetchSubmodules = false;
+      sha256 = "sha256-TMvDzDcZd9hoYI84x+jewOJYkSrb1qwVRTdzD2SwG4U=";
+    };
+    date = "2026-04-13";
+  };
+  dotclaude-skills = {
+    pname = "dotclaude-skills";
+    version = "be586bfc054723332df88492669e274dfe48991b";
+    src = fetchFromGitHub {
+      owner = "FradSer";
+      repo = "dotclaude";
+      rev = "be586bfc054723332df88492669e274dfe48991b";
+      fetchSubmodules = false;
+      sha256 = "sha256-vttsYbwLujeCFzff72+i6zqYNG9bDX7SsOYZ/XZBU30=";
+    };
+    date = "2026-03-30";
+  };
+  github-cli = {
+    pname = "github-cli";
+    version = "4621f96e8c8532b6e1865e4f843a555d37865eee";
+    src = fetchFromGitHub {
+      owner = "georgekhananaev";
+      repo = "claude-skills-vault";
+      rev = "4621f96e8c8532b6e1865e4f843a555d37865eee";
+      fetchSubmodules = false;
+      sha256 = "sha256-HZS1Yt3FR393niSx03GATF0d+j2BtSOmw0hElz8QGRo=";
+    };
+    date = "2026-03-16";
+  };
+  impeccable = {
+    pname = "impeccable";
+    version = "00d485659af82982aef0328d0419c49a2716d123";
+    src = fetchFromGitHub {
+      owner = "pbakaus";
+      repo = "impeccable";
+      rev = "00d485659af82982aef0328d0419c49a2716d123";
+      fetchSubmodules = false;
+      sha256 = "sha256-RdOrnzW0Qu0ECDmOYomKEd5XymezaRbWqgWEYwSfyc4=";
+    };
+    date = "2026-04-10";
+  };
   kitty-icon = {
     pname = "kitty-icon";
     version = "v1.1.0";
@@ -16,6 +88,30 @@
       fetchSubmodules = false;
       sha256 = "sha256-q5wNdFRMvQDx3DlO7zdy/xPJbqcNlm4iVKaBwjxlSMs=";
     };
+  };
+  obra-superpowers = {
+    pname = "obra-superpowers";
+    version = "917e5f53b16b115b70a3a355ed5f4993b9f8b73d";
+    src = fetchFromGitHub {
+      owner = "obra";
+      repo = "superpowers";
+      rev = "917e5f53b16b115b70a3a355ed5f4993b9f8b73d";
+      fetchSubmodules = false;
+      sha256 = "sha256-FMaX6VMBC64OPdvXwhXKfHKnkdvdC2R9lZaU3BR/G3o=";
+    };
+    date = "2026-04-06";
+  };
+  onevcat-skills = {
+    pname = "onevcat-skills";
+    version = "4955f5422d992db58ddb3652ec1c1b552405b39d";
+    src = fetchFromGitHub {
+      owner = "onevcat";
+      repo = "skills";
+      rev = "4955f5422d992db58ddb3652ec1c1b552405b39d";
+      fetchSubmodules = false;
+      sha256 = "sha256-XV6yl6mQkzoC/f2dnMnSp8wfXVjnkdxIbOCN9t5nu/E=";
+    };
+    date = "2026-03-16";
   };
   projects-yazi = {
     pname = "projects-yazi";
@@ -29,17 +125,41 @@
     };
     date = "2026-02-15";
   };
+  vercel-labs-skills = {
+    pname = "vercel-labs-skills";
+    version = "004c73806e35f3b12582967759559203c4ed01f9";
+    src = fetchFromGitHub {
+      owner = "vercel-labs";
+      repo = "skills";
+      rev = "004c73806e35f3b12582967759559203c4ed01f9";
+      fetchSubmodules = false;
+      sha256 = "sha256-cdundZSbWn8wXByYeXI4lQ3gWtBj3DkPQ37Py0bL3IY=";
+    };
+    date = "2026-04-12";
+  };
+  waza-skills = {
+    pname = "waza-skills";
+    version = "306885c1c0b1354a887435000f377392055a46d6";
+    src = fetchFromGitHub {
+      owner = "tw93";
+      repo = "Waza";
+      rev = "306885c1c0b1354a887435000f377392055a46d6";
+      fetchSubmodules = false;
+      sha256 = "sha256-byRlIN0ulP7qEuJ0BvtSS/TMopyyX9F2MMHsIVSKaGE=";
+    };
+    date = "2026-04-12";
+  };
   yazi-plugins = {
     pname = "yazi-plugins";
-    version = "e84f4fe5122b659544b4984e6b7daf14383dbe8f";
+    version = "babfd0f6144aedcc7af11852ce962b989d052898";
     src = fetchFromGitHub {
       owner = "yazi-rs";
       repo = "plugins";
-      rev = "e84f4fe5122b659544b4984e6b7daf14383dbe8f";
+      rev = "babfd0f6144aedcc7af11852ce962b989d052898";
       fetchSubmodules = false;
-      sha256 = "sha256-FVVUU9c3VQBvfjwBBilbBS8ygU4U97L2DwdT4s55OW0=";
+      sha256 = "sha256-y/UnRuZ2QytCdtGhxkbVvaGXglpqwufaUddXOzs7fzo=";
     };
-    date = "2026-04-02";
+    date = "2026-04-11";
   };
   zjstatus = {
     pname = "zjstatus";

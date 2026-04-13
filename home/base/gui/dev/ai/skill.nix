@@ -1,8 +1,7 @@
 {
   config,
   lib,
-  pkgs,
-  mylib,
+  sources,
   ...
 }:
 let
@@ -11,31 +10,80 @@ let
 
   skillsSourcePath = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/skills";
 
-  skillDirs = builtins.attrNames (
-    lib.filterAttrs (_: v: v == "directory") (builtins.readDir ./skills)
+  # 外部 skill 统一交给 nvfetcher 固定来源和版本，避免 activation 阶段临时下载。
+  fetchedSkillSources = {
+    # anthropics/skills
+    skill-creator = "${sources.anthropics-skills.src}/skills/skill-creator";
+
+    # FradSer/dotclaude
+    best-practices = "${sources.dotclaude-skills.src}/refactor/skills/best-practices";
+    refactor = "${sources.dotclaude-skills.src}/refactor/skills/refactor";
+    refactor-project = "${sources.dotclaude-skills.src}/refactor/skills/refactor-project";
+
+    # georgekhananaev/claude-skills-vault
+    github-cli = "${sources.github-cli.src}/.claude/skills/github-cli";
+
+    # luoling8192/ai-coding-principles
+    ai-coding-discipline = "${sources.ai-coding-principles.src}/ai-coding-discipline";
+    ddia-principles = "${sources.ai-coding-principles.src}/ddia-principles";
+
+    # obra/superpowers
+    brainstorming = "${sources.obra-superpowers.src}/skills/brainstorming";
+    executing-plans = "${sources.obra-superpowers.src}/skills/executing-plans";
+    subagent-driven-development = "${sources.obra-superpowers.src}/skills/subagent-driven-development";
+    systematic-debugging = "${sources.obra-superpowers.src}/skills/systematic-debugging";
+    test-driven-development = "${sources.obra-superpowers.src}/skills/test-driven-development";
+    writing-plans = "${sources.obra-superpowers.src}/skills/writing-plans";
+    writing-skills = "${sources.obra-superpowers.src}/skills/writing-skills";
+
+    # onevcat/skills
+    onevcat-jj = "${sources.onevcat-skills.src}/skills/onevcat-jj";
+
+    # pbakaus/impeccable
+    audit = "${sources.impeccable.src}/.claude/skills/audit";
+    critique = "${sources.impeccable.src}/.claude/skills/critique";
+    harden = "${sources.impeccable.src}/.claude/skills/harden";
+    impeccable = "${sources.impeccable.src}/.claude/skills/impeccable";
+    optimize = "${sources.impeccable.src}/.claude/skills/optimize";
+    polish = "${sources.impeccable.src}/.claude/skills/polish";
+
+    # tw93/Waza
+    health = "${sources.waza-skills.src}/skills/health";
+
+    # upstash/context7
+    context7-cli = "${sources.context7-cli.src}/skills/context7-cli";
+
+    # vercel-labs/skills
+    find-skills = "${sources.vercel-labs-skills.src}/skills/find-skills";
+  };
+
+  localSkillDirs = builtins.attrNames (
+    lib.filterAttrs (
+      name: v: v == "directory" && !(builtins.elem name (builtins.attrNames fetchedSkillSources))
+    ) (builtins.readDir ./skills)
   );
+
+  localSkillSources = builtins.listToAttrs (
+    map (name: {
+      inherit name;
+      value = config.lib.file.mkOutOfStoreSymlink "${skillsSourcePath}/${name}";
+    }) localSkillDirs
+  );
+
+  skillSources = localSkillSources // fetchedSkillSources;
 
   allSkillLinks = lib.listToAttrs (
     lib.concatMap (
       targetPath:
-      map (name: {
+      lib.mapAttrsToList (name: sourcePath: {
         name = "${targetPath}/${name}";
         value = {
-          source = config.lib.file.mkOutOfStoreSymlink "${skillsSourcePath}/${name}";
+          source = sourcePath;
           force = true;
         };
-      }) skillDirs
+      }) skillSources
     ) cfg.skillTargets
   );
-
-  remoteSkillsScript = pkgs.writeShellScript "download-remote-skills" ''
-    set -euo pipefail
-    ${lib.concatMapStrings (skill: ''
-      mkdir -p "${skillsSourcePath}/${skill.name}"
-      echo "Downloading skill: ${skill.name}"
-      ${pkgs.curl}/bin/curl -fsSL -o "${skillsSourcePath}/${skill.name}/${skill.fileName}" "${skill.url}"
-    '') cfg.remoteSkills}
-  '';
 in
 {
   options.shelken.dev.ai = {
@@ -52,38 +100,6 @@ in
         ".config/opencode/skills"
       ];
     };
-
-    remoteSkills = mkOption {
-      type = types.listOf (
-        types.submodule {
-          options = {
-            name = mkOption {
-              type = types.str;
-              description = "Skill directory name";
-              example = "agent-browser";
-            };
-            fileName = mkOption {
-              type = types.str;
-              default = "SKILL.md";
-              description = "Target file name";
-            };
-            url = mkOption {
-              type = types.str;
-              description = "URL to fetch the skill file from";
-              example = "https://raw.githubusercontent.com/vercel-labs/agent-browser/main/skills/agent-browser/SKILL.md";
-            };
-          };
-        }
-      );
-      default = [
-        # 优先持久化到skills目录下而不是remote
-        # {
-        #   name = "agent-browser";
-        #   url = "https://raw.githubusercontent.com/vercel-labs/agent-browser/main/skills/agent-browser/SKILL.md";
-        # }
-      ];
-      description = "Remote skills to download on each switch";
-    };
   };
 
   config = mkIf cfg.enable {
@@ -94,13 +110,6 @@ in
     # npx skills add github/repo -g -y -a claude-code codex --skill [skill-name]
     # npx skills add obra/superpowers -g -y -a claude-code codex --skill brainstorming systematic-debugging writing-plans test-driven-development executing-plans subagent-driven-development
     # npx skills add microsoft/playwright-cli -g -y -a claude-code codex --skill playwright-cli
-    # npx skills add pbakaus/impeccable -g -y -a claude-code codex --skill audit critique extract harden normalize onboard optimize teach-impeccable
-
-    # Download remote skills on activation
-    home.activation.downloadRemoteSkills = lib.mkIf (cfg.remoteSkills != [ ]) (
-      lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        run ${remoteSkillsScript}
-      ''
-    );
+    # npx skills add pbakaus/impeccable -g -y -a claude-code codex --skill audit critique harden impeccable optimize polish
   };
 }

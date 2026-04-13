@@ -2,6 +2,57 @@
 src.github_tag = "DinkDonk/kitty-icon"
 fetch.github   = "DinkDonk/kitty-icon"
 
+# Skills
+[ai-coding-principles]
+src.git      = "https://github.com/luoling8192/ai-coding-principles"
+src.branch   = "main"
+fetch.github = "luoling8192/ai-coding-principles"
+
+[anthropics-skills]
+src.git      = "https://github.com/anthropics/skills"
+src.branch   = "main"
+fetch.github = "anthropics/skills"
+
+[context7-cli]
+src.git      = "https://github.com/upstash/context7"
+src.branch   = "master"
+fetch.github = "upstash/context7"
+
+[dotclaude-skills]
+src.git      = "https://github.com/FradSer/dotclaude"
+src.branch   = "main"
+fetch.github = "FradSer/dotclaude"
+
+[github-cli]
+src.git      = "https://github.com/georgekhananaev/claude-skills-vault"
+src.branch   = "main"
+fetch.github = "georgekhananaev/claude-skills-vault"
+
+[impeccable]
+src.git      = "https://github.com/pbakaus/impeccable"
+src.branch   = "main"
+fetch.github = "pbakaus/impeccable"
+
+[obra-superpowers]
+src.git      = "https://github.com/obra/superpowers"
+src.branch   = "main"
+fetch.github = "obra/superpowers"
+
+[onevcat-skills]
+src.git      = "https://github.com/onevcat/skills"
+src.branch   = "master"
+fetch.github = "onevcat/skills"
+
+[vercel-labs-skills]
+src.git      = "https://github.com/vercel-labs/skills"
+src.branch   = "main"
+fetch.github = "vercel-labs/skills"
+
+[waza-skills]
+src.git      = "https://github.com/tw93/Waza"
+src.branch   = "main"
+fetch.github = "tw93/Waza"
+
 # [paperwm-spoon]
 # src.git      = "https://github.com/mogenson/PaperWM.spoon"
 # src.branch   = "main"
