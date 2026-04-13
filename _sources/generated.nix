@@ -30,6 +30,18 @@
     };
     date = "2026-04-09";
   };
+  caveman = {
+    pname = "caveman";
+    version = "63e797cd753b301374947a5ed975c21775d962b9";
+    src = fetchFromGitHub {
+      owner = "JuliusBrussee";
+      repo = "caveman";
+      rev = "63e797cd753b301374947a5ed975c21775d962b9";
+      fetchSubmodules = false;
+      sha256 = "sha256-pHPMQGr9/ufsUODmqHm2T6sCOaeOOJl4baX4OeeYp6k=";
+    };
+    date = "2026-04-12";
+  };
   context7-cli = {
     pname = "context7-cli";
     version = "c31528d0cde3d00cbb542ae44fde59f3fd7144dc";
@@ -112,6 +124,18 @@
       sha256 = "sha256-XV6yl6mQkzoC/f2dnMnSp8wfXVjnkdxIbOCN9t5nu/E=";
     };
     date = "2026-03-16";
+  };
+  playwright-cli = {
+    pname = "playwright-cli";
+    version = "1a3b1f30ba72087a6cd8e102f39358ec888d210d";
+    src = fetchFromGitHub {
+      owner = "microsoft";
+      repo = "playwright-cli";
+      rev = "1a3b1f30ba72087a6cd8e102f39358ec888d210d";
+      fetchSubmodules = false;
+      sha256 = "sha256-6HAQi2P1ddEW5ubFc5pUtPpBSdnNRgfejFiCVBfvbJY=";
+    };
+    date = "2026-04-11";
   };
   projects-yazi = {
     pname = "projects-yazi";

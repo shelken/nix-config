@@ -13,6 +13,11 @@ src.git      = "https://github.com/anthropics/skills"
 src.branch   = "main"
 fetch.github = "anthropics/skills"
 
+[caveman]
+src.git      = "https://github.com/JuliusBrussee/caveman"
+src.branch   = "main"
+fetch.github = "JuliusBrussee/caveman"
+
 [context7-cli]
 src.git      = "https://github.com/upstash/context7"
 src.branch   = "master"
@@ -42,6 +47,11 @@ fetch.github = "obra/superpowers"
 src.git      = "https://github.com/onevcat/skills"
 src.branch   = "master"
 fetch.github = "onevcat/skills"
+
+[playwright-cli]
+src.git      = "https://github.com/microsoft/playwright-cli"
+src.branch   = "main"
+fetch.github = "microsoft/playwright-cli"
 
 [software-design-philosophy-skill]
 src.git      = "https://github.com/luoling8192/software-design-philosophy-skill"

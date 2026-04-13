@@ -23,10 +23,18 @@ let
     # georgekhananaev/claude-skills-vault
     github-cli = "${sources.github-cli.src}/.claude/skills/github-cli";
 
+    # JuliusBrussee/caveman
+    caveman = "${sources.caveman.src}/skills/caveman";
+    caveman-compress = "${sources.caveman.src}/caveman-compress";
+    caveman-help = "${sources.caveman.src}/skills/caveman-help";
+
     # luoling8192/ai-coding-principles
     ai-coding-discipline = "${sources.ai-coding-principles.src}/ai-coding-discipline";
     ddia-principles = "${sources.ai-coding-principles.src}/ddia-principles";
     software-design-philosophy-skill = "${sources.software-design-philosophy-skill.src}/SKILL.md";
+
+    # microsoft/playwright-cli
+    playwright-cli = "${sources.playwright-cli.src}/skills/playwright-cli";
 
     # obra/superpowers
     brainstorming = "${sources.obra-superpowers.src}/skills/brainstorming";
@@ -87,11 +95,12 @@ let
     lib.mapAttrsToList (
       name: sourcePath:
       let
+        fileName = builtins.unsafeDiscardStringContext (baseNameOf (toString sourcePath));
         targetName =
           if lib.pathIsDirectory sourcePath then
             "${targetPath}/${name}"
           else
-            "${targetPath}/${name}/${baseNameOf (toString sourcePath)}";
+            "${targetPath}/${name}/${fileName}";
       in
       {
         name = targetName;
@@ -128,8 +137,6 @@ in
     # 手动命令
     # npx skills update
     # npx skills add github/repo -g -y -a claude-code codex --skill [skill-name]
-    # npx skills add obra/superpowers -g -y -a claude-code codex --skill brainstorming systematic-debugging writing-plans test-driven-development executing-plans subagent-driven-development
     # npx skills add microsoft/playwright-cli -g -y -a claude-code codex --skill playwright-cli
-    # npx skills add pbakaus/impeccable -g -y -a claude-code codex --skill audit critique harden impeccable optimize polish
   };
 }

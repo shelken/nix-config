@@ -41,6 +41,27 @@
         },
         "version": "12ab35c2eb5668c95810e6a6066f40f4218adc39"
     },
+    "caveman": {
+        "cargoLock": null,
+        "date": "2026-04-12",
+        "extract": null,
+        "name": "caveman",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "JuliusBrussee",
+            "repo": "caveman",
+            "rev": "63e797cd753b301374947a5ed975c21775d962b9",
+            "sha256": "sha256-pHPMQGr9/ufsUODmqHm2T6sCOaeOOJl4baX4OeeYp6k=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "63e797cd753b301374947a5ed975c21775d962b9"
+    },
     "context7-cli": {
         "cargoLock": null,
         "date": "2026-04-13",
@@ -187,6 +208,27 @@
             "type": "github"
         },
         "version": "4955f5422d992db58ddb3652ec1c1b552405b39d"
+    },
+    "playwright-cli": {
+        "cargoLock": null,
+        "date": "2026-04-11",
+        "extract": null,
+        "name": "playwright-cli",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "microsoft",
+            "repo": "playwright-cli",
+            "rev": "1a3b1f30ba72087a6cd8e102f39358ec888d210d",
+            "sha256": "sha256-6HAQi2P1ddEW5ubFc5pUtPpBSdnNRgfejFiCVBfvbJY=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "1a3b1f30ba72087a6cd8e102f39358ec888d210d"
     },
     "projects-yazi": {
         "cargoLock": null,
