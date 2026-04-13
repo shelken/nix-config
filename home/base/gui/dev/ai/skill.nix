@@ -26,6 +26,7 @@ let
     # luoling8192/ai-coding-principles
     ai-coding-discipline = "${sources.ai-coding-principles.src}/ai-coding-discipline";
     ddia-principles = "${sources.ai-coding-principles.src}/ddia-principles";
+    software-design-philosophy-skill = "${sources.software-design-philosophy-skill.src}/SKILL.md";
 
     # obra/superpowers
     brainstorming = "${sources.obra-superpowers.src}/skills/brainstorming";
@@ -70,20 +71,39 @@ let
     }) localSkillDirs
   );
 
-  skillSources = localSkillSources // fetchedSkillSources;
+  localSkillLinks = lib.concatMap (
+    targetPath:
+    lib.mapAttrsToList (name: sourcePath: {
+      name = "${targetPath}/${name}";
+      value = {
+        source = sourcePath;
+        force = true;
+      };
+    }) localSkillSources
+  ) cfg.skillTargets;
 
-  allSkillLinks = lib.listToAttrs (
-    lib.concatMap (
-      targetPath:
-      lib.mapAttrsToList (name: sourcePath: {
-        name = "${targetPath}/${name}";
+  fetchedSkillLinks = lib.concatMap (
+    targetPath:
+    lib.mapAttrsToList (
+      name: sourcePath:
+      let
+        targetName =
+          if lib.pathIsDirectory sourcePath then
+            "${targetPath}/${name}"
+          else
+            "${targetPath}/${name}/${baseNameOf (toString sourcePath)}";
+      in
+      {
+        name = targetName;
         value = {
           source = sourcePath;
           force = true;
         };
-      }) skillSources
-    ) cfg.skillTargets
-  );
+      }
+    ) fetchedSkillSources
+  ) cfg.skillTargets;
+
+  allSkillLinks = lib.listToAttrs (localSkillLinks ++ fetchedSkillLinks);
 in
 {
   options.shelken.dev.ai = {

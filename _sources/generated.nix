@@ -125,6 +125,18 @@
     };
     date = "2026-02-15";
   };
+  software-design-philosophy-skill = {
+    pname = "software-design-philosophy-skill";
+    version = "e55ac385e89913a6d53c7da460d080982d32ea03";
+    src = fetchFromGitHub {
+      owner = "luoling8192";
+      repo = "software-design-philosophy-skill";
+      rev = "e55ac385e89913a6d53c7da460d080982d32ea03";
+      fetchSubmodules = false;
+      sha256 = "sha256-S6HF8QJ12UlpMDvbH8R7q3BSO6RBID3vNiQK4ib6bes=";
+    };
+    date = "2026-03-11";
+  };
   vercel-labs-skills = {
     pname = "vercel-labs-skills";
     version = "004c73806e35f3b12582967759559203c4ed01f9";

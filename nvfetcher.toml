@@ -43,6 +43,11 @@ src.git      = "https://github.com/onevcat/skills"
 src.branch   = "master"
 fetch.github = "onevcat/skills"
 
+[software-design-philosophy-skill]
+src.git      = "https://github.com/luoling8192/software-design-philosophy-skill"
+src.branch   = "main"
+fetch.github = "luoling8192/software-design-philosophy-skill"
+
 [vercel-labs-skills]
 src.git      = "https://github.com/vercel-labs/skills"
 src.branch   = "main"

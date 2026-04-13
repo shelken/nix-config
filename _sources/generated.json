@@ -209,6 +209,27 @@
         },
         "version": "198c2ba30e4916ca275d2a08bd329fcf32735866"
     },
+    "software-design-philosophy-skill": {
+        "cargoLock": null,
+        "date": "2026-03-11",
+        "extract": null,
+        "name": "software-design-philosophy-skill",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "luoling8192",
+            "repo": "software-design-philosophy-skill",
+            "rev": "e55ac385e89913a6d53c7da460d080982d32ea03",
+            "sha256": "sha256-S6HF8QJ12UlpMDvbH8R7q3BSO6RBID3vNiQK4ib6bes=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "e55ac385e89913a6d53c7da460d080982d32ea03"
+    },
     "vercel-labs-skills": {
         "cargoLock": null,
         "date": "2026-04-12",
