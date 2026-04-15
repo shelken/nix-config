@@ -33,6 +33,10 @@ let
       targetPath = ".factory";
       fileName = "AGENTS.md";
     }
+    {
+      targetPath = ".pi/agent";
+      fileName = "AGENTS.md";
+    }
   ];
 
   # Generate symlinks for all agents targets
