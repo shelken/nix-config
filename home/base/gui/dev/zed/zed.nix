@@ -148,8 +148,8 @@ in
               };
             }
             {
-              name = "gpt-5.1-codex-mini";
-              display_name = "GPT-5.1-Codex Mini";
+              name = "gpt-5-codex-mini";
+              display_name = "GPT-5-Codex Mini";
               max_tokens = 1000000;
               max_output_tokens = 128000;
               capabilities = {
@@ -244,10 +244,10 @@ in
           # 通用对话            1.3
           # 翻译                1.3
           # 创意类写作/诗歌创作  1.5
-          {
-            provider = "deepseek";
-            temperature = 0.0;
-          }
+          # {
+          #   provider = "deepseek";
+          #   temperature = 0.0;
+          # }
         ];
       };
 

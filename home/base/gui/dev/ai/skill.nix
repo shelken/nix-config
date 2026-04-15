@@ -31,7 +31,7 @@ let
     # luoling8192/ai-coding-principles
     ai-coding-discipline = "${sources.ai-coding-principles.src}/ai-coding-discipline";
     ddia-principles = "${sources.ai-coding-principles.src}/ddia-principles";
-    software-design-philosophy-skill = "${sources.software-design-philosophy-skill.src}/SKILL.md";
+    software-design-philosophy = "${sources.software-design-philosophy-skill.src}/SKILL.md";
 
     # microsoft/playwright-cli
     playwright-cli = "${sources.playwright-cli.src}/skills/playwright-cli";

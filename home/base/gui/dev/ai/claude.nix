@@ -83,7 +83,7 @@ let
         # gpt-5-codex
         # gpt-5-codex-mini
         # gpt-5.2-codex
-        ANTHROPIC_DEFAULT_HAIKU_MODEL = "gpt-5.1-codex-mini";
+        ANTHROPIC_DEFAULT_HAIKU_MODEL = "gpt-5-codex-mini";
         ANTHROPIC_DEFAULT_OPUS_MODEL = "gpt-5.2-codex(high)";
         ANTHROPIC_DEFAULT_SONNET_MODEL = "gpt-5.1";
         ANTHROPIC_MODEL = "gpt-5.2-codex(high)";
