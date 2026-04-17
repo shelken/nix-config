@@ -5,6 +5,10 @@
     enableDefaultConfig = false;
     matchBlocks."*" = {
       forwardAgent = false;
+      addKeysToAgent = "yes";
+      extraOptions = {
+        UseKeychain = "yes";
+      };
     };
     extraConfig = ''
       Host github.com
