@@ -13,6 +13,11 @@ src.git      = "https://github.com/anthropics/skills"
 src.branch   = "main"
 fetch.github = "anthropics/skills"
 
+[bilibili-cli]
+src.git      = "https://github.com/public-clis/bilibili-cli"
+src.branch   = "main"
+fetch.github = "public-clis/bilibili-cli"
+
 [caveman]
 src.git      = "https://github.com/JuliusBrussee/caveman"
 src.branch   = "main"
@@ -57,6 +62,10 @@ fetch.github = "microsoft/playwright-cli"
 src.git      = "https://github.com/luoling8192/software-design-philosophy-skill"
 src.branch   = "main"
 fetch.github = "luoling8192/software-design-philosophy-skill"
+
+[shuorenhua]
+src.github_tag = "MrGeDiao/shuorenhua"
+fetch.github   = "MrGeDiao/shuorenhua"
 
 [vercel-labs-skills]
 src.git      = "https://github.com/vercel-labs/skills"

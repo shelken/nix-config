@@ -16,6 +16,9 @@ let
     # anthropics/skills
     skill-creator = "${sources.anthropics-skills.src}/skills/skill-creator";
 
+    # public-clis/bilibili-cli
+    bilibili-cli = "${sources.bilibili-cli.src}/SKILL.md";
+
     # FradSer/dotclaude
     best-practices = "${sources.dotclaude-skills.src}/refactor/skills/best-practices";
     refactor = "${sources.dotclaude-skills.src}/refactor/skills/refactor";
@@ -35,6 +38,9 @@ let
 
     # microsoft/playwright-cli
     playwright-cli = "${sources.playwright-cli.src}/skills/playwright-cli";
+
+    # MrGeDiao/shuorenhua
+    shuorenhua = "${sources.shuorenhua.src}";
 
     # obra/superpowers
     brainstorming = "${sources.obra-superpowers.src}/skills/brainstorming";

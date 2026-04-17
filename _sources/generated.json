@@ -22,7 +22,7 @@
     },
     "anthropics-skills": {
         "cargoLock": null,
-        "date": "2026-04-09",
+        "date": "2026-04-16",
         "extract": null,
         "name": "anthropics-skills",
         "passthru": null,
@@ -34,16 +34,37 @@
             "name": null,
             "owner": "anthropics",
             "repo": "skills",
-            "rev": "12ab35c2eb5668c95810e6a6066f40f4218adc39",
-            "sha256": "sha256-H/oorOl5cch7bnziDz7gHNBv5Q0OAwFbk9w1WLku2kk=",
+            "rev": "2c7ec5e78b8e5d43ea02e90bb8826f6b9f147b0c",
+            "sha256": "sha256-BMgH43diojdUrGC6ivk87eEm2W1yWNuh2fpR9JpbUnE=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "12ab35c2eb5668c95810e6a6066f40f4218adc39"
+        "version": "2c7ec5e78b8e5d43ea02e90bb8826f6b9f147b0c"
+    },
+    "bilibili-cli": {
+        "cargoLock": null,
+        "date": "2026-03-14",
+        "extract": null,
+        "name": "bilibili-cli",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "public-clis",
+            "repo": "bilibili-cli",
+            "rev": "dbe28551930df43b633baa52e9639832aeada967",
+            "sha256": "sha256-GoYyNyvwDrXT6G/86ra1BO0xn2j/RGDyR94Epm+AlRw=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "dbe28551930df43b633baa52e9639832aeada967"
     },
     "caveman": {
         "cargoLock": null,
-        "date": "2026-04-12",
+        "date": "2026-04-15",
         "extract": null,
         "name": "caveman",
         "passthru": null,
@@ -55,16 +76,16 @@
             "name": null,
             "owner": "JuliusBrussee",
             "repo": "caveman",
-            "rev": "63e797cd753b301374947a5ed975c21775d962b9",
-            "sha256": "sha256-pHPMQGr9/ufsUODmqHm2T6sCOaeOOJl4baX4OeeYp6k=",
+            "rev": "c2ed24b3e5d412cd0c25197b2bc9af587621fd99",
+            "sha256": "sha256-m7HhCW4fXU5pIYRWVP6cvSYUkDHt8R90D9UI3tT7euk=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "63e797cd753b301374947a5ed975c21775d962b9"
+        "version": "c2ed24b3e5d412cd0c25197b2bc9af587621fd99"
     },
     "context7-cli": {
         "cargoLock": null,
-        "date": "2026-04-13",
+        "date": "2026-04-14",
         "extract": null,
         "name": "context7-cli",
         "passthru": null,
@@ -76,12 +97,12 @@
             "name": null,
             "owner": "upstash",
             "repo": "context7",
-            "rev": "c31528d0cde3d00cbb542ae44fde59f3fd7144dc",
-            "sha256": "sha256-TMvDzDcZd9hoYI84x+jewOJYkSrb1qwVRTdzD2SwG4U=",
+            "rev": "0627b71073ddabcd608bbf66dd3ae1b77ec3d298",
+            "sha256": "sha256-oWIXIuyLLTGyemLrMLIDiHQEV444xqYAgD3WYq4yj2A=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "c31528d0cde3d00cbb542ae44fde59f3fd7144dc"
+        "version": "0627b71073ddabcd608bbf66dd3ae1b77ec3d298"
     },
     "dotclaude-skills": {
         "cargoLock": null,
@@ -169,7 +190,7 @@
     },
     "obra-superpowers": {
         "cargoLock": null,
-        "date": "2026-04-06",
+        "date": "2026-04-16",
         "extract": null,
         "name": "obra-superpowers",
         "passthru": null,
@@ -181,12 +202,12 @@
             "name": null,
             "owner": "obra",
             "repo": "superpowers",
-            "rev": "917e5f53b16b115b70a3a355ed5f4993b9f8b73d",
-            "sha256": "sha256-FMaX6VMBC64OPdvXwhXKfHKnkdvdC2R9lZaU3BR/G3o=",
+            "rev": "b55764852ac78870e65c6565fb585b6cd8b3c5c9",
+            "sha256": "sha256-cobQloF7Y6K0IC0/6xSnA2Io+fKgk2SRmCwoZZtVCco=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "917e5f53b16b115b70a3a355ed5f4993b9f8b73d"
+        "version": "b55764852ac78870e65c6565fb585b6cd8b3c5c9"
     },
     "onevcat-skills": {
         "cargoLock": null,
@@ -211,7 +232,7 @@
     },
     "playwright-cli": {
         "cargoLock": null,
-        "date": "2026-04-11",
+        "date": "2026-04-14",
         "extract": null,
         "name": "playwright-cli",
         "passthru": null,
@@ -223,12 +244,12 @@
             "name": null,
             "owner": "microsoft",
             "repo": "playwright-cli",
-            "rev": "1a3b1f30ba72087a6cd8e102f39358ec888d210d",
-            "sha256": "sha256-6HAQi2P1ddEW5ubFc5pUtPpBSdnNRgfejFiCVBfvbJY=",
+            "rev": "0406adaed4c6ba95bbfa6952229e76188bc59993",
+            "sha256": "sha256-8f/wFO4hSytpy3kEPyScoMWXWyeTl/SKoc3vD7xYaKo=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "1a3b1f30ba72087a6cd8e102f39358ec888d210d"
+        "version": "0406adaed4c6ba95bbfa6952229e76188bc59993"
     },
     "projects-yazi": {
         "cargoLock": null,
@@ -250,6 +271,27 @@
             "type": "github"
         },
         "version": "198c2ba30e4916ca275d2a08bd329fcf32735866"
+    },
+    "shuorenhua": {
+        "cargoLock": null,
+        "date": null,
+        "extract": null,
+        "name": "shuorenhua",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "MrGeDiao",
+            "repo": "shuorenhua",
+            "rev": "v1.7.2",
+            "sha256": "sha256-7EokZT/w7aRzLAJXNxd35OHACEJfePIAfgMyWJHu1Zs=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "v1.7.2"
     },
     "software-design-philosophy-skill": {
         "cargoLock": null,
@@ -295,7 +337,7 @@
     },
     "waza-skills": {
         "cargoLock": null,
-        "date": "2026-04-12",
+        "date": "2026-04-16",
         "extract": null,
         "name": "waza-skills",
         "passthru": null,
@@ -307,16 +349,16 @@
             "name": null,
             "owner": "tw93",
             "repo": "Waza",
-            "rev": "306885c1c0b1354a887435000f377392055a46d6",
-            "sha256": "sha256-byRlIN0ulP7qEuJ0BvtSS/TMopyyX9F2MMHsIVSKaGE=",
+            "rev": "0d87462ab3d264d89c464682e18a98cc680aa1e4",
+            "sha256": "sha256-CJ4Virdw4JxIj2WwUWiVFOcPYz2Tt7f1Kq/1Dl9sWyI=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "306885c1c0b1354a887435000f377392055a46d6"
+        "version": "0d87462ab3d264d89c464682e18a98cc680aa1e4"
     },
     "yazi-plugins": {
         "cargoLock": null,
-        "date": "2026-04-11",
+        "date": "2026-04-16",
         "extract": null,
         "name": "yazi-plugins",
         "passthru": null,
@@ -328,12 +370,12 @@
             "name": null,
             "owner": "yazi-rs",
             "repo": "plugins",
-            "rev": "babfd0f6144aedcc7af11852ce962b989d052898",
-            "sha256": "sha256-y/UnRuZ2QytCdtGhxkbVvaGXglpqwufaUddXOzs7fzo=",
+            "rev": "442d9080da7524c8e58e10c610b832538c87464d",
+            "sha256": "sha256-5WxCUf/Lv3wms7IPgkK0lJuJhIPa1E46obOFASS8eZU=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "babfd0f6144aedcc7af11852ce962b989d052898"
+        "version": "442d9080da7524c8e58e10c610b832538c87464d"
     },
     "zjstatus": {
         "cargoLock": null,
