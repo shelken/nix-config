@@ -1,6 +1,5 @@
 {
   config,
-  hostname,
   lib,
   ...
 }:
@@ -29,6 +28,8 @@ in
     package = null; # homebrew
     mutableUserSettings = true;
     mutableUserKeymaps = true;
+    # 注意：
+    # 列表不要直接传入，会直接覆盖
     userSettings = {
       # Zed settings
       #
@@ -46,117 +47,22 @@ in
       language_models = {
         anthropic = {
           api_url = "https://cpa.ooooo.space";
-          available_models = [
-            # {
-            #   name = "gpt-5.3-codex";
-            #   display_name = "GPT-5.3 Codex";
-            #   max_tokens = 400000;
-            #   max_output_tokens = 128000;
-            # }
-            # {
-            #   name = "gpt-5.3-codex(high)";
-            #   display_name = "GPT-5.3 Codex High";
-            #   max_tokens = 400000;
-            #   max_output_tokens = 128000;
-            # }
-            # {
-            #   name = "gpt-5.2-codex(high)";
-            #   display_name = "GPT-5.2 Codex High";
-            #   max_tokens = 400000;
-            #   max_output_tokens = 128000;
-            # }
-            # {
-            #   name = "gpt-5.2-codex";
-            #   display_name = "GPT-5.2 Codex";
-            #   max_tokens = 400000;
-            #   max_output_tokens = 128000;
-            # }
-            # {
-            #   name = "gpt-5.2";
-            #   display_name = "GPT-5.2";
-            #   max_tokens = 400000;
-            #   max_output_tokens = 128000;
-            # }
-            # {
-            #   name = "gpt-5.2(high)";
-            #   display_name = "GPT-5.2 High";
-            #   max_tokens = 400000;
-            #   max_output_tokens = 128000;
-            # }
-            # {
-            #   name = "gpt-5.4";
-            #   display_name = "GPT-5.4";
-            #   max_tokens = 1000000;
-            #   max_output_tokens = 128000;
-            # }
-            # {
-            #   name = "gpt-5.4(high)";
-            #   display_name = "GPT-5.4 High";
-            #   max_tokens = 1000000;
-            #   max_output_tokens = 128000;
-            # }
-            # {
-            #   name = "gpt-5.1-codex-mini";
-            #   display_name = "GPT-5.1-Codex Mini";
-            #   max_tokens = 1000000;
-            #   max_output_tokens = 128000;
-            # }
-          ];
         };
 
         openai = {
           api_url = "https://cpa.ooooo.space/v1";
-          available_models = [
-            {
-              name = "gpt-5.3-codex";
-              display_name = "GPT-5.3 Codex";
-              max_tokens = 400000;
-              max_output_tokens = 128000;
-              reasoning_effort = "high";
-              capabilities = {
-                chat_completions = false;
-              };
-            }
-            {
-              name = "gpt-5.2-codex";
-              display_name = "GPT-5.2 Codex";
-              max_tokens = 400000;
-              max_output_tokens = 128000;
-              reasoning_effort = "high";
-              capabilities = {
-                chat_completions = false;
-              };
-            }
-            {
-              name = "gpt-5.2";
-              display_name = "GPT-5.2";
-              max_tokens = 400000;
-              max_output_tokens = 128000;
-              reasoning_effort = "high";
-              capabilities = {
-                chat_completions = false;
-              };
-            }
-            {
-              name = "gpt-5.4";
-              display_name = "GPT-5.4";
-              max_tokens = 1000000;
-              max_output_tokens = 128000;
-              reasoning_effort = "high";
-              capabilities = {
-                chat_completions = false;
-              };
-            }
-            {
-              name = "gpt-5-codex-mini";
-              display_name = "GPT-5-Codex Mini";
-              max_tokens = 1000000;
-              max_output_tokens = 128000;
-              capabilities = {
-                chat_completions = false;
-              };
-            }
-          ];
+          # available_models = [
+          #   {
+          #     name = "gpt-5.4";
+          #     display_name = "GPT-5.4";
+          #     max_tokens = 1000000;
+          #     max_output_tokens = 128000;
+          #     reasoning_effort = "high";
+          #     capabilities = {
+          #       chat_completions = false;
+          #     };
+          #   }
+          # ];
         };
 
         openai_compatible = {
@@ -181,40 +87,40 @@ in
 
           "OpenCode Zen" = {
             api_url = "https://opencode.ai/zen/v1";
-            available_models = [
-              {
-                name = "minimax-m2.1-free";
-                max_tokens = 204800;
-                max_output_tokens = 32000;
-                max_completion_tokens = 204800;
-                capabilities = {
-                  tools = true;
-                  images = false;
-                  parallel_tool_calls = false;
-                  prompt_cache_key = false;
-                  chat_completions = true;
-                };
-              }
-              {
-                name = "minimax-m2.5-free";
-                max_tokens = 204800;
-                max_output_tokens = 32000;
-                max_completion_tokens = 204800;
-                capabilities = {
-                  tools = true;
-                  images = false;
-                  parallel_tool_calls = false;
-                  prompt_cache_key = false;
-                  chat_completions = true;
-                };
-              }
-            ];
+            # available_models = [
+            #   {
+            #     name = "minimax-m2.1-free";
+            #     max_tokens = 204800;
+            #     max_output_tokens = 32000;
+            #     max_completion_tokens = 204800;
+            #     capabilities = {
+            #       tools = true;
+            #       images = false;
+            #       parallel_tool_calls = false;
+            #       prompt_cache_key = false;
+            #       chat_completions = true;
+            #     };
+            #   }
+            #   {
+            #     name = "minimax-m2.5-free";
+            #     max_tokens = 204800;
+            #     max_output_tokens = 32000;
+            #     max_completion_tokens = 204800;
+            #     capabilities = {
+            #       tools = true;
+            #       images = false;
+            #       parallel_tool_calls = false;
+            #       prompt_cache_key = false;
+            #       chat_completions = true;
+            #     };
+            #   }
+            # ];
           };
         };
       };
 
       agent = {
-        play_sound_when_agent_done = true;
+        play_sound_when_agent_done = "always";
         dock = "right";
 
         tool_permissions = {
@@ -238,17 +144,17 @@ in
         #   model = "gpt-5.1-codex-mini";
         # };
 
-        model_parameters = [
-          # 代码生成/数学解题      0.0
-          # 数据抽取/分析        1.0
-          # 通用对话            1.3
-          # 翻译                1.3
-          # 创意类写作/诗歌创作  1.5
-          # {
-          #   provider = "deepseek";
-          #   temperature = 0.0;
-          # }
-        ];
+        # model_parameters = [
+        #   # 代码生成/数学解题      0.0
+        #   # 数据抽取/分析        1.0
+        #   # 通用对话            1.3
+        #   # 翻译                1.3
+        #   # 创意类写作/诗歌创作  1.5
+        #   # {
+        #   #   provider = "deepseek";
+        #   #   temperature = 0.0;
+        #   # }
+        # ];
       };
 
       git_panel = {
@@ -298,16 +204,6 @@ in
       hover_popover_enabled = true;
       autosave = "on_focus_change";
 
-      file_types = {
-        css = [ "*.wxss" ];
-        just = [ "justfile" ];
-        javascript = [ "*.wxs" ];
-        applescript = [ "*.scpt" ];
-        json5 = [ ".renovaterc.json5" ];
-        caddyfile = [ "Caddyfile" ];
-        jsonc = [ "*.cjson" ];
-      };
-
       linked_edits = true;
       tab_size = 2;
       ui_font_size = 18.0;
@@ -336,10 +232,6 @@ in
         "codex-acp" = {
           default_config_options = {
             mode = "full-access";
-          };
-          favorite_config_option_values = {
-            mode = [ "full-access" ];
-            model = [ "gpt-5.4" ];
           };
           type = "registry";
         };
