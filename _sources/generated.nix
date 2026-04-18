@@ -56,15 +56,15 @@
   };
   context7-cli = {
     pname = "context7-cli";
-    version = "0627b71073ddabcd608bbf66dd3ae1b77ec3d298";
+    version = "a1a935cbe7be7ec0acdb3b58c7d65ddf1c8cecec";
     src = fetchFromGitHub {
       owner = "upstash";
       repo = "context7";
-      rev = "0627b71073ddabcd608bbf66dd3ae1b77ec3d298";
+      rev = "a1a935cbe7be7ec0acdb3b58c7d65ddf1c8cecec";
       fetchSubmodules = false;
-      sha256 = "sha256-oWIXIuyLLTGyemLrMLIDiHQEV444xqYAgD3WYq4yj2A=";
+      sha256 = "sha256-HnouLchKrnsddh2MdoYFNRnK9kTzqVV2di/VONcz6fQ=";
     };
-    date = "2026-04-14";
+    date = "2026-04-17";
   };
   dotclaude-skills = {
     pname = "dotclaude-skills";
@@ -163,13 +163,13 @@
   };
   shuorenhua = {
     pname = "shuorenhua";
-    version = "v1.7.2";
+    version = "v1.7.3";
     src = fetchFromGitHub {
       owner = "MrGeDiao";
       repo = "shuorenhua";
-      rev = "v1.7.2";
+      rev = "v1.7.3";
       fetchSubmodules = false;
-      sha256 = "sha256-7EokZT/w7aRzLAJXNxd35OHACEJfePIAfgMyWJHu1Zs=";
+      sha256 = "sha256-qOMKP1veV+vpEqSKP9f0nVuLDajIzECAZ1wAIgN1j64=";
     };
   };
   software-design-philosophy-skill = {
@@ -198,15 +198,15 @@
   };
   waza-skills = {
     pname = "waza-skills";
-    version = "0d87462ab3d264d89c464682e18a98cc680aa1e4";
+    version = "8e2940c02a0939c1f8e544816f295c513b964559";
     src = fetchFromGitHub {
       owner = "tw93";
       repo = "Waza";
-      rev = "0d87462ab3d264d89c464682e18a98cc680aa1e4";
+      rev = "8e2940c02a0939c1f8e544816f295c513b964559";
       fetchSubmodules = false;
-      sha256 = "sha256-CJ4Virdw4JxIj2WwUWiVFOcPYz2Tt7f1Kq/1Dl9sWyI=";
+      sha256 = "sha256-uyRbf67kQ2oAq+4QRQMaGDJRm4Wb/SlOSKtT/g7b888=";
     };
-    date = "2026-04-16";
+    date = "2026-04-17";
   };
   yazi-plugins = {
     pname = "yazi-plugins";

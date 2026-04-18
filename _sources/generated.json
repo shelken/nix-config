@@ -85,7 +85,7 @@
     },
     "context7-cli": {
         "cargoLock": null,
-        "date": "2026-04-14",
+        "date": "2026-04-17",
         "extract": null,
         "name": "context7-cli",
         "passthru": null,
@@ -97,12 +97,12 @@
             "name": null,
             "owner": "upstash",
             "repo": "context7",
-            "rev": "0627b71073ddabcd608bbf66dd3ae1b77ec3d298",
-            "sha256": "sha256-oWIXIuyLLTGyemLrMLIDiHQEV444xqYAgD3WYq4yj2A=",
+            "rev": "a1a935cbe7be7ec0acdb3b58c7d65ddf1c8cecec",
+            "sha256": "sha256-HnouLchKrnsddh2MdoYFNRnK9kTzqVV2di/VONcz6fQ=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "0627b71073ddabcd608bbf66dd3ae1b77ec3d298"
+        "version": "a1a935cbe7be7ec0acdb3b58c7d65ddf1c8cecec"
     },
     "dotclaude-skills": {
         "cargoLock": null,
@@ -286,12 +286,12 @@
             "name": null,
             "owner": "MrGeDiao",
             "repo": "shuorenhua",
-            "rev": "v1.7.2",
-            "sha256": "sha256-7EokZT/w7aRzLAJXNxd35OHACEJfePIAfgMyWJHu1Zs=",
+            "rev": "v1.7.3",
+            "sha256": "sha256-qOMKP1veV+vpEqSKP9f0nVuLDajIzECAZ1wAIgN1j64=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "v1.7.2"
+        "version": "v1.7.3"
     },
     "software-design-philosophy-skill": {
         "cargoLock": null,
@@ -337,7 +337,7 @@
     },
     "waza-skills": {
         "cargoLock": null,
-        "date": "2026-04-16",
+        "date": "2026-04-17",
         "extract": null,
         "name": "waza-skills",
         "passthru": null,
@@ -349,12 +349,12 @@
             "name": null,
             "owner": "tw93",
             "repo": "Waza",
-            "rev": "0d87462ab3d264d89c464682e18a98cc680aa1e4",
-            "sha256": "sha256-CJ4Virdw4JxIj2WwUWiVFOcPYz2Tt7f1Kq/1Dl9sWyI=",
+            "rev": "8e2940c02a0939c1f8e544816f295c513b964559",
+            "sha256": "sha256-uyRbf67kQ2oAq+4QRQMaGDJRm4Wb/SlOSKtT/g7b888=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "0d87462ab3d264d89c464682e18a98cc680aa1e4"
+        "version": "8e2940c02a0939c1f8e544816f295c513b964559"
     },
     "yazi-plugins": {
         "cargoLock": null,
