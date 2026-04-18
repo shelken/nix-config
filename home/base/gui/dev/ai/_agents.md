@@ -101,6 +101,6 @@
 **如果有skill阅读对应skill**
 
 - 当需要 GitHub 操作（PR、Issue、Release、Actions）时，优先使用 `gh` 命令，而非其他方式
-- 当需要查阅库的最新文档时，优先使用 `ctx7` 命令，例如：`ctx7 library "<name>"` 然后
-  `ctx7 docs <id> <query>`
+- 当需要查阅库的最新文档时，优先使用 `ctx7` 命令，例如：`ctx7 library "<name>"`
+  然后, 必须使用双引号括住所有查询 `ctx7 docs <id> <query>`
 - 涉及密码/敏感数据/密码文件的读取，只允许使用jq获取文件结构，例如：`cat auth.json | jq 'keys'`，不准读取任何密码/密钥/APIKEY
