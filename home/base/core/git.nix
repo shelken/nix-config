@@ -61,7 +61,7 @@
         interHunkContext = 10;
       };
       url = {
-        "git@github.com:".insteadOf = "gh:";
+        "git@github.com:".insteadOf = "https://github.com/";
       };
       delta = {
         navigate = true;
