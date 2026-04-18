@@ -45,6 +45,7 @@
   programs.npm.settings = {
     prefix = "\${HOME}/.npm-global";
     registry = "https://registry.npmmirror.com";
+    min-release-age = 7;
   };
 
   home.shellAliases = {
