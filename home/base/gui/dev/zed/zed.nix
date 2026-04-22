@@ -127,23 +127,6 @@ in
           default = "allow";
         };
 
-        # inline_assistant_model = {
-        #   # provider = "deepseek";
-        #   # model = "deepseek-chat";
-        # };
-
-        # commit_message_model = {
-        #   provider = "deepseek";
-        #   model = "deepseek-chat";
-        #   # provider = "OpenCode Zen";
-        #   # model = "minimax-m2.5-free";
-        # };
-
-        # thread_summary_model = {
-        #   provider = "openai";
-        #   model = "gpt-5.1-codex-mini";
-        # };
-
         # model_parameters = [
         #   # 代码生成/数学解题      0.0
         #   # 数据抽取/分析        1.0
