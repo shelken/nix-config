@@ -8,6 +8,8 @@ in
 {
   home.packages = with pkgs; [
     rtk
+    pandoc # for npm:pi-markdown-preview
+    mermaid-cli # for npm:pi-markdown-preview
   ];
   shelken.backup.app.pi = [
     "${config.home.homeDirectory}/.pi"
