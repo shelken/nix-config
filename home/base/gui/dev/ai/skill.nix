@@ -18,6 +18,7 @@ let
 
     # public-clis/bilibili-cli
     bilibili-cli = "${sources.bilibili-cli.src}/SKILL.md";
+    twitter-cli = "${sources.twitter-cli.src}/SKILL.md";
 
     # FradSer/dotclaude
     best-practices = "${sources.dotclaude-skills.src}/refactor/skills/best-practices";

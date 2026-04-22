@@ -18,6 +18,11 @@ src.git      = "https://github.com/public-clis/bilibili-cli"
 src.branch   = "main"
 fetch.github = "public-clis/bilibili-cli"
 
+[twitter-cli]
+src.git      = "https://github.com/public-clis/twitter-cli"
+src.branch   = "main"
+fetch.github = "public-clis/twitter-cli"
+
 [caveman]
 src.git      = "https://github.com/JuliusBrussee/caveman"
 src.branch   = "main"

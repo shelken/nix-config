@@ -184,6 +184,18 @@
     };
     date = "2026-03-11";
   };
+  twitter-cli = {
+    pname = "twitter-cli";
+    version = "7816f8d813ff384dce80ec0a0a5dd70c03404a55";
+    src = fetchFromGitHub {
+      owner = "public-clis";
+      repo = "twitter-cli";
+      rev = "7816f8d813ff384dce80ec0a0a5dd70c03404a55";
+      fetchSubmodules = false;
+      sha256 = "sha256-AAgwiZaEXhG4DoYvnxvsjQJdp8L2QEBqTns5JlZc7wY=";
+    };
+    date = "2026-04-10";
+  };
   vercel-labs-skills = {
     pname = "vercel-labs-skills";
     version = "004c73806e35f3b12582967759559203c4ed01f9";
