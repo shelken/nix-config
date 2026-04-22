@@ -12,7 +12,7 @@
     #  "https://cache.nixos.org/"
     #];
 
-    # nix communitys cache server
+    # nix communities cache server
     # extra-substituters = [
     #   "https://hadolint.cachix.org"
     # ];
