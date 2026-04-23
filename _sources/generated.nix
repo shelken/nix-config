@@ -184,6 +184,18 @@
       sha256 = "sha256-qOMKP1veV+vpEqSKP9f0nVuLDajIzECAZ1wAIgN1j64=";
     };
   };
+  sidkh-skills = {
+    pname = "sidkh-skills";
+    version = "fb2fdb11e03b43525ecc8110f8edfc9eceb2ef28";
+    src = fetchFromGitHub {
+      owner = "SidKH";
+      repo = "skills";
+      rev = "fb2fdb11e03b43525ecc8110f8edfc9eceb2ef28";
+      fetchSubmodules = false;
+      sha256 = "sha256-X6h5cviR5ig3BhAMcLTYkWEkTTWx6j+wdPXn2WSdA0g=";
+    };
+    date = "2026-04-22";
+  };
   software-design-philosophy-skill = {
     pname = "software-design-philosophy-skill";
     version = "e55ac385e89913a6d53c7da460d080982d32ea03";

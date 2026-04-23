@@ -314,6 +314,27 @@
         },
         "version": "v1.7.3"
     },
+    "sidkh-skills": {
+        "cargoLock": null,
+        "date": "2026-04-22",
+        "extract": null,
+        "name": "sidkh-skills",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "SidKH",
+            "repo": "skills",
+            "rev": "fb2fdb11e03b43525ecc8110f8edfc9eceb2ef28",
+            "sha256": "sha256-X6h5cviR5ig3BhAMcLTYkWEkTTWx6j+wdPXn2WSdA0g=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "fb2fdb11e03b43525ecc8110f8edfc9eceb2ef28"
+    },
     "software-design-philosophy-skill": {
         "cargoLock": null,
         "date": "2026-03-11",

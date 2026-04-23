@@ -77,6 +77,11 @@ fetch.github = "luoling8192/software-design-philosophy-skill"
 src.github_tag = "MrGeDiao/shuorenhua"
 fetch.github   = "MrGeDiao/shuorenhua"
 
+[sidkh-skills]
+src.git      = "https://github.com/SidKH/skills"
+src.branch   = "main"
+fetch.github = "SidKH/skills"
+
 [vercel-labs-skills]
 src.git      = "https://github.com/vercel-labs/skills"
 src.branch   = "main"

@@ -48,6 +48,9 @@ let
     # MrGeDiao/shuorenhua
     shuorenhua = "${sources.shuorenhua.src}";
 
+    # SidKH/skills
+    explain-code = "${sources.sidkh-skills.src}/explain-code";
+
     # obra/superpowers
     brainstorming = "${sources.obra-superpowers.src}/skills/brainstorming";
     executing-plans = "${sources.obra-superpowers.src}/skills/executing-plans";
