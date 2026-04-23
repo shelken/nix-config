@@ -40,8 +40,8 @@
       "cmd+v" = "paste_from_clipboard";
       "cmd+shift+v" = "paste_from_selection";
 
-      "cmd+enter" = "launch --location=hsplit --cwd=current";
-      "cmd+shift+enter" = "launch --location=vsplit --cwd=current";
+      "cmd+d" = "launch --location=vsplit --cwd=current";
+      "cmd+shift+d" = "launch --location=hsplit --cwd=current";
 
       "cmd+[" = "previous_tab";
       "cmd+]" = "next_tab";
