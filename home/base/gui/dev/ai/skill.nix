@@ -28,6 +28,11 @@ let
     # georgekhananaev/claude-skills-vault
     github-cli = "${sources.github-cli.src}/.claude/skills/github-cli";
 
+    # vectorize-io/hindsight
+    hindsight-architect = "${sources.hindsight-skills.src}/skills/hindsight-architect";
+    hindsight-docs = "${sources.hindsight-skills.src}/skills/hindsight-docs";
+    hindsight-local = "${sources.hindsight-skills.src}/skills/hindsight-local";
+
     # JuliusBrussee/caveman
     caveman = "${sources.caveman.src}/skills/caveman";
     caveman-help = "${sources.caveman.src}/skills/caveman-help";

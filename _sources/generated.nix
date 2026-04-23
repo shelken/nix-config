@@ -90,6 +90,18 @@
     };
     date = "2026-03-16";
   };
+  hindsight-skills = {
+    pname = "hindsight-skills";
+    version = "9c9d79175229887f198f271717bd018be47dab4c";
+    src = fetchFromGitHub {
+      owner = "vectorize-io";
+      repo = "hindsight";
+      rev = "9c9d79175229887f198f271717bd018be47dab4c";
+      fetchSubmodules = false;
+      sha256 = "sha256-B20kIVpxbEB5FjMTn9bYIK8IMoVtle7sqaqjQdMbJEg=";
+    };
+    date = "2026-04-22";
+  };
   impeccable = {
     pname = "impeccable";
     version = "00d485659af82982aef0328d0419c49a2716d123";

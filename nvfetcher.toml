@@ -43,6 +43,11 @@ src.git      = "https://github.com/georgekhananaev/claude-skills-vault"
 src.branch   = "main"
 fetch.github = "georgekhananaev/claude-skills-vault"
 
+[hindsight-skills]
+src.git      = "https://github.com/vectorize-io/hindsight"
+src.branch   = "main"
+fetch.github = "vectorize-io/hindsight"
+
 [impeccable]
 src.git      = "https://github.com/pbakaus/impeccable"
 src.branch   = "main"

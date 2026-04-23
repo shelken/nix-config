@@ -146,6 +146,27 @@
         },
         "version": "4621f96e8c8532b6e1865e4f843a555d37865eee"
     },
+    "hindsight-skills": {
+        "cargoLock": null,
+        "date": "2026-04-22",
+        "extract": null,
+        "name": "hindsight-skills",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "vectorize-io",
+            "repo": "hindsight",
+            "rev": "9c9d79175229887f198f271717bd018be47dab4c",
+            "sha256": "sha256-B20kIVpxbEB5FjMTn9bYIK8IMoVtle7sqaqjQdMbJEg=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "9c9d79175229887f198f271717bd018be47dab4c"
+    },
     "impeccable": {
         "cargoLock": null,
         "date": "2026-04-10",
