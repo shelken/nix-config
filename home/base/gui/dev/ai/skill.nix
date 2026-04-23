@@ -16,6 +16,9 @@ let
     # anthropics/skills
     skill-creator = "${sources.anthropics-skills.src}/skills/skill-creator";
 
+    # forrestchang/andrej-karpathy-skills
+    karpathy-guidelines = "${sources.andrej-karpathy-skills.src}/skills/karpathy-guidelines";
+
     # public-clis/bilibili-cli
     bilibili-cli = "${sources.bilibili-cli.src}/SKILL.md";
     twitter-cli = "${sources.twitter-cli.src}/SKILL.md";

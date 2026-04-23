@@ -18,6 +18,18 @@
     };
     date = "2026-03-26";
   };
+  andrej-karpathy-skills = {
+    pname = "andrej-karpathy-skills";
+    version = "2c606141936f1eeef17fa3043a72095b4765b9c2";
+    src = fetchFromGitHub {
+      owner = "forrestchang";
+      repo = "andrej-karpathy-skills";
+      rev = "2c606141936f1eeef17fa3043a72095b4765b9c2";
+      fetchSubmodules = false;
+      sha256 = "sha256-4z/wRdYH7UXRzF8RJU0sw8xbpx0BW/7CBv5sVEC2knY=";
+    };
+    date = "2026-04-20";
+  };
   anthropics-skills = {
     pname = "anthropics-skills";
     version = "2c7ec5e78b8e5d43ea02e90bb8826f6b9f147b0c";
