@@ -61,7 +61,7 @@
         interHunkContext = 10;
       };
       url = {
-        "git@github.com:".insteadOf = "https://github.com/";
+        "git@github.com:shelken/".insteadOf = "https://github.com/shelken/";
       };
       delta = {
         navigate = true;
