@@ -54,6 +54,17 @@ let
     # SidKH/skills
     explain-code = "${sources.sidkh-skills.src}/explain-code";
 
+    # Leonxlnx/taste-skill（目录名对齐各 SKILL.md 的 name）
+    industrial-brutalist-ui = "${sources.taste-skill.src}/skills/brutalist-skill";
+    gpt-taste = "${sources.taste-skill.src}/skills/gpt-tasteskill";
+    image-taste-frontend = "${sources.taste-skill.src}/skills/images-taste-skill";
+    minimalist-ui = "${sources.taste-skill.src}/skills/minimalist-skill";
+    full-output-enforcement = "${sources.taste-skill.src}/skills/output-skill";
+    redesign-existing-projects = "${sources.taste-skill.src}/skills/redesign-skill";
+    high-end-visual-design = "${sources.taste-skill.src}/skills/soft-skill";
+    stitch-design-taste = "${sources.taste-skill.src}/skills/stitch-skill";
+    design-taste-frontend = "${sources.taste-skill.src}/skills/taste-skill";
+
     # obra/superpowers
     brainstorming = "${sources.obra-superpowers.src}/skills/brainstorming";
     executing-plans = "${sources.obra-superpowers.src}/skills/executing-plans";

@@ -377,6 +377,27 @@
         },
         "version": "e55ac385e89913a6d53c7da460d080982d32ea03"
     },
+    "taste-skill": {
+        "cargoLock": null,
+        "date": "2026-04-23",
+        "extract": null,
+        "name": "taste-skill",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "Leonxlnx",
+            "repo": "taste-skill",
+            "rev": "39dc15944b4ada367984489726b3849f400511ec",
+            "sha256": "sha256-sdExXKZ8UjIVe0iHBe8TJ0DzoxbTj5O/rctL/b03T4s=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "39dc15944b4ada367984489726b3849f400511ec"
+    },
     "twitter-cli": {
         "cargoLock": null,
         "date": "2026-04-10",

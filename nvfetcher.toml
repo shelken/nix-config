@@ -78,6 +78,11 @@ src.git      = "https://github.com/luoling8192/software-design-philosophy-skill"
 src.branch   = "main"
 fetch.github = "luoling8192/software-design-philosophy-skill"
 
+[taste-skill]
+src.git      = "https://github.com/Leonxlnx/taste-skill"
+src.branch   = "main"
+fetch.github = "Leonxlnx/taste-skill"
+
 [shuorenhua]
 src.github_tag = "MrGeDiao/shuorenhua"
 fetch.github   = "MrGeDiao/shuorenhua"

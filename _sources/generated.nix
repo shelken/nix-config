@@ -220,6 +220,18 @@
     };
     date = "2026-03-11";
   };
+  taste-skill = {
+    pname = "taste-skill";
+    version = "39dc15944b4ada367984489726b3849f400511ec";
+    src = fetchFromGitHub {
+      owner = "Leonxlnx";
+      repo = "taste-skill";
+      rev = "39dc15944b4ada367984489726b3849f400511ec";
+      fetchSubmodules = false;
+      sha256 = "sha256-sdExXKZ8UjIVe0iHBe8TJ0DzoxbTj5O/rctL/b03T4s=";
+    };
+    date = "2026-04-23";
+  };
   twitter-cli = {
     pname = "twitter-cli";
     version = "7816f8d813ff384dce80ec0a0a5dd70c03404a55";
