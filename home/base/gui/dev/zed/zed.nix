@@ -312,6 +312,7 @@ in
         csv = true;
         "docker-compose" = false; # https://github.com/zed-industries/zed/issues/12122#issuecomment-2613014716
         dockerfile = true;
+        env = true;
         "git-firefly" = true;
         html = true;
         ini = true;
