@@ -53,6 +53,16 @@ in
           api_url = "https://cpa.ooooo.space/v1";
           available_models = [
             {
+              name = "gpt-5.2";
+              display_name = "GPT-5.2";
+              max_tokens = 400000;
+              max_output_tokens = 128000;
+              reasoning_effort = "high";
+              capabilities = {
+                chat_completions = false;
+              };
+            }
+            {
               name = "gpt-5.3-codex";
               display_name = "GPT-5.3 Codex";
               max_tokens = 400000;
@@ -65,7 +75,7 @@ in
             {
               name = "gpt-5.4";
               display_name = "GPT-5.4";
-              max_tokens = 256000;
+              max_tokens = 400000;
               max_output_tokens = 128000;
               reasoning_effort = "high";
               capabilities = {
@@ -77,6 +87,16 @@ in
               display_name = "GPT-5.4 Mini";
               max_tokens = 400000;
               max_output_tokens = 128000;
+              capabilities = {
+                chat_completions = false;
+              };
+            }
+            {
+              name = "gpt-5.5";
+              display_name = "GPT-5.5";
+              max_tokens = 400000;
+              max_output_tokens = 128000;
+              reasoning_effort = "high";
               capabilities = {
                 chat_completions = false;
               };
@@ -107,19 +127,6 @@ in
           "OpenCode Zen" = {
             api_url = "https://opencode.ai/zen/v1";
             available_models = [
-              {
-                name = "minimax-m2.1-free";
-                max_tokens = 204800;
-                max_output_tokens = 32000;
-                max_completion_tokens = 204800;
-                capabilities = {
-                  tools = true;
-                  images = false;
-                  parallel_tool_calls = false;
-                  prompt_cache_key = false;
-                  chat_completions = true;
-                };
-              }
               {
                 name = "minimax-m2.5-free";
                 max_tokens = 204800;
