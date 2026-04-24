@@ -67,11 +67,11 @@
     "dot-astro-nvim": {
       "flake": false,
       "locked": {
-        "lastModified": 1775029814,
-        "narHash": "sha256-9i2hbzymfOBx59Tfrl9daHYS0Kf1t7n3jPlU3h8IHXM=",
+        "lastModified": 1777008422,
+        "narHash": "sha256-Hdd3llgBkx9vHPcJAoaQGhuvonS7dp8Q2dfXa7Jg6gs=",
         "owner": "shelken",
         "repo": "dot-astro-nvim",
-        "rev": "4fa7c9523884fcb10fda3190171a92a0a0f019ec",
+        "rev": "73933f0db2b669241c0f50eb9b9fad6287a45865",
         "type": "github"
       },
       "original": {
@@ -123,11 +123,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1775029855,
-        "narHash": "sha256-w4tFlqcSOZ+fTRyYw2iZS1UxMiwbzN8iB7MNa5sdYAo=",
+        "lastModified": 1777008631,
+        "narHash": "sha256-aGy4hmCgfcVNe1yBDJaf77HXy3QVW0SemvcJNbRErKI=",
         "owner": "shelken",
         "repo": "dotfiles.nix",
-        "rev": "674a28c3fd080f941d5954142e825864c8b3f852",
+        "rev": "c18f82675d6ade741f72dde7613704361223da14",
         "type": "github"
       },
       "original": {
