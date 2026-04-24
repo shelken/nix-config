@@ -32,15 +32,15 @@
   };
   anthropics-skills = {
     pname = "anthropics-skills";
-    version = "2c7ec5e78b8e5d43ea02e90bb8826f6b9f147b0c";
+    version = "5128e1865d670f5d6c9cef000e6dfc4e951fb5b9";
     src = fetchFromGitHub {
       owner = "anthropics";
       repo = "skills";
-      rev = "2c7ec5e78b8e5d43ea02e90bb8826f6b9f147b0c";
+      rev = "5128e1865d670f5d6c9cef000e6dfc4e951fb5b9";
       fetchSubmodules = false;
-      sha256 = "sha256-BMgH43diojdUrGC6ivk87eEm2W1yWNuh2fpR9JpbUnE=";
+      sha256 = "sha256-xFsg66TCtKzSgRIW6Ab771FWEIhei3jPgfE4byMiB44=";
     };
-    date = "2026-04-16";
+    date = "2026-04-23";
   };
   bilibili-cli = {
     pname = "bilibili-cli";
@@ -56,27 +56,27 @@
   };
   caveman = {
     pname = "caveman";
-    version = "c2ed24b3e5d412cd0c25197b2bc9af587621fd99";
+    version = "84cc3c14fa1e10182adaced856e003406ccd250d";
     src = fetchFromGitHub {
       owner = "JuliusBrussee";
       repo = "caveman";
-      rev = "c2ed24b3e5d412cd0c25197b2bc9af587621fd99";
+      rev = "84cc3c14fa1e10182adaced856e003406ccd250d";
       fetchSubmodules = false;
-      sha256 = "sha256-m7HhCW4fXU5pIYRWVP6cvSYUkDHt8R90D9UI3tT7euk=";
+      sha256 = "sha256-M+NoWXxrhtbkbe/lmq7P0/KpmqOZzJjhgeUVjY+7N2k=";
     };
-    date = "2026-04-15";
+    date = "2026-04-18";
   };
   context7-cli = {
     pname = "context7-cli";
-    version = "a1a935cbe7be7ec0acdb3b58c7d65ddf1c8cecec";
+    version = "4ed5db533e92ff7429f128fd2b82ce7d20e3172e";
     src = fetchFromGitHub {
       owner = "upstash";
       repo = "context7";
-      rev = "a1a935cbe7be7ec0acdb3b58c7d65ddf1c8cecec";
+      rev = "4ed5db533e92ff7429f128fd2b82ce7d20e3172e";
       fetchSubmodules = false;
-      sha256 = "sha256-HnouLchKrnsddh2MdoYFNRnK9kTzqVV2di/VONcz6fQ=";
+      sha256 = "sha256-j/hdKvUT39LyDBb9gZLD6Ea/RQ3B2YBXinLSZc76LKY=";
     };
-    date = "2026-04-17";
+    date = "2026-04-22";
   };
   dotclaude-skills = {
     pname = "dotclaude-skills";
@@ -104,27 +104,27 @@
   };
   hindsight-skills = {
     pname = "hindsight-skills";
-    version = "9c9d79175229887f198f271717bd018be47dab4c";
+    version = "e1c6092785eae1da8f0114d3ee61bc69b210e6f8";
     src = fetchFromGitHub {
       owner = "vectorize-io";
       repo = "hindsight";
-      rev = "9c9d79175229887f198f271717bd018be47dab4c";
+      rev = "e1c6092785eae1da8f0114d3ee61bc69b210e6f8";
       fetchSubmodules = false;
-      sha256 = "sha256-B20kIVpxbEB5FjMTn9bYIK8IMoVtle7sqaqjQdMbJEg=";
+      sha256 = "sha256-b2xRAL6zmj6Djr/erDu4elIv/mK6K0lyJEL3D7q4F+w=";
     };
-    date = "2026-04-22";
+    date = "2026-04-24";
   };
   impeccable = {
     pname = "impeccable";
-    version = "00d485659af82982aef0328d0419c49a2716d123";
+    version = "f5e82162c1c6e6bdc0cd29f287c4446b679b61a5";
     src = fetchFromGitHub {
       owner = "pbakaus";
       repo = "impeccable";
-      rev = "00d485659af82982aef0328d0419c49a2716d123";
+      rev = "f5e82162c1c6e6bdc0cd29f287c4446b679b61a5";
       fetchSubmodules = false;
-      sha256 = "sha256-RdOrnzW0Qu0ECDmOYomKEd5XymezaRbWqgWEYwSfyc4=";
+      sha256 = "sha256-z5Vm84h/noAmSYWPGVfeCk1/jpwiiOSmBPxGienmHng=";
     };
-    date = "2026-04-10";
+    date = "2026-04-23";
   };
   kitty-icon = {
     pname = "kitty-icon";
@@ -139,15 +139,15 @@
   };
   obra-superpowers = {
     pname = "obra-superpowers";
-    version = "b55764852ac78870e65c6565fb585b6cd8b3c5c9";
+    version = "6efe32c9e2dd002d0c394e861e0529675d1ab32e";
     src = fetchFromGitHub {
       owner = "obra";
       repo = "superpowers";
-      rev = "b55764852ac78870e65c6565fb585b6cd8b3c5c9";
+      rev = "6efe32c9e2dd002d0c394e861e0529675d1ab32e";
       fetchSubmodules = false;
-      sha256 = "sha256-cobQloF7Y6K0IC0/6xSnA2Io+fKgk2SRmCwoZZtVCco=";
+      sha256 = "sha256-0WupTacT1jIwVBloj1i0RF7wIllVtP8eMPRl7VrXdbE=";
     };
-    date = "2026-04-16";
+    date = "2026-04-23";
   };
   onevcat-skills = {
     pname = "onevcat-skills";
@@ -187,13 +187,13 @@
   };
   shuorenhua = {
     pname = "shuorenhua";
-    version = "v1.7.3";
+    version = "v1.8.0";
     src = fetchFromGitHub {
       owner = "MrGeDiao";
       repo = "shuorenhua";
-      rev = "v1.7.3";
+      rev = "v1.8.0";
       fetchSubmodules = false;
-      sha256 = "sha256-qOMKP1veV+vpEqSKP9f0nVuLDajIzECAZ1wAIgN1j64=";
+      sha256 = "sha256-SOyC+kEMySnv618ej9DK+HW9n2DQjkiP3AeeCeWRVmo=";
     };
   };
   sidkh-skills = {
@@ -246,46 +246,46 @@
   };
   vercel-labs-skills = {
     pname = "vercel-labs-skills";
-    version = "004c73806e35f3b12582967759559203c4ed01f9";
+    version = "5516b8ad07393f35af4b50238b9d3f7cceca5f1e";
     src = fetchFromGitHub {
       owner = "vercel-labs";
       repo = "skills";
-      rev = "004c73806e35f3b12582967759559203c4ed01f9";
+      rev = "5516b8ad07393f35af4b50238b9d3f7cceca5f1e";
       fetchSubmodules = false;
-      sha256 = "sha256-cdundZSbWn8wXByYeXI4lQ3gWtBj3DkPQ37Py0bL3IY=";
+      sha256 = "sha256-yFmumK7BpWuJSRRGpv3bP7h0aJKR7XWroPUhlsMYofQ=";
     };
-    date = "2026-04-12";
+    date = "2026-04-21";
   };
   waza-skills = {
     pname = "waza-skills";
-    version = "8e2940c02a0939c1f8e544816f295c513b964559";
+    version = "b19281c6f3e9e5c9ebe7a1ffa75f2043ee27614f";
     src = fetchFromGitHub {
       owner = "tw93";
       repo = "Waza";
-      rev = "8e2940c02a0939c1f8e544816f295c513b964559";
+      rev = "b19281c6f3e9e5c9ebe7a1ffa75f2043ee27614f";
       fetchSubmodules = false;
-      sha256 = "sha256-uyRbf67kQ2oAq+4QRQMaGDJRm4Wb/SlOSKtT/g7b888=";
+      sha256 = "sha256-12T0CYliEVdc445fegfhQ0LM17ZTqwrWQumQwzpQQ9I=";
     };
-    date = "2026-04-17";
+    date = "2026-04-24";
   };
   yazi-plugins = {
     pname = "yazi-plugins";
-    version = "442d9080da7524c8e58e10c610b832538c87464d";
+    version = "ac82af3e10f9a32cecd9f87ac64b3f9de7c7aea7";
     src = fetchFromGitHub {
       owner = "yazi-rs";
       repo = "plugins";
-      rev = "442d9080da7524c8e58e10c610b832538c87464d";
+      rev = "ac82af3e10f9a32cecd9f87ac64b3f9de7c7aea7";
       fetchSubmodules = false;
-      sha256 = "sha256-5WxCUf/Lv3wms7IPgkK0lJuJhIPa1E46obOFASS8eZU=";
+      sha256 = "sha256-svc7I2E+tVMEUWUvIS6i3oTGfLq13eaI61T0c1MQ8qQ=";
     };
-    date = "2026-04-16";
+    date = "2026-04-23";
   };
   zjstatus = {
     pname = "zjstatus";
-    version = "v0.22.0";
+    version = "v0.23.0";
     src = fetchurl {
-      url = "https://github.com/dj95/zjstatus/releases/download/v0.22.0/zjstatus.wasm";
-      sha256 = "sha256-TeQm0gscv4YScuknrutbSdksF/Diu50XP4W/fwFU3VM=";
+      url = "https://github.com/dj95/zjstatus/releases/download/v0.23.0/zjstatus.wasm";
+      sha256 = "sha256-4AaQEiNSQjnbYYAh5MxdF/gtxL+uVDKJW6QfA/E4Yf8=";
     };
   };
 }

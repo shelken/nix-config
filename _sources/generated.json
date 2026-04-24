@@ -43,7 +43,7 @@
     },
     "anthropics-skills": {
         "cargoLock": null,
-        "date": "2026-04-16",
+        "date": "2026-04-23",
         "extract": null,
         "name": "anthropics-skills",
         "passthru": null,
@@ -55,12 +55,12 @@
             "name": null,
             "owner": "anthropics",
             "repo": "skills",
-            "rev": "2c7ec5e78b8e5d43ea02e90bb8826f6b9f147b0c",
-            "sha256": "sha256-BMgH43diojdUrGC6ivk87eEm2W1yWNuh2fpR9JpbUnE=",
+            "rev": "5128e1865d670f5d6c9cef000e6dfc4e951fb5b9",
+            "sha256": "sha256-xFsg66TCtKzSgRIW6Ab771FWEIhei3jPgfE4byMiB44=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "2c7ec5e78b8e5d43ea02e90bb8826f6b9f147b0c"
+        "version": "5128e1865d670f5d6c9cef000e6dfc4e951fb5b9"
     },
     "bilibili-cli": {
         "cargoLock": null,
@@ -85,7 +85,7 @@
     },
     "caveman": {
         "cargoLock": null,
-        "date": "2026-04-15",
+        "date": "2026-04-18",
         "extract": null,
         "name": "caveman",
         "passthru": null,
@@ -97,16 +97,16 @@
             "name": null,
             "owner": "JuliusBrussee",
             "repo": "caveman",
-            "rev": "c2ed24b3e5d412cd0c25197b2bc9af587621fd99",
-            "sha256": "sha256-m7HhCW4fXU5pIYRWVP6cvSYUkDHt8R90D9UI3tT7euk=",
+            "rev": "84cc3c14fa1e10182adaced856e003406ccd250d",
+            "sha256": "sha256-M+NoWXxrhtbkbe/lmq7P0/KpmqOZzJjhgeUVjY+7N2k=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "c2ed24b3e5d412cd0c25197b2bc9af587621fd99"
+        "version": "84cc3c14fa1e10182adaced856e003406ccd250d"
     },
     "context7-cli": {
         "cargoLock": null,
-        "date": "2026-04-17",
+        "date": "2026-04-22",
         "extract": null,
         "name": "context7-cli",
         "passthru": null,
@@ -118,12 +118,12 @@
             "name": null,
             "owner": "upstash",
             "repo": "context7",
-            "rev": "a1a935cbe7be7ec0acdb3b58c7d65ddf1c8cecec",
-            "sha256": "sha256-HnouLchKrnsddh2MdoYFNRnK9kTzqVV2di/VONcz6fQ=",
+            "rev": "4ed5db533e92ff7429f128fd2b82ce7d20e3172e",
+            "sha256": "sha256-j/hdKvUT39LyDBb9gZLD6Ea/RQ3B2YBXinLSZc76LKY=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "a1a935cbe7be7ec0acdb3b58c7d65ddf1c8cecec"
+        "version": "4ed5db533e92ff7429f128fd2b82ce7d20e3172e"
     },
     "dotclaude-skills": {
         "cargoLock": null,
@@ -169,7 +169,7 @@
     },
     "hindsight-skills": {
         "cargoLock": null,
-        "date": "2026-04-22",
+        "date": "2026-04-24",
         "extract": null,
         "name": "hindsight-skills",
         "passthru": null,
@@ -181,16 +181,16 @@
             "name": null,
             "owner": "vectorize-io",
             "repo": "hindsight",
-            "rev": "9c9d79175229887f198f271717bd018be47dab4c",
-            "sha256": "sha256-B20kIVpxbEB5FjMTn9bYIK8IMoVtle7sqaqjQdMbJEg=",
+            "rev": "e1c6092785eae1da8f0114d3ee61bc69b210e6f8",
+            "sha256": "sha256-b2xRAL6zmj6Djr/erDu4elIv/mK6K0lyJEL3D7q4F+w=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "9c9d79175229887f198f271717bd018be47dab4c"
+        "version": "e1c6092785eae1da8f0114d3ee61bc69b210e6f8"
     },
     "impeccable": {
         "cargoLock": null,
-        "date": "2026-04-10",
+        "date": "2026-04-23",
         "extract": null,
         "name": "impeccable",
         "passthru": null,
@@ -202,12 +202,12 @@
             "name": null,
             "owner": "pbakaus",
             "repo": "impeccable",
-            "rev": "00d485659af82982aef0328d0419c49a2716d123",
-            "sha256": "sha256-RdOrnzW0Qu0ECDmOYomKEd5XymezaRbWqgWEYwSfyc4=",
+            "rev": "f5e82162c1c6e6bdc0cd29f287c4446b679b61a5",
+            "sha256": "sha256-z5Vm84h/noAmSYWPGVfeCk1/jpwiiOSmBPxGienmHng=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "00d485659af82982aef0328d0419c49a2716d123"
+        "version": "f5e82162c1c6e6bdc0cd29f287c4446b679b61a5"
     },
     "kitty-icon": {
         "cargoLock": null,
@@ -232,7 +232,7 @@
     },
     "obra-superpowers": {
         "cargoLock": null,
-        "date": "2026-04-16",
+        "date": "2026-04-23",
         "extract": null,
         "name": "obra-superpowers",
         "passthru": null,
@@ -244,12 +244,12 @@
             "name": null,
             "owner": "obra",
             "repo": "superpowers",
-            "rev": "b55764852ac78870e65c6565fb585b6cd8b3c5c9",
-            "sha256": "sha256-cobQloF7Y6K0IC0/6xSnA2Io+fKgk2SRmCwoZZtVCco=",
+            "rev": "6efe32c9e2dd002d0c394e861e0529675d1ab32e",
+            "sha256": "sha256-0WupTacT1jIwVBloj1i0RF7wIllVtP8eMPRl7VrXdbE=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "b55764852ac78870e65c6565fb585b6cd8b3c5c9"
+        "version": "6efe32c9e2dd002d0c394e861e0529675d1ab32e"
     },
     "onevcat-skills": {
         "cargoLock": null,
@@ -328,12 +328,12 @@
             "name": null,
             "owner": "MrGeDiao",
             "repo": "shuorenhua",
-            "rev": "v1.7.3",
-            "sha256": "sha256-qOMKP1veV+vpEqSKP9f0nVuLDajIzECAZ1wAIgN1j64=",
+            "rev": "v1.8.0",
+            "sha256": "sha256-SOyC+kEMySnv618ej9DK+HW9n2DQjkiP3AeeCeWRVmo=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "v1.7.3"
+        "version": "v1.8.0"
     },
     "sidkh-skills": {
         "cargoLock": null,
@@ -421,7 +421,7 @@
     },
     "vercel-labs-skills": {
         "cargoLock": null,
-        "date": "2026-04-12",
+        "date": "2026-04-21",
         "extract": null,
         "name": "vercel-labs-skills",
         "passthru": null,
@@ -433,16 +433,16 @@
             "name": null,
             "owner": "vercel-labs",
             "repo": "skills",
-            "rev": "004c73806e35f3b12582967759559203c4ed01f9",
-            "sha256": "sha256-cdundZSbWn8wXByYeXI4lQ3gWtBj3DkPQ37Py0bL3IY=",
+            "rev": "5516b8ad07393f35af4b50238b9d3f7cceca5f1e",
+            "sha256": "sha256-yFmumK7BpWuJSRRGpv3bP7h0aJKR7XWroPUhlsMYofQ=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "004c73806e35f3b12582967759559203c4ed01f9"
+        "version": "5516b8ad07393f35af4b50238b9d3f7cceca5f1e"
     },
     "waza-skills": {
         "cargoLock": null,
-        "date": "2026-04-17",
+        "date": "2026-04-24",
         "extract": null,
         "name": "waza-skills",
         "passthru": null,
@@ -454,16 +454,16 @@
             "name": null,
             "owner": "tw93",
             "repo": "Waza",
-            "rev": "8e2940c02a0939c1f8e544816f295c513b964559",
-            "sha256": "sha256-uyRbf67kQ2oAq+4QRQMaGDJRm4Wb/SlOSKtT/g7b888=",
+            "rev": "b19281c6f3e9e5c9ebe7a1ffa75f2043ee27614f",
+            "sha256": "sha256-12T0CYliEVdc445fegfhQ0LM17ZTqwrWQumQwzpQQ9I=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "8e2940c02a0939c1f8e544816f295c513b964559"
+        "version": "b19281c6f3e9e5c9ebe7a1ffa75f2043ee27614f"
     },
     "yazi-plugins": {
         "cargoLock": null,
-        "date": "2026-04-16",
+        "date": "2026-04-23",
         "extract": null,
         "name": "yazi-plugins",
         "passthru": null,
@@ -475,12 +475,12 @@
             "name": null,
             "owner": "yazi-rs",
             "repo": "plugins",
-            "rev": "442d9080da7524c8e58e10c610b832538c87464d",
-            "sha256": "sha256-5WxCUf/Lv3wms7IPgkK0lJuJhIPa1E46obOFASS8eZU=",
+            "rev": "ac82af3e10f9a32cecd9f87ac64b3f9de7c7aea7",
+            "sha256": "sha256-svc7I2E+tVMEUWUvIS6i3oTGfLq13eaI61T0c1MQ8qQ=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "442d9080da7524c8e58e10c610b832538c87464d"
+        "version": "ac82af3e10f9a32cecd9f87ac64b3f9de7c7aea7"
     },
     "zjstatus": {
         "cargoLock": null,
@@ -491,10 +491,10 @@
         "pinned": false,
         "src": {
             "name": null,
-            "sha256": "sha256-TeQm0gscv4YScuknrutbSdksF/Diu50XP4W/fwFU3VM=",
+            "sha256": "sha256-4AaQEiNSQjnbYYAh5MxdF/gtxL+uVDKJW6QfA/E4Yf8=",
             "type": "url",
-            "url": "https://github.com/dj95/zjstatus/releases/download/v0.22.0/zjstatus.wasm"
+            "url": "https://github.com/dj95/zjstatus/releases/download/v0.23.0/zjstatus.wasm"
         },
-        "version": "v0.22.0"
+        "version": "v0.23.0"
     }
 }
