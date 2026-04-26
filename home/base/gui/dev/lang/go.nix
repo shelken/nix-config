@@ -12,7 +12,7 @@
   config = lib.mkIf config.shelken.dev.go.enable {
     home.sessionVariables = {
       # for go
-      GOPROXY = "https://goproxy.io";
+      # GOPROXY = "https://goproxy.io";
     };
 
     home.packages = with pkgs; [
