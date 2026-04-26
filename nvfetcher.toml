@@ -68,6 +68,11 @@ fetch.github = "shelken/shuorenhua"
 # src.branch   = "main"
 # fetch.github = "SidKH/skills"
 
+[taches-cc-resources]
+src.git      = "https://github.com/glittercowboy/taches-cc-resources"
+src.branch   = "main"
+fetch.github = "glittercowboy/taches-cc-resources"
+
 [taste-skill]
 src.git      = "https://github.com/Leonxlnx/taste-skill"
 src.branch   = "main"

@@ -173,6 +173,18 @@
     };
     date = "2026-03-11";
   };
+  taches-cc-resources = {
+    pname = "taches-cc-resources";
+    version = "1757615b99ab789a72ff2d02e9f6112af2a15c04";
+    src = fetchFromGitHub {
+      owner = "glittercowboy";
+      repo = "taches-cc-resources";
+      rev = "1757615b99ab789a72ff2d02e9f6112af2a15c04";
+      fetchSubmodules = false;
+      sha256 = "sha256-wWFJBd0AIIPYRWUG6LEFlKHpbpBQw4N2+7fX9BmjL6g=";
+    };
+    date = "2026-04-01";
+  };
   taste-skill = {
     pname = "taste-skill";
     version = "840b46bb698104b3dd06a8ba0c0ecc0163d54d17";

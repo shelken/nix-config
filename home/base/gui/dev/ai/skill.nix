@@ -68,6 +68,12 @@ let
     #   explain-code = "${sources.sidkh-skills.src}/explain-code";
     # };
 
+    taches-cc-resources = {
+      build-macos-apps = "${sources.taches-cc-resources.src}/skills/expertise/macos-apps";
+      build-iphone-apps = "${sources.taches-cc-resources.src}/skills/expertise/iphone-apps";
+      create-agent-skills = "${sources.taches-cc-resources.src}/skills/create-agent-skills";
+    };
+
     taste-skill = {
       industrial-brutalist-ui = "${sources.taste-skill.src}/skills/brutalist-skill";
       gpt-taste = "${sources.taste-skill.src}/skills/gpt-tasteskill";
