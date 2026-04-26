@@ -4,9 +4,9 @@ fetch.github   = "DinkDonk/kitty-icon"
 
 # Skills
 [ai-coding-principles]
-src.git      = "https://github.com/luoling8192/ai-coding-principles"
+src.git      = "https://github.com/shelken/ai-coding-principles"
 src.branch   = "main"
-fetch.github = "luoling8192/ai-coding-principles"
+fetch.github = "shelken/ai-coding-principles"
 
 [anthropics-skills]
 src.git      = "https://github.com/anthropics/skills"
@@ -23,30 +23,15 @@ src.git      = "https://github.com/public-clis/bilibili-cli"
 src.branch   = "main"
 fetch.github = "public-clis/bilibili-cli"
 
-[twitter-cli]
-src.git      = "https://github.com/public-clis/twitter-cli"
-src.branch   = "main"
-fetch.github = "public-clis/twitter-cli"
-
 [caveman]
 src.git      = "https://github.com/JuliusBrussee/caveman"
 src.branch   = "main"
 fetch.github = "JuliusBrussee/caveman"
 
-[context7-cli]
-src.git      = "https://github.com/upstash/context7"
-src.branch   = "master"
-fetch.github = "upstash/context7"
-
 [dotclaude-skills]
 src.git      = "https://github.com/FradSer/dotclaude"
 src.branch   = "main"
 fetch.github = "FradSer/dotclaude"
-
-[github-cli]
-src.git      = "https://github.com/georgekhananaev/claude-skills-vault"
-src.branch   = "main"
-fetch.github = "georgekhananaev/claude-skills-vault"
 
 [hindsight-skills]
 src.git      = "https://github.com/vectorize-io/hindsight"
@@ -63,34 +48,35 @@ src.git      = "https://github.com/obra/superpowers"
 src.branch   = "main"
 fetch.github = "obra/superpowers"
 
-[onevcat-skills]
-src.git      = "https://github.com/onevcat/skills"
-src.branch   = "master"
-fetch.github = "onevcat/skills"
-
 [playwright-cli]
 src.git      = "https://github.com/microsoft/playwright-cli"
 src.branch   = "main"
 fetch.github = "microsoft/playwright-cli"
 
 [software-design-philosophy-skill]
-src.git      = "https://github.com/luoling8192/software-design-philosophy-skill"
+src.git      = "https://github.com/shelken/software-design-philosophy-skill"
 src.branch   = "main"
-fetch.github = "luoling8192/software-design-philosophy-skill"
+fetch.github = "shelken/software-design-philosophy-skill"
+
+[shuorenhua]
+src.git      = "https://github.com/shelken/shuorenhua"
+src.branch   = "main"
+fetch.github = "shelken/shuorenhua"
+
+# [sidkh-skills]
+# src.git      = "https://github.com/SidKH/skills"
+# src.branch   = "main"
+# fetch.github = "SidKH/skills"
 
 [taste-skill]
 src.git      = "https://github.com/Leonxlnx/taste-skill"
 src.branch   = "main"
 fetch.github = "Leonxlnx/taste-skill"
 
-[shuorenhua]
-src.github_tag = "MrGeDiao/shuorenhua"
-fetch.github   = "MrGeDiao/shuorenhua"
-
-[sidkh-skills]
-src.git      = "https://github.com/SidKH/skills"
+[twitter-cli]
+src.git      = "https://github.com/public-clis/twitter-cli"
 src.branch   = "main"
-fetch.github = "SidKH/skills"
+fetch.github = "public-clis/twitter-cli"
 
 [vercel-labs-skills]
 src.git      = "https://github.com/vercel-labs/skills"

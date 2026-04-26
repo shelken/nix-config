@@ -10,7 +10,7 @@
     pname = "ai-coding-principles";
     version = "27db986fd2790ad1a1818a7f1b2c5d91b3843b8e";
     src = fetchFromGitHub {
-      owner = "luoling8192";
+      owner = "shelken";
       repo = "ai-coding-principles";
       rev = "27db986fd2790ad1a1818a7f1b2c5d91b3843b8e";
       fetchSubmodules = false;
@@ -66,18 +66,6 @@
     };
     date = "2026-04-18";
   };
-  context7-cli = {
-    pname = "context7-cli";
-    version = "4ed5db533e92ff7429f128fd2b82ce7d20e3172e";
-    src = fetchFromGitHub {
-      owner = "upstash";
-      repo = "context7";
-      rev = "4ed5db533e92ff7429f128fd2b82ce7d20e3172e";
-      fetchSubmodules = false;
-      sha256 = "sha256-j/hdKvUT39LyDBb9gZLD6Ea/RQ3B2YBXinLSZc76LKY=";
-    };
-    date = "2026-04-22";
-  };
   dotclaude-skills = {
     pname = "dotclaude-skills";
     version = "be586bfc054723332df88492669e274dfe48991b";
@@ -89,18 +77,6 @@
       sha256 = "sha256-vttsYbwLujeCFzff72+i6zqYNG9bDX7SsOYZ/XZBU30=";
     };
     date = "2026-03-30";
-  };
-  github-cli = {
-    pname = "github-cli";
-    version = "4621f96e8c8532b6e1865e4f843a555d37865eee";
-    src = fetchFromGitHub {
-      owner = "georgekhananaev";
-      repo = "claude-skills-vault";
-      rev = "4621f96e8c8532b6e1865e4f843a555d37865eee";
-      fetchSubmodules = false;
-      sha256 = "sha256-HZS1Yt3FR393niSx03GATF0d+j2BtSOmw0hElz8QGRo=";
-    };
-    date = "2026-03-16";
   };
   hindsight-skills = {
     pname = "hindsight-skills";
@@ -116,15 +92,15 @@
   };
   impeccable = {
     pname = "impeccable";
-    version = "f5e82162c1c6e6bdc0cd29f287c4446b679b61a5";
+    version = "25e6c820aab580526f8e9ffb3866b5a5b39c16c9";
     src = fetchFromGitHub {
       owner = "pbakaus";
       repo = "impeccable";
-      rev = "f5e82162c1c6e6bdc0cd29f287c4446b679b61a5";
+      rev = "25e6c820aab580526f8e9ffb3866b5a5b39c16c9";
       fetchSubmodules = false;
-      sha256 = "sha256-z5Vm84h/noAmSYWPGVfeCk1/jpwiiOSmBPxGienmHng=";
+      sha256 = "sha256-YjFA/ZCnZjwM4kCwKYu39fZ/A8Z2e74NlBiszBdaRs4=";
     };
-    date = "2026-04-23";
+    date = "2026-04-25";
   };
   kitty-icon = {
     pname = "kitty-icon";
@@ -149,29 +125,17 @@
     };
     date = "2026-04-23";
   };
-  onevcat-skills = {
-    pname = "onevcat-skills";
-    version = "4955f5422d992db58ddb3652ec1c1b552405b39d";
-    src = fetchFromGitHub {
-      owner = "onevcat";
-      repo = "skills";
-      rev = "4955f5422d992db58ddb3652ec1c1b552405b39d";
-      fetchSubmodules = false;
-      sha256 = "sha256-XV6yl6mQkzoC/f2dnMnSp8wfXVjnkdxIbOCN9t5nu/E=";
-    };
-    date = "2026-03-16";
-  };
   playwright-cli = {
     pname = "playwright-cli";
-    version = "0406adaed4c6ba95bbfa6952229e76188bc59993";
+    version = "ee24ded1770c7a4f7a8cbb8e22aac9812e151feb";
     src = fetchFromGitHub {
       owner = "microsoft";
       repo = "playwright-cli";
-      rev = "0406adaed4c6ba95bbfa6952229e76188bc59993";
+      rev = "ee24ded1770c7a4f7a8cbb8e22aac9812e151feb";
       fetchSubmodules = false;
-      sha256 = "sha256-8f/wFO4hSytpy3kEPyScoMWXWyeTl/SKoc3vD7xYaKo=";
+      sha256 = "sha256-w1mPi1CxmOsQAo6ruQAb7s+omrdG+Pnn0jZd7mt0yQA=";
     };
-    date = "2026-04-14";
+    date = "2026-04-24";
   };
   projects-yazi = {
     pname = "projects-yazi";
@@ -187,32 +151,21 @@
   };
   shuorenhua = {
     pname = "shuorenhua";
-    version = "v1.8.0";
+    version = "8356a4f9190c5154820f10c6b372a90a1b92e600";
     src = fetchFromGitHub {
-      owner = "MrGeDiao";
+      owner = "shelken";
       repo = "shuorenhua";
-      rev = "v1.8.0";
+      rev = "8356a4f9190c5154820f10c6b372a90a1b92e600";
       fetchSubmodules = false;
       sha256 = "sha256-SOyC+kEMySnv618ej9DK+HW9n2DQjkiP3AeeCeWRVmo=";
     };
-  };
-  sidkh-skills = {
-    pname = "sidkh-skills";
-    version = "fb2fdb11e03b43525ecc8110f8edfc9eceb2ef28";
-    src = fetchFromGitHub {
-      owner = "SidKH";
-      repo = "skills";
-      rev = "fb2fdb11e03b43525ecc8110f8edfc9eceb2ef28";
-      fetchSubmodules = false;
-      sha256 = "sha256-X6h5cviR5ig3BhAMcLTYkWEkTTWx6j+wdPXn2WSdA0g=";
-    };
-    date = "2026-04-22";
+    date = "2026-04-24";
   };
   software-design-philosophy-skill = {
     pname = "software-design-philosophy-skill";
     version = "e55ac385e89913a6d53c7da460d080982d32ea03";
     src = fetchFromGitHub {
-      owner = "luoling8192";
+      owner = "shelken";
       repo = "software-design-philosophy-skill";
       rev = "e55ac385e89913a6d53c7da460d080982d32ea03";
       fetchSubmodules = false;
@@ -222,15 +175,15 @@
   };
   taste-skill = {
     pname = "taste-skill";
-    version = "39dc15944b4ada367984489726b3849f400511ec";
+    version = "840b46bb698104b3dd06a8ba0c0ecc0163d54d17";
     src = fetchFromGitHub {
       owner = "Leonxlnx";
       repo = "taste-skill";
-      rev = "39dc15944b4ada367984489726b3849f400511ec";
+      rev = "840b46bb698104b3dd06a8ba0c0ecc0163d54d17";
       fetchSubmodules = false;
-      sha256 = "sha256-sdExXKZ8UjIVe0iHBe8TJ0DzoxbTj5O/rctL/b03T4s=";
+      sha256 = "sha256-kxwZ7lhtTKeSB+s4yxvEWWBLUhoyOm/Fbl3bFl6rP0E=";
     };
-    date = "2026-04-23";
+    date = "2026-04-25";
   };
   twitter-cli = {
     pname = "twitter-cli";
@@ -258,15 +211,15 @@
   };
   waza-skills = {
     pname = "waza-skills";
-    version = "b19281c6f3e9e5c9ebe7a1ffa75f2043ee27614f";
+    version = "b235fd4864aaf20e4daf3e357fa4e72a8a9cc291";
     src = fetchFromGitHub {
       owner = "tw93";
       repo = "Waza";
-      rev = "b19281c6f3e9e5c9ebe7a1ffa75f2043ee27614f";
+      rev = "b235fd4864aaf20e4daf3e357fa4e72a8a9cc291";
       fetchSubmodules = false;
-      sha256 = "sha256-12T0CYliEVdc445fegfhQ0LM17ZTqwrWQumQwzpQQ9I=";
+      sha256 = "sha256-kX5H6FsfFB9TwzJrb2O17F9uCcydBvtjzNyfDDr4jyI=";
     };
-    date = "2026-04-24";
+    date = "2026-04-26";
   };
   yazi-plugins = {
     pname = "yazi-plugins";

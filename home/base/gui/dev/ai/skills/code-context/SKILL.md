@@ -2,7 +2,7 @@
 name: code-context
 description:
   在写代码前补齐上下文并输出可执行结论。只要用户提到“先理解仓库”“查官方
-  API”“找真实示例”“做升级迁移评估”“排查实践写法”，都应触发此 skill，即使用户没明确说
+  API”“找真实示例”“做升级迁移评估”“排查实践写法”"ctx7"，都应触发此 skill，即使用户没明确说
   code-context。固定流程：先本地，再按需使用 DeepWiki、Context7、Exa。
 ---
 
@@ -45,9 +45,9 @@ ctx7 docs [options] <libraryId> <query>
 ### DeepWiki
 
 ```bash
-deepwiki toc <owner/repo>
-deepwiki wiki <owner/repo>
-deepwiki ask <owner/repo> "<question>"
+deepwiki toc "<owner/repo>"
+deepwiki wiki "<owner/repo>"
+deepwiki ask "<owner/repo>" "<question>"
 ```
 
 ### Exa

@@ -36,10 +36,6 @@ let
       refactor-project = "${sources.dotclaude-skills.src}/refactor/skills/refactor-project";
     };
 
-    github-cli = {
-      github-cli = "${sources.github-cli.src}/.claude/skills/github-cli";
-    };
-
     hindsight-skills = {
       hindsight-architect = "${sources.hindsight-skills.src}/skills/hindsight-architect";
       hindsight-docs = "${sources.hindsight-skills.src}/skills/hindsight-docs";
@@ -68,9 +64,9 @@ let
       shuorenhua = "${sources.shuorenhua.src}";
     };
 
-    sidkh-skills = {
-      explain-code = "${sources.sidkh-skills.src}/explain-code";
-    };
+    # sidkh-skills = {
+    #   explain-code = "${sources.sidkh-skills.src}/explain-code";
+    # };
 
     taste-skill = {
       industrial-brutalist-ui = "${sources.taste-skill.src}/skills/brutalist-skill";
@@ -94,20 +90,12 @@ let
       writing-skills = "${sources.obra-superpowers.src}/skills/writing-skills";
     };
 
-    onevcat-skills = {
-      onevcat-jj = "${sources.onevcat-skills.src}/skills/onevcat-jj";
-    };
-
     impeccable = {
       impeccable = "${sources.impeccable.src}/.claude/skills/impeccable";
     };
 
     waza-skills = {
       health = "${sources.waza-skills.src}/skills/health";
-    };
-
-    context7-cli = {
-      context7-cli = "${sources.context7-cli.src}/skills/context7-cli";
     };
 
     vercel-labs-skills = {
