@@ -77,7 +77,7 @@ let
     taste-skill = {
       industrial-brutalist-ui = "${sources.taste-skill.src}/skills/brutalist-skill";
       gpt-taste = "${sources.taste-skill.src}/skills/gpt-tasteskill";
-      image-taste-frontend = "${sources.taste-skill.src}/skills/images-taste-skill";
+      image-to-code = "${sources.taste-skill.src}/skills/image-to-code-skill";
       minimalist-ui = "${sources.taste-skill.src}/skills/minimalist-skill";
       full-output-enforcement = "${sources.taste-skill.src}/skills/output-skill";
       redesign-existing-projects = "${sources.taste-skill.src}/skills/redesign-skill";
