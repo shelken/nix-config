@@ -60,9 +60,8 @@
         renames = "copies";
         interHunkContext = 10;
       };
-      url = {
-        "git@github.com:shelken/".insteadOf = "https://github.com/shelken/";
-      };
+      # GitHub HTTPS 保持原样，开启 secrets 的机器通过 gh credential helper 使用 GH_TOKEN。
+      # 旧的 SSH rewrite 是为 memex 插件服务；插件弃用后，token 认证作为默认路径。
       delta = {
         navigate = true;
         side-by-side = true;
