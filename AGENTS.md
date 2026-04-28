@@ -27,5 +27,4 @@
 ## Git 提交规则
 
 - commit 前先在 direnv 环境运行一次 pre-commit（例如：`direnv exec . pre-commit run -a`）
-- 优先使用`Conventional Commits`格式提交git commit，标题 **英文**，内容
-  **中文**，如果有`git-commit`技能，读取`git-commit`作为补充
+- 优先使用`Conventional Commits`格式提交git commit，标题 **英文**，内容 **中文**
