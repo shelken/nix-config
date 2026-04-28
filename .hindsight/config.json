@@ -1,7 +1,9 @@
 {
   "host": {
     "pi": {
-      "enabled": true
+      "enabled": true,
+      "recallMode": "hybrid",
+      "retainMode": "step-batch"
     }
   }
 }
