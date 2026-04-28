@@ -87,13 +87,13 @@ let
     };
 
     obra-superpowers = {
-      brainstorming = "${sources.obra-superpowers.src}/skills/brainstorming";
-      executing-plans = "${sources.obra-superpowers.src}/skills/executing-plans";
-      subagent-driven-development = "${sources.obra-superpowers.src}/skills/subagent-driven-development";
+      # brainstorming = "${sources.obra-superpowers.src}/skills/brainstorming";
+      # executing-plans = "${sources.obra-superpowers.src}/skills/executing-plans";
+      # subagent-driven-development = "${sources.obra-superpowers.src}/skills/subagent-driven-development";
       systematic-debugging = "${sources.obra-superpowers.src}/skills/systematic-debugging";
       test-driven-development = "${sources.obra-superpowers.src}/skills/test-driven-development";
-      writing-plans = "${sources.obra-superpowers.src}/skills/writing-plans";
-      writing-skills = "${sources.obra-superpowers.src}/skills/writing-skills";
+      # writing-plans = "${sources.obra-superpowers.src}/skills/writing-plans";
+      # writing-skills = "${sources.obra-superpowers.src}/skills/writing-skills";
     };
 
     impeccable = {

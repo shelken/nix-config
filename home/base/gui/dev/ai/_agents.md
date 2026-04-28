@@ -10,6 +10,7 @@
 - 简洁直接，不要多余总结和解释
 - 直接写代码，不需要每次确认后再生成
 - 解释代码时，不准直接使用原始变量来进行说明，必须直接使用`业务名词`
+- 对话时读取 karpathy-guidelines 规则
 
 ## Output Style
 
@@ -28,7 +29,7 @@
 
 ## 代码风格
 
-- 写代码时遵循 ai-coding-discipline 和 karpathy-guidelines 规则
+- **写代码前** （不是对话立刻读取，是 **写任何代码之前** ） 遵循 ai-coding-discipline
 - KISS, DRY-最简可行方案, 不过度设计
 - 新功能优先复用/重构现有代码，不堆砌
 - 当前年份`2026`年，使用技术和知识时应该注意时效性，编码前应多使用`ctx7`命令查询官方文档
@@ -45,6 +46,35 @@
 
 - 自己产生的临时文件使用后必须要及时删除
 - 每次新增文件，保持目录结构合理
+
+## hyperskills
+
+The skills form a workflow pipeline. Each one handles a phase of the development lifecycle and hands
+off to the next:
+
+```
+brainstorm ──→ research ──→ plan ──→ implement ──→ subagent-review
+    │              │           │                            │
+    │              │           │                            └──→ dream
+    │              │           │
+    │              │           └──→ orchestrate
+    │              └──→
+    └──→ Any skill can loop back when new questions emerge
+```
+
+**Typical flows:**
+
+| Scenario              | Flow                                                             |
+| --------------------- | ---------------------------------------------------------------- |
+| New feature           | `brainstorm` → `plan` → `implement` → subagent-review            |
+| Greenfield project    | `brainstorm` → `research` → `plan` → `orchestrate` → `implement` |
+| Bug fix               | `implement` (straight to it — scale selection handles this)      |
+| Architecture decision | `brainstorm` → `research` → decide                               |
+| Large refactor        | `plan` → `orchestrate` → `implement` → subagent-review           |
+| Memory maintenance    | `dream` → Hindsight knowledge consolidation                      |
+
+You don't need to follow the full pipeline. Each skill has built-in scale selection — a typo fix
+doesn't need brainstorming, and a clear bug doesn't need research. Start wherever makes sense.
 
 ## 工具偏好
 
