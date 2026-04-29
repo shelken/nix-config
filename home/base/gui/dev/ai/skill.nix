@@ -14,9 +14,9 @@ let
   # 外部 skill 统一交给 nvfetcher 固定来源和版本，避免 activation 阶段临时下载。
   # 结构：仓库分组 -> skill 名 -> skill 路径。
   fetchedSkillSourcesByRepo = {
-    anthropics-skills = {
-      skill-creator = "${sources.anthropics-skills.src}/skills/skill-creator";
-    };
+    # anthropics-skills = {
+    #   skill-creator = "${sources.anthropics-skills.src}/skills/skill-creator";
+    # };
 
     andrej-karpathy-skills = {
       karpathy-guidelines = "${sources.andrej-karpathy-skills.src}/skills/karpathy-guidelines";
@@ -100,17 +100,14 @@ let
       liteparse = "${sources.llamaparse-agent-skills.src}/skills/liteparse";
     };
 
-    impeccable = {
-      impeccable = "${sources.impeccable.src}/.claude/skills/impeccable";
-    };
+    # impeccable = {
+    #   impeccable = "${sources.impeccable.src}/.claude/skills/impeccable";
+    # };
 
     waza-skills = {
       health = "${sources.waza-skills.src}/skills/health";
     };
 
-    vercel-labs-skills = {
-      find-skills = "${sources.vercel-labs-skills.src}/skills/find-skills";
-    };
   };
 
   # 单文件来源统一包装成目录，skill 目标形态与目录来源保持一致，避免目录内再挂单文件链接。

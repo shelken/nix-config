@@ -127,7 +127,7 @@
     },
     "hindsight-skills": {
         "cargoLock": null,
-        "date": "2026-04-24",
+        "date": "2026-04-28",
         "extract": null,
         "name": "hindsight-skills",
         "passthru": null,
@@ -139,16 +139,16 @@
             "name": null,
             "owner": "vectorize-io",
             "repo": "hindsight",
-            "rev": "e1c6092785eae1da8f0114d3ee61bc69b210e6f8",
-            "sha256": "sha256-b2xRAL6zmj6Djr/erDu4elIv/mK6K0lyJEL3D7q4F+w=",
+            "rev": "4ea650f6c4162d8ed8aace35b29b613351f8b2d9",
+            "sha256": "sha256-+yX2xKE5T75U+iTqykBSlbT4keL2XcAe3lifkUQHRrg=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "e1c6092785eae1da8f0114d3ee61bc69b210e6f8"
+        "version": "4ea650f6c4162d8ed8aace35b29b613351f8b2d9"
     },
     "impeccable": {
         "cargoLock": null,
-        "date": "2026-04-25",
+        "date": "2026-04-28",
         "extract": null,
         "name": "impeccable",
         "passthru": null,
@@ -160,12 +160,12 @@
             "name": null,
             "owner": "pbakaus",
             "repo": "impeccable",
-            "rev": "25e6c820aab580526f8e9ffb3866b5a5b39c16c9",
-            "sha256": "sha256-YjFA/ZCnZjwM4kCwKYu39fZ/A8Z2e74NlBiszBdaRs4=",
+            "rev": "9a5d0e71a9011def4fbd011d5fca33360880b409",
+            "sha256": "sha256-aS8BGsSw6RcraTQQ11WI21O/1GdjRV5sGGb5w/6mnlI=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "25e6c820aab580526f8e9ffb3866b5a5b39c16c9"
+        "version": "9a5d0e71a9011def4fbd011d5fca33360880b409"
     },
     "kitty-icon": {
         "cargoLock": null,
@@ -337,7 +337,7 @@
     },
     "taste-skill": {
         "cargoLock": null,
-        "date": "2026-04-25",
+        "date": "2026-04-28",
         "extract": null,
         "name": "taste-skill",
         "passthru": null,
@@ -349,12 +349,12 @@
             "name": null,
             "owner": "Leonxlnx",
             "repo": "taste-skill",
-            "rev": "840b46bb698104b3dd06a8ba0c0ecc0163d54d17",
-            "sha256": "sha256-kxwZ7lhtTKeSB+s4yxvEWWBLUhoyOm/Fbl3bFl6rP0E=",
+            "rev": "5bbc8654877fbc9f2a8e32c33706909cae9a1624",
+            "sha256": "sha256-CTVkiE2hVZgdgquCNAl3MDxfqZ4C4uMl8DtHT078Nvc=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "840b46bb698104b3dd06a8ba0c0ecc0163d54d17"
+        "version": "5bbc8654877fbc9f2a8e32c33706909cae9a1624"
     },
     "twitter-cli": {
         "cargoLock": null,
@@ -379,7 +379,7 @@
     },
     "vercel-labs-skills": {
         "cargoLock": null,
-        "date": "2026-04-21",
+        "date": "2026-04-28",
         "extract": null,
         "name": "vercel-labs-skills",
         "passthru": null,
@@ -391,16 +391,16 @@
             "name": null,
             "owner": "vercel-labs",
             "repo": "skills",
-            "rev": "5516b8ad07393f35af4b50238b9d3f7cceca5f1e",
-            "sha256": "sha256-yFmumK7BpWuJSRRGpv3bP7h0aJKR7XWroPUhlsMYofQ=",
+            "rev": "7c0a9af3f8738965b71341712710ac7371089b34",
+            "sha256": "sha256-YxCMuTl+pVJ7dXhaL7l9vDw9k2orlG31j7/0pgllMJk=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "5516b8ad07393f35af4b50238b9d3f7cceca5f1e"
+        "version": "7c0a9af3f8738965b71341712710ac7371089b34"
     },
     "waza-skills": {
         "cargoLock": null,
-        "date": "2026-04-26",
+        "date": "2026-04-27",
         "extract": null,
         "name": "waza-skills",
         "passthru": null,
@@ -412,12 +412,12 @@
             "name": null,
             "owner": "tw93",
             "repo": "Waza",
-            "rev": "b235fd4864aaf20e4daf3e357fa4e72a8a9cc291",
-            "sha256": "sha256-kX5H6FsfFB9TwzJrb2O17F9uCcydBvtjzNyfDDr4jyI=",
+            "rev": "51222bfc4f43bf1f469a72e48016e5026efb6fe4",
+            "sha256": "sha256-XjYoCitjX1jYWewHv4DBib990jfv0jv+dnDMaDlhU/s=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "b235fd4864aaf20e4daf3e357fa4e72a8a9cc291"
+        "version": "51222bfc4f43bf1f469a72e48016e5026efb6fe4"
     },
     "yazi-plugins": {
         "cargoLock": null,

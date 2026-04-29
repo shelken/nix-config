@@ -8,10 +8,10 @@ src.git      = "https://github.com/shelken/ai-coding-principles"
 src.branch   = "main"
 fetch.github = "shelken/ai-coding-principles"
 
-[anthropics-skills]
-src.git      = "https://github.com/anthropics/skills"
-src.branch   = "main"
-fetch.github = "anthropics/skills"
+# [anthropics-skills]
+# src.git      = "https://github.com/anthropics/skills"
+# src.branch   = "main"
+# fetch.github = "anthropics/skills"
 
 [andrej-karpathy-skills]
 src.git      = "https://github.com/forrestchang/andrej-karpathy-skills"
@@ -43,10 +43,10 @@ src.git      = "https://github.com/run-llama/llamaparse-agent-skills"
 src.branch   = "main"
 fetch.github = "run-llama/llamaparse-agent-skills"
 
-[impeccable]
-src.git      = "https://github.com/pbakaus/impeccable"
-src.branch   = "main"
-fetch.github = "pbakaus/impeccable"
+# [impeccable]
+# src.git      = "https://github.com/pbakaus/impeccable"
+# src.branch   = "main"
+# fetch.github = "pbakaus/impeccable"
 
 [obra-superpowers]
 src.git      = "https://github.com/obra/superpowers"
@@ -87,11 +87,6 @@ fetch.github = "Leonxlnx/taste-skill"
 src.git      = "https://github.com/public-clis/twitter-cli"
 src.branch   = "main"
 fetch.github = "public-clis/twitter-cli"
-
-[vercel-labs-skills]
-src.git      = "https://github.com/vercel-labs/skills"
-src.branch   = "main"
-fetch.github = "vercel-labs/skills"
 
 [waza-skills]
 src.git      = "https://github.com/tw93/Waza"

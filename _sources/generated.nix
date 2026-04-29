@@ -80,27 +80,27 @@
   };
   hindsight-skills = {
     pname = "hindsight-skills";
-    version = "e1c6092785eae1da8f0114d3ee61bc69b210e6f8";
+    version = "4ea650f6c4162d8ed8aace35b29b613351f8b2d9";
     src = fetchFromGitHub {
       owner = "vectorize-io";
       repo = "hindsight";
-      rev = "e1c6092785eae1da8f0114d3ee61bc69b210e6f8";
+      rev = "4ea650f6c4162d8ed8aace35b29b613351f8b2d9";
       fetchSubmodules = false;
-      sha256 = "sha256-b2xRAL6zmj6Djr/erDu4elIv/mK6K0lyJEL3D7q4F+w=";
+      sha256 = "sha256-+yX2xKE5T75U+iTqykBSlbT4keL2XcAe3lifkUQHRrg=";
     };
-    date = "2026-04-24";
+    date = "2026-04-28";
   };
   impeccable = {
     pname = "impeccable";
-    version = "25e6c820aab580526f8e9ffb3866b5a5b39c16c9";
+    version = "9a5d0e71a9011def4fbd011d5fca33360880b409";
     src = fetchFromGitHub {
       owner = "pbakaus";
       repo = "impeccable";
-      rev = "25e6c820aab580526f8e9ffb3866b5a5b39c16c9";
+      rev = "9a5d0e71a9011def4fbd011d5fca33360880b409";
       fetchSubmodules = false;
-      sha256 = "sha256-YjFA/ZCnZjwM4kCwKYu39fZ/A8Z2e74NlBiszBdaRs4=";
+      sha256 = "sha256-aS8BGsSw6RcraTQQ11WI21O/1GdjRV5sGGb5w/6mnlI=";
     };
-    date = "2026-04-25";
+    date = "2026-04-28";
   };
   kitty-icon = {
     pname = "kitty-icon";
@@ -199,15 +199,15 @@
   };
   taste-skill = {
     pname = "taste-skill";
-    version = "840b46bb698104b3dd06a8ba0c0ecc0163d54d17";
+    version = "5bbc8654877fbc9f2a8e32c33706909cae9a1624";
     src = fetchFromGitHub {
       owner = "Leonxlnx";
       repo = "taste-skill";
-      rev = "840b46bb698104b3dd06a8ba0c0ecc0163d54d17";
+      rev = "5bbc8654877fbc9f2a8e32c33706909cae9a1624";
       fetchSubmodules = false;
-      sha256 = "sha256-kxwZ7lhtTKeSB+s4yxvEWWBLUhoyOm/Fbl3bFl6rP0E=";
+      sha256 = "sha256-CTVkiE2hVZgdgquCNAl3MDxfqZ4C4uMl8DtHT078Nvc=";
     };
-    date = "2026-04-25";
+    date = "2026-04-28";
   };
   twitter-cli = {
     pname = "twitter-cli";
@@ -223,27 +223,27 @@
   };
   vercel-labs-skills = {
     pname = "vercel-labs-skills";
-    version = "5516b8ad07393f35af4b50238b9d3f7cceca5f1e";
+    version = "7c0a9af3f8738965b71341712710ac7371089b34";
     src = fetchFromGitHub {
       owner = "vercel-labs";
       repo = "skills";
-      rev = "5516b8ad07393f35af4b50238b9d3f7cceca5f1e";
+      rev = "7c0a9af3f8738965b71341712710ac7371089b34";
       fetchSubmodules = false;
-      sha256 = "sha256-yFmumK7BpWuJSRRGpv3bP7h0aJKR7XWroPUhlsMYofQ=";
+      sha256 = "sha256-YxCMuTl+pVJ7dXhaL7l9vDw9k2orlG31j7/0pgllMJk=";
     };
-    date = "2026-04-21";
+    date = "2026-04-28";
   };
   waza-skills = {
     pname = "waza-skills";
-    version = "b235fd4864aaf20e4daf3e357fa4e72a8a9cc291";
+    version = "51222bfc4f43bf1f469a72e48016e5026efb6fe4";
     src = fetchFromGitHub {
       owner = "tw93";
       repo = "Waza";
-      rev = "b235fd4864aaf20e4daf3e357fa4e72a8a9cc291";
+      rev = "51222bfc4f43bf1f469a72e48016e5026efb6fe4";
       fetchSubmodules = false;
-      sha256 = "sha256-kX5H6FsfFB9TwzJrb2O17F9uCcydBvtjzNyfDDr4jyI=";
+      sha256 = "sha256-XjYoCitjX1jYWewHv4DBib990jfv0jv+dnDMaDlhU/s=";
     };
-    date = "2026-04-26";
+    date = "2026-04-27";
   };
   yazi-plugins = {
     pname = "yazi-plugins";
