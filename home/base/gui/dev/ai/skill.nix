@@ -96,6 +96,10 @@ let
       # writing-skills = "${sources.obra-superpowers.src}/skills/writing-skills";
     };
 
+    llamaparse-agent-skills = {
+      liteparse = "${sources.llamaparse-agent-skills.src}/skills/liteparse";
+    };
+
     impeccable = {
       impeccable = "${sources.impeccable.src}/.claude/skills/impeccable";
     };

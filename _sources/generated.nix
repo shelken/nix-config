@@ -113,6 +113,18 @@
       sha256 = "sha256-q5wNdFRMvQDx3DlO7zdy/xPJbqcNlm4iVKaBwjxlSMs=";
     };
   };
+  llamaparse-agent-skills = {
+    pname = "llamaparse-agent-skills";
+    version = "1f10f60a9eba0dbb490724c8104b0a865365f136";
+    src = fetchFromGitHub {
+      owner = "run-llama";
+      repo = "llamaparse-agent-skills";
+      rev = "1f10f60a9eba0dbb490724c8104b0a865365f136";
+      fetchSubmodules = false;
+      sha256 = "sha256-+YVBjEiUYlMc+2jlBLDCEbg6Qn1dgHgTpI8j9lnOseQ=";
+    };
+    date = "2026-03-03";
+  };
   obra-superpowers = {
     pname = "obra-superpowers";
     version = "6efe32c9e2dd002d0c394e861e0529675d1ab32e";

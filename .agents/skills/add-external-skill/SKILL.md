@@ -26,6 +26,7 @@ description: 获取外部skill
    `home.packages` 直接使用
 2. 如果没有，则根据skill文档中的安装方式，如果是 bun/npm/uv 等方式，应该用npx/bunx/uvx直接封装，参考`cli.nix`当前已经写的例子，且要确保名字和skill中定义的一致，即skill写了怎么使用，那么到时候在shell中就应该怎么使用，例如包原名叫`bilibili-cli`，skill中的示例都是`bili`，那么最后在shell中的名字也就是
    `bili`
+3. `just hm` 之后，应该验证所有新安装的cli是否正常使用
 
 ## note
 

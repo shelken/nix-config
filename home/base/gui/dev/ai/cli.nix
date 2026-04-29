@@ -19,6 +19,10 @@ let
   twitter = pkgs.writeShellScriptBin "twitter" ''
     exec ${pkgs.uv}/bin/uvx --from ${sources.twitter-cli.src} twitter "$@"
   '';
+
+  lit = pkgs.writeShellScriptBin "lit" ''
+    exec ${pkgs.bun}/bin/bunx @llamaindex/liteparse "$@"
+  '';
 in
 {
   config = lib.mkIf config.shelken.dev.ai.enable {
@@ -32,6 +36,8 @@ in
       ctx7
       bili
       twitter
+      lit
+      pkgs.imagemagick
     ];
   };
 }

@@ -38,6 +38,11 @@ src.git      = "https://github.com/vectorize-io/hindsight"
 src.branch   = "main"
 fetch.github = "vectorize-io/hindsight"
 
+[llamaparse-agent-skills]
+src.git      = "https://github.com/run-llama/llamaparse-agent-skills"
+src.branch   = "main"
+fetch.github = "run-llama/llamaparse-agent-skills"
+
 [impeccable]
 src.git      = "https://github.com/pbakaus/impeccable"
 src.branch   = "main"
