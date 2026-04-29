@@ -49,6 +49,8 @@
 
 ## hyperskills
 
+任何项目开始应先遵循以下流程，自己判断应该走哪些flow
+
 The skills form a workflow pipeline. Each one handles a phase of the development lifecycle and hands
 off to the next:
 
