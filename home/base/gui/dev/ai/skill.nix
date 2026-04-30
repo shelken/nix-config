@@ -22,19 +22,19 @@ let
       karpathy-guidelines = "${sources.andrej-karpathy-skills.src}/skills/karpathy-guidelines";
     };
 
-    bilibili-cli = {
-      bilibili-cli = "${sources.bilibili-cli.src}/SKILL.md";
-    };
+    # bilibili-cli = {
+    #   bilibili-cli = "${sources.bilibili-cli.src}/SKILL.md";
+    # };
 
-    twitter-cli = {
-      twitter-cli = "${sources.twitter-cli.src}/SKILL.md";
-    };
+    # twitter-cli = {
+    #   twitter-cli = "${sources.twitter-cli.src}/SKILL.md";
+    # };
 
-    dotclaude-skills = {
-      best-practices = "${sources.dotclaude-skills.src}/refactor/skills/best-practices";
-      refactor = "${sources.dotclaude-skills.src}/refactor/skills/refactor";
-      refactor-project = "${sources.dotclaude-skills.src}/refactor/skills/refactor-project";
-    };
+    # dotclaude-skills = {
+    #   best-practices = "${sources.dotclaude-skills.src}/refactor/skills/best-practices";
+    #   refactor = "${sources.dotclaude-skills.src}/refactor/skills/refactor";
+    #   refactor-project = "${sources.dotclaude-skills.src}/refactor/skills/refactor-project";
+    # };
 
     hindsight-skills = {
       hindsight-architect = "${sources.hindsight-skills.src}/skills/hindsight-architect";
@@ -42,10 +42,10 @@ let
       hindsight-local = "${sources.hindsight-skills.src}/skills/hindsight-local";
     };
 
-    caveman = {
-      caveman = "${sources.caveman.src}/skills/caveman";
-      caveman-help = "${sources.caveman.src}/skills/caveman-help";
-    };
+    # caveman = {
+    #   caveman = "${sources.caveman.src}/skills/caveman";
+    #   caveman-help = "${sources.caveman.src}/skills/caveman-help";
+    # };
 
     ai-coding-principles = {
       ai-coding-discipline = "${sources.ai-coding-principles.src}/ai-coding-discipline";
@@ -56,9 +56,9 @@ let
       software-design-philosophy = "${sources.software-design-philosophy-skill.src}/SKILL.md";
     };
 
-    playwright-cli = {
-      playwright-cli = "${sources.playwright-cli.src}/skills/playwright-cli";
-    };
+    # playwright-cli = {
+    #   playwright-cli = "${sources.playwright-cli.src}/skills/playwright-cli";
+    # };
 
     shuorenhua = {
       shuorenhua = "${sources.shuorenhua.src}";
@@ -74,17 +74,17 @@ let
       create-agent-skills = "${sources.taches-cc-resources.src}/skills/create-agent-skills";
     };
 
-    taste-skill = {
-      industrial-brutalist-ui = "${sources.taste-skill.src}/skills/brutalist-skill";
-      gpt-taste = "${sources.taste-skill.src}/skills/gpt-tasteskill";
-      image-to-code = "${sources.taste-skill.src}/skills/image-to-code-skill";
-      minimalist-ui = "${sources.taste-skill.src}/skills/minimalist-skill";
-      full-output-enforcement = "${sources.taste-skill.src}/skills/output-skill";
-      redesign-existing-projects = "${sources.taste-skill.src}/skills/redesign-skill";
-      high-end-visual-design = "${sources.taste-skill.src}/skills/soft-skill";
-      stitch-design-taste = "${sources.taste-skill.src}/skills/stitch-skill";
-      design-taste-frontend = "${sources.taste-skill.src}/skills/taste-skill";
-    };
+    # taste-skill = {
+    #   industrial-brutalist-ui = "${sources.taste-skill.src}/skills/brutalist-skill";
+    #   gpt-taste = "${sources.taste-skill.src}/skills/gpt-tasteskill";
+    #   image-to-code = "${sources.taste-skill.src}/skills/image-to-code-skill";
+    #   minimalist-ui = "${sources.taste-skill.src}/skills/minimalist-skill";
+    #   full-output-enforcement = "${sources.taste-skill.src}/skills/output-skill";
+    #   redesign-existing-projects = "${sources.taste-skill.src}/skills/redesign-skill";
+    #   high-end-visual-design = "${sources.taste-skill.src}/skills/soft-skill";
+    #   stitch-design-taste = "${sources.taste-skill.src}/skills/stitch-skill";
+    #   design-taste-frontend = "${sources.taste-skill.src}/skills/taste-skill";
+    # };
 
     obra-superpowers = {
       # brainstorming = "${sources.obra-superpowers.src}/skills/brainstorming";
@@ -104,9 +104,9 @@ let
     #   impeccable = "${sources.impeccable.src}/.claude/skills/impeccable";
     # };
 
-    waza-skills = {
-      health = "${sources.waza-skills.src}/skills/health";
-    };
+    # waza-skills = {
+    #   health = "${sources.waza-skills.src}/skills/health";
+    # };
 
   };
 

@@ -86,3 +86,5 @@ doesn't need brainstorming, and a clear bug doesn't need research. Start whereve
 - 当需要查阅库的最新文档时，优先使用 `ctx7` 命令，例如：`ctx7 library "<name>"`
   然后, 必须使用双引号括住所有查询 `ctx7 docs <id> <query>`
 - 涉及密码/敏感数据/密码文件的读取，只允许使用jq获取文件结构，例如：`cat auth.json | jq 'keys'`，不准读取任何密码/密钥/APIKEY
+
+[[AGENTS#Output Style]]

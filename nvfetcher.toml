@@ -18,20 +18,20 @@ src.git      = "https://github.com/forrestchang/andrej-karpathy-skills"
 src.branch   = "main"
 fetch.github = "forrestchang/andrej-karpathy-skills"
 
-[bilibili-cli]
-src.git      = "https://github.com/public-clis/bilibili-cli"
-src.branch   = "main"
-fetch.github = "public-clis/bilibili-cli"
+# [bilibili-cli]
+# src.git      = "https://github.com/public-clis/bilibili-cli"
+# src.branch   = "main"
+# fetch.github = "public-clis/bilibili-cli"
 
-[caveman]
-src.git      = "https://github.com/JuliusBrussee/caveman"
-src.branch   = "main"
-fetch.github = "JuliusBrussee/caveman"
+# [caveman]
+# src.git      = "https://github.com/JuliusBrussee/caveman"
+# src.branch   = "main"
+# fetch.github = "JuliusBrussee/caveman"
 
-[dotclaude-skills]
-src.git      = "https://github.com/FradSer/dotclaude"
-src.branch   = "main"
-fetch.github = "FradSer/dotclaude"
+# [dotclaude-skills]
+# src.git      = "https://github.com/FradSer/dotclaude"
+# src.branch   = "main"
+# fetch.github = "FradSer/dotclaude"
 
 [hindsight-skills]
 src.git      = "https://github.com/vectorize-io/hindsight"
@@ -53,10 +53,10 @@ src.git      = "https://github.com/obra/superpowers"
 src.branch   = "main"
 fetch.github = "obra/superpowers"
 
-[playwright-cli]
-src.git      = "https://github.com/microsoft/playwright-cli"
-src.branch   = "main"
-fetch.github = "microsoft/playwright-cli"
+# [playwright-cli]
+# src.git      = "https://github.com/microsoft/playwright-cli"
+# src.branch   = "main"
+# fetch.github = "microsoft/playwright-cli"
 
 [software-design-philosophy-skill]
 src.git      = "https://github.com/shelken/software-design-philosophy-skill"
@@ -78,20 +78,20 @@ src.git      = "https://github.com/glittercowboy/taches-cc-resources"
 src.branch   = "main"
 fetch.github = "glittercowboy/taches-cc-resources"
 
-[taste-skill]
-src.git      = "https://github.com/Leonxlnx/taste-skill"
-src.branch   = "main"
-fetch.github = "Leonxlnx/taste-skill"
+# [taste-skill]
+# src.git      = "https://github.com/Leonxlnx/taste-skill"
+# src.branch   = "main"
+# fetch.github = "Leonxlnx/taste-skill"
 
-[twitter-cli]
-src.git      = "https://github.com/public-clis/twitter-cli"
-src.branch   = "main"
-fetch.github = "public-clis/twitter-cli"
+# [twitter-cli]
+# src.git      = "https://github.com/public-clis/twitter-cli"
+# src.branch   = "main"
+# fetch.github = "public-clis/twitter-cli"
 
-[waza-skills]
-src.git      = "https://github.com/tw93/Waza"
-src.branch   = "main"
-fetch.github = "tw93/Waza"
+# [waza-skills]
+# src.git      = "https://github.com/tw93/Waza"
+# src.branch   = "main"
+# fetch.github = "tw93/Waza"
 
 # [paperwm-spoon]
 # src.git      = "https://github.com/mogenson/PaperWM.spoon"

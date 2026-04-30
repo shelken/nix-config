@@ -41,93 +41,9 @@
         },
         "version": "2c606141936f1eeef17fa3043a72095b4765b9c2"
     },
-    "anthropics-skills": {
-        "cargoLock": null,
-        "date": "2026-04-23",
-        "extract": null,
-        "name": "anthropics-skills",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "anthropics",
-            "repo": "skills",
-            "rev": "5128e1865d670f5d6c9cef000e6dfc4e951fb5b9",
-            "sha256": "sha256-xFsg66TCtKzSgRIW6Ab771FWEIhei3jPgfE4byMiB44=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "5128e1865d670f5d6c9cef000e6dfc4e951fb5b9"
-    },
-    "bilibili-cli": {
-        "cargoLock": null,
-        "date": "2026-03-14",
-        "extract": null,
-        "name": "bilibili-cli",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "public-clis",
-            "repo": "bilibili-cli",
-            "rev": "dbe28551930df43b633baa52e9639832aeada967",
-            "sha256": "sha256-GoYyNyvwDrXT6G/86ra1BO0xn2j/RGDyR94Epm+AlRw=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "dbe28551930df43b633baa52e9639832aeada967"
-    },
-    "caveman": {
-        "cargoLock": null,
-        "date": "2026-04-18",
-        "extract": null,
-        "name": "caveman",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "JuliusBrussee",
-            "repo": "caveman",
-            "rev": "84cc3c14fa1e10182adaced856e003406ccd250d",
-            "sha256": "sha256-M+NoWXxrhtbkbe/lmq7P0/KpmqOZzJjhgeUVjY+7N2k=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "84cc3c14fa1e10182adaced856e003406ccd250d"
-    },
-    "dotclaude-skills": {
-        "cargoLock": null,
-        "date": "2026-03-30",
-        "extract": null,
-        "name": "dotclaude-skills",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "FradSer",
-            "repo": "dotclaude",
-            "rev": "be586bfc054723332df88492669e274dfe48991b",
-            "sha256": "sha256-vttsYbwLujeCFzff72+i6zqYNG9bDX7SsOYZ/XZBU30=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "be586bfc054723332df88492669e274dfe48991b"
-    },
     "hindsight-skills": {
         "cargoLock": null,
-        "date": "2026-04-28",
+        "date": "2026-04-29",
         "extract": null,
         "name": "hindsight-skills",
         "passthru": null,
@@ -139,33 +55,12 @@
             "name": null,
             "owner": "vectorize-io",
             "repo": "hindsight",
-            "rev": "4ea650f6c4162d8ed8aace35b29b613351f8b2d9",
-            "sha256": "sha256-+yX2xKE5T75U+iTqykBSlbT4keL2XcAe3lifkUQHRrg=",
+            "rev": "89c34c31357ecd80e2ab2ed3244d9e37515cb5f8",
+            "sha256": "sha256-pFeZzsNyNDxjpbNq/913nRXVlMIatiMUU6qp70uiypE=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "4ea650f6c4162d8ed8aace35b29b613351f8b2d9"
-    },
-    "impeccable": {
-        "cargoLock": null,
-        "date": "2026-04-28",
-        "extract": null,
-        "name": "impeccable",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "pbakaus",
-            "repo": "impeccable",
-            "rev": "9a5d0e71a9011def4fbd011d5fca33360880b409",
-            "sha256": "sha256-aS8BGsSw6RcraTQQ11WI21O/1GdjRV5sGGb5w/6mnlI=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "9a5d0e71a9011def4fbd011d5fca33360880b409"
+        "version": "89c34c31357ecd80e2ab2ed3244d9e37515cb5f8"
     },
     "kitty-icon": {
         "cargoLock": null,
@@ -229,27 +124,6 @@
             "type": "github"
         },
         "version": "6efe32c9e2dd002d0c394e861e0529675d1ab32e"
-    },
-    "playwright-cli": {
-        "cargoLock": null,
-        "date": "2026-04-24",
-        "extract": null,
-        "name": "playwright-cli",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "microsoft",
-            "repo": "playwright-cli",
-            "rev": "ee24ded1770c7a4f7a8cbb8e22aac9812e151feb",
-            "sha256": "sha256-w1mPi1CxmOsQAo6ruQAb7s+omrdG+Pnn0jZd7mt0yQA=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "ee24ded1770c7a4f7a8cbb8e22aac9812e151feb"
     },
     "projects-yazi": {
         "cargoLock": null,
@@ -334,90 +208,6 @@
             "type": "github"
         },
         "version": "1757615b99ab789a72ff2d02e9f6112af2a15c04"
-    },
-    "taste-skill": {
-        "cargoLock": null,
-        "date": "2026-04-28",
-        "extract": null,
-        "name": "taste-skill",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "Leonxlnx",
-            "repo": "taste-skill",
-            "rev": "5bbc8654877fbc9f2a8e32c33706909cae9a1624",
-            "sha256": "sha256-CTVkiE2hVZgdgquCNAl3MDxfqZ4C4uMl8DtHT078Nvc=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "5bbc8654877fbc9f2a8e32c33706909cae9a1624"
-    },
-    "twitter-cli": {
-        "cargoLock": null,
-        "date": "2026-04-10",
-        "extract": null,
-        "name": "twitter-cli",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "public-clis",
-            "repo": "twitter-cli",
-            "rev": "7816f8d813ff384dce80ec0a0a5dd70c03404a55",
-            "sha256": "sha256-AAgwiZaEXhG4DoYvnxvsjQJdp8L2QEBqTns5JlZc7wY=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "7816f8d813ff384dce80ec0a0a5dd70c03404a55"
-    },
-    "vercel-labs-skills": {
-        "cargoLock": null,
-        "date": "2026-04-28",
-        "extract": null,
-        "name": "vercel-labs-skills",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "vercel-labs",
-            "repo": "skills",
-            "rev": "7c0a9af3f8738965b71341712710ac7371089b34",
-            "sha256": "sha256-YxCMuTl+pVJ7dXhaL7l9vDw9k2orlG31j7/0pgllMJk=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "7c0a9af3f8738965b71341712710ac7371089b34"
-    },
-    "waza-skills": {
-        "cargoLock": null,
-        "date": "2026-04-27",
-        "extract": null,
-        "name": "waza-skills",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "tw93",
-            "repo": "Waza",
-            "rev": "51222bfc4f43bf1f469a72e48016e5026efb6fe4",
-            "sha256": "sha256-XjYoCitjX1jYWewHv4DBib990jfv0jv+dnDMaDlhU/s=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "51222bfc4f43bf1f469a72e48016e5026efb6fe4"
     },
     "yazi-plugins": {
         "cargoLock": null,

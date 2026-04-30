@@ -156,7 +156,7 @@ with open(os.environ.get('SESSION_FILE', '')) as f:
             continue
         parts = msg.get('content', [])
         text = ''.join(p.get('text', '') for p in parts if isinstance(p, dict) and p.get('type') == 'text')
-        if role == 'assistant' and len(text) > 150 and any(kw in text.lower() for kw in ['错误','不对','逻辑不对','不能','应该','原因','正确','根因','傻逼','尼玛','你妈']):
+        if role == 'assistant' and len(text) > 150 and any(kw in text.lower() for kw in ['错误','不对','逻辑不对','不能','应该','原因','正确','根因','傻逼','尼玛','你妈','废话']):
             sig = text[:400].replace(chr(10), ' ').strip()
             print(sig)
             print('---')
@@ -280,15 +280,15 @@ fi
 
 优先深入阅读高分会话:
 
-| 信号                | 分数 | 检测方式                                               |
-| ------------------- | ---- | ------------------------------------------------------ |
-| 有用户修正          | +3   | 在 user 消息里 grep 否定词、脏话（傻逼、尼玛、你妈等） |
-| 多次 error-fix 循环 | +2   | tool_use 错误后出现成功重试                            |
-| 长会话(>50 条消息)  | +1   | JSONL 行数                                             |
-| 跨项目引用          | +2   | 提到其他项目路径                                       |
-| 架构/设计讨论       | +2   | grep 设计关键词                                        |
-| 新库/新工具引入     | +2   | grep "install"、"add"、包名                            |
-| 简单问答会话        | -1   | 短会话且无工具调用                                     |
+| 信号                | 分数 | 检测方式                                                         |
+| ------------------- | ---- | ---------------------------------------------------------------- |
+| 有用户修正          | +3   | 在 user 消息里 grep 否定词、脏话（傻逼、尼玛、你妈等）、「废话」 |
+| 多次 error-fix 循环 | +2   | tool_use 错误后出现成功重试                                      |
+| 长会话(>50 条消息)  | +1   | JSONL 行数                                                       |
+| 跨项目引用          | +2   | 提到其他项目路径                                                 |
+| 架构/设计讨论       | +2   | grep 设计关键词                                                  |
+| 新库/新工具引入     | +2   | grep "install"、"add"、包名                                      |
+| 简单问答会话        | -1   | 短会话且无工具调用                                               |
 
 **先处理分数最高的会话。** Quick nap mode 只处理前 3 个。
 

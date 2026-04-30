@@ -12,13 +12,13 @@ let
     exec ${pkgs.bun}/bin/bunx ctx7@latest "$@"
   '';
 
-  bili = pkgs.writeShellScriptBin "bili" ''
-    exec ${pkgs.uv}/bin/uvx --from ${sources.bilibili-cli.src} bili "$@"
-  '';
+  # bili = pkgs.writeShellScriptBin "bili" ''
+  #   exec ${pkgs.uv}/bin/uvx --from ${sources.bilibili-cli.src} bili "$@"
+  # '';
 
-  twitter = pkgs.writeShellScriptBin "twitter" ''
-    exec ${pkgs.uv}/bin/uvx --from ${sources.twitter-cli.src} twitter "$@"
-  '';
+  # twitter = pkgs.writeShellScriptBin "twitter" ''
+  #   exec ${pkgs.uv}/bin/uvx --from ${sources.twitter-cli.src} twitter "$@"
+  # '';
 
   lit = pkgs.writeShellScriptBin "lit" ''
     exec ${pkgs.bun}/bin/bunx @llamaindex/liteparse "$@"
@@ -34,8 +34,8 @@ in
 
     home.packages = [
       ctx7
-      bili
-      twitter
+      # bil
+      # twitter
       lit
       pkgs.imagemagick
     ];
