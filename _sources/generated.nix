@@ -65,6 +65,18 @@
     };
     date = "2026-03-03";
   };
+  mattpocock-skills = {
+    pname = "mattpocock-skills";
+    version = "b843cb5ea74b1fe5e58a0fc23cddef9e66076fb8";
+    src = fetchFromGitHub {
+      owner = "mattpocock";
+      repo = "skills";
+      rev = "b843cb5ea74b1fe5e58a0fc23cddef9e66076fb8";
+      fetchSubmodules = false;
+      sha256 = "sha256-qOhU5bBnT6kI8c7i0r0IyecrgLJNNPlmQtAb6qWM73Q=";
+    };
+    date = "2026-04-30";
+  };
   obra-superpowers = {
     pname = "obra-superpowers";
     version = "6efe32c9e2dd002d0c394e861e0529675d1ab32e";

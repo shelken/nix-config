@@ -104,6 +104,27 @@
         },
         "version": "1f10f60a9eba0dbb490724c8104b0a865365f136"
     },
+    "mattpocock-skills": {
+        "cargoLock": null,
+        "date": "2026-04-30",
+        "extract": null,
+        "name": "mattpocock-skills",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "mattpocock",
+            "repo": "skills",
+            "rev": "b843cb5ea74b1fe5e58a0fc23cddef9e66076fb8",
+            "sha256": "sha256-qOhU5bBnT6kI8c7i0r0IyecrgLJNNPlmQtAb6qWM73Q=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "b843cb5ea74b1fe5e58a0fc23cddef9e66076fb8"
+    },
     "obra-superpowers": {
         "cargoLock": null,
         "date": "2026-04-23",

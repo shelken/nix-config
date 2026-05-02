@@ -100,6 +100,14 @@ let
       liteparse = "${sources.llamaparse-agent-skills.src}/skills/liteparse";
     };
 
+    mattpocock-skills = {
+      improve-codebase-architecture = "${sources.mattpocock-skills.src}/skills/engineering/improve-codebase-architecture";
+      tdd = "${sources.mattpocock-skills.src}/skills/engineering/tdd";
+      to-issues = "${sources.mattpocock-skills.src}/skills/engineering/to-issues/SKILL.md";
+      to-prd = "${sources.mattpocock-skills.src}/skills/engineering/to-prd/SKILL.md";
+      write-a-skill = "${sources.mattpocock-skills.src}/skills/productivity/write-a-skill/SKILL.md";
+    };
+
     # impeccable = {
     #   impeccable = "${sources.impeccable.src}/.claude/skills/impeccable";
     # };

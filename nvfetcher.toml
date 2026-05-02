@@ -43,6 +43,11 @@ src.git      = "https://github.com/run-llama/llamaparse-agent-skills"
 src.branch   = "main"
 fetch.github = "run-llama/llamaparse-agent-skills"
 
+[mattpocock-skills]
+src.git      = "https://github.com/mattpocock/skills"
+src.branch   = "main"
+fetch.github = "mattpocock/skills"
+
 # [impeccable]
 # src.git      = "https://github.com/pbakaus/impeccable"
 # src.branch   = "main"
