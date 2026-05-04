@@ -112,9 +112,9 @@ let
       write-a-skill = "${sources.mattpocock-skills.src}/skills/productivity/write-a-skill/SKILL.md";
     };
 
-    # impeccable = {
-    #   impeccable = "${sources.impeccable.src}/.claude/skills/impeccable";
-    # };
+    impeccable = {
+      impeccable = "${sources.impeccable.src}/.agents/skills/impeccable";
+    };
 
     # waza-skills = {
     #   health = "${sources.waza-skills.src}/skills/health";

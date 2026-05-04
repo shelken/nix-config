@@ -42,6 +42,18 @@
     };
     date = "2026-05-01";
   };
+  impeccable = {
+    pname = "impeccable";
+    version = "2aeac48b19e66d82ff8ec8b9dd9349626473348e";
+    src = fetchFromGitHub {
+      owner = "pbakaus";
+      repo = "impeccable";
+      rev = "2aeac48b19e66d82ff8ec8b9dd9349626473348e";
+      fetchSubmodules = false;
+      sha256 = "sha256-XBIFMfbTecq1QKvDX+3w+g2dOFNceE4vsnizTNLnjho=";
+    };
+    date = "2026-05-04";
+  };
   kitty-icon = {
     pname = "kitty-icon";
     version = "v1.1.0";

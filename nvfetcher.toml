@@ -48,10 +48,10 @@ src.git      = "https://github.com/mattpocock/skills"
 src.branch   = "main"
 fetch.github = "mattpocock/skills"
 
-# [impeccable]
-# src.git      = "https://github.com/pbakaus/impeccable"
-# src.branch   = "main"
-# fetch.github = "pbakaus/impeccable"
+[impeccable]
+src.git      = "https://github.com/pbakaus/impeccable"
+src.branch   = "main"
+fetch.github = "pbakaus/impeccable"
 
 [obra-superpowers]
 src.git      = "https://github.com/obra/superpowers"

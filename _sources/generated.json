@@ -62,6 +62,27 @@
         },
         "version": "4986e8ec370a29dff5379de5dd9a014840fda9c1"
     },
+    "impeccable": {
+        "cargoLock": null,
+        "date": "2026-05-04",
+        "extract": null,
+        "name": "impeccable",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "pbakaus",
+            "repo": "impeccable",
+            "rev": "2aeac48b19e66d82ff8ec8b9dd9349626473348e",
+            "sha256": "sha256-XBIFMfbTecq1QKvDX+3w+g2dOFNceE4vsnizTNLnjho=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "2aeac48b19e66d82ff8ec8b9dd9349626473348e"
+    },
     "kitty-icon": {
         "cargoLock": null,
         "date": null,
