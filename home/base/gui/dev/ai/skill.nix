@@ -88,10 +88,14 @@ let
 
     obra-superpowers = {
       brainstorming = "${sources.obra-superpowers.src}/skills/brainstorming";
+      dispatching-parallel-agents = "${sources.obra-superpowers.src}/skills/dispatching-parallel-agents";
       # executing-plans = "${sources.obra-superpowers.src}/skills/executing-plans";
       subagent-driven-development = "${sources.obra-superpowers.src}/skills/subagent-driven-development";
+      receiving-code-review = "${sources.obra-superpowers.src}/skills/receiving-code-review";
+      requesting-code-review = "${sources.obra-superpowers.src}/skills/requesting-code-review";
       systematic-debugging = "${sources.obra-superpowers.src}/skills/systematic-debugging";
       test-driven-development = "${sources.obra-superpowers.src}/skills/test-driven-development";
+      verification-before-completion = "${sources.obra-superpowers.src}/skills/verification-before-completion";
       # writing-plans = "${sources.obra-superpowers.src}/skills/writing-plans";
       # writing-skills = "${sources.obra-superpowers.src}/skills/writing-skills";
     };
