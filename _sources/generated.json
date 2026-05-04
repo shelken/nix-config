@@ -43,7 +43,7 @@
     },
     "hindsight-skills": {
         "cargoLock": null,
-        "date": "2026-04-29",
+        "date": "2026-05-01",
         "extract": null,
         "name": "hindsight-skills",
         "passthru": null,
@@ -55,12 +55,12 @@
             "name": null,
             "owner": "vectorize-io",
             "repo": "hindsight",
-            "rev": "89c34c31357ecd80e2ab2ed3244d9e37515cb5f8",
-            "sha256": "sha256-pFeZzsNyNDxjpbNq/913nRXVlMIatiMUU6qp70uiypE=",
+            "rev": "4986e8ec370a29dff5379de5dd9a014840fda9c1",
+            "sha256": "sha256-Etd10lSa2tkrdMP2uN1Q0LWe3SVpnOwMaBlDkZ8myHM=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "89c34c31357ecd80e2ab2ed3244d9e37515cb5f8"
+        "version": "4986e8ec370a29dff5379de5dd9a014840fda9c1"
     },
     "kitty-icon": {
         "cargoLock": null,
@@ -127,7 +127,7 @@
     },
     "obra-superpowers": {
         "cargoLock": null,
-        "date": "2026-04-23",
+        "date": "2026-04-30",
         "extract": null,
         "name": "obra-superpowers",
         "passthru": null,
@@ -139,12 +139,12 @@
             "name": null,
             "owner": "obra",
             "repo": "superpowers",
-            "rev": "6efe32c9e2dd002d0c394e861e0529675d1ab32e",
-            "sha256": "sha256-0WupTacT1jIwVBloj1i0RF7wIllVtP8eMPRl7VrXdbE=",
+            "rev": "e7a2d16476bf042e9add4699c9d018a90f86e4a6",
+            "sha256": "sha256-8/M/S0BUYurZkFqe6LemVtBQnPSxBNfy1C7Q6f92hjE=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "6efe32c9e2dd002d0c394e861e0529675d1ab32e"
+        "version": "e7a2d16476bf042e9add4699c9d018a90f86e4a6"
     },
     "projects-yazi": {
         "cargoLock": null,

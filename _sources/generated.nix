@@ -32,15 +32,15 @@
   };
   hindsight-skills = {
     pname = "hindsight-skills";
-    version = "89c34c31357ecd80e2ab2ed3244d9e37515cb5f8";
+    version = "4986e8ec370a29dff5379de5dd9a014840fda9c1";
     src = fetchFromGitHub {
       owner = "vectorize-io";
       repo = "hindsight";
-      rev = "89c34c31357ecd80e2ab2ed3244d9e37515cb5f8";
+      rev = "4986e8ec370a29dff5379de5dd9a014840fda9c1";
       fetchSubmodules = false;
-      sha256 = "sha256-pFeZzsNyNDxjpbNq/913nRXVlMIatiMUU6qp70uiypE=";
+      sha256 = "sha256-Etd10lSa2tkrdMP2uN1Q0LWe3SVpnOwMaBlDkZ8myHM=";
     };
-    date = "2026-04-29";
+    date = "2026-05-01";
   };
   kitty-icon = {
     pname = "kitty-icon";
@@ -79,15 +79,15 @@
   };
   obra-superpowers = {
     pname = "obra-superpowers";
-    version = "6efe32c9e2dd002d0c394e861e0529675d1ab32e";
+    version = "e7a2d16476bf042e9add4699c9d018a90f86e4a6";
     src = fetchFromGitHub {
       owner = "obra";
       repo = "superpowers";
-      rev = "6efe32c9e2dd002d0c394e861e0529675d1ab32e";
+      rev = "e7a2d16476bf042e9add4699c9d018a90f86e4a6";
       fetchSubmodules = false;
-      sha256 = "sha256-0WupTacT1jIwVBloj1i0RF7wIllVtP8eMPRl7VrXdbE=";
+      sha256 = "sha256-8/M/S0BUYurZkFqe6LemVtBQnPSxBNfy1C7Q6f92hjE=";
     };
-    date = "2026-04-23";
+    date = "2026-04-30";
   };
   projects-yazi = {
     pname = "projects-yazi";
