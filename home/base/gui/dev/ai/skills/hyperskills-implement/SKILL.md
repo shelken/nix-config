@@ -446,5 +446,4 @@ git commit -m "..."       # 消息用 HEREDOC
 - **Not a gate.** Don't follow all five phases for a typo fix. Scale selection exists for a reason.
 - **Not a replacement for reading code.** This skill tells you HOW to implement, not WHAT to
   implement.
-- **Not a planning tool.** Use `/hyperskills-plan` for task decomposition.
 - **Not an excuse to skip tests.** "Verify" means running actual checks, not eyeballing the diff.

@@ -1,6 +1,6 @@
 ---
 name: organize-files
-description: 当用户要求需要 整理文件夹/文件 时使用该技能
+description: 当用户要求需要 整理电脑的文件夹/文件 时使用该技能
 ---
 
 ## 分类原则

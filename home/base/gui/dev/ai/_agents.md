@@ -47,37 +47,6 @@
 - 自己产生的临时文件使用后必须要及时删除
 - 每次新增文件，保持目录结构合理
 
-## hyperskills
-
-任何项目开始应先遵循以下流程，自己判断应该走哪些flow
-
-The skills form a workflow pipeline. Each one handles a phase of the development lifecycle and hands
-off to the next:
-
-```
-brainstorm ──→ research ──→ plan ──→ implement ──→ subagent-review
-    │              │           │                            │
-    │              │           │                            └──→ dream
-    │              │           │
-    │              │           └──→ orchestrate
-    │              └──→
-    └──→ Any skill can loop back when new questions emerge
-```
-
-**Typical flows:**
-
-| Scenario              | Flow                                                             |
-| --------------------- | ---------------------------------------------------------------- |
-| New feature           | `brainstorm` → `plan` → `implement` → subagent-review            |
-| Greenfield project    | `brainstorm` → `research` → `plan` → `orchestrate` → `implement` |
-| Bug fix               | `implement` (straight to it — scale selection handles this)      |
-| Architecture decision | `brainstorm` → `research` → decide                               |
-| Large refactor        | `plan` → `orchestrate` → `implement` → subagent-review           |
-| Memory maintenance    | `dream` → Hindsight knowledge consolidation                      |
-
-You don't need to follow the full pipeline. Each skill has built-in scale selection — a typo fix
-doesn't need brainstorming, and a clear bug doesn't need research. Start wherever makes sense.
-
 ## 工具偏好
 
 **如果有skill阅读对应skill**
@@ -86,5 +55,3 @@ doesn't need brainstorming, and a clear bug doesn't need research. Start whereve
 - 当需要查阅库的最新文档时，优先使用 `ctx7` 命令，例如：`ctx7 library "<name>"`
   然后, 必须使用双引号括住所有查询 `ctx7 docs <id> <query>`
 - 涉及密码/敏感数据/密码文件的读取，只允许使用jq获取文件结构，例如：`cat auth.json | jq 'keys'`，不准读取任何密码/密钥/APIKEY
-
-[[AGENTS#Output Style]]

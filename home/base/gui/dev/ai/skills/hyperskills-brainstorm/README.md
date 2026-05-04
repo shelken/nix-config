@@ -1,1 +1,0 @@
-../hyperskills-implement/README.md
