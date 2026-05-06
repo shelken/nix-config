@@ -261,7 +261,7 @@
           pkgs = nixpkgs.legacyPackages.${system};
         in
         {
-          default = pkgs.mkShell {
+          default = pkgs.mkShellNoCC {
             packages = with pkgs; [
               # fix https://discourse.nixos.org/t/non-interactive-bash-errors-from-flake-nix-mkshell/33310
               bashInteractive
