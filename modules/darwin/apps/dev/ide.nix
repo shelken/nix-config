@@ -18,10 +18,8 @@ in
     homebrew = {
       casks = [
         "intellij-idea" # IDEA
-        # "zed"
+        "cmux"
         # "cursor"
-        # "trae"
-        "antigravity"
       ];
     };
   };

@@ -27,7 +27,7 @@ in
         "raycast"
 
         "zed" # editor dev.zed.Zed
-        "zed@preview" # editor dev.zed.Zed-Preview
+        # "zed@preview" # editor dev.zed.Zed-Preview
 
         "bettershot" # cmd+shift+2
 
