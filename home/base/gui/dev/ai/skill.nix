@@ -108,11 +108,13 @@ let
       improve-codebase-architecture = "${sources.mattpocock-skills.src}/skills/engineering/improve-codebase-architecture";
       diagnose = "${sources.mattpocock-skills.src}/skills/engineering/diagnose";
       grill-me = "${sources.mattpocock-skills.src}/skills/productivity/grill-me";
+      grill-with-docs = "${sources.mattpocock-skills.src}/skills/engineering/grill-with-docs";
       prototype = "${sources.mattpocock-skills.src}/skills/engineering/prototype";
       tdd = "${sources.mattpocock-skills.src}/skills/engineering/tdd";
       to-issues = "${sources.mattpocock-skills.src}/skills/engineering/to-issues/SKILL.md";
       to-prd = "${sources.mattpocock-skills.src}/skills/engineering/to-prd/SKILL.md";
       write-a-skill = "${sources.mattpocock-skills.src}/skills/productivity/write-a-skill/SKILL.md";
+      zoom-out = "${sources.mattpocock-skills.src}/skills/engineering/zoom-out";
     };
 
     impeccable = {
@@ -305,8 +307,8 @@ in
     home.file = allSkillLinks;
 
     # 手动命令
-    # npx skills update
-    # npx skills add github/repo -g -y -a claude-code codex --skill [skill-name]
-    # npx skills add microsoft/playwright-cli -g -y -a claude-code codex --skill playwright-cli
+    # bunx skills update
+    # bunx skills add github/repo -g -y -a claude-code codex --skill [skill-name]
+    # bunx skills add microsoft/playwright-cli -g -y -a claude-code codex --skill playwright-cli
   };
 }

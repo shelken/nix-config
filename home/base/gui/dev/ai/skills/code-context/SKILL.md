@@ -9,7 +9,7 @@ description:
 
 ```bash
 # Context7 CLI
-command -v ctx7 >/dev/null 2>&1 || npm install -g ctx7@latest
+command -v ctx7 >/dev/null 2>&1 || bun add -g ctx7@latest
 ```
 
 ## when to use
