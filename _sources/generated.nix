@@ -79,15 +79,15 @@
   };
   mattpocock-skills = {
     pname = "mattpocock-skills";
-    version = "b843cb5ea74b1fe5e58a0fc23cddef9e66076fb8";
+    version = "733d312884b3878a9a9cff693c5886943753a741";
     src = fetchFromGitHub {
       owner = "mattpocock";
       repo = "skills";
-      rev = "b843cb5ea74b1fe5e58a0fc23cddef9e66076fb8";
+      rev = "733d312884b3878a9a9cff693c5886943753a741";
       fetchSubmodules = false;
-      sha256 = "sha256-qOhU5bBnT6kI8c7i0r0IyecrgLJNNPlmQtAb6qWM73Q=";
+      sha256 = "sha256-HyJLE9+ItZY0nB87eMfONSAc3L6dndcApoRpbO+D7UY=";
     };
-    date = "2026-04-30";
+    date = "2026-05-07";
   };
   obra-superpowers = {
     pname = "obra-superpowers";

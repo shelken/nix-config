@@ -71,7 +71,7 @@ let
     taches-cc-resources = {
       build-macos-apps = "${sources.taches-cc-resources.src}/skills/expertise/macos-apps";
       build-iphone-apps = "${sources.taches-cc-resources.src}/skills/expertise/iphone-apps";
-      create-agent-skills = "${sources.taches-cc-resources.src}/skills/create-agent-skills";
+      # create-agent-skills = "${sources.taches-cc-resources.src}/skills/create-agent-skills";
     };
 
     # taste-skill = {
@@ -96,7 +96,7 @@ let
       systematic-debugging = "${sources.obra-superpowers.src}/skills/systematic-debugging";
       test-driven-development = "${sources.obra-superpowers.src}/skills/test-driven-development";
       verification-before-completion = "${sources.obra-superpowers.src}/skills/verification-before-completion";
-      # writing-plans = "${sources.obra-superpowers.src}/skills/writing-plans";
+      writing-plans = "${sources.obra-superpowers.src}/skills/writing-plans";
       # writing-skills = "${sources.obra-superpowers.src}/skills/writing-skills";
     };
 
@@ -106,6 +106,9 @@ let
 
     mattpocock-skills = {
       improve-codebase-architecture = "${sources.mattpocock-skills.src}/skills/engineering/improve-codebase-architecture";
+      diagnose = "${sources.mattpocock-skills.src}/skills/engineering/diagnose";
+      grill-me = "${sources.mattpocock-skills.src}/skills/productivity/grill-me";
+      prototype = "${sources.mattpocock-skills.src}/skills/engineering/prototype";
       tdd = "${sources.mattpocock-skills.src}/skills/engineering/tdd";
       to-issues = "${sources.mattpocock-skills.src}/skills/engineering/to-issues/SKILL.md";
       to-prd = "${sources.mattpocock-skills.src}/skills/engineering/to-prd/SKILL.md";
