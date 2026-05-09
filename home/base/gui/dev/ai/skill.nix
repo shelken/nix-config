@@ -74,17 +74,18 @@ let
       # create-agent-skills = "${sources.taches-cc-resources.src}/skills/create-agent-skills";
     };
 
-    # taste-skill = {
-    #   industrial-brutalist-ui = "${sources.taste-skill.src}/skills/brutalist-skill";
-    #   gpt-taste = "${sources.taste-skill.src}/skills/gpt-tasteskill";
-    #   image-to-code = "${sources.taste-skill.src}/skills/image-to-code-skill";
-    #   minimalist-ui = "${sources.taste-skill.src}/skills/minimalist-skill";
-    #   full-output-enforcement = "${sources.taste-skill.src}/skills/output-skill";
-    #   redesign-existing-projects = "${sources.taste-skill.src}/skills/redesign-skill";
-    #   high-end-visual-design = "${sources.taste-skill.src}/skills/soft-skill";
-    #   stitch-design-taste = "${sources.taste-skill.src}/skills/stitch-skill";
-    #   design-taste-frontend = "${sources.taste-skill.src}/skills/taste-skill";
-    # };
+    taste-skill = {
+      # taste-skill = "${sources.taste-skill.src}/skills";
+      # industrial-brutalist-ui = "${sources.taste-skill.src}/skills/brutalist-skill";
+      gpt-taste = "${sources.taste-skill.src}/skills/gpt-tasteskill";
+      image-to-code = "${sources.taste-skill.src}/skills/image-to-code-skill";
+      # minimalist-ui = "${sources.taste-skill.src}/skills/minimalist-skill";
+      # full-output-enforcement = "${sources.taste-skill.src}/skills/output-skill";
+      redesign-existing-projects = "${sources.taste-skill.src}/skills/redesign-skill";
+      high-end-visual-design = "${sources.taste-skill.src}/skills/soft-skill";
+      stitch-design-taste = "${sources.taste-skill.src}/skills/stitch-skill";
+      design-taste-frontend = "${sources.taste-skill.src}/skills/taste-skill";
+    };
 
     obra-superpowers = {
       brainstorming = "${sources.obra-superpowers.src}/skills/brainstorming";
@@ -109,6 +110,7 @@ let
       diagnose = "${sources.mattpocock-skills.src}/skills/engineering/diagnose";
       grill-me = "${sources.mattpocock-skills.src}/skills/productivity/grill-me";
       grill-with-docs = "${sources.mattpocock-skills.src}/skills/engineering/grill-with-docs";
+      handoff = "${sources.mattpocock-skills.src}/skills/in-progress/handoff";
       prototype = "${sources.mattpocock-skills.src}/skills/engineering/prototype";
       tdd = "${sources.mattpocock-skills.src}/skills/engineering/tdd";
       to-issues = "${sources.mattpocock-skills.src}/skills/engineering/to-issues/SKILL.md";

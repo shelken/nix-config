@@ -149,6 +149,18 @@
     };
     date = "2026-04-01";
   };
+  taste-skill = {
+    pname = "taste-skill";
+    version = "c8075169cd63d1430bbf492dd4ddd478ea9fa4da";
+    src = fetchFromGitHub {
+      owner = "Leonxlnx";
+      repo = "taste-skill";
+      rev = "c8075169cd63d1430bbf492dd4ddd478ea9fa4da";
+      fetchSubmodules = false;
+      sha256 = "sha256-3eMEDbGd/JwxXjvHbVhd8ZOCTtpjR1WhzuNWdBCFroc=";
+    };
+    date = "2026-05-07";
+  };
   yazi-plugins = {
     pname = "yazi-plugins";
     version = "ac82af3e10f9a32cecd9f87ac64b3f9de7c7aea7";
