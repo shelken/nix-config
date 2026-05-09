@@ -115,6 +115,7 @@ in
       "farion1231/ccswitch" # cc-switch
       "max-sixty/worktrunk" # worktrunk
       "anomalyco/tap" # opencode
+      "manaflow-ai/cmux" # cmux
     ];
 
     brews = [
