@@ -1,54 +1,58 @@
 ---
 name: ask-for-help
 description:
-  通过调用Codex
-  Cli来获取更高智能的模型获取帮助，当你发现在某个困难问题上重复犯错，且无法解决时，或者用户让你「向更高智能的模型获取帮助」、「找Codex获取帮助」时读取这个技能
+  Use Codex CLI to ask a stronger model for help. Read this skill when you repeatedly fail on a hard
+  problem and cannot solve it, or when user asks you to "ask a stronger model" or "ask Codex for
+  help".
 ---
 
 # ask-for-help
 
-通过调用 codex cli 来询问问题并获取帮助
+Ask questions and get help through `codex cli`.
 
-## 决策
+## Decisions
 
-- 如果第一次因为各种问题没有解决，最多再尝试一次之后，停下来，向用户反馈问题
-- `确认模型` 时，如果没有模型高于当前，停下来，向用户说明
-- 得到模型的分析后，判断模型给的建议和指出的问题
+- If the first attempt fails for various reasons, try at most one more time, then stop and report
+  the issue to user.
+- When `confirming model`, if no model is stronger than current model, stop and explain to user.
+- After receiving analysis from model, evaluate suggestions and identified issues.
 
 ## how
 
-首先确定当前自己的模型等级，当遇到问题无法解决时，被提问的模型应该至少比自己先进，例如，当前为5.4，后面选择模型时应该向5.4及以上进行提问，例如 5.5
+First determine current model tier. When stuck on an unsolved problem, ask a model at least as
+advanced as current one. For example, if current model is 5.4, choose 5.4 or higher, such as 5.5.
 
-### 确认模型
+### Confirm model
 
 ```bash
-# 排除 pro/mini 模型，选底部10个
+# Exclude pro/mini models, select bottom 10
 pi --list-models | grep -iP "openai(?\!\s*/)\s*gpt" | grep -vE '(pro|mini|nano)' | tail -10
 ```
 
-### 提问
+### Ask
 
 ```bash
 codex --ask-for-approval never --model {model} exec --ephemeral --sandbox danger-full-access \
 --ignore-user-config --skip-git-repo-check -C {cwd} -c project_doc_max_bytes=0 \
 -c 'skills.enabled=false' \
 -c 'model_reasoning_effort="{low,medium,high}"' - <<'EOF'
-{这里放上下文}
+{put context here}
 EOF
 ```
 
-例如
+Example:
 
 ```bash
 codex --ask-for-approval never --model gpt-5.4-mini exec --ephemeral --sandbox danger-full-access \
 --ignore-user-config --skip-git-repo-check -C /tmp -c project_doc_max_bytes=0 \
 -c 'skills.enabled=false' \
 -c 'model_reasoning_effort="medium"' - <<'EOF'
-阅读 ~/.codex/AGENTS.md ，只回答MBTI是什么
+Read ~/.codex/AGENTS.md and only answer what MBTI is
 EOF
 ```
 
-**提问技巧：**
+**Prompting tips:**
 
-- 上下文 给足需求、相关代码、相关文件、风险点、 **踩过哪些坑** 、 **做过哪些尝试**
-- 让其看过代码之后 指出代码真正的问题所在 并 给出建议
+- Provide enough context: requirements, relevant code, related files, risk points, **pitfalls
+  already hit**, and **attempts already made**.
+- Ask model to inspect code, identify real problem, and give suggestions.

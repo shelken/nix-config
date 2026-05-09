@@ -1,73 +1,75 @@
 ---
 name: postmortem
-description: 用户主动提出「写尸检报告」时读取
+description: Read this skill when user explicitly asks to "write a postmortem".
 ---
 
-## 阶段完成或收尾时
+## When phase completes or work wraps up
 
-当一个阶段完成，或者准备结束本次工作时，如果出现以下任一情况：
+When a phase completes, or when preparing to end current work, write a postmortem if any of these
+occurred:
 
-- 错误假设
-- 无效探索
-- 工具使用错误
-- 可以避免的重试
-- 验证流程缺失或错误
-- 任何值得下次避免的问题
+- Wrong assumption
+- Invalid exploration
+- Tool usage error
+- Avoidable retry
+- Missing or incorrect verification flow
+- Any issue worth avoiding next time
 
-如果本次没有真实事故或者只是小毛病不具备重复可能，不要硬写尸检
+If there was no real incident, or only a small issue unlikely to repeat, do not force a postmortem.
 
-## 存放位置与命名
+## Location and naming
 
-默认将尸检报告存放在项目根目录的 `postmortems/` 目录下。
+By default, store postmortem reports in `postmortems/` at project root.
 
-文件命名格式必须为：
+File naming format must be:
 
-`序号-简短标题.md`
+`number-short-title.md`
 
-规则：
+Rules:
 
-- 序号为三位递增序号，如 `001`、`002`
-- 标题使用小写英文和短横线
-- 标题应简短描述问题对象与核心错误，不得使用空格、中文或特殊符号
+- Number is three-digit increasing sequence, such as `001`, `002`.
+- Title uses lowercase English and hyphens.
+- Title should briefly describe problem object and core mistake. No spaces, Chinese, or special
+  characters.
 
-同时维护 `postmortems/README.md` 作为尸检目录索引。在开始编码前，先读
-`postmortems/README.md`，再按需读取相关尸检。
+Also maintain `postmortems/README.md` as postmortem index. Before coding, read
+`postmortems/README.md`, then read related postmortems as needed.
 
-## 尸检报告格式
+## Postmortem report format
 
-使用以下结构：
+Use structure below:
 
 ```txt
-# 标题
+# Title
 
-**日期**: YYYY-MM-DD
-**影响**:
-**发现人**:
+**Date**: YYYY-MM-DD
+**Impact**:
+**Discovered by**:
 
-## 问题
-<!-- 发生了什么，影响了什么 -->
+## Problem
+<!-- What happened and what was affected -->
 
-## 现象
-<!-- 最小复现命令 + 关键报错 -->
+## Symptoms
+<!-- Minimal reproduction command + key error -->
 
-## 根因
-<!-- 错误假设 / 实际约束 / 缺失检查点 -->
+## Root cause
+<!-- Wrong assumption / actual constraint / missing checkpoint -->
 
-## 修复
-<!-- 当时怎么恢复 / 以后正确做法 -->
+## Fix
+<!-- How recovery happened / correct future approach -->
 
-## 预防
-<!-- 可执行规则，不写空话 -->
+## Prevention
+<!-- Executable rules, no empty words -->
 
 ```
 
-## README格式
+## README format
 
-保持简洁
+Keep concise.
 
 ```txt
 # Postmortems
 
-- [001 · 示例标题](./001-example.md)
-- [002 · 示例标题](./002-example.md)
+- [001 · Example title](./001-example.md)
+- [002 · Example title](./002-example.md)
 ```

@@ -1,8 +1,8 @@
 ---
 name: code-context
 description:
-  Use when user says "check official API", "find real examples", "new docs", "latest api", or
-  "ctx7"; read this skill when current latest documentation for any library is needed.
+  使用于用户说「查官方API」「找真实示例」「新的文档」「最新api」「ctx7」;使用于需要任何库的当前最新文档，读取此
+  skill
 ---
 
 ## Command Setup
@@ -14,8 +14,7 @@ command -v ctx7 >/dev/null 2>&1 || bun add -g ctx7@latest
 
 ## when to use
 
-- Documentation — fetch current latest docs for any library when writing code, verifying API
-  signatures, or suspecting training data is stale.
+- 文档 — 获取任何库的当前最新文档，在编写代码、验证 API 签名或训练数据可能已过时时使用。
 
 ## Quick Reference
 

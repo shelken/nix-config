@@ -1,74 +1,133 @@
 ---
-name: doc-translate
+name: docs-translate
 description:
   Translate documents in place while preserving original copy. Use when user provides document
-  path/name and asks to translate, convert language, localize, or says translate document without
-  specifying full workflow.
+  path/name and asks to translate, convert language, localize, or sync suffixed translated documents
+  back to original documents.
 ---
 
-# Doc Translate
+# Docs Translate
 
-## 触发
+## Trigger
 
-用户传入文档路径或文档名，要求翻译/转换语言/本地化文档。
+User provides document path/name and asks to translate, convert language, localize document, or sync
+original document from a language-suffixed version.
 
-## 默认行为
+## Default behavior
 
-- 目标语言：优先按用户要求；未指定时转为英文。
-- 原文备份：翻译前将原文件复制为 `[原名]_[原语言代码].[扩展名]`。
-- 相同语言：目标语言与原语言一致时，提示无需转换并停止。
-- 输出位置：直接把原路径文件内容替换为目标语言版本。
-- 保留结构：尽量保留标题层级、列表、表格、代码块、链接、Front Matter、占位符、变量名。
-- 不翻译内容：代码、命令、路径、URL、配置键、API 名、品牌/产品专名，除非用户明确要求。
+- No language suffix: when user gives original document like `guide.md` / `GUIDE.md`, translate
+  original document to target language. If target language is unspecified, translate to English.
+- Has language suffix and no extra instruction: when user gives suffixed version like `guide_cn.md`
+  / `GUIDE_CN.md`, update unsuffixed original document to be semantically consistent with suffixed
+  version.
+- Language suffix: placed before extension, format `[original name]_[language code].[extension]`;
+  language code casing is determined only by original name casing and must not be mixed arbitrarily.
+- Same language: in translation mode, if target language equals source language, say conversion is
+  unnecessary and stop.
+- Content and structure consistency: during sync/translation, check both content and structure;
+  deletions must be deleted, additions added, changes changed; do not only check headings/lists or
+  other structure.
+- Preserve structure: keep heading levels, lists, tables, code blocks, links, Front Matter,
+  placeholders, variable names.
+- Do not translate: code, commands, paths, URLs, config keys, API names, brand/product proper nouns,
+  unless user explicitly asks.
 
-## 工作流
+## Workflow
 
-1. 定位文档
-   - 用户给路径：直接使用。
-   - 用户给名字：在当前仓库搜索同名或近似匹配文件；多结果时询问选择。
+1. Locate document
+   - User gives path: use it directly.
+   - User gives name: search current repo for same or approximate file name; if multiple results,
+     ask user to choose.
 
-2. 读取内容
-   - 文本文件用 `read`。
-   - PDF/DOCX/PPTX/XLSX/图片等非纯文本，先使用 `liteparse` 技能抽取内容。
+2. Identify mode
+   - No language suffix: enter translation mode.
+   - Has language suffix and user gives no extra instruction: enter sync-original mode.
+   - Has language suffix and user explicitly asks to translate/change language: follow user
+     instruction.
 
-3. 判断语言
-   - 根据正文主要语言判断原语言。
-   - 若目标语言与原语言一致，提示无需转换并停止。
-   - 备份语言代码匹配原文件名大小写：原名全部大写时用 `CN`、`EN`、`JP`；其他情况用
-     `cn`、`en`、`jp`。
-   - 例：`README.md` 中文原文 → `README_CN.md`；`guide.md` 中文原文 → `guide_cn.md`。
+3. Translation mode
+   - Read unsuffixed original document.
+   - Detect source language; if target language equals source language, say conversion is
+     unnecessary and stop.
+   - Suffix code casing must be determined by “original name stem”; see “Language code casing
+     rules”.
+   - Copy original document to `[original name]_[source language code].[extension]`; if already
+     exists, stop and ask to avoid overwrite.
+   - Translate original document to target language and write back to original path.
+   - Compare source and translated document paragraph by paragraph; confirm body content is fully
+     translated with no missing paragraphs, sentences, or table cells.
+   - Ensure translated document and original document have exactly consistent content and structure;
+     every deletion, addition, and change must correspond item by item.
 
-4. 备份原文件
-   - 复制原文档到 `[原名]_[原语言代码].[扩展名]`。
-   - 若备份已存在，停止并询问，避免覆盖用户数据。
+4. Sync-original mode
+   - Parse original document path from suffixed file name: `guide_cn.md` → `guide.md`; `GUIDE_CN.md`
+     → `GUIDE.md`.
+   - Suffix code casing must be validated by “original name stem”: `guide_CN.md` and `GUIDE_cn.md`
+     are mismatched names; ask user to rename or confirm.
+   - Read suffixed version and original document.
+   - When comparing two files, must use `git diff --no-index original suffixed-version` to locate
+     content that needs syncing.
+   - Must read every added, deleted, and modified block in diff; cannot only inspect structural
+     changes.
+   - Use suffixed version as source of truth, update original document to same semantics; keep
+     original document target language and format.
+   - Ensure original document and suffixed version have exactly consistent content and structure;
+     every deletion, addition, and change must be synced item by item.
+   - Do not create new language backup; this is sync update, not translation backup.
 
-5. 翻译并写回
-   - 按目标语言翻译全文。
-   - 保持原格式和语义，不新增解释、不删减内容。
-   - 用 `write` 或 `edit` 覆盖原文件。
+5. Read content
+   - Use `read` for text files.
+   - For PDF/DOCX/PPTX/XLSX/images and other non-plain-text formats, first use `liteparse` skill to
+     extract content.
 
-6. 验证
-   - 重新读取原文件和备份文件，确认二者存在。
-   - 对 Markdown/Nix/JSON/YAML 等可校验格式，运行对应格式/语法检查；无检查器时至少确认文件非空且结构保留。
+6. Verify
+   - Re-read written file and confirm it exists and is non-empty.
+   - Compare source document/suffixed version and written file paragraph by paragraph again; confirm
+     content is complete, semantically consistent, and structurally consistent.
+   - For Markdown/Nix/JSON/YAML and other checkable formats, run corresponding format/syntax checks;
+     if no checker, at least confirm content and structure are exactly consistent.
 
-## 翻译规则
+## Language code casing rules
 
-- 忠实优先，润色次之。
-- 标题短句可自然化，但不得改变含义。
-- 技术文档术语前后一致。
-- 保留 Markdown 链接目标，只翻译链接文本。
-- 保留代码块原样；代码块外行内代码也原样保留。
-- Front Matter 只翻译可见文案字段，保留键名和结构。
+- First get original name stem: remove directory and final extension; for example, original name
+  stem of `docs/GUIDE.md` is `GUIDE`, and original name stem of `docs/api.v1.md` is `api.v1`.
+- If original name stem consists only of uppercase letters/digits/separators, language code must be
+  all uppercase: `GUIDE.md` → `GUIDE_CN.md`, `API-V1.md` → `API-V1_EN.md`.
+- In all other cases, language code must be all lowercase: `guide.md` → `guide_cn.md`, `Guide.md` →
+  `Guide_cn.md`, `api.v1.md` → `api.v1_en.md`.
+- “All uppercase” only checks letters in original name stem; no lowercase letters means all
+  uppercase.
+- In sync mode, suffixed file must follow same rule; stop and report naming mismatch when it does
+  not.
 
-## 文件命名示例
+## Translation rules
 
-- `GUIDE.md` 中文转英文：备份 `GUIDE_CN.md`，`GUIDE.md` 写入英文。
-- `guide.md` 中文转英文：备份 `guide_cn.md`，`guide.md` 写入英文。
-- `docs/spec.yaml` 英文转日文：备份 `docs/spec_en.yaml`，`docs/spec.yaml` 写入日文。
+- Faithfulness first, polish second.
+- Short headings can be naturalized, but meaning must not change.
+- Keep technical terminology consistent.
+- Preserve Markdown link targets; translate only link text.
+- Preserve code blocks exactly; inline code outside code blocks also stays unchanged.
+- In Front Matter, translate only visible copy fields; preserve keys and structure.
 
-## 失败处理
+## File naming examples
 
-- 找不到文档：说明搜索范围和匹配结果，询问准确路径。
-- 多个候选：列出路径，等待用户选择。
-- 备份名冲突：停止，不覆盖。
-- 二进制格式无法安全写回：先说明限制，建议输出为 Markdown 或让用户确认目标格式。
+- `GUIDE.md` Chinese to English: original name stem `GUIDE` is all uppercase, back up as
+  `GUIDE_CN.md`, write English into `GUIDE.md`.
+- `guide.md` Chinese to English: original name stem `guide` is not all uppercase, back up as
+  `guide_cn.md`, write English into `guide.md`.
+- `Guide.md` Chinese to English: original name stem `Guide` is not all uppercase, back up as
+  `Guide_cn.md`, write English into `Guide.md`.
+- `docs/spec.yaml` English to Japanese: original name stem `spec` is not all uppercase, back up as
+  `docs/spec_en.yaml`, write Japanese into `docs/spec.yaml`.
+- `guide_cn.md` with no extra instruction: use `git diff --no-index guide.md guide_cn.md` to
+  compare, update `guide.md` to same semantics.
+- `GUIDE_CN.md` with no extra instruction: use `git diff --no-index GUIDE.md GUIDE_CN.md` to
+  compare, update `GUIDE.md` to same semantics.
+
+## Failure handling
+
+- Document not found: explain search scope and matches, ask for exact path.
+- Multiple candidates: list paths and wait for user choice.
+- Backup name conflict: stop; do not overwrite.
+- Binary format cannot be safely written back: explain limitation first, suggest Markdown output or
+  ask user to confirm target format.
