@@ -24,6 +24,10 @@ original document from a language-suffixed version.
   language code casing is determined only by original name casing and must not be mixed arbitrarily.
 - Same language: in translation mode, if target language equals source language, say conversion is
   unnecessary and stop.
+- Source correction: skipped by default; only analyze when user mentions
+  correction/polish/expression improvement/ambiguity. Supported in both translation and sync. In
+  sync, prioritize correctable issues introduced by suffixed version. List at most 15 items and
+  modify source only after user confirms.
 - Content and structure consistency: during sync/translation, check both content and structure;
   deletions must be deleted, additions added, changes changed; do not only check headings/lists or
   other structure.
@@ -51,6 +55,8 @@ original document from a language-suffixed version.
      unnecessary and stop.
    - Suffix code casing must be determined by “original name stem”; see “Language code casing
      rules”.
+   - If user requests correction, first run “Source correction suggestions”; modify source only
+     after user confirms, then continue translation.
    - Copy original document to `[original name]_[source language code].[extension]`; if already
      exists, stop and ask to avoid overwrite.
    - Translate original document to target language and write back to original path.
@@ -69,8 +75,13 @@ original document from a language-suffixed version.
      content that needs syncing.
    - Must read every added, deleted, and modified block in diff; cannot only inspect structural
      changes.
+   - If user requests correction, first run “Source correction suggestions”; in sync, focus on
+     unclear expression, ambiguity, terminology inconsistency, and readability issues in suffixed
+     version.
    - Use suffixed version as source of truth, update original document to same semantics; keep
      original document target language and format.
+   - After user confirms correction item numbers, sync confirmed corrections into original document
+     too; unconfirmed corrections must not be written.
    - Ensure original document and suffixed version have exactly consistent content and structure;
      every deletion, addition, and change must be synced item by item.
    - Do not create new language backup; this is sync update, not translation backup.
@@ -86,6 +97,20 @@ original document from a language-suffixed version.
      content is complete, semantically consistent, and structurally consistent.
    - For Markdown/Nix/JSON/YAML and other checkable formats, run corresponding format/syntax checks;
      if no checker, at least confirm content and structure are exactly consistent.
+
+## Source correction suggestions
+
+- Do not correct by default and do not proactively rewrite source; run only when user explicitly
+  mentions correction/polish/ambiguity/expression improvement.
+- Translation mode: before translation, read source fully and find unclear expression, ambiguity,
+  awkward word order, inconsistent terminology, and readability improvements; at most 15 items.
+- Sync mode: this is the most important correction scenario; combine `git diff --no-index` and full
+  suffixed version, prioritizing unclear expression, ambiguity, terminology inconsistency, and
+  readability issues in added/modified suffixed content; at most 15 items.
+- List suggestions in a table: number, location, source file, original text, issue, suggested
+  change, reason; do not modify files directly.
+- After table, ask which item numbers user wants to apply; only after confirmation update source
+  first, then continue translation or sync.
 
 ## Language code casing rules
 
