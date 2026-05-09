@@ -25,9 +25,9 @@ in
     dotDir = zshDotDir;
     # 自动补全 默认不需要，如果使用omz的话
     # enableCompletion = true;
-    # 自动提示
-    autosuggestion.enable = true;
-    # 语法高亮
+    # Home Manager 默认早于 oh-my-zsh/fzf-tab 加载；改为 plugins 控制 ZLE 包装顺序。
+    autosuggestion.enable = false;
+    # 语法高亮保持 Home Manager 默认末尾加载。
     syntaxHighlighting.enable = true;
     # https://home-manager-options.extranix.com/?query=zsh.history
     history = {
@@ -113,10 +113,25 @@ in
         src = pkgs.zsh-powerlevel10k;
         file = "share/zsh-powerlevel10k/powerlevel10k.zsh-theme";
       }
+      # oh-my-zsh/compinit
+      #    -> fzf key bindings, 不含 Tab completion
+      #    -> fzf-tab
+      #    -> zsh-autosuggestions
+      #    -> zsh-syntax-highlighting
+      {
+        name = "fzf-key-bindings";
+        src = pkgs.fzf;
+        file = "share/fzf/key-bindings.zsh";
+      }
       {
         name = "fzf-tab";
         src = pkgs.zsh-fzf-tab;
         file = "share/fzf-tab/fzf-tab.plugin.zsh";
+      }
+      {
+        name = "zsh-autosuggestions";
+        src = pkgs.zsh-autosuggestions;
+        file = "share/zsh-autosuggestions/zsh-autosuggestions.zsh";
       }
       {
         name = "powerlevel10k-config";
@@ -128,7 +143,8 @@ in
 
   programs.fzf = {
     enable = true;
-    enableZshIntegration = true;
+    # fzf --zsh 会在 fzf-tab 之后把 Tab 绑到 fzf-completion；这里只保留上面的 key-bindings。
+    enableZshIntegration = false;
     defaultCommand = "fd --type f";
   };
 
