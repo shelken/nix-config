@@ -305,6 +305,9 @@ run       = ['move-node-to-workspace 3Terminal']
 [[on-window-detected]]
 if.app-id = 'com.apple.Terminal'
 run       = ['layout floating', 'move-node-to-workspace 3Terminal']
+[[on-window-detected]]
+if.app-id = 'com.cmuxterm.app'
+run       = ['move-node-to-workspace 3Terminal']
 
 [[on-window-detected]]
 if.app-id = 'com.tencent.xinWeChat'
