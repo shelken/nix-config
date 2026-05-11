@@ -35,6 +35,7 @@ original document from a language-suffixed version.
   placeholders, variable names.
 - Do not translate: code, commands, paths, URLs, config keys, API names, brand/product proper nouns,
   unless user explicitly asks.
+- Backup means `cp`; do not waste time rewriting backup content with `write`.
 
 ## Workflow
 
@@ -148,6 +149,12 @@ original document from a language-suffixed version.
   compare, update `guide.md` to same semantics.
 - `GUIDE_CN.md` with no extra instruction: use `git diff --no-index GUIDE.md GUIDE_CN.md` to
   compare, update `GUIDE.md` to same semantics.
+
+## Special habits
+
+- Use English punctuation everywhere, regardless of Chinese or English text.
+- During correction/polishing, common technical terms should not be translated into Chinese; for
+  example, `bug` should not become `错误`.
 
 ## Failure handling
 
