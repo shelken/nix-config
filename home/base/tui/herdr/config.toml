@@ -1,0 +1,10 @@
+onboarding = false
+
+[theme]
+name = "catppuccin"
+
+[ui]
+agent_panel_scope = "all"
+
+[keys]
+split_horizontal = "h"
