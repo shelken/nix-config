@@ -64,7 +64,7 @@
       # 旧的 SSH rewrite 是为 memex 插件服务；插件弃用后，token 认证作为默认路径。
       delta = {
         navigate = true;
-        side-by-side = true;
+        # side-by-side = true;
         hyperlinks = true;
         dark = true;
       };
@@ -80,7 +80,7 @@
 
   programs.delta = {
     enable = true;
-    enableGitIntegration = false;
+    enableGitIntegration = true;
   };
 
   home.packages = with pkgs; [
