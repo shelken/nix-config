@@ -1,15 +1,15 @@
 ---
 name: organize-files
-description: Use this skill when user asks to organize folders/files on computer.
+description: 当用户要求需要 整理电脑的文件夹/文件 时使用该技能
 ---
 
-## Classification principles
+## 分类原则
 
-- Organize by "project/purpose", not by "file type".
-- Control hierarchy depth, max 3-4 levels. Reconsider structure if deeper.
+- 按"项目/用途"而非"文件类型"组织
+- 层级控制，最多 3-4 层深，超过就要重新审视
 
 ## Notes
 
-- Do not read file contents unless user allows it.
-- Reference naming convention: date + description + version, as needed.
-  - Example: `2026-03-17_quarterly-report_v2.docx`
+- 不要直接读取文件内容，除非用户允许
+- 参考命名规范 ·日期 + 描述 + 版本·（视需要）
+  - 例如 `2026-03-17_季度报告_v2.docx`

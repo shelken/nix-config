@@ -8,158 +8,117 @@ description:
 
 # Docs Translate
 
-## Trigger
+## 触发
 
-User provides document path/name and asks to translate, convert language, localize document, or sync
-original document from a language-suffixed version.
+用户传入文档路径或文档名，要求翻译/转换语言/本地化文档，或要求根据语言后缀版本同步原文档。
 
-## Default behavior
+## 默认行为
 
-- No language suffix: when user gives original document like `guide.md` / `GUIDE.md`, translate
-  original document to target language. If target language is unspecified, translate to English.
-- Has language suffix and no extra instruction: when user gives suffixed version like `guide_cn.md`
-  / `GUIDE_CN.md`, update unsuffixed original document to be semantically consistent with suffixed
-  version.
-- Language suffix: placed before extension, format `[original name]_[language code].[extension]`;
-  language code casing is determined only by original name casing and must not be mixed arbitrarily.
-- Same language: in translation mode, if target language equals source language, say conversion is
-  unnecessary and stop.
-- Source correction: skipped by default; only analyze when user mentions
-  correction/polish/expression improvement/ambiguity. Supported in both translation and sync. In
-  sync, prioritize correctable issues introduced by suffixed version. List at most 15 items and
-  modify source only after user confirms.
-- Content and structure consistency: during sync/translation, check both content and structure;
-  deletions must be deleted, additions added, changes changed; do not only check headings/lists or
-  other structure.
-- Preserve structure: keep heading levels, lists, tables, code blocks, links, Front Matter,
-  placeholders, variable names.
-- Do not translate: code, commands, paths, URLs, config keys, API names, brand/product proper nouns,
-  unless user explicitly asks.
-- Backup means `cp`; do not waste time rewriting backup content with `write`.
+- 无语言后缀：用户给 `guide.md` / `GUIDE.md`
+  这类原文档时，将原文档翻译成目标语言；未指定目标语言时转为英文。
+- 有语言后缀且无额外说明：用户给 `guide_cn.md` / `GUIDE_CN.md`
+  这类后缀版本时，将无后缀原文档更新到与该后缀版本语义一致。
+- 语言后缀：放在扩展名前，格式为
+  `[原名]_[语言代码].[扩展名]`；语言代码大小写只由原名大小写决定，不能自行混用。
+- 相同语言：翻译模式下，目标语言与原语言一致时，提示无需转换并停止。
+- 原文纠正：默认跳过；只有用户提到“纠正/润色/改进表达/歧义”等才分析，翻译和同步都支持；同步场景优先分析后缀版本带来的可纠正点，最多列 15 条，询问确认后才修改原文。
+- 内容和结构一致：同步/翻译时必须同时检查内容和结构；删除的要删除，增加的要增加，变更的要变更；不准只检查标题/列表等结构。
+- 保留结构：保留标题层级、列表、表格、代码块、链接、Front Matter、占位符、变量名。
+- 不翻译内容：代码、命令、路径、URL、配置键、API 名、品牌/产品专名，除非用户明确要求。
+- 备份就是cp,不要浪费时间write
 
-## Workflow
+## 工作流
 
-1. Locate document
-   - User gives path: use it directly.
-   - User gives name: search current repo for same or approximate file name; if multiple results,
-     ask user to choose.
+1. 定位文档
+   - 用户给路径：直接使用。
+   - 用户给名字：在当前仓库搜索同名或近似匹配文件；多结果时询问选择。
 
-2. Identify mode
-   - No language suffix: enter translation mode.
-   - Has language suffix and user gives no extra instruction: enter sync-original mode.
-   - Has language suffix and user explicitly asks to translate/change language: follow user
-     instruction.
+2. 识别模式
+   - 无语言后缀：进入翻译模式。
+   - 有语言后缀且用户无额外说明：进入同步原文模式。
+   - 有语言后缀且用户明确要求翻译/改语言：按用户说明执行。
 
-3. Translation mode
-   - Read unsuffixed original document.
-   - Detect source language; if target language equals source language, say conversion is
-     unnecessary and stop.
-   - Suffix code casing must be determined by “original name stem”; see “Language code casing
-     rules”.
-   - If user requests correction, first run “Source correction suggestions”; modify source only
-     after user confirms, then continue translation.
-   - Copy original document to `[original name]_[source language code].[extension]`; if already
-     exists, stop and ask to avoid overwrite.
-   - Translate original document to target language and write back to original path.
-   - Compare source and translated document paragraph by paragraph; confirm body content is fully
-     translated with no missing paragraphs, sentences, or table cells.
-   - Ensure translated document and original document have exactly consistent content and structure;
-     every deletion, addition, and change must correspond item by item.
+3. 翻译模式
+   - 读取无后缀原文档。
+   - 判断原语言；若目标语言与原语言一致，提示无需转换并停止。
+   - 后缀代码大小写必须按“原名主体”决定，见「语言代码大小写规则」。
+   - 若用户要求纠正，先执行「原文纠正建议」；用户确认后才修改原文，再继续翻译。
+   - 复制原文档到 `[原名]_[原语言代码].[扩展名]`；若已存在，停止并询问，避免覆盖。
+   - 将原文档翻译为目标语言，并写回原路径。
+   - 逐段对照原文和译文，确认正文内容完整翻译，不遗漏段落、句子、表格单元格。
+   - 确保翻译后文档与原文档内容和结构完全一致；删除、增加、变更必须逐项对应。
 
-4. Sync-original mode
-   - Parse original document path from suffixed file name: `guide_cn.md` → `guide.md`; `GUIDE_CN.md`
-     → `GUIDE.md`.
-   - Suffix code casing must be validated by “original name stem”: `guide_CN.md` and `GUIDE_cn.md`
-     are mismatched names; ask user to rename or confirm.
-   - Read suffixed version and original document.
-   - When comparing two files, must use `git diff --no-index original suffixed-version` to locate
-     content that needs syncing.
-   - Must read every added, deleted, and modified block in diff; cannot only inspect structural
-     changes.
-   - If user requests correction, first run “Source correction suggestions”; in sync, focus on
-     unclear expression, ambiguity, terminology inconsistency, and readability issues in suffixed
-     version.
-   - Use suffixed version as source of truth, update original document to same semantics; keep
-     original document target language and format.
-   - After user confirms correction item numbers, sync confirmed corrections into original document
-     too; unconfirmed corrections must not be written.
-   - Ensure original document and suffixed version have exactly consistent content and structure;
-     every deletion, addition, and change must be synced item by item.
-   - Do not create new language backup; this is sync update, not translation backup.
+4. 同步原文模式
+   - 从后缀文件名解析原文档路径：`guide_cn.md` → `guide.md`；`GUIDE_CN.md` → `GUIDE.md`。
+   - 后缀代码大小写必须按“原名主体”校验：`guide_CN.md`、`GUIDE_cn.md`
+     都是不匹配命名，应提示用户改名或确认。
+   - 读取后缀版本和原文档。
+   - 对比两份文件时必须使用 `git diff --no-index 原文档 后缀版本`，用差异定位需要同步的内容。
+   - 必须阅读 diff 中每个新增、删除、修改块；不能只看结构变化。
+   - 若用户要求纠正，先执行「原文纠正建议」；同步场景必须重点检查后缀版本中的表达不清、歧义、术语不一致和可读性问题。
+   - 以后缀版本为准，把原文档更新到语义一致；保持原文档目标语言和格式。
+   - 用户确认纠正序号后，将纠正结果一并同步到原文档；未确认的纠正不得写入。
+   - 确保原文档与后缀版本内容和结构完全一致；删除、增加、变更必须逐项同步。
+   - 不创建新语言备份；这是同步更新，不是翻译备份。
 
-5. Read content
-   - Use `read` for text files.
-   - For PDF/DOCX/PPTX/XLSX/images and other non-plain-text formats, first use `liteparse` skill to
-     extract content.
+5. 读取内容
+   - 文本文件用 `read`。
+   - PDF/DOCX/PPTX/XLSX/图片等非纯文本，先使用 `liteparse` 技能抽取内容。
 
-6. Verify
-   - Re-read written file and confirm it exists and is non-empty.
-   - Compare source document/suffixed version and written file paragraph by paragraph again; confirm
-     content is complete, semantically consistent, and structurally consistent.
-   - For Markdown/Nix/JSON/YAML and other checkable formats, run corresponding format/syntax checks;
-     if no checker, at least confirm content and structure are exactly consistent.
+6. 验证
+   - 重新读取被写入文件，确认存在且非空。
+   - 再次逐段对照源文档/后缀版本和被写入文件，确认内容完整、语义一致、结构一致。
+   - 对 Markdown/Nix/JSON/YAML 等可校验格式，运行对应格式/语法检查；无检查器时至少确认内容和结构完全一致。
 
-## Source correction suggestions
+## 原文纠正建议
 
-- Do not correct by default and do not proactively rewrite source; run only when user explicitly
-  mentions correction/polish/ambiguity/expression improvement.
-- Translation mode: before translation, read source fully and find unclear expression, ambiguity,
-  awkward word order, inconsistent terminology, and readability improvements; at most 15 items.
-- Sync mode: this is the most important correction scenario; combine `git diff --no-index` and full
-  suffixed version, prioritizing unclear expression, ambiguity, terminology inconsistency, and
-  readability issues in added/modified suffixed content; at most 15 items.
-- List suggestions in a table: number, location, source file, original text, issue, suggested
-  change, reason; do not modify files directly.
-- After table, ask which item numbers user wants to apply; only after confirmation update source
-  first, then continue translation or sync.
+- 默认不做纠正，不主动改写原文；用户明确提到纠正/润色/歧义/表达改进时才执行。
+- 翻译模式：翻译前通读原文，找表达不清、表达有歧义、语序别扭、术语不一致、可读性可改进之处；最多 15 条。
+- 同步模式：这是纠正最重要的场景；必须结合 `git diff --no-index`
+  和后缀版本全文，优先找后缀版本新增/修改内容里的表达不清、歧义、术语不一致、可读性问题；最多 15 条。
+- 用表格列出：序号、位置、来源文件、原文、问题、建议改法、理由；不直接修改文件。
+- 表格后询问用户要应用哪些序号；用户确认后才先更新原文，再继续翻译或同步。
 
-## Language code casing rules
+## 语言代码大小写规则
 
-- First get original name stem: remove directory and final extension; for example, original name
-  stem of `docs/GUIDE.md` is `GUIDE`, and original name stem of `docs/api.v1.md` is `api.v1`.
-- If original name stem consists only of uppercase letters/digits/separators, language code must be
-  all uppercase: `GUIDE.md` → `GUIDE_CN.md`, `API-V1.md` → `API-V1_EN.md`.
-- In all other cases, language code must be all lowercase: `guide.md` → `guide_cn.md`, `Guide.md` →
-  `Guide_cn.md`, `api.v1.md` → `api.v1_en.md`.
-- “All uppercase” only checks letters in original name stem; no lowercase letters means all
-  uppercase.
-- In sync mode, suffixed file must follow same rule; stop and report naming mismatch when it does
-  not.
+- 先取原名主体：去掉目录和最后扩展名；例如 `docs/GUIDE.md` 的原名主体是 `GUIDE`，`docs/api.v1.md`
+  的原名主体是 `api.v1`。
+- 原名主体全部是大写字母/数字/分隔符时，语言代码必须全大写：`GUIDE.md` → `GUIDE_CN.md`，`API-V1.md`
+  → `API-V1_EN.md`。
+- 其他任何情况，语言代码必须全小写：`guide.md` → `guide_cn.md`，`Guide.md` →
+  `Guide_cn.md`，`api.v1.md` → `api.v1_en.md`。
+- 判断“全部大写”只看原名主体中的字母；没有小写字母才算全大写。
+- 同步模式下，后缀文件也必须遵守同一规则；不匹配时停止并提示命名不一致。
 
-## Translation rules
+## 翻译规则
 
-- Faithfulness first, polish second.
-- Short headings can be naturalized, but meaning must not change.
-- Keep technical terminology consistent.
-- Preserve Markdown link targets; translate only link text.
-- Preserve code blocks exactly; inline code outside code blocks also stays unchanged.
-- In Front Matter, translate only visible copy fields; preserve keys and structure.
+- 忠实优先，润色次之。
+- 标题短句可自然化，但不得改变含义。
+- 技术文档术语前后一致。
+- 保留 Markdown 链接目标，只翻译链接文本。
+- 保留代码块原样；代码块外行内代码也原样保留。
+- Front Matter 只翻译可见文案字段，保留键名和结构。
 
-## File naming examples
+## 文件命名示例
 
-- `GUIDE.md` Chinese to English: original name stem `GUIDE` is all uppercase, back up as
-  `GUIDE_CN.md`, write English into `GUIDE.md`.
-- `guide.md` Chinese to English: original name stem `guide` is not all uppercase, back up as
-  `guide_cn.md`, write English into `guide.md`.
-- `Guide.md` Chinese to English: original name stem `Guide` is not all uppercase, back up as
-  `Guide_cn.md`, write English into `Guide.md`.
-- `docs/spec.yaml` English to Japanese: original name stem `spec` is not all uppercase, back up as
-  `docs/spec_en.yaml`, write Japanese into `docs/spec.yaml`.
-- `guide_cn.md` with no extra instruction: use `git diff --no-index guide.md guide_cn.md` to
-  compare, update `guide.md` to same semantics.
-- `GUIDE_CN.md` with no extra instruction: use `git diff --no-index GUIDE.md GUIDE_CN.md` to
-  compare, update `GUIDE.md` to same semantics.
+- `GUIDE.md` 中文转英文：原名主体 `GUIDE` 全大写，备份 `GUIDE_CN.md`，`GUIDE.md` 写入英文。
+- `guide.md` 中文转英文：原名主体 `guide` 非全大写，备份 `guide_cn.md`，`guide.md` 写入英文。
+- `Guide.md` 中文转英文：原名主体 `Guide` 非全大写，备份 `Guide_cn.md`，`Guide.md` 写入英文。
+- `docs/spec.yaml` 英文转日文：原名主体 `spec` 非全大写，备份 `docs/spec_en.yaml`，`docs/spec.yaml`
+  写入日文。
+- `guide_cn.md` 且无额外说明：使用 `git diff --no-index guide.md guide_cn.md` 对比，更新 `guide.md`
+  到同等语义。
+- `GUIDE_CN.md` 且无额外说明：使用 `git diff --no-index GUIDE.md GUIDE_CN.md` 对比，更新 `GUIDE.md`
+  到同等语义。
 
-## Special habits
+## 特别习惯
 
-- Use English punctuation everywhere, regardless of Chinese or English text.
-- During correction/polishing, common technical terms should not be translated into Chinese; for
-  example, `bug` should not become `错误`.
+- 不论中英文,全部使用英文标点符号
+- 纠正/润色时,常见表达不应该翻译为中文,例如:`bug`不应该翻译成`错误`
 
-## Failure handling
+## 失败处理
 
-- Document not found: explain search scope and matches, ask for exact path.
-- Multiple candidates: list paths and wait for user choice.
-- Backup name conflict: stop; do not overwrite.
-- Binary format cannot be safely written back: explain limitation first, suggest Markdown output or
-  ask user to confirm target format.
+- 找不到文档：说明搜索范围和匹配结果，询问准确路径。
+- 多个候选：列出路径，等待用户选择。
+- 备份名冲突：停止，不覆盖。
+- 二进制格式无法安全写回：先说明限制，建议输出为 Markdown 或让用户确认目标格式。
