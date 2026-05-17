@@ -36,11 +36,12 @@ let
     #   refactor-project = "${sources.dotclaude-skills.src}/refactor/skills/refactor-project";
     # };
 
-    hindsight-skills = {
-      hindsight-architect = "${sources.hindsight-skills.src}/skills/hindsight-architect";
-      hindsight-docs = "${sources.hindsight-skills.src}/skills/hindsight-docs";
-      hindsight-local = "${sources.hindsight-skills.src}/skills/hindsight-local";
-    };
+    # 太大了
+    # hindsight-skills = {
+    #   hindsight-architect = "${sources.hindsight-skills.src}/skills/hindsight-architect";
+    #   hindsight-docs = "${sources.hindsight-skills.src}/skills/hindsight-docs";
+    #   hindsight-local = "${sources.hindsight-skills.src}/skills/hindsight-local";
+    # };
 
     # caveman = {
     #   caveman = "${sources.caveman.src}/skills/caveman";
@@ -110,7 +111,7 @@ let
       diagnose = "${sources.mattpocock-skills.src}/skills/engineering/diagnose";
       grill-me = "${sources.mattpocock-skills.src}/skills/productivity/grill-me";
       grill-with-docs = "${sources.mattpocock-skills.src}/skills/engineering/grill-with-docs";
-      handoff = "${sources.mattpocock-skills.src}/skills/in-progress/handoff";
+      handoff = "${sources.mattpocock-skills.src}/skills/productivity/handoff";
       prototype = "${sources.mattpocock-skills.src}/skills/engineering/prototype";
       tdd = "${sources.mattpocock-skills.src}/skills/engineering/tdd";
       to-issues = "${sources.mattpocock-skills.src}/skills/engineering/to-issues/SKILL.md";

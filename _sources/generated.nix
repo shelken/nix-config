@@ -30,29 +30,17 @@
     };
     date = "2026-04-20";
   };
-  hindsight-skills = {
-    pname = "hindsight-skills";
-    version = "4986e8ec370a29dff5379de5dd9a014840fda9c1";
-    src = fetchFromGitHub {
-      owner = "vectorize-io";
-      repo = "hindsight";
-      rev = "4986e8ec370a29dff5379de5dd9a014840fda9c1";
-      fetchSubmodules = false;
-      sha256 = "sha256-Etd10lSa2tkrdMP2uN1Q0LWe3SVpnOwMaBlDkZ8myHM=";
-    };
-    date = "2026-05-01";
-  };
   impeccable = {
     pname = "impeccable";
-    version = "2aeac48b19e66d82ff8ec8b9dd9349626473348e";
+    version = "4af581e23f17d112d8f9d6b7a5b7ff37823494e1";
     src = fetchFromGitHub {
       owner = "pbakaus";
       repo = "impeccable";
-      rev = "2aeac48b19e66d82ff8ec8b9dd9349626473348e";
+      rev = "4af581e23f17d112d8f9d6b7a5b7ff37823494e1";
       fetchSubmodules = false;
-      sha256 = "sha256-XBIFMfbTecq1QKvDX+3w+g2dOFNceE4vsnizTNLnjho=";
+      sha256 = "sha256-fxkGR7HGcWnq/iheSfo8MYR53sHxUop9H0jz84SH+QA=";
     };
-    date = "2026-05-04";
+    date = "2026-05-14";
   };
   kitty-icon = {
     pname = "kitty-icon";
@@ -79,27 +67,27 @@
   };
   mattpocock-skills = {
     pname = "mattpocock-skills";
-    version = "733d312884b3878a9a9cff693c5886943753a741";
+    version = "e74f0061bb67222181640effa98c675bdb2fdaa7";
     src = fetchFromGitHub {
       owner = "mattpocock";
       repo = "skills";
-      rev = "733d312884b3878a9a9cff693c5886943753a741";
+      rev = "e74f0061bb67222181640effa98c675bdb2fdaa7";
       fetchSubmodules = false;
-      sha256 = "sha256-HyJLE9+ItZY0nB87eMfONSAc3L6dndcApoRpbO+D7UY=";
+      sha256 = "sha256-5Rr5BQe8bdQXWt/H6QjYpoM4X+GuWPK26rU2VSqTZVI=";
     };
-    date = "2026-05-07";
+    date = "2026-05-13";
   };
   obra-superpowers = {
     pname = "obra-superpowers";
-    version = "e7a2d16476bf042e9add4699c9d018a90f86e4a6";
+    version = "f2cbfbefebbfef77321e4c9abc9e949826bea9d7";
     src = fetchFromGitHub {
       owner = "obra";
       repo = "superpowers";
-      rev = "e7a2d16476bf042e9add4699c9d018a90f86e4a6";
+      rev = "f2cbfbefebbfef77321e4c9abc9e949826bea9d7";
       fetchSubmodules = false;
-      sha256 = "sha256-8/M/S0BUYurZkFqe6LemVtBQnPSxBNfy1C7Q6f92hjE=";
+      sha256 = "sha256-3E3rO6hR87JUfS3XV1Eaoz6SDWOftleWvN9UPNFEMjw=";
     };
-    date = "2026-04-30";
+    date = "2026-05-04";
   };
   projects-yazi = {
     pname = "projects-yazi";
@@ -163,15 +151,15 @@
   };
   yazi-plugins = {
     pname = "yazi-plugins";
-    version = "ac82af3e10f9a32cecd9f87ac64b3f9de7c7aea7";
+    version = "5d5c4803dd12bab4e4f19d606f8db0c871e6bec5";
     src = fetchFromGitHub {
       owner = "yazi-rs";
       repo = "plugins";
-      rev = "ac82af3e10f9a32cecd9f87ac64b3f9de7c7aea7";
+      rev = "5d5c4803dd12bab4e4f19d606f8db0c871e6bec5";
       fetchSubmodules = false;
-      sha256 = "sha256-svc7I2E+tVMEUWUvIS6i3oTGfLq13eaI61T0c1MQ8qQ=";
+      sha256 = "sha256-cZlnrlgv8+SFeNgIW69q//i/apcpvAv41q5W8bJwVaI=";
     };
-    date = "2026-04-23";
+    date = "2026-05-14";
   };
   zjstatus = {
     pname = "zjstatus";

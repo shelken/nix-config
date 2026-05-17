@@ -33,10 +33,10 @@ fetch.github = "forrestchang/andrej-karpathy-skills"
 # src.branch   = "main"
 # fetch.github = "FradSer/dotclaude"
 
-[hindsight-skills]
-src.git      = "https://github.com/vectorize-io/hindsight"
-src.branch   = "main"
-fetch.github = "vectorize-io/hindsight"
+# [hindsight-skills]
+# src.git      = "https://github.com/vectorize-io/hindsight"
+# src.branch   = "main"
+# fetch.github = "vectorize-io/hindsight"
 
 [llamaparse-agent-skills]
 src.git      = "https://github.com/run-llama/llamaparse-agent-skills"
