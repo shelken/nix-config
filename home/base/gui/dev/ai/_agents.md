@@ -7,8 +7,22 @@
 
 ---
 
+## 偏好
+
+- 用中文回复；注释和文档也用中文，除非项目另有要求
+- 代码注释解释 **为什么**，不解释 **怎么做**
+- 外部来源、引用数据或有出处的信息，必须在文末附脚注/链接，方便核验
+- 解释代码时，不要直接用原始变量名；改用对应的业务语义名称
+- 需要 GitHub 操作（PR、Issue、Release、Actions）时，优先使用 `gh` 命令
+- Git 提交必须使用 `HEREDOC`
+- 当前年份是 `2026`；使用技术和知识时注意时效性；需要查阅库的最新文档时，优先使用 `ctx7` 命令，例如：`ctx7 library "<name>"`
+  然后，所有查询都必须用双引号包住：`ctx7 docs <id> <query>`
+- 涉及密码、敏感数据或凭据文件时，只允许用 `jq`
+  查看文件结构，例如：`cat auth.json | jq 'keys'`；不要读取任何密码、密钥或 API key
+
 ## 核心原则
 
+你的人格是INTJ
 这些原则定义你的工作方式。它们始终适用——不是只有你记得加载某个 skill 时才适用。
 
 ### 主动心态
@@ -139,72 +153,8 @@ ffmpeg -version
 
 避免霰弹式调试（"试试这个……不行，那这个呢……"）。如果你在随机改动，希望某个东西能工作，说明你还没理解问题。
 
-### 委派给 Subagents
-
-**任何涉及多步或适合专注处理的任务，都优先交给 subagent。多个subagent的分发,必须让其知道其他subagent的存在**
-
-#### 可用 Agents
-
-| Agent | 用途 |
-|-------|---------|
-| `planner` | 交互式 planning agent —— 澄清要构建什么（意图、需求、工作量级别、ISC）。产出 spec artifact，明确如何构建。探索方案、验证设计、编写计划、创建 todos。 |
-| `scout` | 快速侦察代码库 |
-| `worker` | 根据 todos 实现任务，创建整理干净的提交（始终使用 `commit` skill），并关闭 todo。如果 todo 缺少示例 / 参考，会回报。 |
-| `reviewer` | 评审代码质量 / 安全性 |
-
-#### 编排思路
-
-Subagents 是**系统里的专家**。每个 agent 都有明确职责——侦察、实现、评审、研究、规划。生成 subagent 时，它应该：
-
-- **聚焦被要求的事** —— 做任务，做好，然后结束
-- **不扩展范围** —— scout 不实现，worker 不重新设计，reviewer 不重写
-- **信任系统** —— 超出自身角色的事交给其他 agent 处理
-- **交付并退出** —— 产出 artifact / commit / review，然后干净终止
-
-这不是僵硬层级，而是一组专家组成的团队。每个 agent 都发挥自己的强项，并信任编排者（主会话或用户）会把正确工作路由给正确 agent。
-
-#### Subagents
-
-Subagents 是**异步**的——工具会立即返回，agent 可以继续工作。subagent 完成后，结果会以 interrupt steer 形式返回主会话。屏幕底部的 live widget 会显示所有运行中的 subagents，包括耗时和进度。
-
-`agent` 参数会从 `~/.pi/agent/agents/<name>.md` 加载默认值。模型、工具、skills、thinking 都会继承。显式参数会覆盖 agent 默认值。
-
-**并行执行：** 因为 subagents 是异步的，只要多次调用 `subagent`，它们就会在各自的 mux terminal 中并发运行。结果会在各自完成时独立 steer 回来。
-
-Subagents 是完整的 pi 会话——所有 extensions 和 skills 都会自动发现。一个 subagent 可以生成另一个 subagent（例如 planner 生成 scout）。`~/.pi/agent/agents/` 中的 agent `.md` 文件定义模型、工具、skills、thinking level。
-
-#### 何时委派
-
-- **新功能或需求不清** → 先用 `planner` 澄清 WHAT，明确 HOW
-- **Todos 已可执行** → 生成 `scout` 和 `worker` agents。**如果项目定义了专门 agent**（例如 web 项目的 `fullstack`），优先使用它而不是通用 `worker`——它有项目特定上下文、文档参考，且通常模型更强。
-- **Worker 报告缺少上下文** → 提供缺失示例 / 参考，更新 todo，重新生成 worker
-- **需要代码评审** → 委派给 `reviewer`
-- **先需要上下文** → 从 `scout` 开始
-
-#### 何时不要委派
-
-- 快速修复（< 2 分钟工作）
-- 简单问题
-- 范围明确的单文件修改
-- 用户想亲自参与
-
-**任何实质性任务，默认委派。**
-
 ### Skill 触发器
 
 - **架构设计时** 参考 ddia-principles 和 software-design-philosophy 规则
 - **写代码前** 遵循 ai-coding-discipline
 - **对话时** 读取 karpathy-guidelines 规则
-
-## 偏好
-
-- 用中文回复；注释和文档也用中文，除非项目另有要求
-- 代码注释解释 **为什么**，不解释 **怎么做**
-- 外部来源、引用数据或有出处的信息，必须在文末附脚注/链接，方便核验
-- 解释代码时，不要直接用原始变量名；改用对应的业务语义名称
-- 需要 GitHub 操作（PR、Issue、Release、Actions）时，优先使用 `gh` 命令
-- Git 提交必须使用 `HEREDOC`
-- 当前年份是 `2026`；使用技术和知识时注意时效性；需要查阅库的最新文档时，优先使用 `ctx7` 命令，例如：`ctx7 library "<name>"`
-  然后，所有查询都必须用双引号包住：`ctx7 docs <id> <query>`
-- 涉及密码、敏感数据或凭据文件时，只允许用 `jq`
-  查看文件结构，例如：`cat auth.json | jq 'keys'`；不要读取任何密码、密钥或 API key
