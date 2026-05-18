@@ -54,10 +54,10 @@ in
     ];
 
     # before: deq /Applications/Input\ Source\ Pro\ Beta.app
-    launchd.user.agents.InputSourceProBeta = {
-      command = ''"/Applications/Input Source Pro Beta.app/Contents/MacOS/Input Source Pro Beta"'';
-      serviceConfig.RunAtLoad = true;
-    };
+    # launchd.user.agents.InputSourceProBeta = {
+    #   command = ''"/Applications/Input Source Pro Beta.app/Contents/MacOS/Input Source Pro Beta"'';
+    #   serviceConfig.RunAtLoad = true;
+    # };
 
     # Generate config file
     home-manager.users.${myvars.username}.home.file.".config/inputsourcepro/config.json".text =

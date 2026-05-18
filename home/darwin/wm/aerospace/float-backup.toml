@@ -63,6 +63,10 @@ if.app-id = 'com.raycast.macos'
 run       = ['layout floating']
 
 [[on-window-detected]]
+if.app-id = 'com.raycast-x.macos'
+run       = ['layout floating']
+
+[[on-window-detected]]
 if.app-id = 'org.hammerspoon.Hammerspoon'
 run       = ['layout floating']
 

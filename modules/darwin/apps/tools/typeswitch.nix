@@ -36,7 +36,6 @@ in
         "dev.zed.Zed" = english;
         "dev.zed.Zed-Preview" = english;
         "com.apple.dt.Xcode" = english;
-        "com.raycast.macos" = english; # raycast
         "net.kovidgoyal.kitty" = english;
         "tv.parsec.www" = english; # parsec
         "com.apple.ScreenSharing" = english;
