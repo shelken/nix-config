@@ -367,9 +367,21 @@ in
       {
         context = "Workspace";
         bindings = {
-          "cmd-1" = "project_panel::ToggleFocus";
-          "cmd-2" = "git_panel::ToggleFocus";
+          "cmd-1" = "project_panel::Toggle";
+          "cmd-2" = "git_panel::Toggle";
           "cmd-3" = "terminal_panel::Toggle";
+        };
+      }
+      {
+        context = "Terminal";
+        unbind = {
+          "shift-up" = "terminal::ScrollLineUp";
+        };
+      }
+      {
+        context = "Terminal";
+        unbind = {
+          "shift-down" = "terminal::ScrollLineDown";
         };
       }
     ];
