@@ -223,34 +223,34 @@ in
         dark = "Catppuccin Macchiato";
       };
 
-      agent_servers = {
-        "claude-acp" = {
-          type = "registry";
-          env = {
-            CLAUDE_CODE_EXECUTABLE = "/opt/homebrew/bin/claude";
-          };
-        };
+      # agent_servers = {
+      #   "claude-acp" = {
+      #     type = "registry";
+      #     env = {
+      #       CLAUDE_CODE_EXECUTABLE = "/opt/homebrew/bin/claude";
+      #     };
+      #   };
 
-        # opencode = {
-        #   type = "custom";
-        #   command = "/opt/homebrew/bin/opencode";
-        #   args = [ "acp" ];
-        # };
+      #   # opencode = {
+      #   #   type = "custom";
+      #   #   command = "/opt/homebrew/bin/opencode";
+      #   #   args = [ "acp" ];
+      #   # };
 
-        "codex-acp" = {
-          default_config_options = {
-            mode = "full-access";
-          };
-          type = "registry";
-        };
+      #   "codex-acp" = {
+      #     default_config_options = {
+      #       mode = "full-access";
+      #     };
+      #     type = "registry";
+      #   };
 
-        # kimi = {
-        #   type = "custom";
-        #   command = "kimi";
-        #   args = [ "acp" ];
-        #   env = { };
-        # };
-      };
+      #   # kimi = {
+      #   #   type = "custom";
+      #   #   command = "kimi";
+      #   #   args = [ "acp" ];
+      #   #   env = { };
+      #   # };
+      # };
 
       languages = {
         Nix = {
