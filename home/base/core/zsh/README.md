@@ -29,8 +29,6 @@ akv --help | -h      # 显示帮助
 补全实现文件：`functions/_akv.zsh` → 编译后为 `_akv`，由 zsh 补全系统自动识别（`#compdef akv`
 指令注册）。
 
----
-
 ### `down_gh_files`
 
 从 GitHub 页面 URL 直接下载文件或目录到当前路径，无需手动拼接 API 地址。
@@ -42,6 +40,30 @@ down_gh_files <github-url>
 # 文件: https://github.com/owner/repo/blob/branch/path/to/file
 # 目录: https://github.com/owner/repo/tree/branch/path/to/dir
 ```
+
+### `cpa-warm`
+
+按 3 并发批量发送 CPA warm 请求。
+
+**用法：**
+
+```zsh /dev/null/example.zsh#L1-5
+cpa-warm [--apiurl <url>] [--model <model>] [--envkey <ENV_VAR_NAME>] [--max <n>] [--input <text>]
+
+# 默认值
+# --apiurl https://example.com
+# --model  gpt-5.4-mini(off)
+# --envkey PI_CPA_API_KEY
+```
+
+**说明：**
+
+- `--apiurl` 传 base URL，函数内部会自动补 `/v1/chat/completions`
+- `--max` 控制总请求数，默认 `1`
+- 固定按 `3` 并发分批发送
+- 不传 `--input` 时，每次自动生成 `echo <random_int>`
+- 传 `--input` 时，每次会在末尾追加 `random_int`，保证每次 input 不同
+- 终端默认只显示运行参数摘要，以及成功/失败统计
 
 ## 补全机制说明
 

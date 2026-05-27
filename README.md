@@ -98,12 +98,12 @@ sudo darwin-uninstaller
 
 ## 常见问题
 
-### 启用 secret 时，无法引入`shelken/secrets.nix`
+### 启用 secret 时，无法引入`shelken/secrets.nix` 或者 gh token 重新生成时
 
 将 `access-tokens = github.com=ghp_xxx` 写入
-`~/.config/nix/nix.conf`/`/etc/nix/nix.custom.conf`(determinate-nix)
+`~/.config/nix/nix.conf`(determinate-nix)
 
-`echo "access-tokens = github.com=ghp_xxx" | sudo tee -a /etc/nix/nix.custom.conf`
+`echo "access-tokens = github.com=ghp_xxx" | sudo tee -a ~/.config/nix/nix.conf`
 
 ### font 文件 一直在等lock
 
