@@ -3,10 +3,10 @@
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false;
-    matchBlocks."*" = {
-      forwardAgent = false;
-      addKeysToAgent = "yes";
-      extraOptions = {
+    settings = {
+      "*" = {
+        forwardAgent = false;
+        addKeysToAgent = "yes";
         UseKeychain = "yes";
       };
     };
