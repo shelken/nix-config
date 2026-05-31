@@ -90,10 +90,10 @@ in
       autoUpdate = lib.mkDefault true;
       # 'zap': uninstalls all formulae(and related files) not listed in the generated Brewfile
       cleanup = lib.mkDefault "uninstall";
-      # 变更原因：Homebrew 新版要求 brew bundle install --cleanup 必须显式确认，否则 nix-darwin activation 会中断。
+      # 变更原因：Homebrew Bundle 的确认参数在不同版本间不一致，`--force` 同时兼容旧版和新版 cleanup。
       extraFlags = lib.mkDefault (
         lib.optionals (config.homebrew.onActivation.cleanup != "none") [
-          "--force-cleanup"
+          "--force"
         ]
       );
     };
@@ -145,6 +145,9 @@ in
 
       # misc that nix do not have cache for.
       "git-trim"
+
+      # 后台任务运行; 替换zellij
+      "herdr"
     ];
 
     # `brew install --cask`
