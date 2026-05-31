@@ -90,6 +90,12 @@ in
       autoUpdate = lib.mkDefault true;
       # 'zap': uninstalls all formulae(and related files) not listed in the generated Brewfile
       cleanup = lib.mkDefault "uninstall";
+      # 变更原因：Homebrew 新版要求 brew bundle install --cleanup 必须显式确认，否则 nix-darwin activation 会中断。
+      extraFlags = lib.mkDefault (
+        lib.optionals (config.homebrew.onActivation.cleanup != "none") [
+          "--force-cleanup"
+        ]
+      );
     };
 
     # Applications to install from Mac App Store using mas.

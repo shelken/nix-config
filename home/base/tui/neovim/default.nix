@@ -36,6 +36,9 @@ in
       withRuby = true;
       withPython3 = true;
 
+      # 变更原因：AstroNvim 通过 rsync 管理 ~/.config/nvim/init.lua，HM 只能通过 wrapper 加载 provider 配置，避免双重管理同一文件。
+      sideloadInitLua = true;
+
       viAlias = true;
       vimAlias = true;
     }

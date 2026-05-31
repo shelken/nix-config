@@ -117,7 +117,8 @@ ls-gen:
 
 # 清除nvim
 nvim-clean:
-    @rm -rf $HOME/.config/astronvim/lua/user
+    # 变更原因：旧 AstroNvim v3 用户配置在 ~/.config/astronvim/lua/user，当前 v4 配置落在 ~/.config/nvim；两处都清理才符合这个任务名。
+    @rm -rf $HOME/.config/astronvim/lua/user $HOME/.config/nvim
 
 # github sha256计算
 prefetch-gh owner repo rev="HEAD":
