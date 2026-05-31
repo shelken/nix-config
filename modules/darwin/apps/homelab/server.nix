@@ -21,8 +21,9 @@ in
         "lima"
       ];
       casks = [
-        "lm-studio"
-        "osaurus"
+        # "lm-studio"
+        # "ollama-app" # free cloud models
+        # "osaurus"
       ];
     };
   };

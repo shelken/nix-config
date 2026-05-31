@@ -28,17 +28,17 @@ in
         "max-sixty/worktrunk/wt" # 一个 Git Worktree 管理 CLI，旨在让 Worktree 的使用像分支一样简单。
       ];
       casks = [
-        "ollama-app"
+        # "ollama-app"
         "lm-studio"
 
         "droid"
         "claude-code"
         "codex"
 
-        "shelken/tap/antigravity-tools"
+        # "shelken/tap/antigravity-tools"
 
         "alma"
-        "osaurus"
+        # "osaurus"
       ];
     };
   };

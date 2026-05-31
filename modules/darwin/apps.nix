@@ -176,8 +176,7 @@ in
       "syntax-highlight"
 
       # Development
-      "visual-studio-code"
-      "farion1231/ccswitch/cc-switch"
+      # "visual-studio-code"
     ];
   };
 }
