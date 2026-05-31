@@ -98,6 +98,12 @@ sudo darwin-uninstaller
 
 ## 常见问题
 
+### 变更 Homebrew 的清华源 remote 为 官方
+
+```bash
+git -C "$(brew --repo)" remote set-url origin https://github.com/Homebrew/brew
+```
+
 ### 启用 secret 时，无法引入`shelken/secrets.nix` 或者 gh token 重新生成时
 
 将 `access-tokens = github.com=ghp_xxx` 写入
