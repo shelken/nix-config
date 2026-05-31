@@ -8,6 +8,10 @@
         forwardAgent = false;
         addKeysToAgent = "yes";
         UseKeychain = "yes";
+        # 变更原因：Home Manager 的 raw SSH `SetEnv` 选项要求 attrset，生成 `SetEnv TERM="..."`。
+        SetEnv = {
+          TERM = "xterm-256color";
+        };
       };
     };
     extraConfig = ''
