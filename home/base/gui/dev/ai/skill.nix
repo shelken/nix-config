@@ -22,6 +22,10 @@ let
       karpathy-guidelines = "${sources.andrej-karpathy-skills.src}/skills/karpathy-guidelines";
     };
 
+    ast-grep-agent-skill = {
+      ast-grep = "${sources.ast-grep-agent-skill.src}/ast-grep/skills/ast-grep";
+    };
+
     # bilibili-cli = {
     #   bilibili-cli = "${sources.bilibili-cli.src}/SKILL.md";
     # };

@@ -30,6 +30,18 @@
     };
     date = "2026-04-20";
   };
+  ast-grep-agent-skill = {
+    pname = "ast-grep-agent-skill";
+    version = "577f4d4507678f2c8cee150fae25e6ce309f70b1";
+    src = fetchFromGitHub {
+      owner = "ast-grep";
+      repo = "agent-skill";
+      rev = "577f4d4507678f2c8cee150fae25e6ce309f70b1";
+      fetchSubmodules = false;
+      sha256 = "sha256-LgGFtPieyKtoru22AhHW8hvkJ8kCHO2Cr8rBOWGuxvY=";
+    };
+    date = "2026-01-21";
+  };
   impeccable = {
     pname = "impeccable";
     version = "b913668ba4d25b95c4a62278d3637837e9d2c6d9";

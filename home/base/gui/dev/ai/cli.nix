@@ -34,6 +34,7 @@ in
 
     home.packages = [
       ctx7
+      pkgs.ast-grep
       # bil
       # twitter
       lit

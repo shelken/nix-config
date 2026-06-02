@@ -41,6 +41,27 @@
         },
         "version": "2c606141936f1eeef17fa3043a72095b4765b9c2"
     },
+    "ast-grep-agent-skill": {
+        "cargoLock": null,
+        "date": "2026-01-21",
+        "extract": null,
+        "name": "ast-grep-agent-skill",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "ast-grep",
+            "repo": "agent-skill",
+            "rev": "577f4d4507678f2c8cee150fae25e6ce309f70b1",
+            "sha256": "sha256-LgGFtPieyKtoru22AhHW8hvkJ8kCHO2Cr8rBOWGuxvY=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "577f4d4507678f2c8cee150fae25e6ce309f70b1"
+    },
     "impeccable": {
         "cargoLock": null,
         "date": "2026-05-29",

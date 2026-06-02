@@ -1,7 +1,6 @@
 ---
 name: update-owned-inputs
-description:
-  当用户要更新、修改、同步自己维护的外部 input 或其上游源码仓库时使用，尤其适用于
+description: 当用户要更新、修改、同步自己维护的外部 input 或其上游源码仓库时使用，尤其适用于
   `dotfiles.nix`、`secrets.nix`、`dot-astro-nvim`等，以及“先改上游再回当前项目更新 flake.lock”“等
   action 跑完再 upp”这类场景。
 ---

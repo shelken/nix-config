@@ -8,6 +8,11 @@ src.git      = "https://github.com/shelken/ai-coding-principles"
 src.branch   = "main"
 fetch.github = "shelken/ai-coding-principles"
 
+[ast-grep-agent-skill]
+src.git      = "https://github.com/ast-grep/agent-skill"
+src.branch   = "main"
+fetch.github = "ast-grep/agent-skill"
+
 # [anthropics-skills]
 # src.git      = "https://github.com/anthropics/skills"
 # src.branch   = "main"
