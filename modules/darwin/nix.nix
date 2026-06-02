@@ -18,10 +18,16 @@
 
   nix.enable = false;
 
-  # Disable auto-optimise-store because of this issue:
-  #   https://github.com/NixOS/nix/issues/7273
-  # "error: cannot link '/nix/store/.tmp-link-xxxxx-xxxxx' to '/nix/store/.links/xxxx': File exists"
-  nix.settings.auto-optimise-store = false;
+  # 变更原因：Darwin 使用 Determinate Nix，nix-darwin 不应接管 /etc/nix/nix.conf。
+  environment.etc."nix/nix.custom.conf".text = ''
+    substituters = https://icache.ooooo.space/cache.nixos.org https://cache.nixos.org https://mirrors.ustc.edu.cn/nix-channels/store https://nix-community.cachix.org
+    trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gW9v8HhXq8b2Xb9YYt5dV5DqH1u6M= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
+    fallback = true
+    trusted-users = shelken nixos
+    # builders = ssh-ng://nix-builder aarch64-linux / 4 1 big-parallel,kvm; ssh://shelken@10.211.55.6 aarch64-linux - 4 1 big-parallel
+    # builders-use-substitutes = true
+    # extra-platforms = aarch64-linux
+  '';
 
   nix.gc.automatic = false;
 
