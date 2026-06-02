@@ -318,7 +318,7 @@
 
     # secrets
     secrets = {
-      url = "github:shelken/secrets.nix?shallow=1";
+      url = "git+ssh://git@github.com/shelken/secrets.nix.git?shallow=1";
       flake = false;
     };
 

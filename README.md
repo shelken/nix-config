@@ -106,6 +106,8 @@ git -C "$(brew --repo)" remote set-url origin https://github.com/Homebrew/brew
 
 ### 启用 secret 时，无法引入`shelken/secrets.nix` 或者 gh token 重新生成时
 
+** 并非必要, 将flake中的私有库改用`git+ssh://xxx`的形式, access-tokens一般用在rate limit的时候 **
+
 将 `access-tokens = github.com=ghp_xxx` 写入
 `~/.config/nix/nix.conf`(determinate-nix)
 
