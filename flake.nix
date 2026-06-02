@@ -230,7 +230,7 @@
           src = ./.;
           hooks = {
             #NOTE 目前不支持配置垂直对其
-            nixfmt-rfc-style = {
+            nixfmt = {
               enable = true;
               settings.width = 100;
             };
