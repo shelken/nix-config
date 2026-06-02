@@ -7,7 +7,7 @@ let
 in
 {
   home.packages = with pkgs; [
-    rtk
+    # rtk
     pandoc # for npm:pi-markdown-preview
     mermaid-cli # for npm:pi-markdown-preview
   ];

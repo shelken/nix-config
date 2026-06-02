@@ -17,6 +17,7 @@ in
   config = mkIf cfg.enable {
     homebrew = {
       brews = [
+        "rtk" # for pi extension
         # "ollama"
         # "gemini-cli"
 
