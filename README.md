@@ -45,27 +45,25 @@ cat ~/.ssh/id_ed25519.pub
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # 2. install nix
-## linux
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
-## mac 官方建议 使用官方pkg包
+## macOS 使用 Determinate Nix；NixOS 使用系统 NixOS 配置管理。
 ## note：在此说明，linux目前使用nixos源，mac使用determinate的管理。此项配置分别在`nix.nix`文件中有体现
+curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix \
+  | sh -s -- install --determinate
 
 # 3. clone repo
 git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-config
 
-# 4. specify the profile that defined in flake.nix
-echo "PROFILE=<profile-name>" >> .env
+# 4. 选择 flake.nix 中定义的机器配置
+# Darwin: mio / sakamoto / yuuko / nano / ling
+# NixOS: pve155 / pve156 / arm-test-1 / work-test
+echo "PROFILE=mio" >> .env
 
-# 加速
-echo "substituters = https://mirrors.ustc.edu.cn/nix-channels/store https://cache.nixos.org" | sudo tee -a /etc/nix/nix.custom.conf
-sudo launchctl stop systems.determinate.nix-daemon && sudo launchctl start systems.determinate.nix-daemon
-
-# 5. 安装nix-darwin并配置
+# 5. 首次应用：此时不能假设 just/nh/home-manager 已存在
+# note: sudo launchctl stop systems.determinate.nix-daemon && sudo launchctl start systems.determinate.nix-daemon
 sudo nix run nix-darwin/master#darwin-rebuild -- switch --flake .#$PROFILE
 
-# 6. 打开新标签，执行
+# 6. 日常应用：打开新 shell 后执行
 just sw
-
 ```
 
 ## 应用
@@ -83,6 +81,9 @@ just b
 # only home manager switch
 just hm
 
+# update flake inputs
+just up
+just upp <input>
 ```
 
 ## 卸载
@@ -104,14 +105,15 @@ sudo darwin-uninstaller
 git -C "$(brew --repo)" remote set-url origin https://github.com/Homebrew/brew
 ```
 
-### 启用 secret 时，无法引入`shelken/secrets.nix` 或者 gh token 重新生成时
+### 启用 secret 时，无法引入 `shelken/secrets.nix`
 
-** 并非必要, 将flake中的私有库改用`git+ssh://xxx`的形式, access-tokens一般用在rate limit的时候 **
+优先用 Git + HTTPS：将 flake input 改为 `git+https://github.com/shelken/secrets.nix.git`，Nix 会走本机 Git HTTPS 认证。
 
-将 `access-tokens = github.com=ghp_xxx` 写入
-`~/.config/nix/nix.conf`(determinate-nix)
+如果继续使用 `github:shelken/secrets.nix`，私有仓库需要 Nix access token。Determinate Nix 的系统配置入口是：
 
-`echo "access-tokens = github.com=ghp_xxx" | sudo tee -a ~/.config/nix/nix.conf`
+```text
+/etc/nix/nix.custom.conf
+```
 
 ### font 文件 一直在等lock
 
