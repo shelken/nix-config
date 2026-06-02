@@ -511,12 +511,12 @@
         "rev": "0a929248cf0c66ec9c0d01368a69b80ce52dab68",
         "shallow": true,
         "type": "git",
-        "url": "ssh://git@github.com/shelken/secrets.nix.git"
+        "url": "https://github.com/shelken/secrets.nix.git"
       },
       "original": {
         "shallow": true,
         "type": "git",
-        "url": "ssh://git@github.com/shelken/secrets.nix.git"
+        "url": "https://github.com/shelken/secrets.nix.git"
       }
     },
     "sops-nix": {
