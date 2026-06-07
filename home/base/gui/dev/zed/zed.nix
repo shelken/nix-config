@@ -384,6 +384,18 @@ in
           "shift-down" = "terminal::ScrollLineDown";
         };
       }
+      {
+        context = "GitPanel";
+        unbind = {
+          "cmd-1" = "git_panel::ActivateChangesTab";
+        };
+      }
+      {
+        context = "GitPanel";
+        unbind = {
+          "cmd-2" = "git_panel::ActivateHistoryTab";
+        };
+      }
     ];
   };
 }
