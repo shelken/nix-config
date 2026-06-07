@@ -2,7 +2,7 @@
 ignore-dot   = true
 ignore-files = true
 # 忽略文件
-extend-exclude = ["*.zsh", "_sources/**"]
+extend-exclude = ["*.zsh", "_sources/**", "home/base/gui/dev/ai/skills/**"]
 
 [default]
 binary = false
