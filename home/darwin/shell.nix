@@ -13,11 +13,17 @@ in
   programs.bash = {
     enable = true;
     bashrcExtra = envExtra;
+    profileExtra = ''
+      source ~/.orbstack/shell/init.bash 2>/dev/null || true
+    '';
   };
 
   programs.zsh = {
     enable = true;
     inherit envExtra;
+    profileExtra = ''
+      source ~/.orbstack/shell/init.zsh 2>/dev/null || true
+    '';
   };
 
   home.shellAliases = {
