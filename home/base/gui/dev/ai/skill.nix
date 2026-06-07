@@ -122,6 +122,7 @@ let
       to-prd = "${sources.mattpocock-skills.src}/skills/engineering/to-prd/SKILL.md";
       write-a-skill = "${sources.mattpocock-skills.src}/skills/productivity/write-a-skill/SKILL.md";
       zoom-out = "${sources.mattpocock-skills.src}/skills/engineering/zoom-out";
+      teach = "${sources.mattpocock-skills.src}/skills/in-progress/teach";
     };
 
     impeccable = {

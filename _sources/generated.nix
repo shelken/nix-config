@@ -44,15 +44,15 @@
   };
   impeccable = {
     pname = "impeccable";
-    version = "b913668ba4d25b95c4a62278d3637837e9d2c6d9";
+    version = "1aedbcf538e3fa6694ccbf00294cc18e59ba1f21";
     src = fetchFromGitHub {
       owner = "pbakaus";
       repo = "impeccable";
-      rev = "b913668ba4d25b95c4a62278d3637837e9d2c6d9";
+      rev = "1aedbcf538e3fa6694ccbf00294cc18e59ba1f21";
       fetchSubmodules = false;
-      sha256 = "sha256-2r4/KtLMfwFCAYL+bSDMxBSHDlaf3GZfTq0Mr6ii0p4=";
+      sha256 = "sha256-ZurJEdRM7OEcoXBmZb9vTntueu9VA2qIL4PbnKDsnrY=";
     };
-    date = "2026-05-29";
+    date = "2026-06-05";
   };
   kitty-icon = {
     pname = "kitty-icon";
