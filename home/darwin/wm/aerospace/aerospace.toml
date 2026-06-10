@@ -296,7 +296,7 @@ run       = 'move-node-to-workspace 2Code'
 if.app-id = 'com.todesktop.230313mzl4w4u92' # cursor
 run       = 'move-node-to-workspace 2Code'
 [[on-window-detected]]
-if.app-id = 'com.google.antigravity'
+if.app-id = 'com.muxy.app'
 run       = 'move-node-to-workspace 2Code'
 
 [[on-window-detected]]
