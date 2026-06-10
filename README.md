@@ -66,7 +66,7 @@ sudo nix run nix-darwin/master#darwin-rebuild -- switch --flake .#$PROFILE
 just sw
 ```
 
-## 应用
+## 日常命令
 
 ```bash
 

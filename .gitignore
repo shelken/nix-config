@@ -5,6 +5,7 @@ result/
 .env
 .pre-commit-config.yaml
 .idea
+__pycache__
 
 .claude/*.local.json
 .alma-snapshots

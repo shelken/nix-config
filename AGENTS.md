@@ -6,7 +6,8 @@
 
 ## 文档/skill
 
-- 写`README/AGENTS`文档的时候永远不把`一次性问题`进行记录, 也就是说, 不要把那些 不具备通用性/不可能重复犯/低频率/强时效性 的问题记录, 只有真正的 硬规则/长期事实/长期规则 才值得被记下
+- 写 `README/AGENTS` 文档时，只记录长期规则、长期事实和硬约定；不要记录一次性问题、低频问题、强时效结论或流水账。
+- 项目级 skill 必须放在项目根目录 `.agents/skills/` 下，不要放到 `home/` 等用户环境配置目录。
 
 ## 架构
 
@@ -33,3 +34,8 @@
 
 - commit 前先在 direnv 环境运行一次 pre-commit（例如：`direnv exec . pre-commit run -a`）
 - 优先使用`Conventional Commits`格式提交git commit，标题 **英文**，内容 **中文**
+
+## 验证
+
+- 执行`just bd`或者`just hm`等nix构建命令前, 确保新增或删除的文件加入了git, 只有add之后才会生效
+- 修改配置后, 使用`nix eval` 和 `just bd`验证当前配置是否正确

@@ -12,10 +12,10 @@
 ## 导出
 
 ```shell
-just raycast-export
+just raycast-export <output_dir>
 ```
 
-命令将使用osascript操作gui界面将配置导出到目录`home/apps/raycast/`目录下
+命令将使用 osascript 操作 GUI 界面，将配置导出到指定目录。
 
 ## 导入
 
@@ -23,4 +23,4 @@ just raycast-export
 just raycast-import
 ```
 
-命令将从目录`home/apps/raycast`导入最新的raycast配置
+命令将从目录 `~/.config/raycast` 导入最新的 Raycast 配置。
