@@ -15,8 +15,6 @@ in
 
     suites.desktop.enable = true;
 
-    tools.typeswitch.enable = false;
-    tools.inputsourcepro.enable = true;
     tools.virts.enable = true;
 
     wm.aerospace.enable = true;

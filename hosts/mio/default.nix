@@ -36,8 +36,7 @@ in
     tools.others.enable = true;
     tools.rclone.enable = true;
     tools.backup.enable = true;
-    tools.typeswitch.enable = false;
-    tools.inputsourcepro.enable = true;
+    tools.autoinputswitch.enable = true;
     tools.remote-control.enable = true;
 
     tools.virts.enable = false; # utm parallel

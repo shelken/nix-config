@@ -69,10 +69,29 @@ in
   // homebrew_mirror_env;
 
   # Set environment variables for nix-darwin before run `brew bundle`.
-  system.activationScripts.homebrew.text = lib.mkBefore ''
-    echo >&2 '${homebrew_env_script}'
-    ${homebrew_env_script}
-  '';
+  # 变更原因：Homebrew ≥5.1.15 要求非官方 tap 必须 trust 才能加载 cask/formula
+  # ref: https://github.com/nix-darwin/nix-darwin/issues/1794
+  # ref: https://github.com/nix-darwin/nix-darwin/pull/1789
+  system.activationScripts.homebrew.text =
+    let
+      # 排除 homebrew 官方 tap（始终受信任），其余全部需要 trust
+      tapsToTrust = builtins.filter (t: !lib.hasPrefix "homebrew/" t) (
+        map (t: t.name) config.homebrew.taps
+      );
+    in
+    lib.mkBefore ''
+      echo >&2 '${homebrew_env_script}'
+      ${homebrew_env_script}
+      ${lib.optionalString (tapsToTrust != [ ]) ''
+        echo >&2 'Trusting Homebrew taps: ${lib.concatStringsSep ", " tapsToTrust}...'
+        PATH="${config.homebrew.prefix}/bin:$PATH" \
+        sudo \
+          --preserve-env=PATH \
+          --user=${config.homebrew.user} \
+          --set-home \
+          ${config.homebrew.prefix}/bin/brew trust --tap ${lib.escapeShellArgs tapsToTrust}
+      ''}
+    '';
 
   # Create /etc/zshrc that loads the nix-darwin environment.
   # this is required if you want to use darwin's default shell - zsh
