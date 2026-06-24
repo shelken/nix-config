@@ -37,6 +37,10 @@ let
       targetPath = ".pi/agent";
       fileName = "AGENTS.md";
     }
+    {
+      targetPath = ".config/zed";
+      fileName = "AGENTS.md";
+    }
   ];
 
   # Generate symlinks for all agents targets
