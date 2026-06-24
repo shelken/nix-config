@@ -112,17 +112,18 @@ let
 
     mattpocock-skills = {
       improve-codebase-architecture = "${sources.mattpocock-skills.src}/skills/engineering/improve-codebase-architecture";
-      diagnose = "${sources.mattpocock-skills.src}/skills/engineering/diagnose";
+      diagnosing-bugs = "${sources.mattpocock-skills.src}/skills/engineering/diagnosing-bugs";
       grill-me = "${sources.mattpocock-skills.src}/skills/productivity/grill-me";
       grill-with-docs = "${sources.mattpocock-skills.src}/skills/engineering/grill-with-docs";
+      grilling = "${sources.mattpocock-skills.src}/skills/productivity/grilling";
       handoff = "${sources.mattpocock-skills.src}/skills/productivity/handoff";
       prototype = "${sources.mattpocock-skills.src}/skills/engineering/prototype";
       tdd = "${sources.mattpocock-skills.src}/skills/engineering/tdd";
       to-issues = "${sources.mattpocock-skills.src}/skills/engineering/to-issues/SKILL.md";
       to-prd = "${sources.mattpocock-skills.src}/skills/engineering/to-prd/SKILL.md";
-      write-a-skill = "${sources.mattpocock-skills.src}/skills/productivity/write-a-skill/SKILL.md";
-      zoom-out = "${sources.mattpocock-skills.src}/skills/engineering/zoom-out";
-      teach = "${sources.mattpocock-skills.src}/skills/in-progress/teach";
+      writing-great-skills = "${sources.mattpocock-skills.src}/skills/productivity/writing-great-skills";
+      teach = "${sources.mattpocock-skills.src}/skills/productivity/teach";
+      loop-me = "${sources.mattpocock-skills.src}/skills/in-progress/loop-me";
     };
 
     impeccable = {
