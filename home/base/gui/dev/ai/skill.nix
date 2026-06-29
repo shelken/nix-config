@@ -301,6 +301,10 @@ in
           path = ".agents/skills"; # codex,opencode,gemini,antigravity
           flatten = false;
         }
+        {
+          path = ".workbuddy/skills";
+          flatten = true;
+        }
       ];
       description = "skill 目标目录及映射策略";
       example = [
