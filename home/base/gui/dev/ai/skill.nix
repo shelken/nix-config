@@ -97,8 +97,8 @@ let
       # dispatching-parallel-agents = "${sources.obra-superpowers.src}/skills/dispatching-parallel-agents";
       # executing-plans = "${sources.obra-superpowers.src}/skills/executing-plans";
       subagent-driven-development = "${sources.obra-superpowers.src}/skills/subagent-driven-development";
-      receiving-code-review = "${sources.obra-superpowers.src}/skills/receiving-code-review";
-      requesting-code-review = "${sources.obra-superpowers.src}/skills/requesting-code-review";
+      # receiving-code-review = "${sources.obra-superpowers.src}/skills/receiving-code-review";
+      # requesting-code-review = "${sources.obra-superpowers.src}/skills/requesting-code-review";
       # systematic-debugging = "${sources.obra-superpowers.src}/skills/systematic-debugging";
       # test-driven-development = "${sources.obra-superpowers.src}/skills/test-driven-development";
       # verification-before-completion = "${sources.obra-superpowers.src}/skills/verification-before-completion";
@@ -124,6 +124,8 @@ let
       writing-great-skills = "${sources.mattpocock-skills.src}/skills/productivity/writing-great-skills";
       teach = "${sources.mattpocock-skills.src}/skills/productivity/teach";
       loop-me = "${sources.mattpocock-skills.src}/skills/in-progress/loop-me";
+      code-review = "${sources.mattpocock-skills.src}/skills/engineering/code-review";
+      implement = "${sources.mattpocock-skills.src}/skills/engineering/implement";
     };
 
     impeccable = {

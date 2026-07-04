@@ -44,6 +44,9 @@
 - 在 排查问题/给出假设 前, 必须对自己的假设进行非破坏性验证, 也就是必须尽一切可能先找证据支撑假设, 意味着, 给假设前: 搜集(只读)支撑假设的证据->推导假设可能性->推翻假设/支撑假设->无论推翻还是支撑,向用户明示理由
 - 关于superpowers文档: 所有`specs`和`plans`文档不放在项目`docs/superpowers`下, 放在 `~/Code/docs/{project-name}/superpowers`下
 - 代码提交前, 检查关键文档 AGENTS.md/README.md/CHANGELOG.md 等, 修正过时的地方/错误的地方; 新增部分向用户说明, 等用户调整再做提交
+- 当用户说保存plans时,通常将计划保存在`~/Code/docs/{project-name}/plans`下,名称格式`y-M-D-slug.md`
+- 当用户需要保存prds文档时,通常将prds保存在`~/Code/docs/{project-name}/prds`,名称格式`y-M-D-slug.md`
+- 编写任何文档时,默认都不应该用绝对路径
 
 ## 关于代码注释
 
@@ -120,6 +123,7 @@
 
 - nix-config: 通常在 `~/nix-config` 下, 用nix来控制我的所有dotconfig,所有`全局skills/AGENTS.md`,所有机器的持久化配置
 - home-ops: 通常在 `~/Code/MyRepo/home-ops`, 我的homelab集群配置,包含我的vps/router相关的服务部署
+- kaiyuan: 通常在 `~/Code/MyRepo/kaiyuan/`, 存放了大量开源项目, 一般将常用的项目会放在里面
 
 ## 绝对禁止
 
