@@ -65,6 +65,26 @@ cpa-warm [--apiurl <url>] [--model <model>] [--envkey <ENV_VAR_NAME>] [--max <n>
 - 传 `--input` 时，每次会在末尾追加 `random_int`，保证每次 input 不同
 - 终端默认只显示运行参数摘要，以及成功/失败统计
 
+### `cpa-eval`
+
+用糖果题测试 CPA 模型回答能力。
+
+**用法：**
+
+```zsh /dev/null/example.zsh#L1-6
+cpa-eval [--apiurl <url>] [--model <model>] [--envkey <ENV_VAR_NAME>] [--max <n>]
+
+# 常用
+cpa-eval --apiurl http://192.168.69.60:8317 --max 20
+```
+
+**说明：**
+
+- `--apiurl` 传 base URL，函数内部会自动补 `/v1/chat/completions`
+- 直接使用 `curl` 请求接口，不调用或暴露 `cpa` 命令
+- 题目来自 `codex-candy-eval` 的糖果题，回答中出现独立的 `21` 判为正确
+- `--max` 控制测试次数，默认 `1`
+
 ## 补全机制说明
 
 `functions/` 目录已加入 `$fpath`，因此符合 `_<command>` 命名规范的文件会被 zsh 补全系统自动发现。  
