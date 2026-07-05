@@ -4,10 +4,12 @@
 #   cpa-eval --help | -h
 
 emulate -L zsh
+setopt typeset_silent
+unsetopt monitor notify
 zmodload zsh/datetime || return 1
 
 local apiurl="http://127.0.0.1:8317"
-local model="gpt-5.4-mini(none)"
+local model="gpt-5.5(medium)"
 local envkey="PI_CPA_API_KEY"
 local max=1
 local endpoint=""
@@ -61,14 +63,14 @@ while [[ $# -gt 0 ]]; do
         echo ""
         echo "默认值:"
         echo "  --apiurl http://127.0.0.1:8317"
-        echo "  --model  gpt-5.4-mini(none)"
+        echo "  --model  gpt-5.5(medium)"
         echo "  --envkey PI_CPA_API_KEY"
         echo "  --max    1"
         echo ""
         echo "说明:"
         echo "  - 直接请求 <apiurl>/v1/chat/completions，不调用 cpa 命令"
         echo "  - 使用 codex-candy-eval 的糖果题，回答中出现独立的 21 判为正确"
-        echo "  - --max 控制测试次数"
+        echo "  - --max 控制测试次数；大于 1 时默认并行执行"
         return 0
         ;;
     *)
@@ -105,61 +107,116 @@ printf '运行参数:\n  apiurl: %s\n  model: %s\n  envkey: %s\n  max: %s\n\n' "
 printf '%4s  %-40s  %8s  %8s  %10s  %7s  %3s\n' Run Answer InTok OutTok ReasonTok Time OK
 printf '%4s  %-40s  %8s  %8s  %10s  %7s  %3s\n' ---- ---------------------------------------- -------- -------- ---------- ------- ---
 
+local tmp_dir
+if ! tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/cpa-eval.XXXXXX"); then
+    echo "Error: 无法创建临时目录"
+    return 1
+fi
+
+local index=1
+while ((index <= max)); do
+    (
+        local body response elapsed start_time end_time curl_status
+
+        body=$(jq -nc --arg model "$model" --arg input "$prompt" '{ model: $model, input: $input }') || exit 1
+        start_time="$EPOCHREALTIME"
+        response=$(command curl -fsS "$endpoint" \
+            -H "Authorization: Bearer $api_key" \
+            -H "Content-Type: application/json" \
+            -d "$body" 2>&1)
+        curl_status=$?
+        end_time="$EPOCHREALTIME"
+        elapsed=$(awk -v start="$start_time" -v end="$end_time" 'BEGIN { printf "%.1f", end - start }')
+
+        print -r -- "$curl_status" >"${tmp_dir}/${index}.status"
+        print -r -- "$elapsed" >"${tmp_dir}/${index}.time"
+        print -r -- "$response" >"${tmp_dir}/${index}.response"
+        : >"${tmp_dir}/${index}.done"
+    ) &
+    ((index++))
+done
+
+if ((max > 1)); then
+    echo "已并行发起 $max 个请求，完成一个输出一个结果。"
+fi
+
 local correct=0
 local graded=0
 local failed=0
-local index=1
+local completed=0
+local -A printed
 
-while ((index <= max)); do
-    local body response elapsed start_time end_time text preview ok input_tok output_tok reason_tok
+while ((completed < max)); do
+    index=1
+    while ((index <= max)); do
+        if [[ -n "${printed[$index]}" || ! -e "${tmp_dir}/${index}.done" ]]; then
+            ((index++))
+            continue
+        fi
 
-    body=$(jq -nc --arg model "$model" --arg input "$prompt" '{ model: $model, input: $input }') || return 1
-    start_time="$EPOCHREALTIME"
-    response=$(command curl -fsS "$endpoint" \
-        -H "Authorization: Bearer $api_key" \
-        -H "Content-Type: application/json" \
-        -d "$body" 2>&1)
-    local curl_status=$?
-    end_time="$EPOCHREALTIME"
-    elapsed=$(awk -v start="$start_time" -v end="$end_time" 'BEGIN { printf "%.1f", end - start }')
+        local response elapsed curl_status text preview ok input_tok output_tok reason_tok
+        response="$(<"${tmp_dir}/${index}.response")"
+        elapsed="$(<"${tmp_dir}/${index}.time")"
+        curl_status="$(<"${tmp_dir}/${index}.status")"
 
-    if ((curl_status != 0)); then
-        failed=1
-        printf '%4s  %-40s  %8s  %8s  %10s  %7s  %3s\n' "$index" "ERROR: ${response[1,33]}" - - - "$elapsed" -
+        if ((curl_status != 0)); then
+            failed=1
+            printf '%4s  %-40s  %8s  %8s  %10s  %7s  %3s\n' "$index" "ERROR: ${response[1,33]}" - - - "$elapsed" -
+            printed[$index]=1
+            ((completed++))
+            ((index++))
+            continue
+        fi
+
+        text=$(jq -r '
+            [
+              .output_text?,
+              .choices[0].message.content?,
+              .choices[0].text?,
+              ([.. | objects | select((.type? == "output_text") or (.type? == "text")) | .text?] | join("\n"))
+            ]
+            | map(select(type == "string" and length > 0))
+            | first // ""
+        ' <<<"$response")
+        if (($? != 0)); then
+            failed=1
+            printf '%4s  %-40s  %8s  %8s  %10s  %7s  %3s\n' "$index" "ERROR: invalid json" - - - "$elapsed" -
+            printed[$index]=1
+            ((completed++))
+            ((index++))
+            continue
+        fi
+
+        input_tok=$(jq -r '.usage.input_tokens // .usage.prompt_tokens // "-"' <<<"$response") || input_tok="-"
+        output_tok=$(jq -r '.usage.output_tokens // .usage.completion_tokens // "-"' <<<"$response") || output_tok="-"
+        reason_tok=$(jq -r '.usage.reasoning_output_tokens // .usage.output_tokens_details.reasoning_tokens // .usage.completion_tokens_details.reasoning_tokens // "-"' <<<"$response") || reason_tok="-"
+
+        preview="${text//$'\n'/\\n}"
+        if (( ${#preview} > 40 )); then
+            preview="${preview[1,37]}..."
+        fi
+
+        if [[ "$text" =~ (^|[^0-9])21([^0-9]|$) ]]; then
+            ok="✓"
+            ((correct++))
+        else
+            ok="✗"
+        fi
+        ((graded++))
+
+        printf '%4s  %-40s  %8s  %8s  %10s  %7s  %3s\n' "$index" "$preview" "$input_tok" "$output_tok" "$reason_tok" "$elapsed" "$ok"
+        printed[$index]=1
+        ((completed++))
         ((index++))
-        continue
+    done
+
+    if ((completed < max)); then
+        sleep 0.2
     fi
-
-    text=$(jq -r '
-        [
-          .output_text?,
-          .choices[0].message.content?,
-          .choices[0].text?,
-          ([.. | objects | select((.type? == "output_text") or (.type? == "text")) | .text?] | join("\n"))
-        ]
-        | map(select(type == "string" and length > 0))
-        | first // ""
-    ' <<<"$response") || return 1
-    input_tok=$(jq -r '.usage.input_tokens // .usage.prompt_tokens // "-"' <<<"$response") || return 1
-    output_tok=$(jq -r '.usage.output_tokens // .usage.completion_tokens // "-"' <<<"$response") || return 1
-    reason_tok=$(jq -r '.usage.reasoning_output_tokens // .usage.output_tokens_details.reasoning_tokens // .usage.completion_tokens_details.reasoning_tokens // "-"' <<<"$response") || return 1
-
-    preview="${text//$'\n'/\\n}"
-    if (( ${#preview} > 40 )); then
-        preview="${preview[1,37]}..."
-    fi
-
-    if [[ "$text" =~ (^|[^0-9])21([^0-9]|$) ]]; then
-        ok="✓"
-        ((correct++))
-    else
-        ok="✗"
-    fi
-    ((graded++))
-
-    printf '%4s  %-40s  %8s  %8s  %10s  %7s  %3s\n' "$index" "$preview" "$input_tok" "$output_tok" "$reason_tok" "$elapsed" "$ok"
-    ((index++))
 done
+
+wait >/dev/null 2>&1
+rm -rf "$tmp_dir"
 
 if ((graded > 0)); then
     local accuracy
