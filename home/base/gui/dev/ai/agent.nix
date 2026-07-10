@@ -42,6 +42,10 @@ let
       fileName = "AGENTS.md";
     }
     {
+      targetPath = ".grok";
+      fileName = "AGENTS.md";
+    }
+    {
       targetPath = ".workbuddy";
       fileName = "SOUL.md"; # WorkBuddy 读取 ~/.workbuddy/SOUL.md 而非 AGENTS.md
     }
