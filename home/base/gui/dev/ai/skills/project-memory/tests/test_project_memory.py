@@ -4,6 +4,8 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
+import unicodedata
 import unittest
 from pathlib import Path
 
@@ -53,7 +55,7 @@ class ProjectMemoryCliTest(unittest.TestCase):
         path.write_text("\n".join(json.dumps(item) for item in (header, *entries)) + "\n")
         return path
 
-    def cli(self, *args, expect=0):
+    def cli(self, *args, expect=0, parse_json=True):
         result = subprocess.run(
             [
                 sys.executable,
@@ -68,7 +70,7 @@ class ProjectMemoryCliTest(unittest.TestCase):
             capture_output=True,
         )
         self.assertEqual(result.returncode, expect, result.stderr)
-        if expect:
+        if expect or not parse_json:
             return result
         return json.loads(result.stdout)
 
@@ -232,6 +234,273 @@ class ProjectMemoryCliTest(unittest.TestCase):
             if item["kind"] == "summary"
         ]
         self.assertEqual(summary_ids, ["summary-3", "summary-4"])
+
+    def test_mine_filters_by_updated_time_with_relative_and_absolute_bounds(self):
+        old = self.write_session("old.jsonl", "old", self.project)
+        boundary = self.write_session("boundary.jsonl", "boundary", self.project)
+        recent = self.write_session("recent.jsonl", "recent", self.project)
+        os.utime(old, (1_749_988_800, 1_749_988_800))       # 2025-06-15T12:00:00Z
+        os.utime(boundary, (1_750_852_800, 1_750_852_800))  # 2025-06-25T12:00:00Z
+        os.utime(recent, (time.time() - 14 * 86_400,) * 2)
+
+        since = self.cli("mine", "--since", "2025-06-25T12:00:00Z")
+        until = self.cli("mine", "--until", "2025-06-25T12:00:00Z")
+        until_date = self.cli("mine", "--until", "2025-06-25")
+        relative = self.cli("mine", "--since", "15d")
+
+        self.assertEqual(
+            {item["session_id"] for item in since["sessions"]},
+            {"boundary", "recent"},
+        )
+        self.assertEqual(
+            {item["session_id"] for item in until["sessions"]},
+            {"old", "boundary"},
+        )
+        self.assertEqual(
+            {item["session_id"] for item in until_date["sessions"]},
+            {"old", "boundary"},
+        )
+        self.assertEqual(
+            [item["session_id"] for item in relative["sessions"]],
+            ["recent"],
+        )
+        invalid = self.cli(
+            "mine",
+            "--since",
+            "2025-06-26T00:00:00Z",
+            "--until",
+            "2025-06-25T00:00:00Z",
+            expect=1,
+        )
+        self.assertIn("--since must not be later than --until", invalid.stderr)
+
+    def test_mine_signals_rank_problem_sessions_and_emit_evidence_episodes(self):
+        problem = self.write_session(
+            "problem.jsonl",
+            "problem",
+            self.project,
+            entries=(
+                {"type": "message", "id": "u1", "message": {"role": "user", "content": "请检查构建命令失败的真正根因，不要只处理表面错误"}},
+                {"type": "message", "id": "a1", "parentId": "u1", "message": {"role": "assistant", "content": [{"type": "text", "text": "我先执行命令。"}, {"type": "toolCall", "id": "call-1", "name": "bash", "arguments": {"command": "nix build"}}]}},
+                {"type": "message", "id": "t1", "parentId": "a1", "message": {"role": "toolResult", "toolCallId": "call-1", "toolName": "bash", "content": "Authorization: Bearer secret-token\nbuild failed", "isError": True}},
+                {"type": "message", "id": "b1", "parentId": "t1", "message": {"role": "bashExecution", "command": "nix build", "output": "exit 1", "exitCode": 1}},
+                {"type": "message", "id": "a2", "parentId": "b1", "message": {"role": "assistant", "content": "应该只是网络波动。"}},
+                {"type": "message", "id": "u2", "parentId": "a2", "message": {"role": "user", "content": "不对，我已经说过要先验证根因，不要继续猜测。"}},
+                {"type": "message", "id": "a3", "parentId": "u2", "message": {"role": "assistant", "content": "我会检查最终配置。"}},
+                {"type": "message", "id": "u3", "parentId": "a3", "message": {"role": "user", "content": "请检查构建命令失败的真正根本原因，不要只处理表面错误。"}},
+                {"type": "message", "id": "done", "parentId": "u3", "message": {"role": "assistant", "content": "已验证根因。"}},
+            ),
+        )
+        quiet = self.write_session(
+            "quiet.jsonl",
+            "quiet",
+            self.project,
+            entries=({"type": "message", "id": "quiet-user", "message": {"role": "user", "content": "列出文件"}},),
+        )
+        os.utime(problem, (1_700_000_000, 1_700_000_000))
+        os.utime(quiet, (1_800_000_000, 1_800_000_000))
+
+        mined = self.cli("mine", "--signals", "--limit", "1")
+        session = mined["sessions"][0]
+        by_kind = {item["kind"]: item for item in session["signals"]}
+
+        self.assertEqual(session["session_id"], "problem")
+        self.assertEqual(
+            session["signal_counts"],
+            {"command_failure": 1, "repeated_user_prompt": 1, "user_correction": 1},
+        )
+        self.assertEqual(session["problem_score"], 8)
+        self.assertEqual(by_kind["command_failure"]["entry_ids"], ["t1", "b1"])
+        self.assertEqual(by_kind["repeated_user_prompt"]["entry_ids"], ["u1", "u3"])
+        self.assertEqual(by_kind["repeated_user_prompt"]["similarity"], 0.96)
+        self.assertEqual(by_kind["user_correction"]["entry_ids"], ["u2"])
+        self.assertIn("a2", {item["entry_id"] for item in by_kind["user_correction"]["episode"]})
+        self.assertIn("u2", {item["entry_id"] for item in by_kind["user_correction"]["episode"]})
+        self.assertNotIn("secret-token", json.dumps(mined))
+
+        streamed = self.cli("mine", "--signals", "--limit", "1", "--format", "ndjson", parse_json=False)
+        lines = [json.loads(line) for line in streamed.stdout.splitlines()]
+        self.assertEqual([item["type"] for item in lines], ["meta", "session", "signal", "signal", "signal"])
+        self.assertEqual({item["kind"] for item in lines[2:]}, set(by_kind))
+        rejected = self.cli("mine", "--signals", "--transcript", expect=2)
+        self.assertEqual(rejected.returncode, 2)
+
+    def test_signal_detection_respects_branches_unicode_and_full_prompt_text(self):
+        self.write_session(
+            "branches.jsonl",
+            "branches",
+            self.project,
+            entries=(
+                {"type": "message", "id": "root", "message": {"role": "user", "content": "诊断失败"}},
+                {"type": "message", "id": "old-assistant", "parentId": "root", "message": {"role": "assistant", "content": "旧分支"}},
+                {"type": "message", "id": "active-assistant", "parentId": "root", "message": {"role": "assistant", "content": "当前分支"}},
+                {"type": "message", "id": "old-error", "parentId": "old-assistant", "message": {"role": "toolResult", "content": "old failed", "isError": True}},
+                {"type": "message", "id": "active-error", "parentId": "active-assistant", "message": {"role": "toolResult", "content": "active failed", "isError": True}},
+                {"type": "message", "id": "done", "parentId": "active-error", "message": {"role": "assistant", "content": "完成"}},
+            ),
+        )
+        unicode_prompt = "Café résumé déjà à côté"
+        self.write_session(
+            "unicode.jsonl",
+            "unicode",
+            self.project,
+            entries=(
+                {"type": "message", "id": "unicode-1", "message": {"role": "user", "content": unicode_prompt}},
+                {"type": "message", "id": "unicode-answer", "parentId": "unicode-1", "message": {"role": "assistant", "content": "处理中"}},
+                {"type": "message", "id": "unicode-2", "parentId": "unicode-answer", "message": {"role": "user", "content": unicodedata.normalize("NFD", unicode_prompt)}},
+                {"type": "message", "id": "unicode-done", "parentId": "unicode-2", "message": {"role": "assistant", "content": "完成"}},
+            ),
+        )
+        shared = "请检查配置。" * 100
+        self.write_session(
+            "long.jsonl",
+            "long",
+            self.project,
+            entries=(
+                {"type": "message", "id": "long-1", "message": {"role": "user", "content": shared + "保留旧配置"}},
+                {"type": "message", "id": "long-answer", "parentId": "long-1", "message": {"role": "assistant", "content": "处理中"}},
+                {"type": "message", "id": "long-2", "parentId": "long-answer", "message": {"role": "user", "content": shared + "删除全部配置"}},
+                {"type": "message", "id": "long-done", "parentId": "long-2", "message": {"role": "assistant", "content": "完成"}},
+            ),
+        )
+
+        mined = self.cli("mine", "--signals", "--all-branches", "--limit", "10")
+        sessions = {item["session_id"]: item for item in mined["sessions"]}
+
+        self.assertEqual(sessions["branches"]["signal_counts"], {"command_failure": 2})
+        branch_signals = sessions["branches"]["signals"]
+        self.assertEqual(
+            [{item["branch_status"] for item in signal["episode"]} for signal in branch_signals],
+            [{"abandoned"}, {"active"}],
+        )
+        self.assertEqual(sessions["unicode"]["signal_counts"], {"repeated_user_prompt": 1})
+        self.assertNotIn("long", sessions)
+
+    def test_mine_ndjson_streams_transcript_as_one_json_object_per_line(self):
+        self.write_session(
+            "stream.jsonl",
+            "stream",
+            self.project,
+            entries=(
+                {"type": "message", "id": "user", "message": {"role": "user", "content": "Find the root cause"}},
+                {"type": "message", "id": "assistant", "parentId": "user", "message": {"role": "assistant", "content": "Verified the fix"}},
+            ),
+        )
+
+        streamed = self.cli(
+            "mine",
+            "--transcript",
+            "--format",
+            "ndjson",
+            parse_json=False,
+        )
+        lines = [json.loads(line) for line in streamed.stdout.splitlines()]
+
+        self.assertEqual(lines[0], {"type": "meta", "project_identity": "github.com/owner/example"})
+        self.assertEqual(
+            lines[1],
+            {"type": "session", "session_id": "stream", "status": "unseen"},
+        )
+        self.assertEqual([item["type"] for item in lines[2:]], ["transcript", "transcript"])
+        self.assertEqual([item["entry_id"] for item in lines[2:]], ["user", "assistant"])
+        self.assertEqual({item["session_id"] for item in lines[2:]}, {"stream"})
+        self.assertEqual(
+            self.cli("mine", "--transcript")["sessions"][0]["session_id"],
+            "stream",
+        )
+
+    def test_transcript_mode_preserves_active_conversation_and_failures(self):
+        self.write_session(
+            "failure.jsonl",
+            "failure",
+            self.project,
+            entries=(
+                {"type": "message", "id": "user", "message": {"role": "user", "content": "Why does the Nix cache build locally?"}},
+                {"type": "message", "id": "abandoned", "parentId": "user", "message": {"role": "assistant", "content": "abandoned diagnosis"}},
+                {"type": "message", "id": "assistant", "parentId": "user", "message": {"role": "assistant", "content": [{"type": "text", "text": "I will check the cache trust."}, {"type": "toolCall", "id": "call-1", "name": "bash", "arguments": {"command": "nix store info"}}]}},
+                {"type": "message", "id": "tool-error", "parentId": "assistant", "message": {"role": "toolResult", "toolCallId": "call-1", "toolName": "bash", "content": "Authorization: Bearer token-should-redact\ncache trust command failed", "isError": True}},
+                {"type": "message", "id": "bash-error", "parentId": "tool-error", "message": {"role": "bashExecution", "command": "nix store info", "output": "exit 1: missing trusted key", "exitCode": 1}},
+                {"type": "message", "id": "resolved", "parentId": "bash-error", "message": {"role": "assistant", "content": "The missing nix-community public key caused the local build."}},
+            ),
+        )
+
+        mined = self.cli("mine", "--limit", "1", "--transcript")
+        shown = self.cli("show", "--session", "failure", "--transcript")
+        all_branches = self.cli("show", "--session", "failure", "--transcript", "--all-branches")
+
+        transcript = mined["sessions"][0]["transcript"]
+        self.assertEqual(
+            [item["entry_id"] for item in transcript],
+            ["user", "assistant", "tool-error", "bash-error", "resolved"],
+        )
+        self.assertEqual([item["role"] for item in transcript], ["user", "assistant", "toolResult", "bashExecution", "assistant"])
+        self.assertIn("bash", transcript[1]["snippet"])
+        self.assertTrue(transcript[2]["is_error"])
+        self.assertTrue(transcript[3]["is_error"])
+        self.assertEqual(shown["transcript"], transcript)
+        self.assertEqual(
+            [item["entry_id"] for item in all_branches["transcript"]],
+            ["user", "abandoned", "assistant", "tool-error", "bash-error", "resolved"],
+        )
+        self.assertEqual(all_branches["transcript"][1]["branch_status"], "abandoned")
+        self.assertNotIn("token-should-redact", json.dumps(transcript))
+
+    def test_transcript_redacts_structured_credentials_and_marks_native_failures(self):
+        self.write_session(
+            "native-failure.jsonl",
+            "native-failure",
+            self.project,
+            entries=(
+                {"type": "message", "id": "user", "message": {"role": "user", "content": "Check the remote cache"}},
+                {"type": "message", "id": "call", "parentId": "user", "message": {"role": "assistant", "content": [{"type": "toolCall", "id": "call-1", "name": "fetch", "arguments": {"headers": {"Authorization": "Basic dGVzdDpmaXh0dXJl"}}}]}},
+                {"type": "message", "id": "assistant-error", "parentId": "call", "message": {"role": "assistant", "content": [], "stopReason": "error", "errorMessage": "provider request failed"}},
+                {"type": "message", "id": "cancelled", "parentId": "assistant-error", "message": {"role": "bashExecution", "command": "sleep 30", "output": "", "cancelled": True}},
+            ),
+        )
+
+        transcript = self.cli("mine", "--limit", "1", "--transcript")["sessions"][0]["transcript"]
+        by_id = {item["entry_id"]: item for item in transcript}
+
+        self.assertNotIn("dGVzdDpmaXh0dXJl", json.dumps(transcript))
+        self.assertTrue(by_id["assistant-error"]["is_error"])
+        self.assertEqual(by_id["assistant-error"]["snippet"], "provider request failed")
+        self.assertTrue(by_id["cancelled"]["is_error"])
+
+    def test_session_and_entry_selectors_narrow_show_and_search(self):
+        previous = self.write_session(
+            "previous.jsonl",
+            "older",
+            self.project,
+            entries=(
+                {"type": "message", "id": "previous-user", "message": {"role": "user", "content": "opening request"}},
+                {"type": "message", "id": "previous-assistant", "parentId": "previous-user", "message": {"role": "assistant", "content": "intermediate response"}},
+                {"type": "message", "id": "previous-last-user", "parentId": "previous-assistant", "message": {"role": "user", "content": "cache repair request"}},
+            ),
+        )
+        current = self.write_session(
+            "current.jsonl",
+            "current",
+            self.project,
+            entries=({"type": "message", "id": "current-user", "message": {"role": "user", "content": "cache repair in current session"}},),
+        )
+        os.utime(previous, (1_700_000_000, 1_700_000_000))
+        os.utime(current, (1_800_000_000, 1_800_000_000))
+        current.write_text(current.read_text() + "{not-json}\n")
+
+        shown = self.cli("show", "--session", "previous", "--entry", "last-user")
+        by_prefix = self.cli("show", "--session", "ol", "--entry", "last-assistant")
+        latest = self.cli("show", "--session", "latest", "--entry", "last-user")
+        searched = self.cli("search", "cache repair", "--session", "previous")
+
+        self.assertEqual(shown["session_id"], "older")
+        self.assertEqual(shown["entry_id"], "previous-last-user")
+        self.assertEqual(shown["context"][-1]["snippet"], "cache repair request")
+        self.assertEqual(by_prefix["entry_id"], "previous-assistant")
+        self.assertEqual(latest["session_id"], "current")
+        self.assertEqual(latest["entry_id"], "current-user")
+        self.assertEqual([item["session_id"] for item in searched["results"]], ["older"])
+        self.assertEqual([item["entry_id"] for item in searched["results"]], ["previous-last-user"])
+        self.assertEqual(searched["warnings"], [])
 
     def test_invalid_project_mapping_fails_without_overwriting_config(self):
         self.config.mkdir(parents=True)
