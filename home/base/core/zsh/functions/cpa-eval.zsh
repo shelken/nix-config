@@ -205,6 +205,7 @@ while ((completed < max)); do
         ((graded++))
 
         printf '%4s  %-40s  %8s  %8s  %10s  %7s  %3s\n' "$index" "$preview" "$input_tok" "$output_tok" "$reason_tok" "$elapsed" "$ok"
+        printf '     完整回答（Run %s）：\n%s\n\n' "$index" "$text"
         printed[$index]=1
         ((completed++))
         ((index++))
