@@ -46,6 +46,18 @@
     prefix = "\${HOME}/.npm-global";
     # registry = "https://registry.npmmirror.com";
     min-release-age = 3;
+    # 半开连接快速失败，不拉长重试等待
+    fetch-timeout = 15000;
+    fetch-retries = 1;
+    fetch-retry-mintimeout = 500;
+    fetch-retry-maxtimeout = 2000;
+    maxsockets = 15;
+  };
+
+  # Bun HTTP 空闲超时/重试（IDLE 仅 1.3.14+；偏快速失败）
+  home.sessionVariables = {
+    BUN_CONFIG_HTTP_IDLE_TIMEOUT = "5";
+    BUN_CONFIG_HTTP_RETRY_COUNT = "1";
   };
 
   home.shellAliases = {
