@@ -29,6 +29,8 @@
 
 - **软件源**: 使用 `nvfetcher` 管理非 nixpkgs 源
 - **秘密管理**: 引用外部 `secrets` flake（通过 sops-nix）
+- 一般使用`nh search`搜索nixpkgs中的包
+- 常用命令都在`justfile`, 使用`just`检查当前哪些快捷命令
 
 ## Git 提交规则
 
