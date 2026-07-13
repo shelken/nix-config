@@ -4,6 +4,7 @@ description: >
   Guides IA through releasing a new version of a GitHub library end-to-end.
   Handles SemVer versioning and Keep a Changelog formatting automatically.
 compatibility: "requires: gh CLI and git"
+disable-model-invocation: true
 ---
 
 # GitHub Release Skill

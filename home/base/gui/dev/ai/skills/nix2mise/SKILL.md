@@ -4,6 +4,7 @@ description:
   将项目的 nix flake 开发环境迁移到 mise。当用户说「flake 转 mise」「nix 换
   mise」「用 mise 替代 flake/nix」「去掉 nix 依赖」或讨论 devShell 工具管理的替代方案时
   使用。覆盖工具版本管理、环境变量、虚拟环境、pre-commit、shell 集成的通用迁移流程。
+disable-model-invocation: true
 ---
 
 # nix2mise

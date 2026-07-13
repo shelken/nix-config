@@ -1,6 +1,7 @@
 ---
 name: stop-shitty
 description: 禁止5.4等GPT模型说废话
+disable-model-invocation: true
 ---
 
 ## 说话方式

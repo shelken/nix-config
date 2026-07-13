@@ -1,6 +1,6 @@
 ---
 name: postmortem
-description: 用户主动提出「写尸检报告」时读取
+description: 「写尸检报告」时读取
 ---
 
 ## 阶段完成或收尾时

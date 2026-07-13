@@ -1,9 +1,8 @@
 ---
 name: repo-open-source
 description:
-  把项目从 private 开源为 public 的完整流程。当用户说「开源项目」「仓库转
-  public」「清理历史后开源」「private 转 public」或要把现有项目公开时使用。覆盖
-  历史归档、敏感信息扫描、git history rewrite、分支清理的通用开源流程。
+  把项目从 private 开源为 public 的完整流程。当用户说「开源项目」「仓库转public」「清理历史后开源」「private 转 public」或要把现有项目公开时使用。覆盖历史归档、敏感信息扫描、git history rewrite、分支清理的通用开源流程。
+disable-model-invocation: true
 ---
 
 # repo-open-source
