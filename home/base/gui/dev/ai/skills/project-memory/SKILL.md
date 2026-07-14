@@ -1,13 +1,43 @@
 ---
 name: project-memory
-description: 管理项目长期知识，支持 recall、capture、mine、audit 四种模式。用于搜索 Pi 当前或历史 Session、回忆过去决策、从开发过程提炼可复用经验、更新 AGENTS 或项目 Skill、形成 ADR/Postmortem 候选，以及检查项目知识是否过时、重复、冲突或放错位置。
+description: 管理项目长期知识，支持 recall、capture、mine、audit 四种模式。用于搜索 Pi 当前或历史 Session、回忆过去决策、从开发过程提炼可复用经验、更新 AGENTS 或项目 Skill、形成 ADR/Postmortem 候选，以及检查项目知识是否过时、重复、冲突或放错位置。跨 Session 检索依赖本机安装的 project-memory CLI（Bun/TS）。
 ---
 
 # Project Memory
 
 ## 目标
 
-把历史对话当作证据源，把项目文件当作唯一长期事实源。检索、验证和路由由本 Skill 协调；具体产物遵循项目约定或对应专用 Skill。
+把历史对话当作证据源，把项目文件当作唯一长期事实源。检索、验证和路由由本 Skill 协调；跨 Session 读写统一走本机 `project-memory` CLI。具体产物遵循项目约定或对应专用 Skill。
+
+## 本地安装（未公开分发）
+
+CLI 源码在本机开发树，**不**走 npm/GitHub Release 公开分发。
+
+```sh
+# 默认路径（按你的实际 clone 位置改）
+PM_DIR="${HOME}/Code/active/project-memory"
+
+# 首次
+cd "$PM_DIR"
+bun install
+
+# 可选：编译单文件二进制并放到 PATH
+bun run compile
+mkdir -p "${HOME}/.local/bin"
+ln -sfn "$PM_DIR/dist/project-memory" "${HOME}/.local/bin/project-memory"
+```
+
+日常调用二选一（Skill 下文默认用源码入口，免依赖 PATH）：
+
+```sh
+# A. 源码（推荐给 Agent）
+bun run --cwd "$PM_DIR" pm -- status
+
+# B. 已 link 的二进制
+project-memory status
+```
+
+改 CLI 逻辑只动 `PM_DIR` 仓库；本 Skill 只保留工作流与分析纪律，不再内嵌 `scripts/project_memory.py`。
 
 ## 核心原则
 
@@ -44,7 +74,16 @@ description: 管理项目长期知识，支持 recall、capture、mine、audit �
 1. 确认当前项目根目录、最近作用域的 `AGENTS.md` 和项目约定。
 2. 查看相关代码、Git 状态、测试、文档和 Postmortem 标题。
 3. 判断当前操作属于哪种模式。
-4. 任何跨 Session 内容只能通过 `scripts/project_memory.py` 读取；执行前将该相对路径解析为本 Skill 目录下的实际路径。
+4. 任何跨 Session 内容只能通过本机 `project-memory` CLI 读取。**禁止**直接读 Session JSONL，也禁止在业务项目 cwd 下拼相对路径脚本。先定 `$PM_DIR`，之后一律 `bun run --cwd "$PM_DIR" pm -- ...`：
+
+```sh
+# 本机源码树（未公开分发；路径按实际安装修改）
+PM_DIR="${HOME}/Code/active/project-memory"
+test -d "$PM_DIR" || { echo "bad PM_DIR: $PM_DIR — 先按 Skill「本地安装」执行 bun install" >&2; exit 1; }
+test -f "$PM_DIR/package.json" || { echo "bad PM_DIR contents: $PM_DIR" >&2; exit 1; }
+bun run --cwd "$PM_DIR" pm -- status   # 默认 text；程序用 status --format json
+# 若已 compile 并 link 到 PATH，可改用：project-memory status
+```
 
 ## Recall
 
@@ -64,27 +103,83 @@ Pi 中存在 `vcc_recall` 时优先使用它：
 2. 默认只搜索当前 Git 项目：
 
 ```sh
-python3 scripts/project_memory.py search "<query>"
+bun run --cwd "$PM_DIR" pm -- search "<query>"
 ```
 
 3. 只有用户明确要求时才跨项目或包含废弃分支：
 
 ```sh
-python3 scripts/project_memory.py search "<query>" --all-projects
-python3 scripts/project_memory.py search "<query>" --all-branches
+bun run --cwd "$PM_DIR" pm -- search "<query>" --all-projects
+bun run --cwd "$PM_DIR" pm -- search "<query>" --all-branches
 ```
 
 4. 使用 `show` 安全展开候选上下文：
 
 ```sh
-python3 scripts/project_memory.py show "<session-id>:<entry-id>"
+bun run --cwd "$PM_DIR" pm -- show "<session-id>:<entry-id>"
+bun run --cwd "$PM_DIR" pm -- show "<session-id>:<entry-id>" --context 5 --max-chars 8000
+bun run --cwd "$PM_DIR" pm -- search "<query>" --format json
+bun run --cwd "$PM_DIR" pm -- show "<session-id>:<entry-id>" --redact
+```
+
+`search` / `show` / `mine` 默认输出可读文本且**默认脱敏**（`--no-redact` 才出原文）；程序消费加 `--format json`。片段默认限长 500，更长用 `--max-chars`。`show` 可用 `--context N` 控制命中前后条目数。条目会尽量标注 `provider/model`；`mine --signals` 为每条信号给出 `error_model` / `recovery_model`。skill 注入的 user 消息、纯谩骂/情绪复读不计入可沉淀信号；同一复读合并为一条并带 `count`。需要按模型汇总时（非首次主路径）：
+
+```sh
+bun run --cwd "$PM_DIR" pm -- mine --since 15d --signals --all-projects --by-model --limit 30 \
+  --signal-kind user_correction,repeated_user_prompt
+bun run --cwd "$PM_DIR" pm -- show "<sid>:<eid>" --context 6 --max-chars 4000
+# 需要工具输出再加 --include-tools
+```
+
+将 ≥2 次、可写成强制动作的结论**建议**写入对应模型 auto-model-prompt；**默认不直接改文件**，等用户确认。OpenAI/GPT 系若「忽略指令 + 突然低级错/空转」→ **降智嫌疑**（不写 rule，只可计数）。分析纪律见 **Mine** 节。
+
+### 无报错怪癖与 session 脉络
+
+**规则与频率由 agent 传入，脚本不替 agent 做判断。** 默认不启用 `behavior_risk`；需要时按假设传入规则，**命中后必须 `show` 上下文判断是否真错**，禁止用 regex 命中反推「模型又犯已知错误」。
+
+行为扫描只看 **被执行的 bash 命令**（忽略 toolResult）；侦察类命令不计。`matched` 仅供核验，不是定罪。
+
+有明确假设时才用 behavior 规则（**不是首次入口**）：
+
+```sh
+# 规则：id::regex::title（:: 分隔，避免正则里的 |）
+bun run --cwd "$PM_DIR" pm -- mine --signals --all-projects \
+  --rule 'git_add_all::\bgit\s+add\s+-A::禁止 add -A' \
+  --signal-kind behavior_risk,user_correction
+
+bun run --cwd "$PM_DIR" pm -- show --session <sid> --outline \
+  --rule 'git_reset_hard::\bgit\s+reset\s+--hard\b::禁止 hard reset'
+
+bun run --cwd "$PM_DIR" pm -- mine --signals --rules-file rules.json --signal-kind behavior_risk
+bun run --cwd "$PM_DIR" pm -- mine --signals --preset-behaviors --signal-kind behavior_risk
+```
+
+分诊约定：
+- **首次只跑 HARVEST 那一条**（见 Mine 节）：纠错/复读 + `--all-projects`；不要一上来 preset
+- `mine --signals` **默认 text**（程序消费显式 `--format json`）
+- text 优先**有技术内容**的纠错/复读；纯降智空转句 **折叠**为 `degradation-like`；`command_failure` **默认折叠**
+- 同 rule 的 behavior 合并为一条并带 `count`；纠错/复读/CF 对 `problem_score` 有封顶
+- `--preset-behaviors` / `--rule` **仅有假设时**再加；命中须 Jump 上下文裁决
+- `--correction-marker` 等 **追加** 默认词表；覆盖用 `--replace-markers`
+- 非法 `--signal-kind` / 坏正则 / 用 `|` 当分隔 → stderr 报错退出
+- 仅要 `behavior_risk` 却不传规则 → 直接报错；也可用 `--rules-file rules.json`
+- `show` 找不到 session 自动 all-projects；context **TARGET 置顶**；`Jump:` 完整可复制
+- cwd 无 session 时 warning 提示 `--all-projects` / `--project-dir`
+
+其它旋钮：`--repeated-threshold` / `--min-prompt-len` / `--episode-radius*`、
+`--no-emotional-filter` / `--no-skill-filter` / `--outline-max-*` / `--context` / `--max-chars`。
+
+单点展开（可直接粘贴 Jump）：
+
+```sh
+bun run --cwd "$PM_DIR" pm -- show "<sid>:<eid>" --context 6 --max-chars 3000
 ```
 
    已知目标会话时，可用通用会话和条目选择器避免全项目正文搜索：
 
 ```sh
-python3 scripts/project_memory.py show --session previous --entry last-user
-python3 scripts/project_memory.py search "<query>" --session previous
+bun run --cwd "$PM_DIR" pm -- show --session previous --entry last-user
+bun run --cwd "$PM_DIR" pm -- search "<query>" --session previous
 ```
 
    `--session` 接受完整会话 ID、唯一前缀、`latest` 或 `previous`；`--entry` 接受完整条目 ID、`last`、`last-user` 或 `last-assistant`。`show "<session-id>:<entry-id>"` 仍适用于搜索结果。
@@ -92,17 +187,17 @@ python3 scripts/project_memory.py search "<query>" --session previous
    需要还原一个 Session 的完整用户、助手和工具因果链时，使用 VCC 风格的会话流：
 
 ```sh
-python3 scripts/project_memory.py show --session previous --transcript
-python3 scripts/project_memory.py show --session previous --transcript --all-branches
+bun run --cwd "$PM_DIR" pm -- show --session previous --transcript
+bun run --cwd "$PM_DIR" pm -- show --session previous --transcript --all-branches
 ```
 
-   前者只读 active lineage，后者包含 abandoned 分支。会话流会保留角色、工具调用、工具结果和失败标记，但仍经过脱敏与限长。
+   前者只读 active lineage，后者包含 abandoned 分支。会话流会保留角色、工具调用、工具结果和失败标记；默认脱敏且限长，需要原文时加 `--no-redact`。
 
    跨项目或废弃分支的结果必须重复对应作用域参数：
 
 ```sh
-python3 scripts/project_memory.py show "<session-id>:<entry-id>" --all-projects
-python3 scripts/project_memory.py show "<session-id>:<entry-id>" --all-branches
+bun run --cwd "$PM_DIR" pm -- show "<session-id>:<entry-id>" --all-projects
+bun run --cwd "$PM_DIR" pm -- show "<session-id>:<entry-id>" --all-branches
 ```
 
 5. 默认不包含工具调用和工具结果；只有错误或命令输出是必要证据时才使用 `--include-tools`。
@@ -178,68 +273,63 @@ python3 scripts/project_memory.py show "<session-id>:<entry-id>" --all-branches
 
 每批最多处理 5 个当前项目中 unseen 或 changed 的 Session。`mine` 必须先发现高信号问题片段，再按需展开完整会话；不能把摘要或 transcript 数量当成分析结果。
 
-先运行 HARVEST 信号探测：
+### 分析纪律（强制）
 
-```sh
-python3 scripts/project_memory.py mine --signals
+目标：从上下文里挖**可沉淀信息**。做不到就写「无」。禁止堆噪音表、session 流水账。
+
+1. **模型归属到 message**：`error_model` + entry 的 `provider/model`；禁止整场 session 记到一个模型。
+2. **上下文裁决，禁止命令枚举定罪**：`behavior_risk`/preset 只是检索线索。必须 `show` 前后文判断当轮是否真错。用户允许的 force、容器内 find、只读侦察、提问句、证据不足 → **不是错误**。
+3. **脚本价值 = 前后文**：用 Jump/`show --context` 读链，不用 mine 列表当终审。
+4. **降智嫌疑（尤其 GPT 系）**：若同时出现「明显忽略用户指令」+「突然低级错误/空转/格式自限/情绪对骂式复读」，标 **降智嫌疑**，**不要当错误展开分析，不要写 rule**（rule 纠不了降智）。只可在汇总里一行计数。
+5. **单次纠正 ≠ rule**：产品偏好、一次性指偏、证据不足的质疑句 → 丢弃。rule 需要可复用强制动作，且最好 ≥2 次非降智样本，或上下文证明系统性做错。
+6. **已在 auto-model-prompt / AGENTS 出现过的** → 不输出；最多内部记「执行失败」，不写进汇报正文。
+7. **汇报只保留有价值信息**（维度：项目 + 模型，不要 session 流水账）：
+   - 建议 rule（简洁正文；无则「无」）
+   - 用户习惯（跨上下文稳定偏好；无则「无」）
+   - 降智嫌疑（模型 + 一句特征/计数；**不写 rule**）
+   - 禁止：情绪词统计、已知禁令再清单、证据不足条目、降智过程复述
+8. **默认不改** auto-model-prompt 文件，除非用户当轮明确要求写入。
+
+### 分析流程（重做）
+
+```
+mine 纠错/复读 → Jump 读上下文 → 分类 → 只留下「可沉淀」
+分类桶：
+  A 降智嫌疑 → 丢弃（可计数）
+  B 已有 rule → 丢弃（不汇报）
+  C 单次/非错误/证据不足 → 丢弃
+  D 可沉淀 rule / 稳定用户习惯 → 写入对应表
 ```
 
-`--signals` 扫描筛选范围后按 `problem_score` 排序，只返回存在问题信号的 Session：
+### HARVEST
 
-- `command_failure`（2 分）：同一分支上具有直接父子关系的一个或多个连续 Assistant、toolResult 或 bashExecution 错误。
-- `repeated_user_prompt`（3 分）：Unicode 规范化后相同或相似度至少 0.86 的用户 Prompt；超过 500 字时只接受规范化后完全相同，避免共同长前缀掩盖关键尾部差异。
-- `user_correction`（3 分）：紧跟 Assistant 回答并包含明确纠正表达的用户消息。
-
-每个信号包含原始 Entry ID 和脱敏 Episode。信号是高召回候选，不等于 Agent 一定犯错；必须由主代理结合 Episode 裁决。
-
-需要限定审阅时间窗口时，使用通用时间边界；筛选发生在 `--limit` 之前，并以 Session 文件最后更新时间为准。边界包含等值，接受 `15d` 这类相对天数或 ISO 8601 时间：
+主路径只挖纠错/复读（跨项目，默认脱敏）。`--signals` 未写 `--since` 时默认 **15d**（全量：`--since all`）。preset 仅有**明确假设**时再加，命中仍须分类 A–D：
 
 ```sh
-python3 scripts/project_memory.py mine --since 15d --signals
-python3 scripts/project_memory.py mine --since 2026-06-25 --until 2026-07-10 --signals
+bun run --cwd "$PM_DIR" pm -- mine --since 15d --signals --limit 5 --all-projects \
+  --signal-kind user_correction,repeated_user_prompt
+# 有假设时再加 --preset-behaviors / --rule（不是定罪）
 ```
 
-输出较大时使用 NDJSON。输出依次为 `meta`、`session`、逐条 `signal`、`transcript` 或 `item`，以及可选的 `warning`，每行都是独立 JSON：
+`--signals` 只返回有问题信号的 Session。排序：**技术向纠错优先**（`tech_score`），纯降智空转靠后；有 behavior 时 behavior 数仍最高。text 把 `degradation-like` 折叠成一行。
+
+- `user_correction`（3 分）：紧跟 Assistant 回答并包含明确纠正表达的用户消息。**分析主入口。**
+- `repeated_user_prompt`（3 分）：Unicode 规范化后相同或相似度至少 0.86 的用户 Prompt；超过 500 字时只接受规范化后完全相同。
+- `behavior_risk`（4 分）：assistant 实际执行的 bash 命中 `--rule` / `--preset-behaviors`（需显式启用）。**仅候选。**
+- `command_failure`（单条 2 分，session 总分最多计 2；text 默认折叠）：连续错误链。
+
+每个信号含 Entry ID、`error_model`/`recovery_model`、脱敏 Episode。信号是高召回候选，**不等于** Agent 一定犯错；必须主代理结合 Episode/`show` 裁决。
+
+时间窗：相对 `15d` 或 ISO；未写 `--since` 时 `--signals` 默认 15d（全量 `--since all`）。大输出用 `--format ndjson`。
+
+Episode/`--context` 仍不够时，再整页读该 session（**不是首次入口**）：
 
 ```sh
-python3 scripts/project_memory.py mine --since 15d --signals --format ndjson
+bun run --cwd "$PM_DIR" pm -- show --session "<session-id>" --transcript \
+  --offset 0 --limit 50 --full-content --format json
 ```
 
-流程：
-
-1. 逐个审阅信号 Episode，并回答：用户原要求是什么、Agent 做了什么判断或行动、哪条工具结果或用户消息推翻了它、是否重复同一错误、最终如何修正、是否形成可复用反模式。重复 Prompt 还要判断是 Agent 忽略要求、偏离任务、错误宣称完成，还是用户主动补充需求。
-2. Episode 不足以裁决因果链时，再展开该 Session 的完整 active lineage：
-
-```sh
-python3 scripts/project_memory.py show --session "<session-id>" --transcript
-```
-
-`--transcript` 以 VCC 风格输出 user、assistant、toolResult、bashExecution 和 summary，并保留 Entry ID、时间、分支状态与 `is_error`。
-3. 如果被放弃的诊断分支可能解释错误根因、反复尝试或用户纠正，重跑：
-
-```sh
-python3 scripts/project_memory.py show --session "<session-id>" --transcript --all-branches
-```
-
-4. 完成问题信号审阅后，再用普通 `mine` 检查没有错误信号但可能包含决策、规则或待定问题的 Session。summary 只辅助导航，不能单独排除候选。
-5. 对每个候选回到原始 Entry，再按「候选知识准入」结合当前代码、Git、测试或运行结果验证。没有候选也必须说明已检查的信号、错误链和反向证据。
-6. 只有主代理在核验子代理或自身的审阅结论后，才记录状态：
-
-```sh
-python3 scripts/project_memory.py mark-reviewed "<session-id>" --status reviewed
-python3 scripts/project_memory.py mark-reviewed "<session-id>" --status pending --candidate-count <n>
-python3 scripts/project_memory.py mark-reviewed "<session-id>" --status resolved
-```
-
-状态含义：
-
-- `unseen`：未审阅。
-- `reviewed`：已审阅，没有候选。
-- `pending`：发现候选，尚未沉淀或放弃。
-- `resolved`：候选已沉淀或明确放弃。
-- `changed`：Session 在上次审阅后发生变化，由 CLI 派生并重新进入队列。
-
-`mine` 默认不重复处理 pending。候选正文不写入本地索引。
+用 `transcript_page.next_offset` 翻页直到 `null`。assistant 按各自 `model` 归属。仍不够再 `--all-branches`。
 
 ## Audit
 
@@ -284,7 +374,7 @@ python3 scripts/project_memory.py mark-reviewed "<session-id>" --status resolved
 - 用户确认后使用映射：
 
 ```sh
-python3 scripts/project_memory.py map-project "<session-id-or-old-cwd>" --to-current
+bun run --cwd "$PM_DIR" pm -- map-project "<session-id-or-old-cwd>" --to-current
 ```
 
 - `status` 查看索引、归属和审阅状态；`rebuild-index` 强制重读 Session 元数据。
@@ -292,9 +382,9 @@ python3 scripts/project_memory.py map-project "<session-id-or-old-cwd>" --to-cur
 
 ## 安全边界
 
-- 默认排除 system、developer、工具调用和工具结果；`mine --transcript` 与 `show --transcript` 是经脱敏的显式例外，用于审阅错误链和因果关系。
-- 跨 Session 片段必须先经过 CLI 脱敏和限长。
-- 未经明确授权，不读取未脱敏历史内容。
+- 默认排除 system、developer、工具调用和工具结果；`mine --transcript` 与 `show --transcript` 是显式例外，用于审阅错误链和因果关系。
+- 跨 Session 默认限长且脱敏；需要原文用 `--no-redact`。写入项目文件前必须确认无秘密。
+- 未经明确授权，不把含秘密的历史原文写入项目文件。
 - 即使获得授权，也不把原始秘密或私人对话写入项目文件。
 - 不调用外部 Embedding、搜索服务或后台 daemon。
 - CLI 永远只读原始 Session，不修改 JSONL。
