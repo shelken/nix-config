@@ -10,6 +10,7 @@ profile := "$PROFILE"
 alias b := rebuild
 alias bd := rebuild-debug
 alias sw := switch
+alias hmb := hm-build
 
 # 显式帮助
 default:
@@ -266,6 +267,11 @@ switch *args: rebuild-debug
     # sudo -E ./result/sw/bin/darwin-rebuild switch --flake ".#{{ profile }}" --show-trace --verbose
     # nix run nixpkgs#nh -- darwin switch -H {{ profile }} . -v -- {{ args }}
     nh darwin switch -H {{ profile }} . -v -- {{ args }}
+
+# 仅构建 Home Manager（查看差异，不应用）
+[macos]
+hm-build *args:
+    nh home build -c {{ profile }} . -v -- {{ args }}
 
 # 仅应用 Home Manager
 [macos]
