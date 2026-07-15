@@ -41,3 +41,13 @@
 
 - 执行`just bd`或者`just hm`等nix构建命令前, 确保新增或删除的文件加入了git, 只有add之后才会生效
 - 修改配置后, 使用`nix eval` 和 `just bd`验证当前配置是否正确
+
+## Agent skills
+
+### 问题跟踪器
+
+问题、规格与 Wayfinder 路线地图使用 GitHub Issues 管理。详见 `docs/agents/issue-tracker.md`。
+
+### 领域文档
+
+采用单一上下文：根目录 `CONTEXT.md` 记录共享领域知识，架构决策记录放在 `docs/adr/`。详见 `docs/agents/domain.md`。
