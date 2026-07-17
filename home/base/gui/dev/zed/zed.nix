@@ -367,6 +367,7 @@ in
       {
         context = "Workspace";
         bindings = {
+          "cmd-`" = "agent::ToggleFocus";
           "cmd-1" = "project_panel::Toggle";
           "cmd-2" = "git_panel::Toggle";
           "cmd-3" = "terminal_panel::Toggle";
@@ -382,6 +383,16 @@ in
         context = "Terminal";
         unbind = {
           "shift-down" = "terminal::ScrollLineDown";
+        };
+      }
+      # for projects:open recent
+      {
+        context = "Terminal";
+        unbind = {
+          "ctrl-r" = [
+            "terminal::SendKeystroke"
+            "ctrl-r"
+          ];
         };
       }
       {
