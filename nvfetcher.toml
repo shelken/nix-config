@@ -58,25 +58,25 @@ src.git      = "https://github.com/pbakaus/impeccable"
 src.branch   = "main"
 fetch.github = "pbakaus/impeccable"
 
-[obra-superpowers]
-src.git      = "https://github.com/obra/superpowers"
-src.branch   = "main"
-fetch.github = "obra/superpowers"
+# [obra-superpowers]
+# src.git      = "https://github.com/obra/superpowers"
+# src.branch   = "main"
+# fetch.github = "obra/superpowers"
 
 # [playwright-cli]
 # src.git      = "https://github.com/microsoft/playwright-cli"
 # src.branch   = "main"
 # fetch.github = "microsoft/playwright-cli"
 
-[software-design-philosophy-skill]
-src.git      = "https://github.com/shelken/software-design-philosophy-skill"
-src.branch   = "main"
-fetch.github = "shelken/software-design-philosophy-skill"
+# [software-design-philosophy-skill]
+# src.git      = "https://github.com/shelken/software-design-philosophy-skill"
+# src.branch   = "main"
+# fetch.github = "shelken/software-design-philosophy-skill"
 
-[shuorenhua]
-src.git      = "https://github.com/shelken/shuorenhua"
-src.branch   = "main"
-fetch.github = "shelken/shuorenhua"
+# [shuorenhua]
+# src.git      = "https://github.com/shelken/shuorenhua"
+# src.branch   = "main"
+# fetch.github = "shelken/shuorenhua"
 
 # [sidkh-skills]
 # src.git      = "https://github.com/SidKH/skills"

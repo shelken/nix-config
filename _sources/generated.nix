@@ -32,27 +32,27 @@
   };
   ast-grep-agent-skill = {
     pname = "ast-grep-agent-skill";
-    version = "577f4d4507678f2c8cee150fae25e6ce309f70b1";
+    version = "c2a9bc154f4ffe08b25d28d5e852dfac8c0d0d8a";
     src = fetchFromGitHub {
       owner = "ast-grep";
       repo = "agent-skill";
-      rev = "577f4d4507678f2c8cee150fae25e6ce309f70b1";
+      rev = "c2a9bc154f4ffe08b25d28d5e852dfac8c0d0d8a";
       fetchSubmodules = false;
-      sha256 = "sha256-LgGFtPieyKtoru22AhHW8hvkJ8kCHO2Cr8rBOWGuxvY=";
+      sha256 = "sha256-awochSE2OupbsmaGx0xc7wHf0ovVMSdtHv4gZAGWOus=";
     };
-    date = "2026-01-21";
+    date = "2026-07-03";
   };
   impeccable = {
     pname = "impeccable";
-    version = "d2ab4ddee6fa63002fae680652b5fbd31735e280";
+    version = "af78b1e512148e2a2f2d2ded6786d265ea420191";
     src = fetchFromGitHub {
       owner = "pbakaus";
       repo = "impeccable";
-      rev = "d2ab4ddee6fa63002fae680652b5fbd31735e280";
+      rev = "af78b1e512148e2a2f2d2ded6786d265ea420191";
       fetchSubmodules = false;
-      sha256 = "sha256-r13nUfAlDXNckyY+9+AldJNY8RQNy0gk97xQpcWGSsc=";
+      sha256 = "sha256-m4dFX8c0xzYvroS+YFDHovBOUXBc9MVlWIqddnrTpcM=";
     };
-    date = "2026-06-22";
+    date = "2026-07-25";
   };
   kitty-icon = {
     pname = "kitty-icon";
@@ -67,75 +67,39 @@
   };
   llamaparse-agent-skills = {
     pname = "llamaparse-agent-skills";
-    version = "ac17e016b5421f7f89ad2266cb144aaa6575b662";
+    version = "2dcef7c62417bd2ec4671fce4621bb1e8cce48d0";
     src = fetchFromGitHub {
       owner = "run-llama";
       repo = "llamaparse-agent-skills";
-      rev = "ac17e016b5421f7f89ad2266cb144aaa6575b662";
+      rev = "2dcef7c62417bd2ec4671fce4621bb1e8cce48d0";
       fetchSubmodules = false;
-      sha256 = "sha256-ag0Y56OjxooztnJXSEPo8N6/i9h+/zO/TR7ao0mEXnM=";
+      sha256 = "sha256-KzYcArVClk1mUBYLM/EmU3+rKzAHtpHRLAFVY1LbtKQ=";
     };
-    date = "2026-06-17";
+    date = "2026-07-03";
   };
   mattpocock-skills = {
     pname = "mattpocock-skills";
-    version = "391a2701dd948f94f56a39f7533f8eea9a859c87";
+    version = "ed37663cc5fbef691ddfecd080dff42f7e7e350d";
     src = fetchFromGitHub {
       owner = "mattpocock";
       repo = "skills";
-      rev = "391a2701dd948f94f56a39f7533f8eea9a859c87";
+      rev = "ed37663cc5fbef691ddfecd080dff42f7e7e350d";
       fetchSubmodules = false;
-      sha256 = "sha256-gFPkjrujFAoNXYa0ariPKTj/xBoiCTLUo3X20qrTzRE=";
+      sha256 = "sha256-o/H9s3t6ahBqFwpkOMBOTwpsvb33pgvpI9n0PA+uLYM=";
     };
-    date = "2026-07-10";
-  };
-  obra-superpowers = {
-    pname = "obra-superpowers";
-    version = "896224c4b1879920ab573417e68fd51d2ccc9072";
-    src = fetchFromGitHub {
-      owner = "obra";
-      repo = "superpowers";
-      rev = "896224c4b1879920ab573417e68fd51d2ccc9072";
-      fetchSubmodules = false;
-      sha256 = "sha256-+lT2a/qq0SF4k0PgnEDKiuidVlZX2p0vEso4d/5T1os=";
-    };
-    date = "2026-06-18";
+    date = "2026-07-21";
   };
   projects-yazi = {
     pname = "projects-yazi";
-    version = "112a2707e9d37c02304449fbc8669d0264841e22";
+    version = "22a4006f531b7c8e71704f64e48feed659164104";
     src = fetchFromGitHub {
       owner = "MasouShizuka";
       repo = "projects.yazi";
-      rev = "112a2707e9d37c02304449fbc8669d0264841e22";
+      rev = "22a4006f531b7c8e71704f64e48feed659164104";
       fetchSubmodules = false;
-      sha256 = "sha256-w7QTVogc7pqVa56fSCl22m8AkOHO5jq+yXLfCRaY1Yg=";
+      sha256 = "sha256-J3MM4Fc3+6P84OrC4DWqchSPbEOuzhEeO8rzNYXSZXQ=";
     };
-    date = "2026-05-31";
-  };
-  shuorenhua = {
-    pname = "shuorenhua";
-    version = "8356a4f9190c5154820f10c6b372a90a1b92e600";
-    src = fetchFromGitHub {
-      owner = "shelken";
-      repo = "shuorenhua";
-      rev = "8356a4f9190c5154820f10c6b372a90a1b92e600";
-      fetchSubmodules = false;
-      sha256 = "sha256-SOyC+kEMySnv618ej9DK+HW9n2DQjkiP3AeeCeWRVmo=";
-    };
-    date = "2026-04-24";
-  };
-  software-design-philosophy-skill = {
-    pname = "software-design-philosophy-skill";
-    version = "e55ac385e89913a6d53c7da460d080982d32ea03";
-    src = fetchFromGitHub {
-      owner = "shelken";
-      repo = "software-design-philosophy-skill";
-      rev = "e55ac385e89913a6d53c7da460d080982d32ea03";
-      fetchSubmodules = false;
-      sha256 = "sha256-S6HF8QJ12UlpMDvbH8R7q3BSO6RBID3vNiQK4ib6bes=";
-    };
-    date = "2026-03-11";
+    date = "2026-07-11";
   };
   taches-cc-resources = {
     pname = "taches-cc-resources";
@@ -151,34 +115,34 @@
   };
   taste-skill = {
     pname = "taste-skill";
-    version = "06d6028b5c623016c59ce8536f578e5a1127b499";
+    version = "e988add20dab0fa97d7a76781c48961c8184288e";
     src = fetchFromGitHub {
       owner = "Leonxlnx";
       repo = "taste-skill";
-      rev = "06d6028b5c623016c59ce8536f578e5a1127b499";
+      rev = "e988add20dab0fa97d7a76781c48961c8184288e";
       fetchSubmodules = false;
-      sha256 = "sha256-NQBzh3+oXbJbQScWIOHuF0H+7YCR0yN+QWvCs2xQ1Ys=";
+      sha256 = "sha256-Zt3fC8/63ZHcsFLjNR6/zNykrVkT0QV3SmmCi1dlnJA=";
     };
-    date = "2026-06-21";
+    date = "2026-07-23";
   };
   yazi-plugins = {
     pname = "yazi-plugins";
-    version = "38efe09c270162f1b0dfb6020e021a5b64bdc735";
+    version = "bbac5e75b22a2893ef7cdd2bd6814b15f2abb91e";
     src = fetchFromGitHub {
       owner = "yazi-rs";
       repo = "plugins";
-      rev = "38efe09c270162f1b0dfb6020e021a5b64bdc735";
+      rev = "bbac5e75b22a2893ef7cdd2bd6814b15f2abb91e";
       fetchSubmodules = false;
-      sha256 = "sha256-rgelX8Aj6iPYzk3NZN5NLMiJ/dQKJD2BKXsrK6xXdkc=";
+      sha256 = "sha256-lio4pvrqK575q7M+GtRr/5EdA4h2J/7gIvXK8c5rq1U=";
     };
-    date = "2026-06-20";
+    date = "2026-07-23";
   };
   zjstatus = {
     pname = "zjstatus";
-    version = "v0.23.0";
+    version = "v0.24.0";
     src = fetchurl {
-      url = "https://github.com/dj95/zjstatus/releases/download/v0.23.0/zjstatus.wasm";
-      sha256 = "sha256-4AaQEiNSQjnbYYAh5MxdF/gtxL+uVDKJW6QfA/E4Yf8=";
+      url = "https://github.com/dj95/zjstatus/releases/download/v0.24.0/zjstatus.wasm";
+      sha256 = "sha256-HM7ezh3tYs8+IJvmkM3TnKb7noIo7XGpUfZQf5lWZps=";
     };
   };
 }

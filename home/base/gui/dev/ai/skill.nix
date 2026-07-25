@@ -54,33 +54,32 @@ let
 
     ai-coding-principles = {
       ai-coding-discipline = "${sources.ai-coding-principles.src}/ai-coding-discipline";
-      ddia-principles = "${sources.ai-coding-principles.src}/ddia-principles";
+      # ddia-principles = "${sources.ai-coding-principles.src}/ddia-principles";
     };
 
-    software-design-philosophy-skill = {
-      software-design-philosophy = "${sources.software-design-philosophy-skill.src}/SKILL.md";
-    };
+    # software-design-philosophy-skill = {
+    #   software-design-philosophy = "${sources.software-design-philosophy-skill.src}/SKILL.md";
+    # };
 
     # playwright-cli = {
     #   playwright-cli = "${sources.playwright-cli.src}/skills/playwright-cli";
     # };
 
-    shuorenhua = {
-      shuorenhua = "${sources.shuorenhua.src}";
-    };
+    # shuorenhua = {
+    #   shuorenhua = "${sources.shuorenhua.src}";
+    # };
 
     # sidkh-skills = {
     #   explain-code = "${sources.sidkh-skills.src}/explain-code";
     # };
 
-    taches-cc-resources = {
-      build-macos-apps = "${sources.taches-cc-resources.src}/skills/expertise/macos-apps";
-      build-iphone-apps = "${sources.taches-cc-resources.src}/skills/expertise/iphone-apps";
-      # create-agent-skills = "${sources.taches-cc-resources.src}/skills/create-agent-skills";
-    };
+    # taches-cc-resources = {
+    #   build-macos-apps = "${sources.taches-cc-resources.src}/skills/expertise/macos-apps";
+    #   build-iphone-apps = "${sources.taches-cc-resources.src}/skills/expertise/iphone-apps";
+    #   # create-agent-skills = "${sources.taches-cc-resources.src}/skills/create-agent-skills";
+    # };
 
     taste-skill = {
-      # taste-skill = "${sources.taste-skill.src}/skills";
       # industrial-brutalist-ui = "${sources.taste-skill.src}/skills/brutalist-skill";
       gpt-taste = "${sources.taste-skill.src}/skills/gpt-tasteskill";
       image-to-code = "${sources.taste-skill.src}/skills/image-to-code-skill";
