@@ -1,7 +1,6 @@
 ---
 name: doc-readme
-description: 当用户需要写README时阅读
-disable-model-invocation: true
+description: 当用户需要写README时使用;当需要满足用户对readme文档的要求时使用
 ---
 
 # doc-readme

@@ -1,7 +1,6 @@
 ---
 name: doc-user-guide
-description: 当用户需要写用户指南时阅读
-disable-model-invocation: true
+description: 当用户需要写用户指南时使用;当需要满足用户对用户指南的要求时使用
 ---
 
 # doc-user-guide
