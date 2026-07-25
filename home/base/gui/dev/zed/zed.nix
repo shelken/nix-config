@@ -184,6 +184,7 @@ in
 
       terminal = {
         font_size = 15.0;
+        option_as_meta = true;
       };
 
       telemetry = {
@@ -349,6 +350,7 @@ in
         context = "AgentPanel";
         bindings = {
           "cmd-1" = "project_panel::ToggleFocus";
+          "cmd-e" = "workspace::FocusCenterPane";
         };
       }
       {
