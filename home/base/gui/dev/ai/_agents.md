@@ -12,7 +12,7 @@
 
 ## 沟通
 
-- 文档和 `to-spec` 产物默认使用中文，项目另有约定时从其约定
+- 文档和 `to-spec` 产物默认使用中文，项目另有约定时从其约定; 待办工具使用中文建立待办事项列表
 - 在任何情况下：问你为什么的时候，直接回答问题本身
 - 外部来源、引用数据或有出处的信息，必须给出链接，方便核验
 - 调用工具前，用一句话说明下一步及原因
@@ -63,18 +63,17 @@
 - home-ops: 通常在 `~/Code/MyRepo/home-ops`，homelab 集群配置，包含 VPS/router 相关服务部署
 - kaiyuan: 通常在 `~/Code/kaiyuan/`，存放大量其他人开源项目，一般将需要研究的开源项目放在里面
 - pi-extensions: 通常在 `~/Code/active/pi-extensions`，存放自维护的大部分 pi 插件
-- active: 通常在 `~/Code/active`，当前开发的大部分项目都在这
+- active: 通常在 `~/Code/active`，本地开发的大部分项目都在这
 
 ## 项目记忆
 
 - 接手任何一个项目时，先检查项目下的尸检报告`ls postmortems`;记住标题就行，后续遇到相关`难解的问题`就往回查看;结束一个`阶段/大型的/长时间`的任务之后，如果有值得记下的`坑/难题`，阅读`postmortems`skill后，然后记下来并提交
 - 主代理或子代理完成任务时，发现值得沉淀的规则但用户未明确要求，只提醒用户
 - 不准直接修改 `AGENTS.md`，永远只能提醒与建议
-- 每次阅读到项目`AGENTS.md`时，如果不符合格式要求，在用户的任务结束前或者代码提交前询问用户是否调整，并给出建议；格式细则见 `doc-agent-file`
 
 ## Skill 触发器
 
-**如果没有特别说明，skills 默认都在 `~/.agents/skills/`，项目 skills 默认都在 `{project}/.agents/skills/`；全局 skills 的管理源在 `~/nix-config/home/base/gui/dev/ai/skills/`。**
+**如果没有特别说明，skills 大部分都在 `~/.agents/skills/`可以找到，项目 skills 一般都在 `{project}/.agents/skills/`可以找到**
 
 - Git 提交、GitHub 日常操作、提交前检查：`git-workflow`
 - 项目文档约定（非专项写作流程）：`docs-policy`
