@@ -24,14 +24,17 @@ let
   followLast = {
     followLast = { };
   };
+  none = {
+    none = { };
+  };
 
   chinese = fixed "im.rime.inputmethod.Squirrel.Hans";
   english = fixed "com.apple.keylayout.ABC";
 
   # 合并后的 appRules（取 typeswitch 和 inputsourcepro 的并集）
+  # none 必须显式写入 desired：activation 只 merge，删 key 不会清掉旧 strategy
   appRules = {
-    # English
-    "com.apple.finder" = english;
+    # English（编码/终端：跨中文 App 切回来时强制 ABC）
     "com.apple.Spotlight" = english;
     "com.microsoft.VSCode" = english;
     "dev.zed.Zed" = english;
@@ -40,11 +43,9 @@ let
     "com.apple.dt.Xcode" = english;
     "net.kovidgoyal.kitty" = english;
     "tv.parsec.www" = english;
-    "com.apple.ScreenSharing" = english;
-    "com.apple.Safari" = english;
     "com.google.Chrome" = english;
     "net.imput.helium" = english;
-    # Chinese
+    # Chinese（聊天/笔记）
     "com.apple.Notes" = chinese;
     "com.tencent.xinWeChat" = chinese;
     "md.obsidian" = chinese;
@@ -53,10 +54,12 @@ let
     "com.openai.chat" = chinese;
     "com.anthropic.claudefordesktop" = chinese;
     "com.apple.MobileSMS" = chinese;
-    "com.apple.systempreferences" = chinese;
     "com.yetone.alma" = chinese;
-    # 记住上次
-    "com.muxy.app" = followLast;
+    # 不强制：减少无意义边界切换 / 焦点抖动放大
+    "com.apple.ScreenSharing" = none; # 与本地键盘源同步叠加
+    "com.apple.finder" = none;
+    "com.apple.Safari" = none; # 中英都写，不必钉死
+    "com.apple.systempreferences" = none;
   };
 
   # 传递给 jq --argjson 合并已有 app-rules.json
