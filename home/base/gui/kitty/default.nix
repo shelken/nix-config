@@ -27,10 +27,15 @@
     '';
 
     keybindings = {
+      # pi：协议协商失败时 Shift+Enter 会退化成普通 Enter；强制发 CSI-u（#5188）
+      "shift+enter" = "send_text all \\x1b[13;2u";
+
       "cmd+ctrl+," = "load_config_file";
 
       "cmd+t" = "new_tab";
       "cmd+w" = "close_tab";
+      # 默认 ctrl+shift+q 会关 tab，与 pi dequeue 冲突；关 tab 用上面 cmd+w
+      "ctrl+shift+q" = "no_op";
 
       "cmd+shift+m" = "toggle_maximized";
       "cmd+shift+l" = "next_layout";
@@ -79,7 +84,11 @@
       tab_bar_style = "powerline";
       tab_powerline_style = "slanted";
       tab_bar_min_tabs = 2;
-      tab_title_template = "{title}{' :{}:'.format(num_windows) if num_windows > 1 else ''}";
+      # 只显示活跃 panel 标题的最后一级（去掉 :N: 窗口数、去掉长路径前缀）
+      tab_title_template = "{title.rsplit('/', 1)[-1]}";
+
+      # 默认 #181926 与 inactive tab 近黑糊在一起
+      tab_bar_background = "#363A4F";
 
       macos_option_as_alt = "yes";
 
