@@ -53,6 +53,11 @@ src.git      = "https://github.com/mattpocock/skills"
 src.branch   = "main"
 fetch.github = "mattpocock/skills"
 
+[redesign-skill]
+src.git      = "https://github.com/elayadesign/redesign-skill"
+src.branch   = "main"
+fetch.github = "elayadesign/redesign-skill"
+
 [impeccable]
 src.git      = "https://github.com/pbakaus/impeccable"
 src.branch   = "main"
