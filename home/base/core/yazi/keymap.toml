@@ -1,4 +1,4 @@
-"$schema" = "https://yazi-rs.github.io/schemas/keymap.json"
+$schema = "https://yazi-rs.github.io/schemas/keymap.json"
 
 # 一次Esc退出输入框
 [[input.prepend_keymap]]
