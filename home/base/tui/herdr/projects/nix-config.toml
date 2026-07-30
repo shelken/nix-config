@@ -1,0 +1,25 @@
+# 一个 Project = 一键新开 workspace（不是恢复上次现场）
+# 可改 working_dir / tabs 后立刻生效，无需 reinstall 插件
+
+name = "nix-config"
+description = "nix-config"
+group = "home"
+working_dir = "~/nix-config"
+
+# 第一个 tab：左右分栏
+# 首 pane 是根，split 被忽略；后续 pane 相对前一个 split
+[[tabs]]
+name = "main"
+
+[[tabs.panes]]
+label = "pi"
+command = "pi"
+
+[[tabs.panes]]
+label = "shell"
+split = "right"
+# 无 command = 空终端
+
+# 第二个 tab：纯终端备用
+[[tabs]]
+name = "term"

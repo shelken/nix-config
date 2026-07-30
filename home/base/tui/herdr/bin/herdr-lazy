@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# herdr-lazy 官方不上 PATH；用 herdr 查 plugin_root 再转调
+set -euo pipefail
+
+root="$(
+  herdr plugin list --json | python3 -c '
+import json, sys
+plugins = json.load(sys.stdin)["result"]["plugins"]
+roots = [p["plugin_root"] for p in plugins if p.get("plugin_id") == "herdr-lazy"]
+if not roots:
+    sys.stderr.write("herdr-lazy: plugin not installed (herdr plugin install natori-hrj/herdr-lazy)\n")
+    sys.exit(1)
+print(roots[0])
+'
+)"
+
+bin="$root/target/release/herdr-lazy"
+if [[ ! -x "$bin" ]]; then
+  echo "herdr-lazy: binary missing at $bin (reinstall plugin to rebuild)" >&2
+  exit 1
+fi
+
+exec "$bin" "$@"

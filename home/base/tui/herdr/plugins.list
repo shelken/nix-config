@@ -1,0 +1,8 @@
+# GitHub 插件声明（herdr-lazy）
+# 本地 link（auto-pi / pi-float）不写这里；prune 会保留 local
+# 换机：hm 生效后执行 herdr-lazy sync 或 restore
+
+natori-hrj/herdr-lazy
+beyondlex/herdr-recent-navigator
+cloudmanic/herdr-plus
+smarzban/herdr-file-viewer

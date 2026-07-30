@@ -3,8 +3,75 @@ onboarding = false
 [theme]
 name = "catppuccin"
 
-[ui]
-agent_panel_scope = "all"
-
 [keys]
-split_horizontal = "h"
+prefix = "alt+x"
+split_horizontal = "prefix+h"
+
+# focus / swap：只绑方向键（覆盖默认 prefix+hjkl，hjkl 关闭）
+focus_pane_left = "prefix+left"
+focus_pane_down = "prefix+down"
+focus_pane_up = "prefix+up"
+focus_pane_right = "prefix+right"
+swap_pane_left = "prefix+shift+left"
+swap_pane_down = "prefix+shift+down"
+swap_pane_up = "prefix+shift+up"
+swap_pane_right = "prefix+shift+right"
+
+# navigate 模式：←→ 是内置保留键，关不掉；hjkl 显式清空
+navigate_pane_left = ""
+navigate_pane_down = ""
+navigate_pane_up = ""
+navigate_pane_right = ""
+
+# agent/workspace 跳转用 session navigator：prefix+g（默认）
+
+# 当前页按面积递推开 pi（auto-pi 插件）
+# herdr 不支持按键双击；用单键 chord。alt+p / alt+s 比 prefix 序列更短。
+[[keys.command]]
+key = "alt+p"
+type = "plugin_action"
+command = "shelken.auto-pi.enter-pi"
+description = "open pi in next free pane"
+
+# auto-pi：当前目录 session 浮窗（过滤 skill）
+# 不用 prefix+r：留给内置 resize_mode；与 alt+p 同为直达键
+[[keys.command]]
+key = "alt+s"
+type = "plugin_action"
+command = "shelken.auto-pi.pick-session"
+description = "pick pi session for cwd"
+
+# recent-navigator：只 Agents 页（比 prefix+g 干净）
+[[keys.command]]
+key = "alt+a"
+type = "plugin_action"
+command = "beyondlex.herdr-recent-navigator.focus-agents"
+description = "recent agents navigator"
+
+# pi-float：浮动弹窗选预设，在 focus pane cwd 启动 pi（alt+f 另有他用）
+[[keys.command]]
+key = "prefix+i"
+type = "plugin_action"
+command = "shelken.pi-float.pick-preset"
+description = "pi-float: pick preset"
+
+# herdr-plus: Projects 浏览器（一键按模板开 workspace）
+[[keys.command]]
+key = "prefix+p"
+type = "plugin_action"
+command = "cloudmanic.herdr-plus.projects"
+description = "herdr-plus: projects"
+
+# herdr-file-viewer：只读文件树
+[[keys.command]]
+key = "prefix+f"
+type = "plugin_action"
+command = "herdr-file-viewer.open-file-viewer-tab"
+description = "file viewer tab"
+
+# herdr-lazy：插件声明管理（list/lock 在 nix-config herdr/）
+[[keys.command]]
+key = "prefix+shift+l"
+type = "plugin_action"
+command = "herdr-lazy.manage"
+description = "herdr-lazy: manage plugins"
