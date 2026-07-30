@@ -68,31 +68,6 @@ in
   # Set variables for you to manually install homebrew packages.
   // homebrew_mirror_env;
 
-  # Set environment variables for nix-darwin before run `brew bundle`.
-  # 变更原因：Homebrew ≥5.1.15 要求非官方 tap 必须 trust 才能加载 cask/formula
-  # ref: https://github.com/nix-darwin/nix-darwin/issues/1794
-  # ref: https://github.com/nix-darwin/nix-darwin/pull/1789
-  system.activationScripts.homebrew.text =
-    let
-      # 排除 homebrew 官方 tap（始终受信任），其余全部需要 trust
-      tapsToTrust = builtins.filter (t: !lib.hasPrefix "homebrew/" t) (
-        map (t: t.name) config.homebrew.taps
-      );
-    in
-    lib.mkBefore ''
-      echo >&2 '${homebrew_env_script}'
-      ${homebrew_env_script}
-      ${lib.optionalString (tapsToTrust != [ ]) ''
-        echo >&2 'Trusting Homebrew taps: ${lib.concatStringsSep ", " tapsToTrust}...'
-        PATH="${config.homebrew.prefix}/bin:$PATH" \
-        sudo \
-          --preserve-env=PATH \
-          --user=${config.homebrew.user} \
-          --set-home \
-          ${config.homebrew.prefix}/bin/brew trust --tap ${lib.escapeShellArgs tapsToTrust}
-      ''}
-    '';
-
   # Create /etc/zshrc that loads the nix-darwin environment.
   # this is required if you want to use darwin's default shell - zsh
   programs.zsh.enable = true;
@@ -129,18 +104,50 @@ in
     };
 
     taps = [
-      "shelken/tap" # self tap
-
-      "hashicorp/tap" # terraform
-      "FelixKratz/formulae" # jankyborders
-      "gromgit/fuse" # macfuse,mounty
-      "nikitabobko/tap" # aerospace
-      "bigwig-club/brew" # upic
-      "mhaeuser/mhaeuser" # battery-toolkit
-      "farion1231/ccswitch" # cc-switch
-      "max-sixty/worktrunk" # worktrunk
-      "anomalyco/tap" # opencode
-      "manaflow-ai/cmux" # cmux
+      {
+        name = "shelken/tap";
+        trusted = true;
+      } # self tap
+      {
+        name = "hashicorp/tap";
+        trusted = true;
+      } # terraform
+      {
+        name = "FelixKratz/formulae";
+        trusted = true;
+      } # jankyborders
+      {
+        name = "gromgit/fuse";
+        trusted = true;
+      } # macfuse,mounty
+      {
+        name = "nikitabobko/tap";
+        trusted = true;
+      } # aerospace
+      {
+        name = "bigwig-club/brew";
+        trusted = true;
+      } # upic
+      {
+        name = "mhaeuser/mhaeuser";
+        trusted = true;
+      } # battery-toolkit
+      {
+        name = "farion1231/ccswitch";
+        trusted = true;
+      } # cc-switch
+      {
+        name = "max-sixty/worktrunk";
+        trusted = true;
+      } # worktrunk
+      {
+        name = "anomalyco/tap";
+        trusted = true;
+      } # opencode
+      {
+        name = "manaflow-ai/cmux";
+        trusted = true;
+      } # cmux
     ];
 
     brews = [
