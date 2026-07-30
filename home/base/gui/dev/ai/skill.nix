@@ -85,7 +85,6 @@ let
       image-to-code = "${sources.taste-skill.src}/skills/image-to-code-skill";
       # minimalist-ui = "${sources.taste-skill.src}/skills/minimalist-skill";
       # full-output-enforcement = "${sources.taste-skill.src}/skills/output-skill";
-      redesign-existing-projects = "${sources.taste-skill.src}/skills/redesign-skill";
       high-end-visual-design = "${sources.taste-skill.src}/skills/soft-skill";
       stitch-design-taste = "${sources.taste-skill.src}/skills/stitch-skill";
       design-taste-frontend = "${sources.taste-skill.src}/skills/taste-skill";
@@ -129,6 +128,10 @@ let
       wayfinder = "${sources.mattpocock-skills.src}/skills/engineering/wayfinder";
       research = "${sources.mattpocock-skills.src}/skills/engineering/research";
       domain-modeling = "${sources.mattpocock-skills.src}/skills/engineering/domain-modeling";
+    };
+
+    redesign-skill = {
+      redesign-existing-projects = "${sources.redesign-skill.src}/skills/redesign-existing-projects";
     };
 
     impeccable = {

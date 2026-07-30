@@ -101,6 +101,18 @@
     };
     date = "2026-07-11";
   };
+  redesign-skill = {
+    pname = "redesign-skill";
+    version = "64627f6ebe7a7a2f17c0affe4fe5838e2d46a876";
+    src = fetchFromGitHub {
+      owner = "elayadesign";
+      repo = "redesign-skill";
+      rev = "64627f6ebe7a7a2f17c0affe4fe5838e2d46a876";
+      fetchSubmodules = false;
+      sha256 = "sha256-en6PdayGgqm28R/DvchzCyjSi4pkyM8/GHfKQL8dy2M=";
+    };
+    date = "2026-07-20";
+  };
   taches-cc-resources = {
     pname = "taches-cc-resources";
     version = "1757615b99ab789a72ff2d02e9f6112af2a15c04";

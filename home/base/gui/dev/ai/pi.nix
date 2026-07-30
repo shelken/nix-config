@@ -16,6 +16,7 @@ in
   home.file.".config/ponytail/config.json".text = builtins.toJSON {
     hideStatus = true;
     quietStartup = true;
+    defaultMode = "off"; # 默认不开启注入prompt
   };
   shelken.backup.app.pi = [
     "${config.home.homeDirectory}/.pi"

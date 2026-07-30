@@ -167,6 +167,27 @@
         },
         "version": "22a4006f531b7c8e71704f64e48feed659164104"
     },
+    "redesign-skill": {
+        "cargoLock": null,
+        "date": "2026-07-20",
+        "extract": null,
+        "name": "redesign-skill",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "elayadesign",
+            "repo": "redesign-skill",
+            "rev": "64627f6ebe7a7a2f17c0affe4fe5838e2d46a876",
+            "sha256": "sha256-en6PdayGgqm28R/DvchzCyjSi4pkyM8/GHfKQL8dy2M=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "64627f6ebe7a7a2f17c0affe4fe5838e2d46a876"
+    },
     "taches-cc-resources": {
         "cargoLock": null,
         "date": "2026-04-01",
