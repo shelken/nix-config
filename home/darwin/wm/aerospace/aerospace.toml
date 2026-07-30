@@ -4,6 +4,13 @@
 # You can use it to add commands that run after login to macOS user session.
 # 'start-at-login' needs to be 'true' for 'after-login-command' to work
 # Available commands: https://nikitabobko.github.io/AeroSpace/commands
+# Config version for compatibility and deprecations
+# See: https://nikitabobko.github.io/AeroSpace/guide#config-version
+config-version = 2
+
+# v2 的 fallback 为空数组（空 workspace 会自动消失），显式列出以保持 v1 的持久驻留行为
+persistent-workspaces = ["1Browser", "2Code", "3Terminal", "4Write", "5Chat", "6Music", "7", "8", "9File", "0Other"]
+
 after-login-command = []
 
 # You can use it to add commands that run after AeroSpace startup.
