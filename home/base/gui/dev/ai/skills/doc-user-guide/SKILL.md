@@ -1,6 +1,6 @@
 ---
 name: doc-user-guide
-description: 当用户需要写用户指南时使用;当需要满足用户对用户指南的要求时使用
+description: 当用户需要写用户指南时使用;当需要满足用户对用户指南的要求时阅读该技能
 ---
 
 # doc-user-guide

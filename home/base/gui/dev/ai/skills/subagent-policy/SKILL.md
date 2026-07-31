@@ -1,6 +1,6 @@
 ---
 name: subagent-policy
-description: 发起、审查或规划子代理工作时使用
+description: 发起、审查或规划子代理工作时阅读该技能
 ---
 
 # 子代理

@@ -1,6 +1,6 @@
 ---
 name: browser-best-practice
-description: 当需要控制浏览器时使用
+description: 当需要控制浏览器时阅读该技能
 ---
 
 ## Rules

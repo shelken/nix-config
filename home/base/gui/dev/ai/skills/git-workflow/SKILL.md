@@ -1,6 +1,6 @@
 ---
 name: git-workflow
-description: Git 提交、GitHub 日常操作或提交前文档检查时使用
+description: Git 提交、GitHub 日常操作或提交前文档检查时阅读该技能
 ---
 
 # Git

@@ -1,6 +1,6 @@
 ---
 name: docs-policy
-description: 编写、修改项目文档，或需要统一文档约定时使用
+description: 编写、修改项目文档，或需要统一文档约定时阅读该技能
 ---
 
 # 文档

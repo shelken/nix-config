@@ -1,6 +1,6 @@
 ---
 name: doc-agent-file
-description: 编写、修改、审查或建议更新 AGENTS.md 时使用
+description: 编写、修改、审查或建议更新 AGENTS.md 时阅读该技能
 ---
 
 # AGENTS.md 的基本格式要求

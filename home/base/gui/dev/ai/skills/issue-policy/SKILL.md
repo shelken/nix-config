@@ -1,6 +1,6 @@
 ---
 name: issue-policy
-description: 创建github issue前/关闭issue前/阅读某个项目issue前/阅读pr前 使用
+description: 创建github issue前/关闭issue前/阅读某个项目issue前/阅读pr前 阅读该技能
 ---
 
 ## Rules
