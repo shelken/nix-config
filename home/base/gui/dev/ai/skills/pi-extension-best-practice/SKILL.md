@@ -1,6 +1,6 @@
 ---
 name: pi-extension-best-practice
-description: 写或审查 pi 插件 (provider) 的事件处理时使用. 触发词: pi extension session_start、model_select、插件签到锁、provider 网络门闩、pi 插件非阻塞、activate 契约、多 pi 并发启动.
+description: 写或审查 pi 插件(pi extension) 时使用
 ---
 
 # pi 插件最佳实践
