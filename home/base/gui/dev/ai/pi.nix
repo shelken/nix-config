@@ -1,5 +1,6 @@
 { pkgs, config, ... }:
 let
+  ponytailDir = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/ponytail";
   shellInit = ''
     # for extension pi-powerline-footer
     export POWERLINE_NERD_FONTS=1
@@ -13,10 +14,10 @@ in
   ];
 
   # ponytail 扩展配置: 隐藏状态栏显示, 保留规则注入
-  home.file.".config/ponytail/config.json".text = builtins.toJSON {
-    hideStatus = true;
-    quietStartup = true;
-    defaultMode = "off"; # 默认不开启注入prompt
+  # 可编辑：软链到仓库源文件 home/base/gui/dev/ai/ponytail/config.json
+  home.file.".config/ponytail/config.json" = {
+    source = config.lib.file.mkOutOfStoreSymlink "${ponytailDir}/config.json";
+    force = true;
   };
   shelken.backup.app.pi = [
     "${config.home.homeDirectory}/.pi"
