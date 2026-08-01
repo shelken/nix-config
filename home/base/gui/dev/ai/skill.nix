@@ -57,6 +57,10 @@ let
       # ddia-principles = "${sources.ai-coding-principles.src}/ddia-principles";
     };
 
+    ai-design-skills = {
+      landing-page-design = "${sources.ai-design-skills.src}/skills/landing-page-design";
+    };
+
     # software-design-philosophy-skill = {
     #   software-design-philosophy = "${sources.software-design-philosophy-skill.src}/SKILL.md";
     # };

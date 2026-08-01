@@ -78,7 +78,7 @@
 
 ## Skill 触发器
 
-**如果没有特别说明，skills 大部分都在 `~/.agents/skills/`可以找到，项目 skills 一般都在 `{project}/.agents/skills/`可以找到**
+**如果没有特别说明，skills 大部分都在 `~/.agents/skills/`可以找到，项目 skills 一般都在 `{project}/.agents/skills/`可以找到, 优化与改善的话在nix-config/home.../skills中**
 
 - Git 提交、GitHub 日常操作、提交前检查：`git-workflow`
 - 项目文档约定（非专项写作流程）：`docs-policy`
@@ -87,3 +87,5 @@
 - 发起或审查子代理：`subagent-policy`
 - 用户要求回忆/沉淀/审计项目知识时：`project-memory`
 - 写尸检报告：`postmortem`
+- debug: `debug-best-practice`
+- 控制浏览器: `browser-best-practice`

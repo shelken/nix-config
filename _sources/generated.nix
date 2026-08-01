@@ -18,6 +18,18 @@
     };
     date = "2026-03-26";
   };
+  ai-design-skills = {
+    pname = "ai-design-skills";
+    version = "1c1e97cb9878e236552c772092dda7adcdddbcb2";
+    src = fetchFromGitHub {
+      owner = "elayadesign";
+      repo = "ai-design-skills";
+      rev = "1c1e97cb9878e236552c772092dda7adcdddbcb2";
+      fetchSubmodules = false;
+      sha256 = "sha256-Vscb+Cd6HnUk5222xIrJZ5q/cTqir5lhPWQ+RLAQ8d4=";
+    };
+    date = "2026-07-29";
+  };
   andrej-karpathy-skills = {
     pname = "andrej-karpathy-skills";
     version = "2c606141936f1eeef17fa3043a72095b4765b9c2";
