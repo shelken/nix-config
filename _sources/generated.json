@@ -83,6 +83,27 @@
         },
         "version": "c2a9bc154f4ffe08b25d28d5e852dfac8c0d0d8a"
     },
+    "emilkowalski-skills": {
+        "cargoLock": null,
+        "date": "2026-08-05",
+        "extract": null,
+        "name": "emilkowalski-skills",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "emilkowalski",
+            "repo": "skills",
+            "rev": "de33dbed000212b54400a33767d1e4d03654db2a",
+            "sha256": "sha256-ABUbg0Ps28qMZ410msWmwDAhvIQi5qNAL1WkLbw5YA8=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "de33dbed000212b54400a33767d1e4d03654db2a"
+    },
     "impeccable": {
         "cargoLock": null,
         "date": "2026-08-04",

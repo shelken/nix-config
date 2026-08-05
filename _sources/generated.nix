@@ -54,6 +54,18 @@
     };
     date = "2026-07-03";
   };
+  emilkowalski-skills = {
+    pname = "emilkowalski-skills";
+    version = "de33dbed000212b54400a33767d1e4d03654db2a";
+    src = fetchFromGitHub {
+      owner = "emilkowalski";
+      repo = "skills";
+      rev = "de33dbed000212b54400a33767d1e4d03654db2a";
+      fetchSubmodules = false;
+      sha256 = "sha256-ABUbg0Ps28qMZ410msWmwDAhvIQi5qNAL1WkLbw5YA8=";
+    };
+    date = "2026-08-05";
+  };
   impeccable = {
     pname = "impeccable";
     version = "ae5e95101a6979e7f7973a4ff57680b3c7adc1ec";

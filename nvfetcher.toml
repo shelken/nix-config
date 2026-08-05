@@ -48,6 +48,11 @@ fetch.github = "elayadesign/ai-design-skills"
 # src.branch   = "main"
 # fetch.github = "vectorize-io/hindsight"
 
+[emilkowalski-skills]
+src.git      = "https://github.com/emilkowalski/skills"
+src.branch   = "main"
+fetch.github = "emilkowalski/skills"
+
 [llamaparse-agent-skills]
 src.git      = "https://github.com/run-llama/llamaparse-agent-skills"
 src.branch   = "main"
