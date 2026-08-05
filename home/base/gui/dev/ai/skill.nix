@@ -121,9 +121,9 @@ let
       handoff = "${sources.mattpocock-skills.src}/skills/productivity/handoff";
       prototype = "${sources.mattpocock-skills.src}/skills/engineering/prototype";
       tdd = "${sources.mattpocock-skills.src}/skills/engineering/tdd";
-      to-tickets = "${sources.mattpocock-skills.src}/skills/engineering/to-tickets/SKILL.md";
-      to-spec = "${sources.mattpocock-skills.src}/skills/engineering/to-spec/SKILL.md";
-      writing-great-skills = "${sources.mattpocock-skills.src}/skills/productivity/writing-great-skills";
+      to-tickets = "${sources.mattpocock-skills.src}/skills/engineering/to-tickets";
+      to-spec = "${sources.mattpocock-skills.src}/skills/engineering/to-spec";
+      writing-for-agents = "${sources.mattpocock-skills.src}/skills/productivity/writing-for-agents";
       teach = "${sources.mattpocock-skills.src}/skills/productivity/teach";
       loop-me = "${sources.mattpocock-skills.src}/skills/in-progress/loop-me";
       code-review = "${sources.mattpocock-skills.src}/skills/engineering/code-review";
@@ -132,6 +132,7 @@ let
       wayfinder = "${sources.mattpocock-skills.src}/skills/engineering/wayfinder";
       research = "${sources.mattpocock-skills.src}/skills/engineering/research";
       domain-modeling = "${sources.mattpocock-skills.src}/skills/engineering/domain-modeling";
+      ask-matt = "${sources.mattpocock-skills.src}/skills/engineering/ask-matt";
     };
 
     redesign-skill = {

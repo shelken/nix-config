@@ -56,15 +56,15 @@
   };
   impeccable = {
     pname = "impeccable";
-    version = "af78b1e512148e2a2f2d2ded6786d265ea420191";
+    version = "ae5e95101a6979e7f7973a4ff57680b3c7adc1ec";
     src = fetchFromGitHub {
       owner = "pbakaus";
       repo = "impeccable";
-      rev = "af78b1e512148e2a2f2d2ded6786d265ea420191";
+      rev = "ae5e95101a6979e7f7973a4ff57680b3c7adc1ec";
       fetchSubmodules = false;
-      sha256 = "sha256-m4dFX8c0xzYvroS+YFDHovBOUXBc9MVlWIqddnrTpcM=";
+      sha256 = "sha256-efbINjnGr0WneoroeiqTWVeiiqEdiGVeesLBs3aM+ew=";
     };
-    date = "2026-07-25";
+    date = "2026-08-04";
   };
   kitty-icon = {
     pname = "kitty-icon";
@@ -91,15 +91,15 @@
   };
   mattpocock-skills = {
     pname = "mattpocock-skills";
-    version = "ed37663cc5fbef691ddfecd080dff42f7e7e350d";
+    version = "8b36d4fb2635b3c21998dcd8144439c9e5ba7302";
     src = fetchFromGitHub {
       owner = "mattpocock";
       repo = "skills";
-      rev = "ed37663cc5fbef691ddfecd080dff42f7e7e350d";
+      rev = "8b36d4fb2635b3c21998dcd8144439c9e5ba7302";
       fetchSubmodules = false;
-      sha256 = "sha256-o/H9s3t6ahBqFwpkOMBOTwpsvb33pgvpI9n0PA+uLYM=";
+      sha256 = "sha256-RwFJdrPnyieN65QrwSfABRuBzMdyUIf/qoJ1M8zLLps=";
     };
-    date = "2026-07-21";
+    date = "2026-08-05";
   };
   projects-yazi = {
     pname = "projects-yazi";
@@ -151,15 +151,15 @@
   };
   yazi-plugins = {
     pname = "yazi-plugins";
-    version = "bbac5e75b22a2893ef7cdd2bd6814b15f2abb91e";
+    version = "b9598e6cbe721aa29bf64836ce314584cfeb58fc";
     src = fetchFromGitHub {
       owner = "yazi-rs";
       repo = "plugins";
-      rev = "bbac5e75b22a2893ef7cdd2bd6814b15f2abb91e";
+      rev = "b9598e6cbe721aa29bf64836ce314584cfeb58fc";
       fetchSubmodules = false;
-      sha256 = "sha256-lio4pvrqK575q7M+GtRr/5EdA4h2J/7gIvXK8c5rq1U=";
+      sha256 = "sha256-mrQq3r1dzM3DmEyke8CvSLbacgLQ4tNiqYHCOyXaqp0=";
     };
-    date = "2026-07-23";
+    date = "2026-08-03";
   };
   zjstatus = {
     pname = "zjstatus";
