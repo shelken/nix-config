@@ -135,6 +135,18 @@ let
       ask-matt = "${sources.mattpocock-skills.src}/skills/engineering/ask-matt";
     };
 
+    emilkowalski-skills = {
+      animate = "${sources.emilkowalski-skills.src}/skills/animate";
+      animation-vocabulary = "${sources.emilkowalski-skills.src}/skills/animation-vocabulary";
+      apple-design = "${sources.emilkowalski-skills.src}/skills/apple-design";
+      emil-design-eng = "${sources.emilkowalski-skills.src}/skills/emil-design-eng";
+      find-animation-opportunities = "${sources.emilkowalski-skills.src}/skills/find-animation-opportunities";
+      improve-animations = "${sources.emilkowalski-skills.src}/skills/improve-animations";
+      pick-ui-library = "${sources.emilkowalski-skills.src}/skills/pick-ui-library";
+      # prototype 与 mattpocock-skills 同名冲突，跳过
+      review-animations = "${sources.emilkowalski-skills.src}/skills/review-animations";
+    };
+
     redesign-skill = {
       redesign-existing-projects = "${sources.redesign-skill.src}/skills/redesign-existing-projects";
     };
@@ -161,8 +173,33 @@ let
 
   normalizeSkillSources = lib.mapAttrs (_: normalizeFetchedSkillSource);
 
+  # 声明式 frontmatter 覆盖：skill 名 -> 键值集合。
+  # 命中时在安装期产出一份复制目录并注入 frontmatter 的派生路径，上游源不动。
+  skillFrontmatterOverrides = {
+    find-animation-opportunities.disable-model-invocation = true;
+    improve-animations.disable-model-invocation = true;
+  };
+
+  applyFrontmatterOverrides =
+    sourcePath: overrides:
+    if overrides == { } then
+      sourcePath
+    else
+      pkgs.runCommand "skill-patched" { } ''
+        cp -r ${sourcePath} $out
+        chmod -R +w $out
+        ${pkgs.python3}/bin/python ${../../../../../utils/script/patch_frontmatter.py} "$out/SKILL.md" '${builtins.toJSON overrides}'
+      '';
+
+  # normalize 后再按覆盖表注入 frontmatter，未命中的原样透传（零成本）。
+  normalizeAndOverride =
+    name: sourcePath:
+    applyFrontmatterOverrides (normalizeFetchedSkillSource sourcePath) (
+      skillFrontmatterOverrides.${name} or { }
+    );
+
   normalizedFetchedSkillSourcesByRepo = lib.mapAttrs (
-    _: normalizeSkillSources
+    _: lib.mapAttrs normalizeAndOverride
   ) fetchedSkillSourcesByRepo;
 
   listToAttrsWithUniqueNameCheck =
