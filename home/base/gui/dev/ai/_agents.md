@@ -72,7 +72,19 @@
 - 主代理或子代理完成任务时，发现值得沉淀的规则但用户未明确要求，只提醒用户
 - 不准直接修改 `AGENTS.md`，永远只能提醒与建议
 
-## 交付物
+## Papercuts
+
+When you hit friction during work — a dead-end tool call, a broken link, a
+misleading doc, a footgun config, a missing helper — file it before moving on:
+
+    papercuts add "<what you hit and what would have prevented it>" --tag <area>
+
+Don't stop working; file it and push through. Severity: minor (default) for
+annoyances, major for time sinks, blocker for hard walls. Run `papercuts schema`
+once if you need the full contract. Attach `--cmd`, `--exit`, or `--stderr-file`
+when filing tool failures; never feed raw environment dumps.
+
+### 交付物
 
 将交付成果撰写为独立且完整的最终产物。直接吸收反馈进行修改，切勿提及草稿、版本、评审轮次、先前表述、被替代的决策或编辑过程，除非用户明确要求提供变更日志、历史记录或决策记录。(例如: 在文档中写`第xx版`)
 
@@ -89,3 +101,4 @@
 - 写尸检报告：`postmortem`
 - debug: `debug-best-practice`
 - 控制浏览器: `browser-best-practice`
+- 代码写完后审查前: `ponytail-review` 之后 `code-review`
