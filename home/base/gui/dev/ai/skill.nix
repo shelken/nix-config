@@ -57,9 +57,9 @@ let
       # ddia-principles = "${sources.ai-coding-principles.src}/ddia-principles";
     };
 
-    ai-design-skills = {
-      landing-page-design = "${sources.ai-design-skills.src}/skills/landing-page-design";
-    };
+    # ai-design-skills = {
+    #   landing-page-design = "${sources.ai-design-skills.src}/skills/landing-page-design";
+    # };
 
     # software-design-philosophy-skill = {
     #   software-design-philosophy = "${sources.software-design-philosophy-skill.src}/SKILL.md";
@@ -83,16 +83,16 @@ let
     #   # create-agent-skills = "${sources.taches-cc-resources.src}/skills/create-agent-skills";
     # };
 
-    taste-skill = {
-      # industrial-brutalist-ui = "${sources.taste-skill.src}/skills/brutalist-skill";
-      gpt-taste = "${sources.taste-skill.src}/skills/gpt-tasteskill";
-      image-to-code = "${sources.taste-skill.src}/skills/image-to-code-skill";
-      # minimalist-ui = "${sources.taste-skill.src}/skills/minimalist-skill";
-      # full-output-enforcement = "${sources.taste-skill.src}/skills/output-skill";
-      high-end-visual-design = "${sources.taste-skill.src}/skills/soft-skill";
-      stitch-design-taste = "${sources.taste-skill.src}/skills/stitch-skill";
-      design-taste-frontend = "${sources.taste-skill.src}/skills/taste-skill";
-    };
+    # taste-skill = {
+    #   # industrial-brutalist-ui = "${sources.taste-skill.src}/skills/brutalist-skill";
+    #   gpt-taste = "${sources.taste-skill.src}/skills/gpt-tasteskill";
+    #   image-to-code = "${sources.taste-skill.src}/skills/image-to-code-skill";
+    #   # minimalist-ui = "${sources.taste-skill.src}/skills/minimalist-skill";
+    #   # full-output-enforcement = "${sources.taste-skill.src}/skills/output-skill";
+    #   high-end-visual-design = "${sources.taste-skill.src}/skills/soft-skill";
+    #   stitch-design-taste = "${sources.taste-skill.src}/skills/stitch-skill";
+    #   design-taste-frontend = "${sources.taste-skill.src}/skills/taste-skill";
+    # };
 
     # obra-superpowers = {
     #   # brainstorming = "${sources.obra-superpowers.src}/skills/brainstorming";
@@ -133,27 +133,29 @@ let
       research = "${sources.mattpocock-skills.src}/skills/engineering/research";
       domain-modeling = "${sources.mattpocock-skills.src}/skills/engineering/domain-modeling";
       ask-matt = "${sources.mattpocock-skills.src}/skills/engineering/ask-matt";
+      triage = "${sources.mattpocock-skills.src}/skills/engineering/triage";
     };
 
-    emilkowalski-skills = {
-      animate = "${sources.emilkowalski-skills.src}/skills/animate";
-      animation-vocabulary = "${sources.emilkowalski-skills.src}/skills/animation-vocabulary";
-      apple-design = "${sources.emilkowalski-skills.src}/skills/apple-design";
-      emil-design-eng = "${sources.emilkowalski-skills.src}/skills/emil-design-eng";
-      find-animation-opportunities = "${sources.emilkowalski-skills.src}/skills/find-animation-opportunities";
-      improve-animations = "${sources.emilkowalski-skills.src}/skills/improve-animations";
-      pick-ui-library = "${sources.emilkowalski-skills.src}/skills/pick-ui-library";
-      # prototype 与 mattpocock-skills 同名冲突，跳过
-      review-animations = "${sources.emilkowalski-skills.src}/skills/review-animations";
-    };
+    # emilkowalski-skills = {
+    #   animate = "${sources.emilkowalski-skills.src}/skills/animate";
+    #   animation-vocabulary = "${sources.emilkowalski-skills.src}/skills/animation-vocabulary";
+    #   apple-design = "${sources.emilkowalski-skills.src}/skills/apple-design";
+    #   emil-design-eng = "${sources.emilkowalski-skills.src}/skills/emil-design-eng";
+    #   find-animation-opportunities = "${sources.emilkowalski-skills.src}/skills/find-animation-opportunities";
+    #   improve-animations = "${sources.emilkowalski-skills.src}/skills/improve-animations";
+    #   pick-ui-library = "${sources.emilkowalski-skills.src}/skills/pick-ui-library";
+    #   # prototype 与 mattpocock-skills 同名冲突，跳过
+    #   review-animations = "${sources.emilkowalski-skills.src}/skills/review-animations";
+    # };
 
-    redesign-skill = {
-      redesign-existing-projects = "${sources.redesign-skill.src}/skills/redesign-existing-projects";
-    };
+    #https://github.com/elayadesign/redesign-skill 设计
+    # redesign-skill = {
+    #   redesign-existing-projects = "${sources.redesign-skill.src}/skills/redesign-existing-projects";
+    # };
 
-    impeccable = {
-      impeccable = "${sources.impeccable.src}/.agents/skills/impeccable";
-    };
+    # impeccable = {
+    #   impeccable = "${sources.impeccable.src}/.agents/skills/impeccable";
+    # };
 
     # waza-skills = {
     #   health = "${sources.waza-skills.src}/skills/health";

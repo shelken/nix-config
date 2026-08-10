@@ -1,6 +1,6 @@
 ---
 name: doc-readme
-description: 当用户需要写README时阅读该技能;当需要满足用户对readme文档的要求时阅读该技能
+description: 当用户需要写README时阅读该技能;当需要满足用户对readme文档的要求时阅读该技能;当项目的功能出现用户可见变更时且非常值得记录时阅读该技能
 ---
 
 # doc-readme

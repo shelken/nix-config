@@ -18,18 +18,6 @@
     };
     date = "2026-03-26";
   };
-  ai-design-skills = {
-    pname = "ai-design-skills";
-    version = "1c1e97cb9878e236552c772092dda7adcdddbcb2";
-    src = fetchFromGitHub {
-      owner = "elayadesign";
-      repo = "ai-design-skills";
-      rev = "1c1e97cb9878e236552c772092dda7adcdddbcb2";
-      fetchSubmodules = false;
-      sha256 = "sha256-Vscb+Cd6HnUk5222xIrJZ5q/cTqir5lhPWQ+RLAQ8d4=";
-    };
-    date = "2026-07-29";
-  };
   andrej-karpathy-skills = {
     pname = "andrej-karpathy-skills";
     version = "2c606141936f1eeef17fa3043a72095b4765b9c2";
@@ -53,30 +41,6 @@
       sha256 = "sha256-awochSE2OupbsmaGx0xc7wHf0ovVMSdtHv4gZAGWOus=";
     };
     date = "2026-07-03";
-  };
-  emilkowalski-skills = {
-    pname = "emilkowalski-skills";
-    version = "de33dbed000212b54400a33767d1e4d03654db2a";
-    src = fetchFromGitHub {
-      owner = "emilkowalski";
-      repo = "skills";
-      rev = "de33dbed000212b54400a33767d1e4d03654db2a";
-      fetchSubmodules = false;
-      sha256 = "sha256-ABUbg0Ps28qMZ410msWmwDAhvIQi5qNAL1WkLbw5YA8=";
-    };
-    date = "2026-08-05";
-  };
-  impeccable = {
-    pname = "impeccable";
-    version = "ae5e95101a6979e7f7973a4ff57680b3c7adc1ec";
-    src = fetchFromGitHub {
-      owner = "pbakaus";
-      repo = "impeccable";
-      rev = "ae5e95101a6979e7f7973a4ff57680b3c7adc1ec";
-      fetchSubmodules = false;
-      sha256 = "sha256-efbINjnGr0WneoroeiqTWVeiiqEdiGVeesLBs3aM+ew=";
-    };
-    date = "2026-08-04";
   };
   kitty-icon = {
     pname = "kitty-icon";
@@ -103,15 +67,15 @@
   };
   mattpocock-skills = {
     pname = "mattpocock-skills";
-    version = "8b36d4fb2635b3c21998dcd8144439c9e5ba7302";
+    version = "84fdeffd12f2ee307994d1eb6feb48173b6e0502";
     src = fetchFromGitHub {
       owner = "mattpocock";
       repo = "skills";
-      rev = "8b36d4fb2635b3c21998dcd8144439c9e5ba7302";
+      rev = "84fdeffd12f2ee307994d1eb6feb48173b6e0502";
       fetchSubmodules = false;
-      sha256 = "sha256-RwFJdrPnyieN65QrwSfABRuBzMdyUIf/qoJ1M8zLLps=";
+      sha256 = "sha256-pseSJJb5nBBGPzpxA1GzjGLB9OrT+u0At1saJ4NqZ1E=";
     };
-    date = "2026-08-05";
+    date = "2026-08-06";
   };
   projects-yazi = {
     pname = "projects-yazi";
@@ -125,53 +89,17 @@
     };
     date = "2026-07-11";
   };
-  redesign-skill = {
-    pname = "redesign-skill";
-    version = "64627f6ebe7a7a2f17c0affe4fe5838e2d46a876";
-    src = fetchFromGitHub {
-      owner = "elayadesign";
-      repo = "redesign-skill";
-      rev = "64627f6ebe7a7a2f17c0affe4fe5838e2d46a876";
-      fetchSubmodules = false;
-      sha256 = "sha256-en6PdayGgqm28R/DvchzCyjSi4pkyM8/GHfKQL8dy2M=";
-    };
-    date = "2026-07-20";
-  };
-  taches-cc-resources = {
-    pname = "taches-cc-resources";
-    version = "1757615b99ab789a72ff2d02e9f6112af2a15c04";
-    src = fetchFromGitHub {
-      owner = "glittercowboy";
-      repo = "taches-cc-resources";
-      rev = "1757615b99ab789a72ff2d02e9f6112af2a15c04";
-      fetchSubmodules = false;
-      sha256 = "sha256-wWFJBd0AIIPYRWUG6LEFlKHpbpBQw4N2+7fX9BmjL6g=";
-    };
-    date = "2026-04-01";
-  };
-  taste-skill = {
-    pname = "taste-skill";
-    version = "e988add20dab0fa97d7a76781c48961c8184288e";
-    src = fetchFromGitHub {
-      owner = "Leonxlnx";
-      repo = "taste-skill";
-      rev = "e988add20dab0fa97d7a76781c48961c8184288e";
-      fetchSubmodules = false;
-      sha256 = "sha256-Zt3fC8/63ZHcsFLjNR6/zNykrVkT0QV3SmmCi1dlnJA=";
-    };
-    date = "2026-07-23";
-  };
   yazi-plugins = {
     pname = "yazi-plugins";
-    version = "b9598e6cbe721aa29bf64836ce314584cfeb58fc";
+    version = "0be29a913ad61c6d119abfaaf253e96e6af5db67";
     src = fetchFromGitHub {
       owner = "yazi-rs";
       repo = "plugins";
-      rev = "b9598e6cbe721aa29bf64836ce314584cfeb58fc";
+      rev = "0be29a913ad61c6d119abfaaf253e96e6af5db67";
       fetchSubmodules = false;
-      sha256 = "sha256-mrQq3r1dzM3DmEyke8CvSLbacgLQ4tNiqYHCOyXaqp0=";
+      sha256 = "sha256-IDmmXzQKFx3QZ9u5lMwcTOeWeMPWzIBeKBXkGAgJMaI=";
     };
-    date = "2026-08-03";
+    date = "2026-08-07";
   };
   zjstatus = {
     pname = "zjstatus";
