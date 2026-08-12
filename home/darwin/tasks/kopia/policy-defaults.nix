@@ -19,6 +19,9 @@
       ".Spotlight-V100"
       ".Trashes"
       "Thumbs.db"
+      ".scratch"
+      ".playwright-cli"
+      ".build"
     ];
     retention = {
       latest = 48;
