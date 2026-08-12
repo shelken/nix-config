@@ -23,6 +23,8 @@ let
   lit = pkgs.writeShellScriptBin "lit" ''
     exec ${pkgs.bun}/bin/bunx @llamaindex/liteparse "$@"
   '';
+
+  spawnSubagentDir = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/skills/subagent-policy";
 in
 {
   config = lib.mkIf config.shelken.dev.ai.enable {
@@ -30,6 +32,12 @@ in
     programs.gh.enable = true;
     programs.opencode = {
       enable = false; # use homebrew
+    };
+
+    # spawn-subagent：与 subagent-policy skill 同源，软链保持可编辑
+    home.file.".local/bin/spawn-subagent" = {
+      source = config.lib.file.mkOutOfStoreSymlink "${spawnSubagentDir}/spawn-subagent";
+      force = true;
     };
 
     home.packages = [

@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+# spawn-subagent: 在 Herdr 窗格中启动/关闭 pi 子代理
+# 用法:
+#   spawn-subagent <profile> -- <task>
+#   spawn-subagent close <pane-id>
+set -euo pipefail
+
+# ---------- 预设表 ----------
+# profile -> model | thinking | tools
+profiles=(
+  explore general-purpose reviewer general-purpose-review
+)
+
+declare -A model_of thinking_of tools_of
+model_of[explore]="opencode-go/deepseek-v4-flash"
+model_of[general-purpose]="opencode-go/deepseek-v4-flash"
+model_of[reviewer]="openai-codex/gpt-5.6-sol"
+model_of[general-purpose-review]="openai-codex/gpt-5.6-sol"
+
+thinking_of[explore]="high"
+thinking_of[general-purpose]="high"
+thinking_of[reviewer]="medium"
+thinking_of[general-purpose-review]="medium"
+
+tools_of[explore]="read,bash,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom"
+tools_of[general-purpose]="read,bash,edit,write,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom"
+tools_of[reviewer]="read,bash,grep,find,ls,ffgrep,fffind,intercom"
+tools_of[general-purpose-review]="read,bash,edit,write,grep,find,ls,ffgrep,fffind,intercom"
+
+usage() {
+  cat <<'EOF'
+用法:
+  spawn-subagent <profile> -- <task>
+  spawn-subagent close <pane-id>
+
+profiles: explore | general-purpose | reviewer | general-purpose-review
+EOF
+}
+
+# ---------- 前置检查 ----------
+require_env() {
+  if [[ -z "${!1:-}" ]]; then
+    echo "spawn-subagent: 环境变量 $1 缺失" >&2
+    exit 1
+  fi
+}
+
+# HERDR_PANE_ID 缺失 = 非 Herdr 环境（Kitty 等）
+if [[ -z "${HERDR_PANE_ID:-}" ]]; then
+  echo "spawn-subagent: 当前仅支持 Herdr（未检测到 HERDR_PANE_ID）" >&2
+  exit 1
+fi
+require_env PI_INTERCOM_SESSION_ID
+
+# ---------- close ----------
+if [[ "${1:-}" == "close" ]]; then
+  pane_id="${2:-}"
+  if [[ -z "$pane_id" ]]; then
+    echo "spawn-subagent: close 需要 pane-id 参数" >&2
+    usage
+    exit 1
+  fi
+  herdr pane close "$pane_id" >/dev/null
+  herdr agent focus "$HERDR_PANE_ID" >/dev/null
+  echo "closed $pane_id"
+  exit 0
+fi
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "$#" -lt 3 ]]; then
+  usage
+  exit 1
+fi
+
+profile="$1"
+shift
+[[ "${1:-}" == "--" ]] && shift
+task="$*"
+
+# ---------- 未知 profile ----------
+if [[ -z "${model_of[$profile]:-}" ]]; then
+  echo "spawn-subagent: 未知 profile '$profile'，可用: ${profiles[*]}" >&2
+  exit 1
+fi
+
+# ---------- 布局推导：首个右侧 40%，后续右侧最底部向下堆叠 ----------
+layout_json=$(herdr pane layout --pane "$HERDR_PANE_ID")
+# 主 pane 的 x：作为右侧判断基准
+main_x=$(jq -r --arg id "$HERDR_PANE_ID" '
+  .result.layout.panes[] | select(.pane_id == $id) | .rect.x
+' <<<"$layout_json")
+# 右侧最底部 pane（x > main_x 且 y 最大），没有则空
+target_pane=$(jq -r --arg main_x "$main_x" '
+  [.result.layout.panes[] | select(.rect.x > ($main_x | tonumber))]
+  | sort_by(.rect.y) | last | .pane_id
+' <<<"$layout_json")
+
+if [[ "$target_pane" == "null" || -z "$target_pane" ]]; then
+  new_pane=$(herdr pane split --pane "$HERDR_PANE_ID" --direction right --ratio 0.6 --no-focus |
+    jq -r '.result.pane.pane_id')
+else
+  new_pane=$(herdr pane split --pane "$target_pane" --direction down --no-focus |
+    jq -r '.result.pane.pane_id')
+fi
+
+# ---------- 协调 prompt ----------
+prompt="你是通过 spawn-subagent 启动的 pi 子代理（profile: ${profile}）。
+
+回传协议：
+- 完成或受阻时，用 intercom 工具向主代理 session 发送一条结论消息：
+  intercom({ action: \"send\", to: \"${PI_INTERCOM_SESSION_ID}\", message: \"<结论>\" })
+- 消息格式由下方任务描述，不设固定字段。
+- 阻塞或失败时保留当前 pane 供主代理检查，不要自行关闭。
+
+任务原文：
+---
+${task}
+---"
+
+# ---------- 启动 ----------
+# 多行 prompt 无法安全编码进 agent start 的 shell 参数，分两步：
+# 先启动空 pi，等待就绪后通过 agent prompt（socket API）提交协调 prompt。
+# agent name 需全局唯一且仅含小写字母/数字/-/_（herdr 报 agent_name_taken），用时间戳区分。
+agent_name="${profile}-$(date +%s)"
+herdr agent start "$agent_name" --kind pi --pane "$new_pane" -- \
+  --model "${model_of[$profile]}" \
+  --thinking "${thinking_of[$profile]}" \
+  --tools "${tools_of[$profile]}" >/dev/null
+
+# 等待 pi TUI 就绪（agent prompt 在 pi 未就绪时返回 stalled）
+for _ in $(seq 1 20); do
+  if herdr agent prompt "$new_pane" "$prompt" --wait --timeout 15000 2>/dev/null | grep -q '"type":"agent_prompted"'; then
+    break
+  fi
+  sleep 2
+done
+
+echo "$new_pane"
