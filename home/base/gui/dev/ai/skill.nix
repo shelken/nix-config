@@ -108,6 +108,10 @@ let
     #   # writing-skills = "${sources.obra-superpowers.src}/skills/writing-skills";
     # };
 
+    humanlayer-skills = {
+      show-me = "${sources.humanlayer-skills.src}/plugins/show-me/skills/show-me";
+    };
+
     llamaparse-agent-skills = {
       liteparse = "${sources.llamaparse-agent-skills.src}/skills/liteparse";
     };

@@ -62,6 +62,27 @@
         },
         "version": "c2a9bc154f4ffe08b25d28d5e852dfac8c0d0d8a"
     },
+    "humanlayer-skills": {
+        "cargoLock": null,
+        "date": "2026-08-09",
+        "extract": null,
+        "name": "humanlayer-skills",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "humanlayer",
+            "repo": "skills",
+            "rev": "d3138e5898ff1bd98aeaf11c79a8c5880e917a52",
+            "sha256": "sha256-13OR6Qw7JDJDmAyrpzL8RMCgQ6iIkDh2InjjQac7z68=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "d3138e5898ff1bd98aeaf11c79a8c5880e917a52"
+    },
     "kitty-icon": {
         "cargoLock": null,
         "date": null,

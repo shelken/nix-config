@@ -42,6 +42,18 @@
     };
     date = "2026-07-03";
   };
+  humanlayer-skills = {
+    pname = "humanlayer-skills";
+    version = "d3138e5898ff1bd98aeaf11c79a8c5880e917a52";
+    src = fetchFromGitHub {
+      owner = "humanlayer";
+      repo = "skills";
+      rev = "d3138e5898ff1bd98aeaf11c79a8c5880e917a52";
+      fetchSubmodules = false;
+      sha256 = "sha256-13OR6Qw7JDJDmAyrpzL8RMCgQ6iIkDh2InjjQac7z68=";
+    };
+    date = "2026-08-09";
+  };
   kitty-icon = {
     pname = "kitty-icon";
     version = "v1.1.0";
