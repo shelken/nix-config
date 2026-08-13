@@ -14,8 +14,10 @@ description: 发起、审查或规划子代理工作时阅读该技能
 ## 发起子代理
 
 ```sh
-spawn-subagent <profile> -- <task>
+spawn-subagent <profile> <slug> -- <task>
 ```
+
+`slug` 是任务语义标识（只含小写字母/数字/连字符），用于 agent 命名（如 `explore-parse-errors-1786609381`）。
 
 脚本会按布局推导新 pane 并启动 pi 子代理，最后输出 pane ID 供记录：
 
@@ -24,12 +26,18 @@ spawn-subagent <profile> -- <task>
 
 ### 预设表
 
-| profile | 用途 | tools | model | thinking |
-|---|---|---|---|---|
-| explore | 代码库探索（只读） | read,bash,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom | opencode-go/deepseek-v4-flash | high |
-| general-purpose | 复杂多步任务，勿用于 review | read,bash,edit,write,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom | opencode-go/deepseek-v4-flash | high |
-| reviewer | 代码审查（只读） | read,bash,grep,find,ls,ffgrep,fffind,intercom | openai-codex/gpt-5.6-sol | medium |
-| general-purpose-review | 代码审查（可写） | read,bash,edit,write,grep,find,ls,ffgrep,fffind,intercom | openai-codex/gpt-5.6-sol | medium |
+各 profile 的默认 model / thinking / tools 定义在**同目录 `subagent-config.json`**（唯一真相源），改配置即生效；本表只描述用途。也可用 `spawn-subagent --check` 查看当前生效的预设和排除清单。
+
+| profile | 用途 |
+|---|---|
+| explore | 代码库探索（只读） |
+| general-purpose | 复杂多步任务，勿用于 review |
+| reviewer | 代码审查（只读） |
+| general-purpose-review | 代码审查（可写） |
+
+### 排除清单
+
+不适合子代理的插件写在 `subagent-config.json` 的 `exclude` 数组（默认全继承主代理插件）。规范：只写插件短名（路径/仓库/npm 名的最后一段，scoped 包去 scope 取 name），如 `npm:@juicesharp/rpiv-todo` 写 `rpiv-todo`。
 
 ## 回传协议
 

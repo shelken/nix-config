@@ -5,36 +5,100 @@
 #   spawn-subagent close <pane-id>
 set -euo pipefail
 
-# ---------- 预设表 ----------
-# profile -> model | thinking | tools
-profiles=(
-  explore general-purpose reviewer general-purpose-review
-)
-
-declare -A model_of thinking_of tools_of
-model_of[explore]="opencode-go/deepseek-v4-flash"
-model_of[general-purpose]="opencode-go/deepseek-v4-flash"
-model_of[reviewer]="openai-codex/gpt-5.6-sol"
-model_of[general-purpose-review]="openai-codex/gpt-5.6-sol"
-
-thinking_of[explore]="high"
-thinking_of[general-purpose]="high"
-thinking_of[reviewer]="medium"
-thinking_of[general-purpose-review]="medium"
-
-tools_of[explore]="read,bash,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom"
-tools_of[general-purpose]="read,bash,edit,write,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom"
-tools_of[reviewer]="read,bash,grep,find,ls,ffgrep,fffind,intercom"
-tools_of[general-purpose-review]="read,bash,edit,write,grep,find,ls,ffgrep,fffind,intercom"
+# ---------- 预设数据 ----------
+# 唯一真相源：本目录 subagent-config.json（presets + exclude），脚本每次启动读取。
+# 详见 prepare_subagent_env 的派生逻辑与 --check 模式。
 
 usage() {
   cat <<'EOF'
-用法:
-  spawn-subagent <profile> -- <task>
-  spawn-subagent close <pane-id>
+spawn-subagent - 在 Herdr 窗格中启动/关闭 pi 子代理
 
-profiles: explore | general-purpose | reviewer | general-purpose-review
+用法:
+  spawn-subagent <profile> <slug> -- <task>   启动子代理，输出 pane ID
+  spawn-subagent close <pane-id>              关闭子代理 pane 并聚焦回主 pane
+  spawn-subagent --check                      派生 settings + 打印当前预设/排除，不启动
+  spawn-subagent -h | --help                  显示本帮助
+
+profile: explore | general-purpose | reviewer | general-purpose-review
+         （默认模型/思考深度/工具见同目录 subagent-config.json，改配置即生效）
+slug:    任务语义标识，只含小写字母/数字/连字符，用于 agent 命名（如 fix-parse-errors）
+task:    子代理任务描述（支持多行）
+
+环境变量:
+  HERDR_PANE_ID           当前 pane ID（Herdr 环境自动注入，缺失即退出）
+  PI_INTERCOM_SESSION_ID  主代理 intercom session ID，子代理回传结论用
+
+子代理环境:
+  自动派生 ~/.pi/agent-subagent（黑名单转 pi 的 '-' 禁用前缀，npm/git/intercom
+  等共享主代理结构），为运行时产物可随时删除、下次启动自动重建。
+
+示例:
+  spawn-subagent explore fix-parse-errors -- "排查 src/parser 的报错原因"
+  spawn-subagent close w11:pK
+  spawn-subagent --check
 EOF
+}
+
+# ---------- 子代理环境（自动派生，零手动维护） ----------
+# 主 ~/.pi/agent/settings.json 是唯一真相源，本目录 subagent-exclude.json 列出
+# 不适合子代理的插件（默认全继承）。每次启动：
+#   1) 派生子代理 settings.json（黑名单转 pi 的 "-" 禁用前缀）
+#   2) 自检共享结构（npm/node_modules、git、配置软链），缺失即重建
+# ~/.pi/agent-subagent 是运行时产物，可随时删除，下次启动自动重建。
+# 脚本源目录（realpath 解析 symlink 到 nix-config 源），配置文件在此目录读取
+script_dir="$(dirname "$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$0")")"
+
+prepare_subagent_env() {
+  local sub_dir main_settings config_file
+  sub_dir="$HOME/.pi/agent-subagent"
+  main_settings="$HOME/.pi/agent/settings.json"
+  config_file="$script_dir/subagent-config.json"
+  # 黑名单规范：只写插件短名（路径/仓库/npm 名的最后一段，scoped 包去 scope 取 name）
+  # 例：npm:@juicesharp/rpiv-todo → rpiv-todo；git:.../pi-zed-provider → pi-zed-provider
+
+  mkdir -p "$sub_dir/npm"
+  ln -sfn "$HOME/.pi/agent/npm/node_modules" "$sub_dir/npm/node_modules"
+  ln -sfn "$HOME/.pi/agent/git" "$sub_dir/git"
+  ln -sfn "$HOME/.pi/agent/intercom" "$sub_dir/intercom"  # 共享 intercom broker socket
+  for f in auth.json models.json models-store.json trust.json permissions.yaml; do
+    if [[ -f "$HOME/.pi/agent/$f" ]]; then
+      ln -sfn "$HOME/.pi/agent/$f" "$sub_dir/$f"
+    fi
+  done
+
+  python3 - "$main_settings" "$config_file" "$sub_dir/settings.json" <<'PY'
+import json, sys
+main_path, cfg_path, out_path = sys.argv[1:4]
+main = json.load(open(main_path))
+cfg = json.load(open(cfg_path))
+exclude = set(cfg.get("exclude", []))
+
+def pkg_name(p):
+    # 任意形态（npm:/git:repo/本地路径/对象包）都提取出插件名字，黑名单按名字匹配
+    if isinstance(p, dict):
+        p = p.get("source")
+    if not isinstance(p, str):
+        return None
+    s = p.lstrip("-")
+    if ":" in s and not s.startswith("/"):
+        s = s.split(":", 1)[1]
+    parts = [x for x in s.split("/") if x]
+    if not parts:
+        return None
+    # 统一返回最后一段裸名（@scope/name -> name），与黑名单裸名写法一致
+    return parts[-1]
+
+derived = {k: v for k, v in main.items() if k != "packages"}
+derived["packages"] = []
+for p in main.get("packages", []):
+    name = pkg_name(p)
+    disabled = isinstance(p, str) and p.startswith("-")
+    if name and name in exclude and not disabled:
+        derived["packages"].append("-" + p)
+    else:
+        derived["packages"].append(p)
+json.dump(derived, open(out_path, "w"), indent=2, ensure_ascii=False)
+PY
 }
 
 # ---------- 前置检查 ----------
@@ -66,21 +130,59 @@ if [[ "${1:-}" == "close" ]]; then
   exit 0
 fi
 
-if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || "$#" -lt 3 ]]; then
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+# ---------- --check：只派生 settings + 打印预设，不启动子代理 ----------
+if [[ "${1:-}" == "--check" ]]; then
+  prepare_subagent_env
+  python3 - "$script_dir/subagent-config.json" <<'PY'
+import json, sys
+cfg = json.load(open(sys.argv[1]))
+for name, p in cfg.get("presets", {}).items():
+    print(f"{name}: model={p['model']} thinking={p['thinking']} tools={p['tools']}")
+print("exclude:", ", ".join(cfg.get("exclude", [])))
+PY
+  exit 0
+fi
+
+if [[ "$#" -lt 4 ]]; then
   usage
   exit 1
 fi
 
 profile="$1"
-shift
+slug="$2"
+shift 2
 [[ "${1:-}" == "--" ]] && shift
 task="$*"
 
-# ---------- 未知 profile ----------
-if [[ -z "${model_of[$profile]:-}" ]]; then
-  echo "spawn-subagent: 未知 profile '$profile'，可用: ${profiles[*]}" >&2
+# ---------- slug 校验（herdr agent name 仅小写字母/数字/-/_） ----------
+if [[ ! "$slug" =~ ^[a-z0-9-]+$ ]]; then
+  echo "spawn-subagent: slug 只能含小写字母/数字/连字符: '$slug'" >&2
   exit 1
 fi
+
+# ---------- 读取预设（配置为唯一真相源） ----------
+preset_json=$(python3 - "$script_dir/subagent-config.json" "$profile" <<'PY'
+import json, sys
+cfg = json.load(open(sys.argv[1]))
+presets = cfg.get("presets", {})
+if sys.argv[2] not in presets:
+    print("__UNKNOWN__")
+    sys.exit(0)
+print(json.dumps(presets[sys.argv[2]]))
+PY
+)
+if [[ "$preset_json" == "__UNKNOWN__" ]]; then
+  echo "spawn-subagent: 未知 profile '$profile'，可用: $(python3 -c "import json,sys; print(', '.join(json.load(open(sys.argv[1])).get('presets',{}).keys()))" "$script_dir/subagent-config.json")" >&2
+  exit 1
+fi
+model=$(jq -r '.model' <<<"$preset_json")
+thinking=$(jq -r '.thinking' <<<"$preset_json")
+tools=$(jq -r '.tools' <<<"$preset_json")
 
 # ---------- 布局推导：首个右侧 40%，后续右侧最底部向下堆叠 ----------
 layout_json=$(herdr pane layout --pane "$HERDR_PANE_ID")
@@ -117,18 +219,25 @@ ${task}
 ---"
 
 # ---------- 启动 ----------
+prepare_subagent_env
+# 等待 pane shell 就绪后注入 PI_CODING_AGENT_DIR（agent start 启动的 pi 继承该 env）
+sleep 2
+herdr pane run "$new_pane" "export PI_CODING_AGENT_DIR=$HOME/.pi/agent-subagent" >/dev/null
+sleep 1
 # 多行 prompt 无法安全编码进 agent start 的 shell 参数，分两步：
 # 先启动空 pi，等待就绪后通过 agent prompt（socket API）提交协调 prompt。
 # agent name 需全局唯一且仅含小写字母/数字/-/_（herdr 报 agent_name_taken），用时间戳区分。
-agent_name="${profile}-$(date +%s)"
+agent_name="${profile}-${slug}-$(date +%s)"
 herdr agent start "$agent_name" --kind pi --pane "$new_pane" -- \
-  --model "${model_of[$profile]}" \
-  --thinking "${thinking_of[$profile]}" \
-  --tools "${tools_of[$profile]}" >/dev/null
+  --model "$model" \
+  --thinking "$thinking" \
+  --tools "$tools" >/dev/null
 
-# 等待 pi TUI 就绪（agent prompt 在 pi 未就绪时返回 stalled）
+# 等待 pi 就绪并确认 prompt 送达：不带 --wait 时，pi 未就绪提交不注入
+# （无 agent_prompted 事件，可安全重试）；就绪后注入即有 agent_prompted，
+# 立即 break，与回合长度无关，绝不重发已送达的 prompt。
 for _ in $(seq 1 20); do
-  if herdr agent prompt "$new_pane" "$prompt" --wait --timeout 15000 2>/dev/null | grep -q '"type":"agent_prompted"'; then
+  if herdr agent prompt "$new_pane" "$prompt" 2>/dev/null | grep -q '"type":"agent_prompted"'; then
     break
   fi
   sleep 2

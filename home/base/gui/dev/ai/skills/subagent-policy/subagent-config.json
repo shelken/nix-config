@@ -1,0 +1,31 @@
+{
+  "//": "子代理配置。spawn-subagent 每次启动读取本文件（nix-config 源，经 realpath 解析）。exclude 黑名单规范：只写插件短名（路径/仓库/npm 名的最后一段，scoped 包去 scope 取 name），例：npm:@juicesharp/rpiv-todo → rpiv-todo",
+  "exclude": [
+    "pi-context-prune",
+    "rpiv-todo",
+    "pi-observational-memory",
+    "pi-recap"
+  ],
+  "presets": {
+    "explore": {
+      "model": "opencode-go/deepseek-v4-flash",
+      "thinking": "high",
+      "tools": "read,bash,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom"
+    },
+    "general-purpose": {
+      "model": "opencode-go/deepseek-v4-flash",
+      "thinking": "high",
+      "tools": "read,bash,edit,write,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom"
+    },
+    "reviewer": {
+      "model": "openai-codex/gpt-5.6-sol",
+      "thinking": "medium",
+      "tools": "read,bash,grep,find,ls,ffgrep,fffind,intercom"
+    },
+    "general-purpose-review": {
+      "model": "openai-codex/gpt-5.6-sol",
+      "thinking": "medium",
+      "tools": "read,bash,edit,write,grep,find,ls,ffgrep,fffind,intercom"
+    }
+  }
+}
