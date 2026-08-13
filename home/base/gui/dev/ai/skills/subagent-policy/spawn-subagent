@@ -164,6 +164,13 @@ if [[ ! "$slug" =~ ^[a-z0-9-]+$ ]]; then
   echo "spawn-subagent: slug 只能含小写字母/数字/连字符: '$slug'" >&2
   exit 1
 fi
+# agent name 由 profile-slug-时间戳 组成,herdr 上限 32 字符。
+# 提前构造并校验长度,避免 split 新 pane 后才失败留下空 pane。
+agent_name="${profile}-${slug}-$(date +%s)"
+if [[ ${#agent_name} -gt 32 ]]; then
+  echo "spawn-subagent: agent 名 '${agent_name}' 超 32 字符,slug 请控制在 $((32 - ${#profile} - 12)) 字符内" >&2
+  exit 1
+fi
 
 # ---------- 读取预设（配置为唯一真相源） ----------
 preset_json=$(python3 - "$script_dir/subagent-config.json" "$profile" <<'PY'
@@ -203,6 +210,8 @@ else
   new_pane=$(herdr pane split --pane "$target_pane" --direction down --no-focus |
     jq -r '.result.pane.pane_id')
 fi
+# 后续任何命令失败(set -e 退出)时关闭已 split 的 pane,避免残留空 pane
+trap 'herdr pane close "$new_pane" >/dev/null 2>&1 || true' ERR
 
 # ---------- 协调 prompt ----------
 prompt="你是通过 spawn-subagent 启动的 pi 子代理（profile: ${profile}）。
@@ -226,8 +235,7 @@ herdr pane run "$new_pane" "export PI_CODING_AGENT_DIR=$HOME/.pi/agent-subagent"
 sleep 1
 # 多行 prompt 无法安全编码进 agent start 的 shell 参数，分两步：
 # 先启动空 pi，等待就绪后通过 agent prompt（socket API）提交协调 prompt。
-# agent name 需全局唯一且仅含小写字母/数字/-/_（herdr 报 agent_name_taken），用时间戳区分。
-agent_name="${profile}-${slug}-$(date +%s)"
+# agent name 已在上方构造并校验长度;时间戳区分并发/重复 slug。
 herdr agent start "$agent_name" --kind pi --pane "$new_pane" -- \
   --model "$model" \
   --thinking "$thinking" \
