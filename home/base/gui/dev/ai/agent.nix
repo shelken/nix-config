@@ -38,6 +38,10 @@ let
       fileName = "AGENTS.md";
     }
     {
+      targetPath = ".dsh";
+      fileName = "AGENTS.md"; # dsh (deepseek-harness) 用户全局指令, 读取 $DSH_HOME/AGENTS.md
+    }
+    {
       targetPath = ".config/zed";
       fileName = "AGENTS.md";
     }
