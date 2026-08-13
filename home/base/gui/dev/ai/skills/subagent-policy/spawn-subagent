@@ -14,7 +14,7 @@ usage() {
 spawn-subagent - 在 Herdr 窗格中启动/关闭 pi 子代理
 
 用法:
-  spawn-subagent <profile> <slug> -- <task>   启动子代理，输出 pane ID
+  spawn-subagent <profile> <slug> [--wait] -- <task>   启动子代理，输出 pane ID
   spawn-subagent close <pane-id>              关闭子代理 pane 并聚焦回主 pane
   spawn-subagent --check                      派生 settings + 打印当前预设/排除，不启动
   spawn-subagent -h | --help                  显示本帮助
@@ -23,6 +23,9 @@ profile: explore | general-purpose | reviewer | general-purpose-review
          （默认模型/思考深度/工具见同目录 subagent-config.json，改配置即生效）
 slug:    任务语义标识，只含小写字母/数字/连字符，用于 agent 命名（如 fix-parse-errors）
 task:    子代理任务描述（支持多行）
+--wait:  阻塞等待子代理完成当前回合（回到 idle）再返回，默认超时 10 分钟
+         （用环境变量 SPAWN_WAIT_MS 覆盖，如 SPAWN_WAIT_MS=300000）
+         不加 --wait 时立即返回 pane ID，主代理空闲等待 intercom 回报
 
 环境变量:
   HERDR_PANE_ID           当前 pane ID（Herdr 环境自动注入，缺失即退出）
@@ -101,6 +104,24 @@ json.dump(derived, open(out_path, "w"), indent=2, ensure_ascii=False)
 PY
 }
 
+# ---------- --check / 帮助：零 pane 副作用，任何环境可用 ----------
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+if [[ "${1:-}" == "--check" ]]; then
+  prepare_subagent_env
+  python3 - "$script_dir/subagent-config.json" <<'PY'
+import json, sys
+cfg = json.load(open(sys.argv[1]))
+for name, p in cfg.get("presets", {}).items():
+    print(f"{name}: model={p['model']} thinking={p['thinking']} tools={p['tools']}")
+print("exclude:", ", ".join(cfg.get("exclude", [])))
+PY
+  exit 0
+fi
+
 # ---------- 前置检查 ----------
 require_env() {
   if [[ -z "${!1:-}" ]]; then
@@ -130,24 +151,6 @@ if [[ "${1:-}" == "close" ]]; then
   exit 0
 fi
 
-if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  usage
-  exit 0
-fi
-
-# ---------- --check：只派生 settings + 打印预设，不启动子代理 ----------
-if [[ "${1:-}" == "--check" ]]; then
-  prepare_subagent_env
-  python3 - "$script_dir/subagent-config.json" <<'PY'
-import json, sys
-cfg = json.load(open(sys.argv[1]))
-for name, p in cfg.get("presets", {}).items():
-    print(f"{name}: model={p['model']} thinking={p['thinking']} tools={p['tools']}")
-print("exclude:", ", ".join(cfg.get("exclude", [])))
-PY
-  exit 0
-fi
-
 if [[ "$#" -lt 4 ]]; then
   usage
   exit 1
@@ -156,6 +159,14 @@ fi
 profile="$1"
 slug="$2"
 shift 2
+
+# --wait：阻塞等待子代理回到 idle（完成当前回合）再返回
+wait_mode=0
+wait_ms="${SPAWN_WAIT_MS:-600000}"
+if [[ "${1:-}" == "--wait" ]]; then
+  wait_mode=1
+  shift
+fi
 [[ "${1:-}" == "--" ]] && shift
 task="$*"
 
@@ -191,23 +202,33 @@ model=$(jq -r '.model' <<<"$preset_json")
 thinking=$(jq -r '.thinking' <<<"$preset_json")
 tools=$(jq -r '.tools' <<<"$preset_json")
 
-# ---------- 布局推导：首个右侧 40%，后续右侧最底部向下堆叠 ----------
+# ---------- 布局推导：首个子代理右侧分列，后续在右列内向下堆叠 ----------
+# 向下堆叠时新 pane 占父 pane 55%（比默认对半稍大），且右列子代理上限 3 个，
+# 避免无限对半分割导致 pane 越分越小不可读。
 layout_json=$(herdr pane layout --pane "$HERDR_PANE_ID")
 # 主 pane 的 x：作为右侧判断基准
 main_x=$(jq -r --arg id "$HERDR_PANE_ID" '
   .result.layout.panes[] | select(.pane_id == $id) | .rect.x
 ' <<<"$layout_json")
-# 右侧最底部 pane（x > main_x 且 y 最大），没有则空
+# 右侧 pane 数量与最底部 pane
+right_count=$(jq -r --arg main_x "$main_x" '
+  [.result.layout.panes[] | select(.rect.x > ($main_x | tonumber))] | length
+' <<<"$layout_json")
 target_pane=$(jq -r --arg main_x "$main_x" '
   [.result.layout.panes[] | select(.rect.x > ($main_x | tonumber))]
   | sort_by(.rect.y) | last | .pane_id
 ' <<<"$layout_json")
 
+if [[ "$right_count" -ge 3 ]]; then
+  echo "spawn-subagent: 右侧子代理 pane 已达 3 个上限（防越分越小），请先 close 部分再派发" >&2
+  exit 1
+fi
+
 if [[ "$target_pane" == "null" || -z "$target_pane" ]]; then
-  new_pane=$(herdr pane split --pane "$HERDR_PANE_ID" --direction right --ratio 0.6 --no-focus |
+  new_pane=$(herdr pane split --pane "$HERDR_PANE_ID" --direction right --ratio 0.55 --no-focus |
     jq -r '.result.pane.pane_id')
 else
-  new_pane=$(herdr pane split --pane "$target_pane" --direction down --no-focus |
+  new_pane=$(herdr pane split --pane "$target_pane" --direction down --ratio 0.55 --no-focus |
     jq -r '.result.pane.pane_id')
 fi
 # 后续任何命令失败(set -e 退出)时关闭已 split 的 pane,避免残留空 pane
@@ -250,5 +271,20 @@ for _ in $(seq 1 20); do
   fi
   sleep 2
 done
+
+# 验证 agent 真实启动（agent start 可能声称成功但会话未起来），失败即关 pane
+if ! herdr agent get "$agent_name" >/dev/null 2>&1; then
+  echo "spawn-subagent: agent $agent_name 未成功启动，已关闭 pane $new_pane" >&2
+  herdr pane close "$new_pane" >/dev/null 2>&1 || true
+  exit 1
+fi
+
+# --wait：阻塞等待子代理完成当前回合（回到 idle/done/blocked）再返回
+if [[ "$wait_mode" -eq 1 ]]; then
+  if ! herdr agent wait "$agent_name" --timeout "$wait_ms" >/dev/null 2>&1; then
+    echo "spawn-subagent: 等待子代理 $agent_name 超时（${wait_ms}ms），pane $new_pane 仍保留" >&2
+    exit 1
+  fi
+fi
 
 echo "$new_pane"

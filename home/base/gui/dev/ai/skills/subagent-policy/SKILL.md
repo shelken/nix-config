@@ -14,15 +14,21 @@ description: 发起、审查或规划子代理工作时阅读该技能
 ## 发起子代理
 
 ```sh
-spawn-subagent <profile> <slug> -- <task>
+spawn-subagent <profile> <slug> [--wait] -- <task>
 ```
 
 `slug` 是任务语义标识（只含小写字母/数字/连字符，≤13 字符；agent 名 `profile-slug-时间戳` 总长上限 32），用于 agent 命名（如 `explore-parse-errors-1786609381`）。
 
 脚本会按布局推导新 pane 并启动 pi 子代理，最后输出 pane ID 供记录：
 
-- 首个子代理：主 pane 右侧 40%（`--ratio 0.6` 保留主 pane 60%）。
-- 后续子代理：右侧最底部 pane 向下拆分，右侧上下堆叠。
+- 首个子代理：主 pane 右侧分列（`--ratio 0.55` 保留主 pane 55%）。
+- 后续子代理：右侧最底部 pane 向下拆分（`--ratio 0.55`，新 pane 比旧 pane 略大）。
+- 右侧子代理 pane 上限 3 个，超出时报错并提示先 close，避免 pane 越分越小不可读。
+
+### 等待模式
+
+- 默认不加 `--wait`：立即返回 pane ID，主代理空闲等待子代理经 intercom 回报（不要用 sleep 干等）。
+- 加 `--wait`：脚本阻塞等待子代理完成当前回合（`herdr agent wait` 回到 idle/done/blocked）再返回，默认超时 10 分钟，可用环境变量 `SPAWN_WAIT_MS` 覆盖。
 
 ### 预设表
 
