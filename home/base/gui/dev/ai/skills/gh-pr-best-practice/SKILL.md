@@ -10,3 +10,4 @@ description: 当提交PR时阅读该技能
 - **禁止自行添加 `Co-Authored-By` trailer**
 - 基于 upstream 的干净基点建分支，不要在 fork main 上累积多个 commit 后再提 PR；多个修复 commit 压缩为一个再提交
 - 推送前确认 PR 关联的上游 issue 编号正确（`Fixes #xxx`），且 issue 确实是同一根因
+- 请在 PR/DISCUSSION 的body最后标注自己为AI, 格式为 `Co-Authored-By: {Model-Name}`; 模型名字在PI中通过环境变量查看`PI_MODEL`;如果不在Pi, 标注为`Agent`
