@@ -202,37 +202,63 @@ model=$(jq -r '.model' <<<"$preset_json")
 thinking=$(jq -r '.thinking' <<<"$preset_json")
 tools=$(jq -r '.tools' <<<"$preset_json")
 
-# ---------- 布局推导：首个子代理右侧分列，后续在右列内向下堆叠 ----------
-# 向下堆叠时新 pane 占父 pane 55%（比默认对半稍大），且右列子代理上限 3 个，
-# 避免无限对半分割导致 pane 越分越小不可读。
+# ---------- 布局：首个右侧分列，后续在右列内向下堆叠 ----------
+# 新增后重新均分右列（所有 pane 等高，自适应，不限制数量），
+# 避免无限对半分割导致 pane 越分越小。
 layout_json=$(herdr pane layout --pane "$HERDR_PANE_ID")
 # 主 pane 的 x：作为右侧判断基准
 main_x=$(jq -r --arg id "$HERDR_PANE_ID" '
   .result.layout.panes[] | select(.pane_id == $id) | .rect.x
 ' <<<"$layout_json")
-# 右侧 pane 数量与最底部 pane
-right_count=$(jq -r --arg main_x "$main_x" '
-  [.result.layout.panes[] | select(.rect.x > ($main_x | tonumber))] | length
-' <<<"$layout_json")
-target_pane=$(jq -r --arg main_x "$main_x" '
+# 右侧最底部 pane
+right_panes=$(jq -r --arg main_x "$main_x" '
   [.result.layout.panes[] | select(.rect.x > ($main_x | tonumber))]
-  | sort_by(.rect.y) | last | .pane_id
+  | sort_by(.rect.y)
 ' <<<"$layout_json")
-
-if [[ "$right_count" -ge 3 ]]; then
-  echo "spawn-subagent: 右侧子代理 pane 已达 3 个上限（防越分越小），请先 close 部分再派发" >&2
-  exit 1
-fi
+target_pane=$(jq -r 'last | .pane_id' <<<"$right_panes")
 
 if [[ "$target_pane" == "null" || -z "$target_pane" ]]; then
   new_pane=$(herdr pane split --pane "$HERDR_PANE_ID" --direction right --ratio 0.55 --no-focus |
     jq -r '.result.pane.pane_id')
 else
-  new_pane=$(herdr pane split --pane "$target_pane" --direction down --ratio 0.55 --no-focus |
+  new_pane=$(herdr pane split --pane "$target_pane" --direction down --ratio 0.5 --no-focus |
     jq -r '.result.pane.pane_id')
 fi
 # 后续任何命令失败(set -e 退出)时关闭已 split 的 pane,避免残留空 pane
 trap 'herdr pane close "$new_pane" >/dev/null 2>&1 || true' ERR
+
+# 均分右列：新增后把同一列的所有 pane 调整为等高（从下往上逐个 resize）
+rebalance_column() {
+  local layout col_x panes n col_top col_bot i
+  layout=$(herdr pane layout --pane "$HERDR_PANE_ID")
+  col_x=$(jq -r --arg id "$new_pane" '.result.layout.panes[] | select(.pane_id == $id) | .rect.x' <<<"$layout")
+  mapfile -t panes < <(jq -r --argjson x "$col_x" \
+    '[.result.layout.panes[] | select(.rect.x == $x)] | sort_by(.rect.y) | .[].pane_id' <<<"$layout")
+  n=${#panes[@]}
+  [[ "$n" -lt 2 ]] && return
+  # 嵌套 split 的 ratio 目标:第 i 条 down split 的顶部 pane 占其父区域 1/(n-i)
+  for ((i = n - 2; i >= 0; i--)); do
+    local cur_ratio target_ratio delta dir
+    cur_ratio=$(jq -r --argjson i "$i" \
+      '[.result.layout.splits[] | select(.direction == "down")] | sort_by(.rect.y) | .[$i] | .ratio' <<<"$layout")
+    target_ratio=$(python3 -c "print(1 / ($n - $i))")
+    delta=$(python3 -c "print(round($target_ratio - $cur_ratio, 6))")
+    if [[ "$delta" == "0" || "$delta" == "0.0" || "$delta" == "-0.0" ]]; then
+      continue
+    fi
+    # 调整 pane_i 与其下方 pane 的边界 split:增大用 panes[i] down(+delta),
+    # 减小用 panes[i+1] up(+|delta|)(herdr CLI 不接受负 amount,
+    # 且 panes[i] up 会找上方边界而非本边界)
+    if python3 -c "exit(0 if $delta > 0 else 1)"; then
+      herdr pane resize --pane "${panes[$i]}" --direction down --amount "$delta" >/dev/null
+    else
+      delta=$(python3 -c "print(-$delta)")
+      herdr pane resize --pane "${panes[$((i + 1))]}" --direction up --amount "$delta" >/dev/null
+    fi
+    layout=$(herdr pane layout --pane "$HERDR_PANE_ID")
+  done
+}
+rebalance_column
 
 # ---------- 协调 prompt ----------
 prompt="你是通过 spawn-subagent 启动的 pi 子代理（profile: ${profile}）。

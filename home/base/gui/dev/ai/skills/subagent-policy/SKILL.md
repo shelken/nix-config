@@ -22,8 +22,7 @@ spawn-subagent <profile> <slug> [--wait] -- <task>
 脚本会按布局推导新 pane 并启动 pi 子代理，最后输出 pane ID 供记录：
 
 - 首个子代理：主 pane 右侧分列（`--ratio 0.55` 保留主 pane 55%）。
-- 后续子代理：右侧最底部 pane 向下拆分（`--ratio 0.55`，新 pane 比旧 pane 略大）。
-- 右侧子代理 pane 上限 3 个，超出时报错并提示先 close，避免 pane 越分越小不可读。
+- 后续子代理：右侧最底部 pane 向下拆分，拆分后右列所有 pane 自动重新均分等高（自适应，不限制数量，新增不会把 pane 越压越小）。
 
 ### 等待模式
 
