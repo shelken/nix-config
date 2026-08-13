@@ -4,6 +4,8 @@ let
   shellInit = ''
     # for extension pi-powerline-footer
     export POWERLINE_NERD_FONTS=1
+    # for pi-fff
+    export FFF_ENABLE_HOME_SCAN=0
   '';
 in
 {
@@ -11,6 +13,7 @@ in
     # rtk
     pandoc # for npm:pi-markdown-preview
     mermaid-cli # for npm:pi-markdown-preview
+    antigravity-cli # for modlens
   ];
 
   # ponytail 扩展配置: 隐藏状态栏显示, 保留规则注入
