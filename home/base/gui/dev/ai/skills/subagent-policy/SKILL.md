@@ -14,7 +14,7 @@ description: 发起、审查或规划子代理工作时阅读该技能
 ## 发起子代理
 
 ```sh
-spawn-subagent <profile> <slug> [--wait] -- <task>
+spawn-subagent <profile> <slug> -- <task>
 ```
 
 `slug` 是任务语义标识（只含小写字母/数字/连字符，≤13 字符；agent 名 `profile-slug-时间戳` 总长上限 32），用于 agent 命名（如 `explore-parse-errors-1786609381`）。
@@ -26,8 +26,9 @@ spawn-subagent <profile> <slug> [--wait] -- <task>
 
 ### 等待模式
 
-- 默认不加 `--wait`：立即返回 pane ID，主代理空闲等待子代理经 intercom 回报（不要用 sleep 干等）。
-- 加 `--wait`：脚本阻塞等待子代理完成当前回合（`herdr agent wait` 回到 idle/done/blocked）再返回，默认超时 10 分钟，可用环境变量 `SPAWN_WAIT_MS` 覆盖。
+派发后主代理**立即结束当前回合**（不再调用任何工具、不 sleep、不轮询）：子代理结论经 intercom 自动注入并唤醒主代理继续处理，这是唯一可靠姿势
+
+herdr 对未聚焦 pane 的 agent 全程仅报 idle（无 working/done 区分），阻塞等待无可靠信号，等待统一由 intercom 注入完成
 
 ### 预设表
 

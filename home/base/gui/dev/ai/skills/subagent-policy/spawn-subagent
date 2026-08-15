@@ -14,7 +14,7 @@ usage() {
 spawn-subagent - 在 Herdr 窗格中启动/关闭 pi 子代理
 
 用法:
-  spawn-subagent <profile> <slug> [--wait] -- <task>   启动子代理，输出 pane ID
+  spawn-subagent <profile> <slug> -- <task>   启动子代理，输出 pane ID
   spawn-subagent close <pane-id>              关闭子代理 pane 并聚焦回主 pane
   spawn-subagent --check                      派生 settings + 打印当前预设/排除，不启动
   spawn-subagent -h | --help                  显示本帮助
@@ -23,9 +23,8 @@ profile: explore | general-purpose | reviewer | general-purpose-review
          （默认模型/思考深度/工具见同目录 subagent-config.json，改配置即生效）
 slug:    任务语义标识，只含小写字母/数字/连字符，用于 agent 命名（如 fix-parse-errors）
 task:    子代理任务描述（支持多行）
---wait:  阻塞等待子代理完成当前回合（回到 idle）再返回，默认超时 10 分钟
-         （用环境变量 SPAWN_WAIT_MS 覆盖，如 SPAWN_WAIT_MS=300000）
-         不加 --wait 时立即返回 pane ID，主代理空闲等待 intercom 回报
+         派发后立即返回 pane ID，主代理结束当前回合，子代理结论经
+         intercom 自动注入唤醒（见 SKILL.md 等待模式）
 
 环境变量:
   HERDR_PANE_ID           当前 pane ID（Herdr 环境自动注入，缺失即退出）
@@ -160,13 +159,6 @@ profile="$1"
 slug="$2"
 shift 2
 
-# --wait：阻塞等待子代理回到 idle（完成当前回合）再返回
-wait_mode=0
-wait_ms="${SPAWN_WAIT_MS:-600000}"
-if [[ "${1:-}" == "--wait" ]]; then
-  wait_mode=1
-  shift
-fi
 [[ "${1:-}" == "--" ]] && shift
 task="$*"
 
@@ -303,14 +295,6 @@ if ! herdr agent get "$agent_name" >/dev/null 2>&1; then
   echo "spawn-subagent: agent $agent_name 未成功启动，已关闭 pane $new_pane" >&2
   herdr pane close "$new_pane" >/dev/null 2>&1 || true
   exit 1
-fi
-
-# --wait：阻塞等待子代理完成当前回合（回到 idle/done/blocked）再返回
-if [[ "$wait_mode" -eq 1 ]]; then
-  if ! herdr agent wait "$agent_name" --timeout "$wait_ms" >/dev/null 2>&1; then
-    echo "spawn-subagent: 等待子代理 $agent_name 超时（${wait_ms}ms），pane $new_pane 仍保留" >&2
-    exit 1
-  fi
 fi
 
 echo "$new_pane"
