@@ -31,8 +31,8 @@ task:    子代理任务描述（支持多行）
   PI_INTERCOM_SESSION_ID  主代理 intercom session ID，子代理回传结论用
 
 子代理环境:
-  自动派生 ~/.pi/agent-subagent（黑名单转 pi 的 '-' 禁用前缀，npm/git/intercom
-  等共享主代理结构），为运行时产物可随时删除、下次启动自动重建。
+  ~/.pi/agent 是持久状态唯一真相源；~/.pi/agent-subagent 仅隔离派生的
+  settings.json、sessions 与 tmp，其余配置、provider 状态和缓存全部共享。
 
 示例:
   spawn-subagent explore fix-parse-errors -- "排查 src/parser 的报错原因"
@@ -42,64 +42,72 @@ EOF
 }
 
 # ---------- 子代理环境（自动派生，零手动维护） ----------
-# 主 ~/.pi/agent/settings.json 是唯一真相源，本目录 subagent-exclude.json 列出
-# 不适合子代理的插件（默认全继承）。每次启动：
-#   1) 派生子代理 settings.json（黑名单转 pi 的 "-" 禁用前缀）
-#   2) 自检共享结构（npm/node_modules、git、配置软链），缺失即重建
-# ~/.pi/agent-subagent 是运行时产物，可随时删除，下次启动自动重建。
+# 主 ~/.pi/agent 是持久状态唯一真相源。子代理只隔离 settings.json、sessions、tmp：
+# settings.json 负责插件黑名单；sessions/tmp 属于子进程运行时；其余配置、provider
+# 状态与缓存全部链接回主目录，新增顶层状态也会自动继承。
 # 脚本源目录（realpath 解析 symlink 到 nix-config 源），配置文件在此目录读取
 script_dir="$(dirname "$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$0")")"
 
 prepare_subagent_env() {
-  local sub_dir main_settings config_file
-  sub_dir="$HOME/.pi/agent-subagent"
-  main_settings="$HOME/.pi/agent/settings.json"
-  config_file="$script_dir/subagent-config.json"
-  # 黑名单规范：只写插件短名（路径/仓库/npm 名的最后一段，scoped 包去 scope 取 name）
-  # 例：npm:@juicesharp/rpiv-todo → rpiv-todo；git:.../pi-zed-provider → pi-zed-provider
+  python3 - "$HOME/.pi/agent" "$HOME/.pi/agent-subagent" "$script_dir/subagent-config.json" <<'PY'
+import fcntl, json, os, shutil, sys, tempfile
+from pathlib import Path
 
-  mkdir -p "$sub_dir/npm"
-  ln -sfn "$HOME/.pi/agent/npm/node_modules" "$sub_dir/npm/node_modules"
-  ln -sfn "$HOME/.pi/agent/git" "$sub_dir/git"
-  ln -sfn "$HOME/.pi/agent/intercom" "$sub_dir/intercom"  # 共享 intercom broker socket
-  for f in auth.json models.json models-store.json trust.json permissions.yaml; do
-    if [[ -f "$HOME/.pi/agent/$f" ]]; then
-      ln -sfn "$HOME/.pi/agent/$f" "$sub_dir/$f"
-    fi
-  done
+main_dir, sub_dir, config_path = map(Path, sys.argv[1:4])
+sub_dir.mkdir(parents=True, exist_ok=True)
+(sub_dir / "sessions").mkdir(exist_ok=True)
+(sub_dir / "tmp").mkdir(exist_ok=True)
 
-  python3 - "$main_settings" "$config_file" "$sub_dir/settings.json" <<'PY'
-import json, sys
-main_path, cfg_path, out_path = sys.argv[1:4]
-main = json.load(open(main_path))
-cfg = json.load(open(cfg_path))
-exclude = set(cfg.get("exclude", []))
+# 多个子代理可同时启动；目录映射与 settings 更新必须作为一次事务串行完成。
+with open(sub_dir / "tmp" / "prepare.lock", "w") as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
 
-def pkg_name(p):
-    # 任意形态（npm:/git:repo/本地路径/对象包）都提取出插件名字，黑名单按名字匹配
-    if isinstance(p, dict):
-        p = p.get("source")
-    if not isinstance(p, str):
-        return None
-    s = p.lstrip("-")
-    if ":" in s and not s.startswith("/"):
-        s = s.split(":", 1)[1]
-    parts = [x for x in s.split("/") if x]
-    if not parts:
-        return None
-    # 统一返回最后一段裸名（@scope/name -> name），与黑名单裸名写法一致
-    return parts[-1]
+    for src in main_dir.iterdir():
+        if src.name in {"settings.json", "sessions", "tmp"}:
+            continue
+        dst = sub_dir / src.name
+        if dst.is_symlink() and dst.resolve() == src.resolve():
+            continue
+        if dst.is_symlink() or dst.is_file():
+            dst.unlink()
+        elif dst.is_dir():
+            shutil.rmtree(dst)
+        dst.symlink_to(src, target_is_directory=src.is_dir())
 
-derived = {k: v for k, v in main.items() if k != "packages"}
-derived["packages"] = []
-for p in main.get("packages", []):
-    name = pkg_name(p)
-    disabled = isinstance(p, str) and p.startswith("-")
-    if name and name in exclude and not disabled:
-        derived["packages"].append("-" + p)
-    else:
-        derived["packages"].append(p)
-json.dump(derived, open(out_path, "w"), indent=2, ensure_ascii=False)
+    with open(main_dir / "settings.json") as f:
+        main = json.load(f)
+    with open(config_path) as f:
+        cfg = json.load(f)
+    exclude = set(cfg.get("exclude", []))
+
+    def pkg_name(package):
+        # 任意形态（npm:/git:repo/本地路径/对象包）都按最后一段裸名匹配黑名单。
+        if isinstance(package, dict):
+            package = package.get("source")
+        if not isinstance(package, str):
+            return None
+        source = package.lstrip("-")
+        if ":" in source and not source.startswith("/"):
+            source = source.split(":", 1)[1]
+        parts = [part for part in source.split("/") if part]
+        return parts[-1] if parts else None
+
+    derived = {key: value for key, value in main.items() if key != "packages"}
+    derived["packages"] = []
+    for package in main.get("packages", []):
+        name = pkg_name(package)
+        disabled = isinstance(package, str) and package.startswith("-")
+        derived["packages"].append("-" + package if name in exclude and not disabled else package)
+
+    fd, tmp_path = tempfile.mkstemp(dir=sub_dir, prefix="settings.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(derived, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        os.replace(tmp_path, sub_dir / "settings.json")
+    finally:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 PY
 }
 
