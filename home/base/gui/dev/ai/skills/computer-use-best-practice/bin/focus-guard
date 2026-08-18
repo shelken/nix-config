@@ -10,18 +10,20 @@ SRC="$SRC_DIR/focus-guard.swift"
 # --help/-h/无参 不需编译，直接显示帮助
 if [ $# -eq 0 ] || [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
     cat <<'EOF'
-focus-guard <seconds>
+focus-guard <seconds> [--target <name>...] [--verbose]
 
-在指定秒数内保护当前前台 app 不被其他 app 抢焦点。
-先后台启动 guard，再启动目标 app；guard 退出前所有抢焦点的行为都会被切回原前台。
+在指定秒数内保护当前前台 app 不被「指定目标 app」抢焦点。
+先后台启动 guard，再启动目标 app；guard 退出前目标的抢焦点都会被切回原前台。
 
 参数：
-  seconds    保护时长（秒，正数）
-  -h, --help 显示本帮助
+  seconds             保护时长（秒，正数）
+  --target <name>     会抢焦点的目标 app 名（可多次指定）；不指定则拦截所有非 prior 的激活
+  --verbose, -v       打印每次激活事件（调试用）
+  -h, --help          显示本帮助
 
 示例：
-  focus-guard 15 &       # 后台保护 15 秒
-  open -a SomeApp        # 在保护窗口内启动抢焦点的 app
+  focus-guard 15 --target QwenWorkCN --target "QoderWork CN" &
+  open -a QwenWorkCN   # 只有 QwenWorkCN 抢焦点会被拦，用户切换不受影响
 
 首次使用自动编译（约 30s，仅一次），产物缓存在 ~/.cache/computer-use/
 EOF
