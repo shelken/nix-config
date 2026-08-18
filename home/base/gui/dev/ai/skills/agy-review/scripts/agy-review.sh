@@ -4,7 +4,7 @@
 # Pipes whatever you give it — a plan, design, code, writing, decision, argument,
 # config, or idea — into `agy` in non-interactive print mode and prints back a
 # red-team critique: assumptions, flaws, risks, gaps, and a SHIP/REVISE/RETHINK
-# verdict. Default model: Gemini 3.5 Flash in its highest thinking mode.
+# verdict. Default model: Gemini 3.6 Flash in its highest thinking mode.
 #
 # Usage:
 #   agy-review.sh -f FILE                    # review a file
@@ -15,14 +15,14 @@
 # Options:
 #   -f, --file FILE     read the content to review from FILE
 #   -c, --context STR   what it is / goals / constraints, to focus the review
-#   -m, --model NAME    model (default $AGY_REVIEW_MODEL or "Gemini 3.5 Flash (High)"; see `agy models`)
+#   -m, --model NAME    model (default $AGY_REVIEW_MODEL or "gemini-3.6-flash-high"; see `agy models`)
 #   -h, --help          show this help
 #
 # Env: AGY_REVIEW_MODEL · AGY_PRINT_TIMEOUT (2m) · AGY_HARD_TIMEOUT (150s)
 # Exit: 0 critique printed · 1 usage error · 2 agy missing or returned nothing
 set -euo pipefail
 
-MODEL="${AGY_REVIEW_MODEL:-Gemini 3.5 Flash (High)}"
+MODEL="${AGY_REVIEW_MODEL:-gemini-3.6-flash-high}"
 PRINT_TIMEOUT="${AGY_PRINT_TIMEOUT:-2m}"
 HARD_TIMEOUT="${AGY_HARD_TIMEOUT:-150}"
 INPUT=""; CONTEXT=""

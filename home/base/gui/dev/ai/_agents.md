@@ -55,7 +55,7 @@
 - 所有依赖和安装包应该优先留在项目内，不污染全局环境
 - 如果项目没有特别说明，项目优先使用 mise 管理系统中**缺失的工具/cli**；没有特别说明, 必须使用最新版本;npm 依赖使用 bun 管理；python 依赖使用 uv 管理
 - 工具（如果存在）优先级：ffgrep(tool) > grep(tool) > rg(bash) > grep(bash)；fffind(tool) > find(tool) > fd(bash) > find(bash)
-- todo 仅在任务有规划有计划 或者 任务很大 时使用
+- todo 仅在任务有规划有计划 或者 任务很大 或 用户要求 时使用
 
 ## 常用目录
 
@@ -74,21 +74,9 @@
 - 主代理或子代理完成任务时，发现值得沉淀的规则但用户未明确要求，只提醒用户
 - 不准直接修改 `AGENTS.md`，永远只能提醒与建议
 
-## Papercuts
-
-When you hit friction during work — a dead-end tool call, a broken link, a
-misleading doc, a footgun config, a missing helper — file it before moving on:
-
-    papercuts add "<what you hit and what would have prevented it>" --tag <area>
-
-Don't stop working; file it and push through. Severity: minor (default) for
-annoyances, major for time sinks, blocker for hard walls. Run `papercuts schema`
-once if you need the full contract. Attach `--cmd`, `--exit`, or `--stderr-file`
-when filing tool failures; never feed raw environment dumps.
-
 ### 交付物
 
-将交付成果撰写为独立且完整的最终产物。直接吸收反馈进行修改，切勿提及草稿、版本、评审轮次、先前表述、被替代的决策或编辑过程，除非用户明确要求提供变更日志、历史记录或决策记录。(例如: 在文档中写`第xx版`)
+将交付成果撰写为独立且完整的最终产物。直接吸收反馈进行修改，切勿提及草稿、版本、评审轮次、先前表述、被替代的决策或编辑过程，除非用户明确要求提供变更日志、历史记录或决策记录。(例如: 在文档中不写`第xx版`/`xx优化版本`)
 
 ## Skill 触发器
 

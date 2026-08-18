@@ -35,7 +35,7 @@ It prints the critique to stdout and exits `0`. Read the bullets, then weigh the
 
 ## Model
 
-Defaults to **`Gemini 3.5 Flash (High)`** (Flash in its highest thinking mode), per preference. Override with `AGY_REVIEW_MODEL="<name>"` (see `agy models` for exact strings) or `-m`.
+Defaults to **`gemini-3.6-flash-high`** (Gemini 3.6 Flash in its highest thinking mode), per preference. Override with `AGY_REVIEW_MODEL="<name>"` (see `agy models` for exact strings) or `-m`.
 
 ## Reading the result
 
