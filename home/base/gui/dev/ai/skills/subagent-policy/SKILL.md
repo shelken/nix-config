@@ -17,7 +17,7 @@ description: 发起、审查或规划子代理工作时阅读该技能
 spawn-subagent <profile> <slug> -- <task>
 ```
 
-`slug` 是任务语义标识（只含小写字母/数字/连字符，≤13 字符；agent 名 `profile-slug-时间戳` 总长上限 32），用于 agent 命名（如 `explore-parse-errors-1786609381`）。
+`slug` 是任务语义标识（只含小写字母/数字/连字符，超长自动截断；agent 名 `profile-slug-时间戳` 总长上限 32，由时间戳保证唯一），用于 agent 命名（如 `explore-parse-errors-1786609381`）。
 
 脚本会按布局推导新 pane 并启动 pi 子代理，最后输出 pane ID 供记录：
 

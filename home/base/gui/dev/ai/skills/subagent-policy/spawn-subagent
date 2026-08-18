@@ -21,7 +21,7 @@ spawn-subagent - 在 Herdr 窗格中启动/关闭 pi 子代理
 
 profile: explore | general-purpose | reviewer | general-purpose-review
          （默认模型/思考深度/工具见同目录 subagent-config.json，改配置即生效）
-slug:    任务语义标识，只含小写字母/数字/连字符，用于 agent 命名（如 fix-parse-errors）
+slug:    任务语义标识，只含小写字母/数字/连字符，超长自动截断（agent 名上限 32 字符）
 task:    子代理任务描述（支持多行）
          派发后立即返回 pane ID，主代理结束当前回合，子代理结论经
          intercom 自动注入唤醒（见 SKILL.md 等待模式）
@@ -167,12 +167,23 @@ if [[ ! "$slug" =~ ^[a-z0-9-]+$ ]]; then
   echo "spawn-subagent: slug 只能含小写字母/数字/连字符: '$slug'" >&2
   exit 1
 fi
-# agent name 由 profile-slug-时间戳 组成,herdr 上限 32 字符。
-# 提前构造并校验长度,避免 split 新 pane 后才失败留下空 pane。
-agent_name="${profile}-${slug}-$(date +%s)"
-if [[ ${#agent_name} -gt 32 ]]; then
-  echo "spawn-subagent: agent 名 '${agent_name}' 超 32 字符,slug 请控制在 $((32 - ${#profile} - 12)) 字符内" >&2
-  exit 1
+# agent name 由 profile-slug-时间戳 组成,herdr 上限 32 字符,超长自动截断:
+# 先截 slug(保留 profile 语义),profile 本身超预算才截 profile,时间戳保证唯一。
+budget=$((32 - 12))  # 12 = 2 个连字符 + 10 位时间戳(到 2286 年)
+if (( ${#profile} + 1 + ${#slug} > budget )); then
+  max_slug=$((budget - ${#profile} - 1))
+  if (( max_slug < 1 )); then
+    profile="${profile:0:budget}"
+    slug=""
+  else
+    slug="${slug:0:max_slug}"
+    slug="${slug%-}"  # 截断后不以连字符结尾
+  fi
+fi
+if [[ -n "$slug" ]]; then
+  agent_name="${profile}-${slug}-$(date +%s)"
+else
+  agent_name="${profile}-$(date +%s)"
 fi
 
 # ---------- 读取预设（配置为唯一真相源） ----------
