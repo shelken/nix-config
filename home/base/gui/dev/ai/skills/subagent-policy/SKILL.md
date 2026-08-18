@@ -5,6 +5,8 @@ description: 发起、审查或规划子代理工作时阅读该技能
 
 # 子代理
 
+**该skill适用于非Workflow场景下,Workflow使用独立的编排逻辑**
+
 子代理由 `spawn-subagent` 脚本在 Herdr 窗格中启动（替代已禁用的 pi-subagents 插件），通过 `pi-intercom` 回传结论。
 
 ## 环境限制
