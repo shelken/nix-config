@@ -12,4 +12,4 @@ description: 当需要控制浏览器时阅读该技能
 ### CDP 连接浏览器
 
 - 假如用户需要连接非chrome浏览器,默认情况下,检查9333端口,如果没有监听,停下来,让用户重新以开启监听的方式打开浏览器
-- 入口：`playwright-cli attach --cdp http://127.0.0.1:9333 --session <名>`，成功后用 `playwright-cli -s=<名> <命令>` 操作；网络观测用 `requests`（先 `goto` 刷新建基线）+ `request/response-body <序号>`
+- 入口:`playwright-cli attach --cdp http://127.0.0.1:9333 -s=<名> >/tmp/<名>.log 2>&1 &`(attach 是长驻 daemon,必须后台运行),成功后用 `playwright-cli -s=<名> <命令>` 操作;网络观测用 `requests`(先 `goto` 刷新建基线)+ `request/response-body <序号>`

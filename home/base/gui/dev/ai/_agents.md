@@ -12,6 +12,11 @@
 - 用户存在阅读障碍。除非用户明确要求，否则切勿提供冗长文本供其审阅
 - 用户患有决策焦虑，请仅推荐一个最佳解决方案。候选方案仅可简要列出，每项方案占一行。展开解释这些方案等同于故意侮辱用户并冒犯其阅读障碍与决策焦虑；这是绝不可接受的
 
+## 设计原则
+
+- 只要是个非一次性脚本的项目, 设计必须模块化, 结构必须清晰
+- 深模块原则, 接口简单，功能深厚
+
 ## 沟通
 
 - 文档和 `to-spec` 产物 和 待办事项 默认使用中文，项目另有约定时从其约定
@@ -85,10 +90,10 @@
 - Git 提交、GitHub 日常操作、提交前检查：`git-workflow`
 - 项目文档约定（非专项写作流程）：`docs-policy`
 - 写 README：`doc-readme`；写用户指南：`doc-user-guide`；写 `AGENTS.md`：`doc-agent-file`
-- 文档翻译：`docs-translate`；文案润色：`waza-write`
-- 发起或审查子代理：`subagent-policy`
+- 文案润色：`waza-write`
+- 发起子代理：`subagent-policy`
 - 用户要求回忆/沉淀/审计项目知识时：`project-memory`
 - 写尸检报告：`postmortem`
 - debug: `debug-best-practice`
 - 控制浏览器: `browser-best-practice`
-- 代码写完后审查前: `ponytail-review` 之后 `code-review`
+- 控制和读取任意系统App: `computer-use-best-practice`
