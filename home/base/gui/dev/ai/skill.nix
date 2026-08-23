@@ -140,6 +140,10 @@ let
       triage = "${sources.mattpocock-skills.src}/skills/engineering/triage";
     };
 
+    reverse-skill = {
+      reverse-skill = "${sources.reverse-skill.src}/skills";
+    };
+
     # emilkowalski-skills = {
     #   animate = "${sources.emilkowalski-skills.src}/skills/animate";
     #   animation-vocabulary = "${sources.emilkowalski-skills.src}/skills/animation-vocabulary";

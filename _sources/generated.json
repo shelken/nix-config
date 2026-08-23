@@ -167,6 +167,27 @@
         },
         "version": "22a4006f531b7c8e71704f64e48feed659164104"
     },
+    "reverse-skill": {
+        "cargoLock": null,
+        "date": "2026-08-22",
+        "extract": null,
+        "name": "reverse-skill",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "zhaoxuya520",
+            "repo": "reverse-skill",
+            "rev": "41bd788c34f82d26ad9e51bcba838b0d1220928e",
+            "sha256": "sha256-dWpkbBLRf0S0Qhkkxw90lf4V8Gygh6yGXCQuMUBnTM8=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "41bd788c34f82d26ad9e51bcba838b0d1220928e"
+    },
     "yazi-plugins": {
         "cargoLock": null,
         "date": "2026-08-07",

@@ -101,6 +101,18 @@
     };
     date = "2026-07-11";
   };
+  reverse-skill = {
+    pname = "reverse-skill";
+    version = "41bd788c34f82d26ad9e51bcba838b0d1220928e";
+    src = fetchFromGitHub {
+      owner = "zhaoxuya520";
+      repo = "reverse-skill";
+      rev = "41bd788c34f82d26ad9e51bcba838b0d1220928e";
+      fetchSubmodules = false;
+      sha256 = "sha256-dWpkbBLRf0S0Qhkkxw90lf4V8Gygh6yGXCQuMUBnTM8=";
+    };
+    date = "2026-08-22";
+  };
   yazi-plugins = {
     pname = "yazi-plugins";
     version = "0be29a913ad61c6d119abfaaf253e96e6af5db67";
