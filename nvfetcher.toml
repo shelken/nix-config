@@ -13,6 +13,11 @@ src.git      = "https://github.com/ast-grep/agent-skill"
 src.branch   = "main"
 fetch.github = "ast-grep/agent-skill"
 
+[cursor-plugins]
+src.git      = "https://github.com/cursor/plugins"
+src.branch   = "main"
+fetch.github = "cursor/plugins"
+
 # [anthropics-skills]
 # src.git      = "https://github.com/anthropics/skills"
 # src.branch   = "main"

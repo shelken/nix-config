@@ -11,165 +11,126 @@ let
 
   skillsSourcePath = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/skills";
 
-  # 外部 skill 统一交给 nvfetcher 固定来源和版本，避免 activation 阶段临时下载。
-  # 结构：仓库分组 -> skill 名 -> skill 路径。
-  fetchedSkillSourcesByRepo = {
-    # anthropics-skills = {
-    #   skill-creator = "${sources.anthropics-skills.src}/skills/skill-creator";
-    # };
+  flattenSkillName = lib.replaceStrings [ "/" ] [ "--" ];
 
+  collectSkillRootRelativePaths =
+    dirPath: relativePath:
+    let
+      entries = builtins.readDir dirPath;
+      childDirs = builtins.attrNames (lib.filterAttrs (_: fileType: fileType == "directory") entries);
+      childRelativePath =
+        childName: if relativePath == "" then childName else "${relativePath}/${childName}";
+    in
+    if builtins.hasAttr "SKILL.md" entries then
+      [ relativePath ]
+    else
+      lib.concatMap (
+        childName: collectSkillRootRelativePaths "${dirPath}/${childName}" (childRelativePath childName)
+      ) childDirs;
+
+  listToAttrsWithUniqueNameCheck =
+    errorMsg: entries:
+    let
+      names = map (entry: entry.name) entries;
+    in
+    assert lib.assertMsg (builtins.length names == builtins.length (lib.unique names)) errorMsg;
+    builtins.listToAttrs entries;
+
+  # 外部来源只声明仓库根目录和选择策略，解析后统一进入现有分组/平铺流程。
+  fetchedSkillRepos = {
     andrej-karpathy-skills = {
-      karpathy-guidelines = "${sources.andrej-karpathy-skills.src}/skills/karpathy-guidelines";
+      root = sources.andrej-karpathy-skills.src;
+      skills.karpathy-guidelines = "skills/karpathy-guidelines";
     };
 
     ast-grep-agent-skill = {
-      ast-grep = "${sources.ast-grep-agent-skill.src}/ast-grep/skills/ast-grep";
+      root = sources.ast-grep-agent-skill.src;
+      skills.ast-grep = "ast-grep/skills/ast-grep";
     };
-
-    # bilibili-cli = {
-    #   bilibili-cli = "${sources.bilibili-cli.src}/SKILL.md";
-    # };
-
-    # twitter-cli = {
-    #   twitter-cli = "${sources.twitter-cli.src}/SKILL.md";
-    # };
-
-    # dotclaude-skills = {
-    #   best-practices = "${sources.dotclaude-skills.src}/refactor/skills/best-practices";
-    #   refactor = "${sources.dotclaude-skills.src}/refactor/skills/refactor";
-    #   refactor-project = "${sources.dotclaude-skills.src}/refactor/skills/refactor-project";
-    # };
-
-    # 太大了
-    # hindsight-skills = {
-    #   hindsight-architect = "${sources.hindsight-skills.src}/skills/hindsight-architect";
-    #   hindsight-docs = "${sources.hindsight-skills.src}/skills/hindsight-docs";
-    #   hindsight-local = "${sources.hindsight-skills.src}/skills/hindsight-local";
-    # };
-
-    # caveman = {
-    #   caveman = "${sources.caveman.src}/skills/caveman";
-    #   caveman-help = "${sources.caveman.src}/skills/caveman-help";
-    # };
 
     ai-coding-principles = {
-      ai-coding-discipline = "${sources.ai-coding-principles.src}/ai-coding-discipline";
-      # ddia-principles = "${sources.ai-coding-principles.src}/ddia-principles";
+      root = sources.ai-coding-principles.src;
+      skills.ai-coding-discipline = "ai-coding-discipline";
     };
 
-    # ai-design-skills = {
-    #   landing-page-design = "${sources.ai-design-skills.src}/skills/landing-page-design";
-    # };
-
-    # software-design-philosophy-skill = {
-    #   software-design-philosophy = "${sources.software-design-philosophy-skill.src}/SKILL.md";
-    # };
-
-    # playwright-cli = {
-    #   playwright-cli = "${sources.playwright-cli.src}/skills/playwright-cli";
-    # };
-
-    # shuorenhua = {
-    #   shuorenhua = "${sources.shuorenhua.src}";
-    # };
-
-    # sidkh-skills = {
-    #   explain-code = "${sources.sidkh-skills.src}/explain-code";
-    # };
-
-    # taches-cc-resources = {
-    #   build-macos-apps = "${sources.taches-cc-resources.src}/skills/expertise/macos-apps";
-    #   build-iphone-apps = "${sources.taches-cc-resources.src}/skills/expertise/iphone-apps";
-    #   # create-agent-skills = "${sources.taches-cc-resources.src}/skills/create-agent-skills";
-    # };
-
-    # taste-skill = {
-    #   # industrial-brutalist-ui = "${sources.taste-skill.src}/skills/brutalist-skill";
-    #   gpt-taste = "${sources.taste-skill.src}/skills/gpt-tasteskill";
-    #   image-to-code = "${sources.taste-skill.src}/skills/image-to-code-skill";
-    #   # minimalist-ui = "${sources.taste-skill.src}/skills/minimalist-skill";
-    #   # full-output-enforcement = "${sources.taste-skill.src}/skills/output-skill";
-    #   high-end-visual-design = "${sources.taste-skill.src}/skills/soft-skill";
-    #   stitch-design-taste = "${sources.taste-skill.src}/skills/stitch-skill";
-    #   design-taste-frontend = "${sources.taste-skill.src}/skills/taste-skill";
-    # };
-
-    # obra-superpowers = {
-    #   # brainstorming = "${sources.obra-superpowers.src}/skills/brainstorming";
-    #   # dispatching-parallel-agents = "${sources.obra-superpowers.src}/skills/dispatching-parallel-agents";
-    #   # executing-plans = "${sources.obra-superpowers.src}/skills/executing-plans";
-    #   # subagent-driven-development = "${sources.obra-superpowers.src}/skills/subagent-driven-development";
-    #   # receiving-code-review = "${sources.obra-superpowers.src}/skills/receiving-code-review";
-    #   # requesting-code-review = "${sources.obra-superpowers.src}/skills/requesting-code-review";
-    #   # systematic-debugging = "${sources.obra-superpowers.src}/skills/systematic-debugging";
-    #   # test-driven-development = "${sources.obra-superpowers.src}/skills/test-driven-development";
-    #   # verification-before-completion = "${sources.obra-superpowers.src}/skills/verification-before-completion";
-    #   # writing-plans = "${sources.obra-superpowers.src}/skills/writing-plans";
-    #   # writing-skills = "${sources.obra-superpowers.src}/skills/writing-skills";
-    # };
-
     humanlayer-skills = {
-      show-me = "${sources.humanlayer-skills.src}/plugins/show-me/skills/show-me";
+      root = sources.humanlayer-skills.src;
+      skills.show-me = "plugins/show-me/skills/show-me";
     };
 
     llamaparse-agent-skills = {
-      liteparse = "${sources.llamaparse-agent-skills.src}/skills/liteparse";
+      root = sources.llamaparse-agent-skills.src;
+      skills.liteparse = "skills/liteparse";
     };
 
     mattpocock-skills = {
-      improve-codebase-architecture = "${sources.mattpocock-skills.src}/skills/engineering/improve-codebase-architecture";
-      diagnosing-bugs = "${sources.mattpocock-skills.src}/skills/engineering/diagnosing-bugs";
-      grill-me = "${sources.mattpocock-skills.src}/skills/productivity/grill-me";
-      grill-with-docs = "${sources.mattpocock-skills.src}/skills/engineering/grill-with-docs";
-      grilling = "${sources.mattpocock-skills.src}/skills/productivity/grilling";
-      handoff = "${sources.mattpocock-skills.src}/skills/productivity/handoff";
-      prototype = "${sources.mattpocock-skills.src}/skills/engineering/prototype";
-      tdd = "${sources.mattpocock-skills.src}/skills/engineering/tdd";
-      to-tickets = "${sources.mattpocock-skills.src}/skills/engineering/to-tickets";
-      to-spec = "${sources.mattpocock-skills.src}/skills/engineering/to-spec";
-      writing-for-agents = "${sources.mattpocock-skills.src}/skills/productivity/writing-for-agents";
-      teach = "${sources.mattpocock-skills.src}/skills/productivity/teach";
-      loop-me = "${sources.mattpocock-skills.src}/skills/in-progress/loop-me";
-      code-review = "${sources.mattpocock-skills.src}/skills/engineering/code-review";
-      implement = "${sources.mattpocock-skills.src}/skills/engineering/implement";
-      setup-matt-pocock-skills = "${sources.mattpocock-skills.src}/skills/engineering/setup-matt-pocock-skills";
-      wayfinder = "${sources.mattpocock-skills.src}/skills/engineering/wayfinder";
-      research = "${sources.mattpocock-skills.src}/skills/engineering/research";
-      domain-modeling = "${sources.mattpocock-skills.src}/skills/engineering/domain-modeling";
-      ask-matt = "${sources.mattpocock-skills.src}/skills/engineering/ask-matt";
-      triage = "${sources.mattpocock-skills.src}/skills/engineering/triage";
+      root = sources.mattpocock-skills.src;
+      skills = {
+        improve-codebase-architecture = "skills/engineering/improve-codebase-architecture";
+        diagnosing-bugs = "skills/engineering/diagnosing-bugs";
+        grill-me = "skills/productivity/grill-me";
+        grill-with-docs = "skills/engineering/grill-with-docs";
+        grilling = "skills/productivity/grilling";
+        handoff = "skills/productivity/handoff";
+        prototype = "skills/engineering/prototype";
+        tdd = "skills/engineering/tdd";
+        to-tickets = "skills/engineering/to-tickets";
+        to-spec = "skills/engineering/to-spec";
+        writing-for-agents = "skills/productivity/writing-for-agents";
+        loop-me = "skills/in-progress/loop-me";
+        code-review = "skills/engineering/code-review";
+        implement = "skills/engineering/implement";
+        setup-matt-pocock-skills = "skills/engineering/setup-matt-pocock-skills";
+        wayfinder = "skills/engineering/wayfinder";
+        research = "skills/engineering/research";
+        domain-modeling = "skills/engineering/domain-modeling";
+        ask-matt = "skills/engineering/ask-matt";
+        triage = "skills/engineering/triage";
+      };
+    };
+
+    pstack = {
+      root = "${sources.cursor-plugins.src}/pstack/skills";
+      discover = true;
+      exclude = [ "tdd" ];
     };
 
     reverse-skill = {
-      reverse-skill = "${sources.reverse-skill.src}/skills";
+      root = sources.reverse-skill.src;
+      skills.reverse-skill = "skills";
     };
-
-    # emilkowalski-skills = {
-    #   animate = "${sources.emilkowalski-skills.src}/skills/animate";
-    #   animation-vocabulary = "${sources.emilkowalski-skills.src}/skills/animation-vocabulary";
-    #   apple-design = "${sources.emilkowalski-skills.src}/skills/apple-design";
-    #   emil-design-eng = "${sources.emilkowalski-skills.src}/skills/emil-design-eng";
-    #   find-animation-opportunities = "${sources.emilkowalski-skills.src}/skills/find-animation-opportunities";
-    #   improve-animations = "${sources.emilkowalski-skills.src}/skills/improve-animations";
-    #   pick-ui-library = "${sources.emilkowalski-skills.src}/skills/pick-ui-library";
-    #   # prototype 与 mattpocock-skills 同名冲突，跳过
-    #   review-animations = "${sources.emilkowalski-skills.src}/skills/review-animations";
-    # };
-
-    #https://github.com/elayadesign/redesign-skill 设计
-    # redesign-skill = {
-    #   redesign-existing-projects = "${sources.redesign-skill.src}/skills/redesign-existing-projects";
-    # };
-
-    # impeccable = {
-    #   impeccable = "${sources.impeccable.src}/.agents/skills/impeccable";
-    # };
-
-    # waza-skills = {
-    #   health = "${sources.waza-skills.src}/skills/health";
-    # };
-
   };
+
+  discoverSkillSources =
+    repoName: root:
+    listToAttrsWithUniqueNameCheck "${repoName}: 自动发现的 skill 名冲突。" (
+      map (relativePath: {
+        name = flattenSkillName relativePath;
+        value = "${root}/${relativePath}";
+      }) (collectSkillRootRelativePaths root "")
+    );
+
+  resolveSkillRepo =
+    repoName: repo:
+    let
+      discovered = if repo.discover or false then discoverSkillSources repoName repo.root else { };
+      explicit = lib.mapAttrs (_: relativePath: "${repo.root}/${relativePath}") (repo.skills or { });
+      duplicateNames = lib.intersectLists (builtins.attrNames discovered) (builtins.attrNames explicit);
+      combined = discovered // explicit;
+      exclusions = repo.exclude or [ ];
+      unknownExclusions = builtins.filter (name: !(builtins.hasAttr name combined)) exclusions;
+      resolved = builtins.removeAttrs combined exclusions;
+    in
+    assert lib.assertMsg (
+      duplicateNames == [ ]
+    ) "${repoName}: 自动发现与显式声明存在同名 skill：${builtins.concatStringsSep ", " duplicateNames}";
+    assert lib.assertMsg (
+      unknownExclusions == [ ]
+    ) "${repoName}: exclude 包含不存在的 skill：${builtins.concatStringsSep ", " unknownExclusions}";
+    assert lib.assertMsg (resolved != { }) "${repoName}: 没有可用的 skill";
+    resolved;
+
+  fetchedSkillSourcesByRepo = lib.mapAttrs resolveSkillRepo fetchedSkillRepos;
 
   # 单文件来源统一包装成目录，skill 目标形态与目录来源保持一致，避免目录内再挂单文件链接。
   normalizeFetchedSkillSource =
@@ -181,45 +142,9 @@ let
         builtins.readFile sourcePath
       );
 
-  normalizeSkillSources = lib.mapAttrs (_: normalizeFetchedSkillSource);
-
-  # 声明式 frontmatter 覆盖：skill 名 -> 键值集合。
-  # 命中时在安装期产出一份复制目录并注入 frontmatter 的派生路径，上游源不动。
-  skillFrontmatterOverrides = {
-    find-animation-opportunities.disable-model-invocation = true;
-    improve-animations.disable-model-invocation = true;
-  };
-
-  applyFrontmatterOverrides =
-    sourcePath: overrides:
-    if overrides == { } then
-      sourcePath
-    else
-      pkgs.runCommand "skill-patched" { } ''
-        cp -r ${sourcePath} $out
-        chmod -R +w $out
-        ${pkgs.python3}/bin/python ${../../../../../utils/script/patch_frontmatter.py} "$out/SKILL.md" '${builtins.toJSON overrides}'
-      '';
-
-  # normalize 后再按覆盖表注入 frontmatter，未命中的原样透传（零成本）。
-  normalizeAndOverride =
-    name: sourcePath:
-    applyFrontmatterOverrides (normalizeFetchedSkillSource sourcePath) (
-      skillFrontmatterOverrides.${name} or { }
-    );
-
   normalizedFetchedSkillSourcesByRepo = lib.mapAttrs (
-    _: lib.mapAttrs normalizeAndOverride
+    _: lib.mapAttrs (_: normalizeFetchedSkillSource)
   ) fetchedSkillSourcesByRepo;
-
-  listToAttrsWithUniqueNameCheck =
-    errorMsg: entries:
-    let
-      names = map (entry: entry.name) entries;
-      hasUniqueNames = builtins.length names == builtins.length (lib.unique names);
-      _ = lib.assertMsg hasUniqueNames errorMsg;
-    in
-    builtins.listToAttrs entries;
 
   skillSourceToEntry = skillName: sourcePath: {
     name = skillName;
@@ -255,7 +180,7 @@ let
       skillSourceToEntry skillName repo.skillSources.${skillName}
     else
       {
-        name = repo.name;
+        inherit (repo) name;
         value = mkFetchedRepoLinkFarm repo;
       };
 
@@ -271,24 +196,6 @@ let
     name: fileType: fileType == "directory" && !(builtins.elem name fetchedFlattenSkillNames);
 
   localTopLevelSkillDirs = builtins.attrNames (lib.filterAttrs isLocalGroupedSkill localSkillEntries);
-
-  # pi 风格：遇到 SKILL.md 就把该目录当 skill 根，不继续向下。
-  collectSkillRootRelativePaths =
-    dirPath: relativePath:
-    let
-      entries = builtins.readDir dirPath;
-      childDirs = builtins.attrNames (lib.filterAttrs (_: fileType: fileType == "directory") entries);
-      childRelativePath =
-        childName: if relativePath == "" then childName else "${relativePath}/${childName}";
-    in
-    if builtins.hasAttr "SKILL.md" entries then
-      [ relativePath ]
-    else
-      lib.concatMap (
-        childName: collectSkillRootRelativePaths "${dirPath}/${childName}" (childRelativePath childName)
-      ) childDirs;
-
-  flattenSkillName = relativePath: lib.replaceStrings [ "/" ] [ "--" ] relativePath;
 
   mkLocalSkillSource =
     relativePath: config.lib.file.mkOutOfStoreSymlink "${skillsSourcePath}/${relativePath}";

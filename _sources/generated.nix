@@ -42,6 +42,18 @@
     };
     date = "2026-07-03";
   };
+  cursor-plugins = {
+    pname = "cursor-plugins";
+    version = "46125561306434d8a1d7745d540d8932ab0cd2a2";
+    src = fetchFromGitHub {
+      owner = "cursor";
+      repo = "plugins";
+      rev = "46125561306434d8a1d7745d540d8932ab0cd2a2";
+      fetchSubmodules = false;
+      sha256 = "sha256-rTkT/2dliMzvwDkza2+JNhSIzcTr9fXjvK2zwi/lRl8=";
+    };
+    date = "2026-08-20";
+  };
   humanlayer-skills = {
     pname = "humanlayer-skills";
     version = "d3138e5898ff1bd98aeaf11c79a8c5880e917a52";
