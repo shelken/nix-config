@@ -94,6 +94,7 @@ let
       discover = true;
       exclude = [ "tdd" ];
       frontmatter.poteto-mode.name = "poteto-mode";
+      frontmatter.setup-pstack.disable-model-invocation = true;
     };
 
     reverse-skill = {
