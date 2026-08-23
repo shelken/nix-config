@@ -82,6 +82,8 @@ bun run --cwd "$PM_DIR" pm -- status   # 默认 text；程序用 status --format
 
 ## Recall
 
+回答时优先引用当前代码、Git、测试、运行结果或正式文档。Session 用于定位和补足这些来源未覆盖的历史信息；默认转述，只有用户明确要求原文或措辞本身影响结论时才直接引用。
+
 ### 当前 Session
 
 Pi 中存在 `vcc_recall` 时优先使用它：默认检索 active lineage，只有历史分支可能影响结论时才用 `scope: "all"`，用 `expand` 展开必要原文。没有 `vcc_recall` 时，只使用当前 Agent 可见上下文，不声称拥有完整当前 Session 历史。
