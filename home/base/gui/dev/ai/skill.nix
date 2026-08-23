@@ -93,6 +93,7 @@ let
       root = "${sources.cursor-plugins.src}/pstack/skills";
       discover = true;
       exclude = [ "tdd" ];
+      frontmatter.poteto-mode.name = "poteto-mode";
     };
 
     reverse-skill = {
@@ -120,6 +121,8 @@ let
       exclusions = repo.exclude or [ ];
       unknownExclusions = builtins.filter (name: !(builtins.hasAttr name combined)) exclusions;
       resolved = builtins.removeAttrs combined exclusions;
+      overrideNames = builtins.attrNames (repo.frontmatter or { });
+      unknownOverrides = builtins.filter (name: !(builtins.hasAttr name resolved)) overrideNames;
     in
     assert lib.assertMsg (
       duplicateNames == [ ]
@@ -127,6 +130,9 @@ let
     assert lib.assertMsg (
       unknownExclusions == [ ]
     ) "${repoName}: exclude 包含不存在的 skill：${builtins.concatStringsSep ", " unknownExclusions}";
+    assert lib.assertMsg (
+      unknownOverrides == [ ]
+    ) "${repoName}: frontmatter 包含不存在的 skill：${builtins.concatStringsSep ", " unknownOverrides}";
     assert lib.assertMsg (resolved != { }) "${repoName}: 没有可用的 skill";
     resolved;
 
@@ -142,8 +148,26 @@ let
         builtins.readFile sourcePath
       );
 
+  applyFrontmatterOverrides =
+    skillName: sourcePath: overrides:
+    if overrides == { } then
+      sourcePath
+    else
+      pkgs.runCommand "skill-${skillName}" { } ''
+        cp -r ${sourcePath} $out
+        chmod -R +w $out
+        ${pkgs.python3}/bin/python ${../../../../../utils/script/patch_frontmatter.py} "$out/SKILL.md" \
+          ${lib.escapeShellArg (builtins.toJSON overrides)}
+      '';
+
   normalizedFetchedSkillSourcesByRepo = lib.mapAttrs (
-    _: lib.mapAttrs (_: normalizeFetchedSkillSource)
+    repoName:
+    lib.mapAttrs (
+      skillName: sourcePath:
+      applyFrontmatterOverrides skillName (normalizeFetchedSkillSource sourcePath) (
+        fetchedSkillRepos.${repoName}.frontmatter.${skillName} or { }
+      )
+    )
   ) fetchedSkillSourcesByRepo;
 
   skillSourceToEntry = skillName: sourcePath: {
