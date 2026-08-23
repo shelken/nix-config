@@ -22,11 +22,11 @@
 - 中文注释，中文文档
 - commit 前先在 direnv 环境运行一次 pre-commit（`direnv exec . pre-commit run -a`）
 - 优先使用 Conventional Commits 格式提交，标题 **英文**，内容 **中文**
-- 执行 `just bd` / `just hm` 等构建命令前，确保新增或删除的文件已 `git add`，否则不生效
-- 修改配置后，用 `nix eval` 和 `just bd` 验证当前配置是否正确
+- 修改配置后，使用 `just bd`(nix-darwin范围验证) / `just hm-build`(home-manager 范围验证) 等命令进行验证
+- 使用 `just sw`(nix-darwin范围变更) / `just hm`(home-manager 范围变更) 前; 确保新增或删除的文件已 `git add`，否则不生效;
 - 一般使用 `nh search` 搜索 nixpkgs 中的包
-- 常用命令在 `justfile`，用 `just` 查看可用快捷命令
 - 项目级 skill 必须放在项目根目录 `.agents/skills/` 下，不要放到 `home/` 等用户环境配置目录
+- 更多常用命令在 `justfile`，用 `just` 查看可用快捷命令
 
 ## 软件源与秘密
 
