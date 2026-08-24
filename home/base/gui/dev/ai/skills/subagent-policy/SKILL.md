@@ -17,14 +17,18 @@ description: 发起、审查或规划子代理工作时阅读该技能
 
 ```sh
 spawn-subagent <profile> <slug> -- <task>
+spawn-subagent resume <pane-id> -- <task> # 复用已有 agent pane 注入新任务，不重启；失败非零退出且不关闭该 pane
+spawn-subagent list              # 列出所有 agent 的 name/model/thinking/tools/描述
+spawn-subagent --check           # 派生 settings + 打印所有 agent 生效值，不启动
+spawn-subagent close <pane-id>
 ```
 
-`slug` 是任务语义标识（只含小写字母/数字/连字符，超长自动截断；agent 名 `profile-slug-时间戳` 总长上限 32，由时间戳保证唯一），用于 agent 命名（如 `explore-parse-errors-1786609381`）。
+`slug` 是任务语义标识（只含小写字母/数字/连字符；agent 名 `profile-slug-时间戳` 总长上限 32，时间戳为不截断的唯一后缀），用于 agent 命名（如 `explore-parse-errors-1786609381`）。
 
 脚本会按布局推导新 pane 并启动 pi 子代理，最后输出 pane ID 供记录：
 
 - 首个子代理：主 pane 右侧分列（`--ratio 0.55` 保留主 pane 55%）。
-- 后续子代理：右侧最底部 pane 向下拆分，拆分后右列所有 pane 自动重新均分等高（自适应，不限制数量，新增不会把 pane 越压越小）。
+- 后续子代理：右侧最底部 pane 向下拆分，拆分后右列所有 pane 每次重新均分等高（避免累计失衡；pane 数量增多时单个 pane 必然更矮）。
 
 ### 等待模式
 
@@ -34,7 +38,7 @@ herdr 对未聚焦 pane 的 agent 全程仅报 idle（无 working/done 区分）
 
 ### 预设表
 
-各 profile 的默认 model / thinking / tools 定义在**同目录 `subagent-config.json`**（唯一真相源），改配置即生效；本表只描述用途。也可用 `spawn-subagent --check` 查看当前生效的预设和排除清单。
+每个 profile 对应 `~/.pi/agent/agents/<profile>.md` 模板（文件名小写匹配），其 frontmatter 的 `model` / `thinking` / `tools` / `exclude_extensions` 为**唯一真相源**；同目录 `subagent-config.json` 仅作全局默认：md 显式值覆盖 config，md 缺字段/缺文件时才回退 config 预设。用 `spawn-subagent list` 查看全部 agent，`--check` 查看生效值与全局排除。
 
 | profile | 用途 |
 |---|---|
@@ -43,9 +47,11 @@ herdr 对未聚焦 pane 的 agent 全程仅报 idle（无 working/done 区分）
 | reviewer | 代码审查（只读） |
 | general-purpose-review | 代码审查（可写） |
 
+> 脚本只解析 frontmatter，**不把 md 正文作为预设 prompt 注入**；协调 prompt 仅含回传协议和 task 原文。md 里的正文与 `prompt_mode: append` 仅供其他读取该 md 的插件使用。
+
 ### 排除清单
 
-不适合子代理的插件写在 `subagent-config.json` 的 `exclude` 数组（默认全继承主代理插件）。规范：只写插件短名（路径/仓库/npm 名的最后一段，scoped 包去 scope 取 name），如 `npm:@juicesharp/rpiv-todo` 写 `rpiv-todo`。
+全局默认排除写在 `subagent-config.json` 的 `exclude` 数组（仅当 md 未声明 `exclude_extensions` 时生效）；md 的 `exclude_extensions`（含显式空列表 `[]`）整体覆盖全局。规范：只写插件短名（路径/仓库/npm 名的最后一段，scoped 包去 scope 取 name），如 `npm:@juicesharp/rpiv-todo` 写 `rpiv-todo`。
 
 ## 回传协议
 

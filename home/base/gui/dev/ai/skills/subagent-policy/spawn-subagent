@@ -1,319 +1,300 @@
-#!/usr/bin/env bash
-# spawn-subagent: 在 Herdr 窗格中启动/关闭 pi 子代理
-# 用法:
-#   spawn-subagent <profile> -- <task>
-#   spawn-subagent close <pane-id>
-set -euo pipefail
+#!/usr/bin/env bun
+// spawn-subagent.ts — 在 Herdr 窗格中启动/关闭 pi 子代理
+// agent 真相源: ~/.pi/agent/agents/<profile>.md frontmatter; subagent-config.json 仅作全局默认。
+// 用法: spawn-subagent <profile> <slug> -- <task> | close <pane-id> | list | --check | -h
+import { execFileSync, execSync } from "node:child_process";
+import {
+  existsSync, lstatSync, mkdirSync, readdirSync, readFileSync,
+  rmSync, symlinkSync, writeFileSync,
+} from "node:fs";
+import { homedir } from "node:os";
+import { basename, dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-# ---------- 预设数据 ----------
-# 唯一真相源：本目录 subagent-config.json（presets + exclude），脚本每次启动读取。
-# 详见 prepare_subagent_env 的派生逻辑与 --check 模式。
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const agentsDir = join(homedir(), ".pi", "agent", "agents");
+const config = JSON.parse(readFileSync(join(scriptDir, "subagent-config.json"), "utf8"));
+const AGENT_FIELDS = ["description", "model", "thinking", "tools", "exclude_extensions"];
 
-usage() {
-  cat <<'EOF'
-spawn-subagent - 在 Herdr 窗格中启动/关闭 pi 子代理
+type Agent = {
+  name: string; model: string; thinking: string; tools: string;
+  exclude: string[]; description: string; md?: string;
+};
+
+// ---------- 解析 ----------
+
+// 轻量 frontmatter 解析: key: value 与缩进 "- item" 块, 注释/其余行忽略值保留在 md。
+function parseFrontmatter(text: string): Record<string, string | string[]> {
+  const m = text.match(/^---\n([\s\S]*?)\n---/);
+  if (!m) return {};
+  const f: Record<string, string | string[]> = {};
+  let cur: string | null = null;
+  for (const raw of m[1].split("\n")) {
+    const line = raw.trimEnd();
+    const kv = line.match(/^([A-Za-z0-9_-]+):(.*)$/);
+    if (kv) { cur = kv[1]; f[cur] = kv[2].trim(); }
+    else if (cur && /^\s+-\s+/.test(line)) {
+      const item = line.trim().slice(2);
+      f[cur] = Array.isArray(f[cur]) ? [...f[cur], item] : [item];
+    }
+  }
+  return f;
+}
+
+// md 显式值 > config 预设; md 无对应文件时退回 config 预设。
+function resolveAgent(profile: string): Agent | null {
+  const preset = config.presets?.[profile.toLowerCase()] ?? {};
+  const mdName = existsSync(agentsDir)
+    ? readdirSync(agentsDir).find((f) => basename(f, ".md").toLowerCase() === profile.toLowerCase())
+    : undefined;
+  const f = mdName ? parseFrontmatter(readFileSync(join(agentsDir, mdName), "utf8")) : {};
+  const has = (k: string) => Object.prototype.hasOwnProperty.call(f, k);
+  const pick = (k: string, d: string) => (has(k) ? String(f[k]) : d);
+  const model = pick("model", preset.model);
+  const thinking = pick("thinking", preset.thinking);
+  const tools = pick("tools", preset.tools);
+  if (!model || !thinking || !tools) return null;
+  const exclude = has("exclude_extensions")
+    ? (Array.isArray(f.exclude_extensions) ? f.exclude_extensions : [])
+    : (config.exclude ?? []);
+  return {
+    name: profile, model, thinking, tools,
+    exclude: exclude as string[], description: (f.description as string) ?? "",
+    ...(mdName ? { md: join(agentsDir, mdName) } : {}),
+  };
+}
+
+// ---------- 命令 ----------
+
+function herdr(args: string[]): any {
+  return JSON.parse(execFileSync("herdr", args, { encoding: "utf8" }));
+}
+function usage() {
+  console.log(`spawn-subagent - 在 Herdr 窗格中启动/关闭 pi 子代理
 
 用法:
   spawn-subagent <profile> <slug> -- <task>   启动子代理，输出 pane ID
+  spawn-subagent resume <pane-id> -- <task>   复用已有 agent pane，注入新任务（不重启）
+  spawn-subagent list                         列出所有 agent(name/model/thinking/tools/描述)
+  spawn-subagent --check                      派生 settings + 打印所有 agent 生效值，不启动
   spawn-subagent close <pane-id>              关闭子代理 pane 并聚焦回主 pane
-  spawn-subagent --check                      派生 settings + 打印当前预设/排除，不启动
   spawn-subagent -h | --help                  显示本帮助
 
-profile: explore | general-purpose | reviewer | general-purpose-review
-         （默认模型/思考深度/工具见同目录 subagent-config.json，改配置即生效）
-slug:    任务语义标识，只含小写字母/数字/连字符，超长自动截断（agent 名上限 32 字符）
-task:    子代理任务描述（支持多行）
-         派发后立即返回 pane ID，主代理结束当前回合，子代理结论经
-         intercom 自动注入唤醒（见 SKILL.md 等待模式）
+profile: 对应 ~/.pi/agent/agents/<profile>.md（文件名小写匹配）；frontmatter 的
+         model/thinking/tools/exclude_extensions 为唯一真相源，subagent-config.json
+         仅作全局默认，被具体 md 显式值覆盖。
+slug:    任务语义标识（小写字母/数字/连字符，agent 名上限 32 字符）
+task:    子代理任务描述，支持多行；派发后立即返回 pane ID，结论经 intercom 回传
 
-环境变量:
-  HERDR_PANE_ID           当前 pane ID（Herdr 环境自动注入，缺失即退出）
-  PI_INTERCOM_SESSION_ID  主代理 intercom session ID，子代理回传结论用
-
-子代理环境:
-  ~/.pi/agent 是持久状态唯一真相源；~/.pi/agent-subagent 仅隔离派生的
-  settings.json、sessions 与 tmp，其余配置、provider 状态和缓存全部共享。
-
-示例:
-  spawn-subagent explore fix-parse-errors -- "排查 src/parser 的报错原因"
-  spawn-subagent close w11:pK
-  spawn-subagent --check
-EOF
+env: HERDR_PANE_ID, PI_INTERCOM_SESSION_ID`);
 }
 
-# ---------- 子代理环境（自动派生，零手动维护） ----------
-# 主 ~/.pi/agent 是持久状态唯一真相源。子代理只隔离 settings.json、sessions、tmp：
-# settings.json 负责插件黑名单；sessions/tmp 属于子进程运行时；其余配置、provider
-# 状态与缓存全部链接回主目录，新增顶层状态也会自动继承。
-# 脚本源目录（realpath 解析 symlink 到 nix-config 源），配置文件在此目录读取
-script_dir="$(dirname "$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$0")")"
-
-prepare_subagent_env() {
-  python3 - "$HOME/.pi/agent" "$HOME/.pi/agent-subagent" "$script_dir/subagent-config.json" <<'PY'
-import fcntl, json, os, shutil, sys, tempfile
-from pathlib import Path
-
-main_dir, sub_dir, config_path = map(Path, sys.argv[1:4])
-sub_dir.mkdir(parents=True, exist_ok=True)
-(sub_dir / "sessions").mkdir(exist_ok=True)
-(sub_dir / "tmp").mkdir(exist_ok=True)
-
-# 多个子代理可同时启动；目录映射与 settings 更新必须作为一次事务串行完成。
-with open(sub_dir / "tmp" / "prepare.lock", "w") as lock:
-    fcntl.flock(lock, fcntl.LOCK_EX)
-
-    for src in main_dir.iterdir():
-        if src.name in {"settings.json", "sessions", "tmp"}:
-            continue
-        dst = sub_dir / src.name
-        if dst.is_symlink() and dst.resolve() == src.resolve():
-            continue
-        if dst.is_symlink() or dst.is_file():
-            dst.unlink()
-        elif dst.is_dir():
-            shutil.rmtree(dst)
-        dst.symlink_to(src, target_is_directory=src.is_dir())
-
-    with open(main_dir / "settings.json") as f:
-        main = json.load(f)
-    with open(config_path) as f:
-        cfg = json.load(f)
-    exclude = set(cfg.get("exclude", []))
-
-    def pkg_name(package):
-        # 任意形态（npm:/git:repo/本地路径/对象包）都按最后一段裸名匹配黑名单。
-        if isinstance(package, dict):
-            package = package.get("source")
-        if not isinstance(package, str):
-            return None
-        source = package.lstrip("-")
-        if ":" in source and not source.startswith("/"):
-            source = source.split(":", 1)[1]
-        parts = [part for part in source.split("/") if part]
-        return parts[-1] if parts else None
-
-    derived = {key: value for key, value in main.items() if key != "packages"}
-    derived["packages"] = []
-    for package in main.get("packages", []):
-        name = pkg_name(package)
-        disabled = isinstance(package, str) and package.startswith("-")
-        derived["packages"].append("-" + package if name in exclude and not disabled else package)
-
-    fd, tmp_path = tempfile.mkstemp(dir=sub_dir, prefix="settings.", suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w") as f:
-            json.dump(derived, f, indent=2, ensure_ascii=False)
-            f.write("\n")
-        os.replace(tmp_path, sub_dir / "settings.json")
-    finally:
-        if os.path.exists(tmp_path):
-            os.unlink(tmp_path)
-PY
+function listAgents() {
+  if (!existsSync(agentsDir)) return console.error(`agents 目录不存在: ${agentsDir}`);
+  for (const f of readdirSync(agentsDir).filter((x) => x.endsWith(".md"))) {
+    const g = resolveAgent(basename(f, ".md"));
+    if (!g) {
+      console.log(`${basename(f, ".md")}: <缺少 model/thinking/tools 字段，无法解析>`);
+      continue;
+    }
+    console.log(`${g.name}: model=${g.model} thinking=${g.thinking} tools=[${g.tools}]`);
+    console.log(`  description: ${g.description}`);
+  }
 }
 
-# ---------- --check / 帮助：零 pane 副作用，任何环境可用 ----------
-if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  usage
-  exit 0
-fi
-
-if [[ "${1:-}" == "--check" ]]; then
-  prepare_subagent_env
-  python3 - "$script_dir/subagent-config.json" <<'PY'
-import json, sys
-cfg = json.load(open(sys.argv[1]))
-for name, p in cfg.get("presets", {}).items():
-    print(f"{name}: model={p['model']} thinking={p['thinking']} tools={p['tools']}")
-print("exclude:", ", ".join(cfg.get("exclude", [])))
-PY
-  exit 0
-fi
-
-# ---------- 前置检查 ----------
-require_env() {
-  if [[ -z "${!1:-}" ]]; then
-    echo "spawn-subagent: 环境变量 $1 缺失" >&2
-    exit 1
-  fi
+// 子代理环境: ~/.pi/agent-subagent 只隔离 settings/sessions/tmp, 其余链接回主目录;
+// packages 里命中 exclude 的包加 "-" 前缀禁用。
+function prepareEnv(exclude: string[]) {
+  const main = join(homedir(), ".pi", "agent");
+  const sub = join(homedir(), ".pi", "agent-subagent");
+  mkdirSync(join(sub, "sessions"), { recursive: true });
+  mkdirSync(join(sub, "tmp"), { recursive: true });
+  for (const ent of readdirSync(main)) {
+    if (["settings.json", "sessions", "tmp"].includes(ent)) continue;
+    const src = join(main, ent), dst = join(sub, ent);
+    try { rmSync(dst, { recursive: true, force: true }); } catch { /* 首次无 dst */ }
+    symlinkSync(src, dst, lstatSync(src).isDirectory() ? "dir" : "file");
+  }
+  const pkgName = (p: any): string | null => {
+    if (p && typeof p === "object") p = p.source;
+    if (typeof p !== "string" || !p) return null;
+    const s = p.replace(/^-/, "");
+    const bare = s.includes(":") && !s.startsWith("/") ? s.split(":").slice(1).join(":") : s;
+    return bare.split("/").filter(Boolean).at(-1) ?? null;
+  };
+  const settings = JSON.parse(readFileSync(join(main, "settings.json"), "utf8"));
+  settings.packages = settings.packages.map((p: any) => {
+    const name = pkgName(p);
+    if (name && exclude.includes(name)) {
+      if (p && typeof p === "object") {
+        const src = String(p.source);
+        return src.startsWith("-") ? p : { ...p, source: "-" + src };
+      }
+      if (typeof p === "string" && !p.startsWith("-")) return "-" + p;
+    }
+    return p;
+  });
+  writeFileSync(join(sub, "settings.json"), JSON.stringify(settings, null, 2) + "\n");
 }
 
-# HERDR_PANE_ID 缺失 = 非 Herdr 环境（Kitty 等）
-if [[ -z "${HERDR_PANE_ID:-}" ]]; then
-  echo "spawn-subagent: 当前仅支持 Herdr（未检测到 HERDR_PANE_ID）" >&2
-  exit 1
-fi
-require_env PI_INTERCOM_SESSION_ID
-
-# ---------- close ----------
-if [[ "${1:-}" == "close" ]]; then
-  pane_id="${2:-}"
-  if [[ -z "$pane_id" ]]; then
-    echo "spawn-subagent: close 需要 pane-id 参数" >&2
-    usage
-    exit 1
-  fi
-  herdr pane close "$pane_id" >/dev/null
-  herdr agent focus "$HERDR_PANE_ID" >/dev/null
-  echo "closed $pane_id"
-  exit 0
-fi
-
-if [[ "$#" -lt 4 ]]; then
-  usage
-  exit 1
-fi
-
-profile="$1"
-slug="$2"
-shift 2
-
-[[ "${1:-}" == "--" ]] && shift
-task="$*"
-
-# ---------- slug 校验（herdr agent name 仅小写字母/数字/-/_） ----------
-if [[ ! "$slug" =~ ^[a-z0-9-]+$ ]]; then
-  echo "spawn-subagent: slug 只能含小写字母/数字/连字符: '$slug'" >&2
-  exit 1
-fi
-# agent name 由 profile-slug-时间戳 组成,herdr 上限 32 字符,超长自动截断:
-# 先截 slug(保留 profile 语义),profile 本身超预算才截 profile,时间戳保证唯一。
-budget=$((32 - 12))  # 12 = 2 个连字符 + 10 位时间戳(到 2286 年)
-if (( ${#profile} + 1 + ${#slug} > budget )); then
-  max_slug=$((budget - ${#profile} - 1))
-  if (( max_slug < 1 )); then
-    profile="${profile:0:budget}"
-    slug=""
-  else
-    slug="${slug:0:max_slug}"
-    slug="${slug%-}"  # 截断后不以连字符结尾
-  fi
-fi
-if [[ -n "$slug" ]]; then
-  agent_name="${profile}-${slug}-$(date +%s)"
-else
-  agent_name="${profile}-$(date +%s)"
-fi
-
-# ---------- 读取预设（配置为唯一真相源） ----------
-preset_json=$(python3 - "$script_dir/subagent-config.json" "$profile" <<'PY'
-import json, sys
-cfg = json.load(open(sys.argv[1]))
-presets = cfg.get("presets", {})
-if sys.argv[2] not in presets:
-    print("__UNKNOWN__")
-    sys.exit(0)
-print(json.dumps(presets[sys.argv[2]]))
-PY
-)
-if [[ "$preset_json" == "__UNKNOWN__" ]]; then
-  echo "spawn-subagent: 未知 profile '$profile'，可用: $(python3 -c "import json,sys; print(', '.join(json.load(open(sys.argv[1])).get('presets',{}).keys()))" "$script_dir/subagent-config.json")" >&2
-  exit 1
-fi
-model=$(jq -r '.model' <<<"$preset_json")
-thinking=$(jq -r '.thinking' <<<"$preset_json")
-tools=$(jq -r '.tools' <<<"$preset_json")
-
-# ---------- 布局：首个右侧分列，后续在右列内向下堆叠 ----------
-# 新增后重新均分右列（所有 pane 等高，自适应，不限制数量），
-# 避免无限对半分割导致 pane 越分越小。
-layout_json=$(herdr pane layout --pane "$HERDR_PANE_ID")
-# 主 pane 的 x：作为右侧判断基准
-main_x=$(jq -r --arg id "$HERDR_PANE_ID" '
-  .result.layout.panes[] | select(.pane_id == $id) | .rect.x
-' <<<"$layout_json")
-# 右侧最底部 pane
-right_panes=$(jq -r --arg main_x "$main_x" '
-  [.result.layout.panes[] | select(.rect.x > ($main_x | tonumber))]
-  | sort_by(.rect.y)
-' <<<"$layout_json")
-target_pane=$(jq -r 'last | .pane_id' <<<"$right_panes")
-
-if [[ "$target_pane" == "null" || -z "$target_pane" ]]; then
-  new_pane=$(herdr pane split --pane "$HERDR_PANE_ID" --direction right --ratio 0.55 --no-focus |
-    jq -r '.result.pane.pane_id')
-else
-  new_pane=$(herdr pane split --pane "$target_pane" --direction down --ratio 0.5 --no-focus |
-    jq -r '.result.pane.pane_id')
-fi
-# 后续任何命令失败(set -e 退出)时关闭已 split 的 pane,避免残留空 pane
-trap 'herdr pane close "$new_pane" >/dev/null 2>&1 || true' ERR
-
-# 均分右列：新增后把同一列的所有 pane 调整为等高（从下往上逐个 resize）
-rebalance_column() {
-  local layout col_x panes n col_top col_bot i
-  layout=$(herdr pane layout --pane "$HERDR_PANE_ID")
-  col_x=$(jq -r --arg id "$new_pane" '.result.layout.panes[] | select(.pane_id == $id) | .rect.x' <<<"$layout")
-  mapfile -t panes < <(jq -r --argjson x "$col_x" \
-    '[.result.layout.panes[] | select(.rect.x == $x)] | sort_by(.rect.y) | .[].pane_id' <<<"$layout")
-  n=${#panes[@]}
-  [[ "$n" -lt 2 ]] && return
-  # 嵌套 split 的 ratio 目标:第 i 条 down split 的顶部 pane 占其父区域 1/(n-i)
-  for ((i = n - 2; i >= 0; i--)); do
-    local cur_ratio target_ratio delta dir
-    cur_ratio=$(jq -r --argjson i "$i" \
-      '[.result.layout.splits[] | select(.direction == "down")] | sort_by(.rect.y) | .[$i] | .ratio' <<<"$layout")
-    target_ratio=$(python3 -c "print(1 / ($n - $i))")
-    delta=$(python3 -c "print(round($target_ratio - $cur_ratio, 6))")
-    if [[ "$delta" == "0" || "$delta" == "0.0" || "$delta" == "-0.0" ]]; then
-      continue
-    fi
-    # 调整 pane_i 与其下方 pane 的边界 split:增大用 panes[i] down(+delta),
-    # 减小用 panes[i+1] up(+|delta|)(herdr CLI 不接受负 amount,
-    # 且 panes[i] up 会找上方边界而非本边界)
-    if python3 -c "exit(0 if $delta > 0 else 1)"; then
-      herdr pane resize --pane "${panes[$i]}" --direction down --amount "$delta" >/dev/null
-    else
-      delta=$(python3 -c "print(-$delta)")
-      herdr pane resize --pane "${panes[$((i + 1))]}" --direction up --amount "$delta" >/dev/null
-    fi
-    layout=$(herdr pane layout --pane "$HERDR_PANE_ID")
-  done
+// 布局: 首个右侧分列(55%), 后续右列内向下堆叠并均分等高
+function layoutPane(mainPane: string): string {
+  const layout = herdr(["pane", "layout", "--pane", mainPane]).result.layout;
+  const mainX = layout.panes.find((p: any) => p.pane_id === mainPane).rect.x;
+  const right = layout.panes
+    .filter((p: any) => p.rect.x > mainX)
+    .sort((a: any, b: any) => a.rect.y - b.rect.y);
+  const target = right.at(-1)?.pane_id;
+  const newPane = target
+    ? herdr(["pane", "split", "--pane", target, "--direction", "down", "--ratio", "0.5", "--no-focus"]).result.pane.pane_id
+    : herdr(["pane", "split", "--pane", mainPane, "--direction", "right", "--ratio", "0.55", "--no-focus"]).result.pane.pane_id;
+  // 均分右列: 从下往上把同列 panes 逐步调成 1/(n-i) 占比
+  for (let i = 0; i < 6; i++) {
+    const l = herdr(["pane", "layout", "--pane", mainPane]).result.layout;
+    const panes = l.panes
+      .filter((p: any) => p.rect.x === l.panes.find((q: any) => q.pane_id === newPane).rect.x)
+      .sort((a: any, b: any) => a.rect.y - b.rect.y);
+    const n = panes.length;
+    if (n < 2) break;
+    const colX = l.panes.find((q: any) => q.pane_id === newPane).rect.x;
+    const splits = l.splits
+      .filter((s: any) => s.direction === "down" && Math.abs((s.rect?.x ?? -1) - colX) < 1)
+      .sort((a: any, b: any) => a.rect.y - b.rect.y);
+    let changed = false;
+    for (let k = n - 2; k >= 0; k--) {
+      const cur = splits[k].ratio, want = 1 / (n - k);
+      const delta = Math.round((want - cur) * 1e6) / 1e6;
+      if (delta === 0) continue;
+      const dir = delta > 0 ? "down" : "up";
+      const pane = delta > 0 ? panes[k] : panes[k + 1];
+      herdr(["pane", "resize", "--pane", pane.pane_id, "--direction", dir, "--amount", String(Math.abs(delta))]);
+      changed = true;
+    }
+    if (!changed) break;
+  }
+  return newPane;
 }
-rebalance_column
 
-# ---------- 协调 prompt ----------
-prompt="你是通过 spawn-subagent 启动的 pi 子代理（profile: ${profile}）。
+// 复用已有 agent（指定 pane）：注入新任务，不重启、不新建 pane。
+// 首次 spawn 已注入回传协议；此处仅提醒回传给主代理 session
+function resume(paneId: string, task: string) {
+  const intercom = process.env.PI_INTERCOM_SESSION_ID;
+  if (!intercom) {
+    console.error("spawn-subagent: resume 需要 PI_INTERCOM_SESSION_ID");
+    process.exit(1);
+  }
+  const prompt = `（会话延续）新任务，完成后用 intercom 向主代理 session 回传结论（${intercom}）:\n---\n${task}`;
+  let prompted = false;
+  for (let i = 0; i < 20 && !prompted; i++) {
+    try {
+      const out = execFileSync("herdr", ["agent", "prompt", paneId, prompt], { encoding: "utf8" });
+      prompted = out.includes('"type":"agent_prompted"');
+    } catch { /* 未就绪或 pane 已关闭, 重试 */ }
+    if (!prompted) execSync("sleep 2");
+  }
+  if (!prompted) {
+    console.error(`spawn-subagent: resume 注入失败（20 次重试后 pane '${paneId}' 未就绪或已关闭）`);
+    process.exit(1);
+  }
+  console.log(paneId);
+}
 
-回传协议：
-- 完成或受阻时，用 intercom 工具向主代理 session 发送一条结论消息：
-  intercom({ action: \"send\", to: \"${PI_INTERCOM_SESSION_ID}\", message: \"<结论>\" })
+function spawn(profile: string, slug: string, task: string) {
+  const g = resolveAgent(profile);
+  if (!g) {
+    console.error(`spawn-subagent: profile '${profile}' 无法解析（agents 目录无对应 md，或缺少 model/thinking/tools 字段）`);
+    process.exit(1);
+  }
+  if (!slug.match(/^[a-z0-9-]+$/)) {
+    console.error(`spawn-subagent: slug 只能含小写字母/数字/连字符: '${slug}'`);
+    process.exit(1);
+  }
+  const mainPane = process.env.HERDR_PANE_ID;
+  const intercom = process.env.PI_INTERCOM_SESSION_ID;
+  if (!mainPane || !intercom) {
+    console.error("spawn-subagent: 需要 HERDR_PANE_ID 与 PI_INTERCOM_SESSION_ID");
+    process.exit(1);
+  }
+  const ts = Date.now().toString(36); // 唯一后缀，保证不被截断
+  const slugBudget = 32 - 1 - ts.length - 1 - profile.length; // ${profile}-${slug}-${ts} 两个分隔符
+  let agentName: string;
+  if (slugBudget >= 1) {
+    agentName = `${profile}-${slug.slice(0, slugBudget).replace(/-$/, "")}-${ts}`;
+  } else {
+    // slug 无空间：牺牲 profile 长度保时间戳
+    agentName = `${profile.slice(0, 32 - 1 - ts.length).replace(/-$/, "")}-${ts}`;
+  }
+  if (agentName.length > 32) {
+    console.error(`spawn-subagent: 无法构造 32 字符内的 agent 名（profile='${profile}' slug='${slug}'）`);
+    process.exit(1);
+  }
+  const newPane = layoutPane(mainPane);
+  try {
+    prepareEnv(g.exclude);
+    execFileSync("herdr", ["pane", "run", newPane, `export PI_CODING_AGENT_DIR=${homedir()}/.pi/agent-subagent`]);
+    herdr(["agent", "start", agentName, "--kind", "pi", "--pane", newPane, "--", "--model", g.model, "--thinking", g.thinking, "--tools", g.tools]);
+    const prompt = `你是通过 spawn-subagent 启动的 pi 子代理（profile: ${profile}）。
+
+回传协议:
+- 完成或受阻时，用 intercom 工具向主代理 session 发送一条结论消息:
+  intercom({ action: "send", to: "${intercom}", message: "<结论>" })
 - 消息格式由下方任务描述，不设固定字段。
 - 阻塞或失败时保留当前 pane 供主代理检查，不要自行关闭。
 
-任务原文：
+任务原文:
 ---
 ${task}
----"
+---`;
+    let prompted = false;
+    for (let i = 0; i < 20 && !prompted; i++) {
+      try {
+        const out = execFileSync("herdr", ["agent", "prompt", newPane, prompt], { encoding: "utf8" });
+        prompted = out.includes('"type":"agent_prompted"');
+      } catch { /* pane 未就绪, 重试 */ }
+      if (!prompted) execSync("sleep 2");
+    }
+    if (!prompted) throw new Error("prompt 注入失败（20 次重试后 pane 未就绪）");
+    console.log(newPane);
+  } catch (e: any) {
+    try { execFileSync("herdr", ["pane", "close", newPane]); } catch { /* 已关闭 */ }
+    console.error("spawn-subagent: 启动失败:", String(e.message ?? e));
+    process.exit(1);
+  }
+}
 
-# ---------- 启动 ----------
-prepare_subagent_env
-# 等待 pane shell 就绪后注入 PI_CODING_AGENT_DIR（agent start 启动的 pi 继承该 env）
-sleep 2
-herdr pane run "$new_pane" "export PI_CODING_AGENT_DIR=$HOME/.pi/agent-subagent" >/dev/null
-sleep 1
-# 多行 prompt 无法安全编码进 agent start 的 shell 参数，分两步：
-# 先启动空 pi，等待就绪后通过 agent prompt（socket API）提交协调 prompt。
-# agent name 已在上方构造并校验长度;时间戳区分并发/重复 slug。
-herdr agent start "$agent_name" --kind pi --pane "$new_pane" -- \
-  --model "$model" \
-  --thinking "$thinking" \
-  --tools "$tools" >/dev/null
-
-# 等待 pi 就绪并确认 prompt 送达：不带 --wait 时，pi 未就绪提交不注入
-# （无 agent_prompted 事件，可安全重试）；就绪后注入即有 agent_prompted，
-# 立即 break，与回合长度无关，绝不重发已送达的 prompt。
-for _ in $(seq 1 20); do
-  if herdr agent prompt "$new_pane" "$prompt" 2>/dev/null | grep -q '"type":"agent_prompted"'; then
-    break
-  fi
-  sleep 2
-done
-
-# 验证 agent 真实启动（agent start 可能声称成功但会话未起来），失败即关 pane
-if ! herdr agent get "$agent_name" >/dev/null 2>&1; then
-  echo "spawn-subagent: agent $agent_name 未成功启动，已关闭 pane $new_pane" >&2
-  herdr pane close "$new_pane" >/dev/null 2>&1 || true
-  exit 1
-fi
-
-echo "$new_pane"
+// ---------- main ----------
+const [c0, c1, ...rest] = process.argv.slice(2);
+if (!c0 || c0 === "-h" || c0 === "--help") {
+  usage();
+} else if (c0 === "list") {
+  listAgents();
+} else if (c0 === "--check") {
+  prepareEnv(config.exclude ?? []);
+  console.log(`派生 settings.json 就绪: ${join(homedir(), ".pi", "agent-subagent", "settings.json")}`);
+  console.log(`全局默认 exclude(仅当 md 未声明 exclude_extensions 时生效): ${JSON.stringify(config.exclude ?? [])}\n`);
+  listAgents();
+} else if (c0 === "close") {
+  if (!c1) {
+    console.error("spawn-subagent: close 需要 pane-id 参数");
+    process.exit(1);
+  }
+  execFileSync("herdr", ["pane", "close", c1]);
+  execFileSync("herdr", ["agent", "focus", process.env.HERDR_PANE_ID!]);
+  console.log(`closed ${c1}`);
+} else if (c0 === "resume") {
+  const sep = process.argv.indexOf("--");
+  const task = sep >= 0 ? process.argv.slice(sep + 1).join(" ") : rest.join(" ");
+  if (!c1 || !task.trim()) {
+    usage();
+    process.exit(1);
+  }
+  resume(c1, task);
+} else {
+  const sep = process.argv.indexOf("--");
+  const task = sep >= 0 ? process.argv.slice(sep + 1).join(" ") : rest.join(" ");
+  if (!c1 || !task.trim()) {
+    usage();
+    process.exit(1);
+  }
+  spawn(c0, c1, task);
+}
