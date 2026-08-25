@@ -60,17 +60,13 @@ herdr 对未聚焦 pane 的 agent 全程仅报 idle（无 working/done 区分）
 
 派发不盲等：脚本在注入 task 后阻塞监听子代理会话文件（零模型调用），按确定性签名判别：
 
-- 坏模型的 assistant 消息必为 `"stopReason":"error"` + 空 content + errorMessage（404/认证失败/配额耗尽等），恢复窗口耗尽后派发命令报错退出（exit 1，附具体错误摘要）
-- 健康模型的 assistant 消息有内容（stopReason 为 toolUse/stop），exit 0 正常交给 intercom 等结论
-- pi 遇瞬时错误（503 等）会自动重试，同一会话可 error 后恢复（实测 2-17s），因此首个 error 不判死：error 后有 15s 恢复窗口，窗口内出现新的健康 assistant 判健康，窗口耗尽仍无恢复才判失效
-- 总超时 30s 无任何信号也按失败退出
+- 坏模型的 assistant 消息必为 `"stopReason":"error"` + 空 content + errorMessage；健康模型的有内容（stopReason 为 toolUse/stop）
+- pi 遇瞬时错误（503 等）会自动重试，同一会话可 error 后恢复（实测 2-17s），因此首个 error 不判死：error 后 15s 恢复窗口内出现新的健康 assistant 判健康，窗口耗尽才判失效；总超时 30s
 
-即模型失效在派发命令的返回值里就能看到，主代理当回合即可处理失效模型，不会死等一个永远不回传的子代理。多个 agent 并发时健康门互相独立，一个失效只标记自己
+失效时脚本自动处理，主代理无需额外操作：关闭失败 pane（防残留），reason 带分类前缀：
 
-失效后的处理：
-
-- 瞬时故障（503 等）健康门内 pi 已自动重试过；若仍失败，允许关闭失败 pane（`spawn-subagent close <pane-id>`）后重试派发一次，二次失败则跳过/降权该模型
-- 404（模型 id 错）/认证失败属配置问题，直接跳过，重试无意义
+- `config-error:`（404/认证失败）→ 跳过该模型，重试无意义
+- `transient:`（503 恢复失败/超时）→ 允许重试派发一次，二次失败跳过
 
 ### batch 编排
 

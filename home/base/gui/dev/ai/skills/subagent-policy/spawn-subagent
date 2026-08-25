@@ -332,11 +332,23 @@ ${task}
   return { profile, pane: newPane, agentName, sessionFile };
 }
 
+// 失效分类: 404/401/403/认证属配置错误（重试无意义），其余（503/超时等）为瞬时故障（可重试）
+function classifyFailure(reason: string): string {
+  return /404|401|403|auth|unauthorized|forbidden|not_found/i.test(reason)
+    ? `config-error: ${reason}`
+    : `transient: ${reason}`;
+}
+
 // 阶段二（可并发）：独立健康门，等本 agent 的 stopReason:error / 健康 assistant，超时 30s
+// 失效时自动关闭 pane（模型失效的 pane 无检查价值，防残留）
 async function gateAgent(l: Launched, timeoutMs: number): Promise<DispatchResult> {
   const gate = await healthGate(l.sessionFile, timeoutMs);
-  if (!gate) return { profile: l.profile, pane: l.pane, agentName: l.agentName, healthy: false, reason: "health-check timeout (no model response)" };
-  return { profile: l.profile, pane: l.pane, agentName: l.agentName, healthy: gate.healthy, reason: gate.reason };
+  const reason = gate && !gate.healthy ? classifyFailure(gate.reason ?? "") : (gate ? undefined : "transient: health-check timeout (no model response)");
+  if (reason) {
+    try { execFileSync("herdr", ["pane", "close", l.pane]); } catch { /* 已关闭 */ }
+    return { profile: l.profile, pane: "-", agentName: l.agentName, healthy: false, reason };
+  }
+  return { profile: l.profile, pane: l.pane, agentName: l.agentName, healthy: true };
 }
 
 async function spawn(profile: string, slug: string, task: string) {
