@@ -209,24 +209,44 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// 异步等待健康/失效信号: 会话文件出现 "stopReason":"error" → 失效；出现健康 assistant → 健康
-// 文件可能延迟创建（start 返回后 ms 级），内部等待至 deadline，找不到文件也算超时可疑
+// 阻塞等待健康/失效信号。pi 遇瞬时错误（503 等）会自动重试，实测同一会话可 error 后恢复
+// （最快 2s、最慢 17s），因此首个 error 不能判死：
+// - 首条信号是健康 assistant（无 error）→ 健康
+// - error 后 15s 恢复窗口内出现新的健康 assistant（pi 重试成功）→ 健康
+// - error 后窗口耗尽仍无恢复，或总超时 → 失效
 async function healthGate(sessionFile: string | null, timeoutMs: number): Promise<{ healthy: boolean; reason?: string } | null> {
   const deadline = Date.now() + timeoutMs;
+  let firstErrorAt: number | null = null;
+  let lastErrorText = "";
+  const RECOVERY_MS = 15000;
   while (Date.now() < deadline) {
     if (sessionFile && existsSync(sessionFile)) {
-      const text = readFileSync(sessionFile, "utf-8");
-      if (text.includes('"stopReason":"error"')) {
-        const m = text.match(/"errorMessage":"([^"]{0,120})/);
-        return { healthy: false, reason: m ? m[1] : "model error" };
+      const lines = readFileSync(sessionFile, "utf-8").trim().split("\n");
+      let sawError = false;
+      let healthyAfterError = false;
+      for (const line of lines) {
+        if (!line.includes('"role":"assistant"')) continue;
+        const isErr = line.includes('"stopReason":"error"');
+        if (isErr) {
+          sawError = true;
+          const m = line.match(/"errorMessage":"([^"]{0,120})/);
+          if (m) lastErrorText = m[1];
+          if (firstErrorAt === null) firstErrorAt = Date.now();
+        } else if (sawError) {
+          healthyAfterError = true;
+        }
       }
-      if (text.includes('"role":"assistant"') && !text.includes('"stopReason":"error"')) {
+      if (!sawError) {
+        if (lines.some((l) => l.includes('"role":"assistant"'))) return { healthy: true };
+      } else if (healthyAfterError) {
         return { healthy: true };
+      } else if (firstErrorAt !== null && Date.now() - firstErrorAt > RECOVERY_MS) {
+        return { healthy: false, reason: lastErrorText || "model error" };
       }
     }
     await sleep(1000);
   }
-  return null; // 超时且未见任何信号（疑）
+  return null;
 }
 
 // ---------- 单 agent 派发（spawn / batch 共用）----------

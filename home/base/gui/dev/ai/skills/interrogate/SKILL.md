@@ -47,7 +47,7 @@ spawn-subagent batch <manifest.json>
 
 batch 的保证：校验先行（任一 profile 无效则零派发，不烧 token）；并发派发；每 agent 独立健康门（模型失效立即报 failed + 错误摘要，不影响其余）。输出每 agent 一行 `profile\tpane\tok|failed(reason)`，任一失败 exit 1。
 
-**失效处理**：failed 的 reviewer 从本轮剔除，不派发替代、不重试；综合阶段按健康 reviewer 的结论继续。若全部失效，报告用户模型配置问题，不强行出裁决。
+**失效处理**：failed 的 reviewer 按健康门指引处理（503 瞬时故障可关闭失败 pane 后重试一次，二次失败或 404 配置错误则剔除）；剔除后不派发替代、不再重试，综合阶段按健康 reviewer 的结论继续。若全部失效，报告用户模型配置问题，不强行出裁决。
 
 每个 profile 的 frontmatter `model`/`thinking`/`tools` 是唯一真相源，profile 本身不带审查标准。审查标准由 task 文本承载：读 `references/reviewer-prompt.md` 模板，填入意图、diff、`references/rubric.md` 与 `references/code-quality-review.md` 全文，作为 `<task>` 发出。同一份模板发给所有 reviewer。
 
