@@ -91,11 +91,13 @@ task:    子代理任务描述，支持多行；结论经 intercom 回传，不�
 
 退出码与输出:
   exit 0: 派发成功。单发输出 pane ID；batch 每 agent 一行 profile\tpane\tok
-  exit 1: 失败。失败原因输出在 stderr，模型失效时 reason 带分类前缀:
-      config-error: 模型/认证配置错 → 跳过该模型，重试无意义
-      transient:    瞬时故障 → 可重试派发一次，二次失败跳过
-  失效 agent 的 pane 已由脚本自动关闭；退出码非零时不残留 pane
-  派发命令返回 ≠ 任务完成: 结论经 intercom 回传，派发成功后应结束回合等待
+  exit 1: 失败。失败原因输出在 stderr，reason 带分类前缀:
+      config-error: 模型/认证配置错
+      transient:    pi 在同一会话内重试后仍未恢复
+      launch-error: pane/session/prompt 启动失败
+  以上失败均直接跳过该模型；失败 pane 已由脚本自动关闭，不残留
+  派发命令阻塞至健康判定完成（最长约 1 分钟），返回 ≠ 任务完成:
+  结论经 intercom 回传，派发成功后应结束回合等待
 
 manifest (batch，文件路径，不支持内联 JSON 或 stdin):
   {
@@ -214,7 +216,7 @@ function resume(paneId: string, task: string) {
     console.error("spawn-subagent: resume 需要 PI_INTERCOM_SESSION_ID");
     process.exit(1);
   }
-  const prompt = `（会话延续）新任务，完成后用 intercom 向主代理 session 回传结论（${intercom}）:\n---\n${task}`;
+  const prompt = `（会话延续）新任务，完成后用 intercom 向主代理 session 回传结论（${intercom}），结论第一行标注 [${paneId}] 供对账:\n---\n${task}`;
   let prompted = false;
   for (let i = 0; i < 20 && !prompted; i++) {
     try {
@@ -236,44 +238,51 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// 阻塞等待健康/失效信号。pi 遇瞬时错误（503 等）会自动重试，实测同一会话可 error 后恢复
-// （最快 2s、最慢 17s），因此首个 error 不能判死：
-// - 首条信号是健康 assistant（无 error）→ 健康
-// - error 后 15s 恢复窗口内出现新的健康 assistant（pi 重试成功）→ 健康
-// - error 后窗口耗尽仍无恢复，或总超时 → 失效
-async function healthGate(sessionFile: string | null, timeoutMs: number): Promise<{ healthy: boolean; reason?: string } | null> {
+type SessionEvent = {
+  type?: string;
+  message?: { role?: string; stopReason?: string; errorMessage?: string };
+};
+type HealthObservation = { status: "none" | "healthy" | "error"; reason?: string };
+
+function observeHealth(text: string): HealthObservation {
+  let reason = "";
+  for (const line of text.trim().split("\n")) {
+    let event: SessionEvent;
+    try { event = JSON.parse(line); } catch { continue; }
+    const message = event.type === "message" ? event.message : null;
+    if (message?.role !== "assistant") continue;
+    if (message.stopReason !== "error") return { status: "healthy" };
+    reason = message.errorMessage || "model error";
+  }
+  return reason ? { status: "error", reason } : { status: "none" };
+}
+
+function checkHealthParser() {
+  const msg = (stopReason: string, errorMessage?: string) => JSON.stringify({ type: "message", message: { role: "assistant", stopReason, errorMessage } });
+  if (observeHealth(msg("stop")).status !== "healthy") throw new Error("健康签名自检失败");
+  if (observeHealth(`${msg("error", "503")}\n${msg("toolUse")}`).status !== "healthy") throw new Error("恢复签名自检失败");
+  if (observeHealth(msg("error", "404")).status !== "error") throw new Error("失效签名自检失败");
+}
+
+// pi 自己负责瞬时错误重试。健康门只观察同一会话，避免脚本重启 session 造成双重重试。
+// 4xx 配置/认证错误立即失败；其他错误等到总期限，期间出现新健康 assistant 即恢复。
+async function healthGate(sessionFile: string, timeoutMs: number): Promise<{ healthy: boolean; reason?: string } | null> {
   const deadline = Date.now() + timeoutMs;
-  let firstErrorAt: number | null = null;
   let lastErrorText = "";
-  const RECOVERY_MS = 15000;
   while (Date.now() < deadline) {
-    if (sessionFile && existsSync(sessionFile)) {
-      const lines = readFileSync(sessionFile, "utf-8").trim().split("\n");
-      let sawError = false;
-      let healthyAfterError = false;
-      for (const line of lines) {
-        if (!line.includes('"role":"assistant"')) continue;
-        const isErr = line.includes('"stopReason":"error"');
-        if (isErr) {
-          sawError = true;
-          const m = line.match(/"errorMessage":"([^"]{0,120})/);
-          if (m) lastErrorText = m[1];
-          if (firstErrorAt === null) firstErrorAt = Date.now();
-        } else if (sawError) {
-          healthyAfterError = true;
+    if (existsSync(sessionFile)) {
+      const observation = observeHealth(readFileSync(sessionFile, "utf-8"));
+      if (observation.status === "healthy") return { healthy: true };
+      if (observation.status === "error") {
+        lastErrorText = observation.reason ?? "model error";
+        if (/400|401|403|404|auth|unauthorized|forbidden|not_found/i.test(lastErrorText)) {
+          return { healthy: false, reason: lastErrorText };
         }
-      }
-      if (!sawError) {
-        if (lines.some((l) => l.includes('"role":"assistant"'))) return { healthy: true };
-      } else if (healthyAfterError) {
-        return { healthy: true };
-      } else if (firstErrorAt !== null && Date.now() - firstErrorAt > RECOVERY_MS) {
-        return { healthy: false, reason: lastErrorText || "model error" };
       }
     }
     await sleep(1000);
   }
-  return null;
+  return lastErrorText ? { healthy: false, reason: lastErrorText } : null;
 }
 
 // ---------- 单 agent 派发（spawn / batch 共用）----------
@@ -290,7 +299,7 @@ type Launched = {
   profile: string;
   pane: string;
   agentName: string;
-  sessionFile: string | null;
+  sessionFile: string;
 };
 
 // 阶段一（同步串行）：布局 + 环境 + 启动 + 注入。返回派发信息，不等待模型响应
@@ -333,12 +342,17 @@ function launchAgent(profile: string, slug: string, task: string): Launched {
     try { execFileSync("herdr", ["pane", "close", newPane]); } catch { /* 已关闭 */ }
     throw new Error(`启动失败: ${String(e.message ?? e)}`);
   }
+  if (!sessionFile) {
+    try { execFileSync("herdr", ["pane", "close", newPane]); } catch { /* 已关闭 */ }
+    throw new Error("健康门不可用: herdr 未返回可解析的 agent session 路径");
+  }
 
   const prompt = `你是通过 spawn-subagent 启动的 pi 子代理（profile: ${profile}）。
 
 回传协议:
 - 完成或受阻时，用 intercom 工具向主代理 session 发送一条结论消息:
   intercom({ action: "send", to: "${intercom}", message: "<结论>" })
+- 结论消息第一行必须是 [${agentName}]（你的 agent 名），供主代理对账。
 - 消息格式由下方任务描述，不设固定字段。
 - 阻塞或失败时保留当前 pane 供主代理检查，不要自行关闭。
 
@@ -354,14 +368,17 @@ ${task}
     } catch { /* pane 未就绪, 重试 */ }
     if (!prompted) execSync("sleep 2");
   }
-  if (!prompted) throw new Error("prompt 注入失败（20 次重试后 pane 未就绪）");
+  if (!prompted) {
+    try { execFileSync("herdr", ["pane", "close", newPane]); } catch { /* 已关闭 */ }
+    throw new Error("prompt 注入失败（20 次重试后 pane 未就绪）");
+  }
 
   return { profile, pane: newPane, agentName, sessionFile };
 }
 
 // 失效分类: 404/401/403/认证属配置错误（重试无意义），其余（503/超时等）为瞬时故障（可重试）
 function classifyFailure(reason: string): string {
-  return /404|401|403|auth|unauthorized|forbidden|not_found/i.test(reason)
+  return /400|401|403|404|auth|unauthorized|forbidden|not_found/i.test(reason)
     ? `config-error: ${reason}`
     : `transient: ${reason}`;
 }
@@ -380,13 +397,12 @@ async function gateAgent(l: Launched, timeoutMs: number): Promise<DispatchResult
 
 async function spawn(profile: string, slug: string, task: string) {
   try {
-    const l = launchAgent(profile, slug, task);
-    const r = await gateAgent(l, 30000);
-    console.log(r.pane);
+    const r = await gateAgent(launchAgent(profile, slug, task), 45000);
     if (!r.healthy) {
-      console.error(`spawn-subagent: agent 已派发但模型失效（${r.reason}）`);
+      console.error(`spawn-subagent: 模型失效（${r.reason}）`);
       process.exit(1);
     }
+    console.log(r.pane);
   } catch (e: any) {
     console.error("spawn-subagent: 启动失败:", String(e.message ?? e));
     process.exit(1);
@@ -415,11 +431,11 @@ async function batch(manifestPath: string) {
   const errors: string[] = [];
   for (const a of rawAgents) {
     const profile = typeof a === "string" ? a : a?.profile;
+    if (!profile) { errors.push("缺少 profile"); continue; }
     const slugRaw = typeof a === "string" ? undefined : a?.slug;
     const task = typeof a === "string" ? sharedTask : (a?.task ?? sharedTask);
     const slug = slugRaw ?? profile.replace(/^reviewer-/i, "").replace(/[^a-z0-9-]/gi, "-");
-    if (!profile) errors.push("缺少 profile");
-    else if (!resolveAgent(profile)) errors.push(`profile '${profile}' 无效`);
+    if (!resolveAgent(profile)) errors.push(`profile '${profile}' 无效`);
     if (!slug.match(/^[a-z0-9-]+$/)) errors.push(`slug '${slug}' 只能含小写/数字/连字符`);
     if (!task.trim()) errors.push(`profile '${profile}' 的 task 为空`);
     entries.push({ profile, slug, task });
@@ -441,11 +457,12 @@ async function batch(manifestPath: string) {
     }
   }
   const results = await Promise.all(launched.map(async ({ entry, result, error }) => {
-    if (!result) return { profile: entry.profile, pane: "-", agentName: "-", healthy: false, reason: error };
-    return gateAgent(result, 30000);
+    if (!result) return { profile: entry.profile, pane: "-", agentName: "-", healthy: false, reason: `launch-error: ${error}` };
+    return gateAgent(result, 45000);
   }));
   for (const r of results) {
-    console.log(`${r.profile}\t${r.pane}\t${r.healthy ? "ok" : "failed"}${r.reason ? `  (${r.reason})` : ""}`);
+    const line = `${r.profile}\t${r.pane}\t${r.healthy ? "ok" : "failed"}${r.reason ? `  (${r.reason})` : ""}`;
+    (r.healthy ? console.log : console.error)(line);
   }
   const anyFailed = results.some((r) => !r.healthy);
   process.exit(anyFailed ? 1 : 0);
@@ -464,7 +481,9 @@ if (!c0 || c0 === "-h" || c0 === "--help") {
 } else if (c0 === "list") {
   listAgents();
 } else if (c0 === "--check") {
+  checkHealthParser();
   prepareEnv(config.exclude ?? []);
+  console.log("健康门签名自检通过");
   console.log(`派生 settings.json 就绪: ${join(homedir(), ".pi", "agent-subagent", "settings.json")}`);
   console.log(`全局排除 exclude(subagent-config.json 统一生效): ${JSON.stringify(config.exclude ?? [])}\n`);
   listAgents();
