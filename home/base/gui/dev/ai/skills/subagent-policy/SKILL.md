@@ -38,20 +38,19 @@ herdr 对未聚焦 pane 的 agent 全程仅报 idle（无 working/done 区分）
 
 ### 预设表
 
-每个 profile 对应 `~/.pi/agent/agents/<profile>.md` 模板（文件名小写匹配），其 frontmatter 的 `model` / `thinking` / `tools` / `exclude_extensions` 为**唯一真相源**；同目录 `subagent-config.json` 仅作全局默认：md 显式值覆盖 config，md 缺字段/缺文件时才回退 config 预设。用 `spawn-subagent list` 查看全部 agent，`--check` 查看生效值与全局排除。
+每个 profile 对应 `~/.pi/agent/agents/<profile>.md` 模板（文件名小写匹配），frontmatter 的 `model` / `thinking` / `tools` 为**唯一真相源**，缺字段时回退 `subagent-config.json` 预设。profile 清单与生效配置实时获取，不在文档记录：
 
-| profile | 用途 |
-|---|---|
-| explore | 代码库探索（只读） |
-| general-purpose | 复杂多步任务，勿用于 review |
-| reviewer | 代码审查（只读） |
-| general-purpose-review | 代码审查（可写） |
+```sh
+spawn-subagent list    # 全部 profile 的 name/model/thinking/描述
+```
+
+新增 profile：在 agents 目录新建 `<profile>.md`，最小 frontmatter 即可（`description` 一句中文用途 + `model` + `thinking` + `tools`），不要声明正文和 `exclude_extensions`（见排除清单）
 
 > 脚本只解析 frontmatter，**不把 md 正文作为预设 prompt 注入**；协调 prompt 仅含回传协议和 task 原文。md 里的正文与 `prompt_mode: append` 仅供其他读取该 md 的插件使用。
 
 ### 排除清单
 
-全局默认排除写在 `subagent-config.json` 的 `exclude` 数组（仅当 md 未声明 `exclude_extensions` 时生效）；md 的 `exclude_extensions`（含显式空列表 `[]`）整体覆盖全局。规范：只写插件短名（路径/仓库/npm 名的最后一段，scoped 包去 scope 取 name），如 `npm:@juicesharp/rpiv-todo` 写 `rpiv-todo`。
+插件排除由 `subagent-config.json` 的 `exclude` 数组**全局统一生效**，不支持按 md 单独声明：所有子代理共用同一份派生 settings.json（每次 spawn 重写），per-md exclude 会被后续 spawn 覆盖，机制上无法成立。规范：只写插件短名（路径/仓库/npm 名的最后一段，scoped 包去 scope 取 name），如 `npm:@juicesharp/rpiv-todo` 写 `rpiv-todo`。
 
 ## 回传协议
 
@@ -72,4 +71,5 @@ spawn-subagent close <pane-id>
 - 禁止多次重复派发子代理，例如修复几行代码后重新派发。**经济原则**：非大问题/大修改不重新审查。
 - 子代理不得继续派生子代理。
 - reviewer 适合在大量变更/多轮任务之后使用。
-- 发起子代理时，必须让其知道相关 issue/背景/上下文/前因后果/用户的完整意图；不要全部告知细节，告知其如何查询，例如直接给 issue 链接、重要文件路径。
+- 发起子代理时，必须让其知道相关 issue/背景/上下文/前因后果/用户的完整意图；不要全部告知细节，告知其如何查询，例如直接给 issue 链接、重要文件路径
+- 复审时可使用 intercom 与子代理进行交流; **主代理有任何审查方面的不同意见, 可直接与子代理辩论相关问题, 直到达成共识**

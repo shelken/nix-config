@@ -92,7 +92,10 @@ let
     pstack = {
       root = "${sources.cursor-plugins.src}/pstack/skills";
       discover = true;
-      exclude = [ "tdd" ];
+      exclude = [
+        "tdd"
+        "interrogate"
+      ];
       frontmatter.poteto-mode.name = "poteto-mode";
       frontmatter.setup-pstack.disable-model-invocation = true;
     };

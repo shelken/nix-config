@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const agentsDir = join(homedir(), ".pi", "agent", "agents");
 const config = JSON.parse(readFileSync(join(scriptDir, "subagent-config.json"), "utf8"));
-const AGENT_FIELDS = ["description", "model", "thinking", "tools", "exclude_extensions"];
+const AGENT_FIELDS = ["description", "model", "thinking", "tools"];
 
 type Agent = {
   name: string; model: string; thinking: string; tools: string;
@@ -54,12 +54,10 @@ function resolveAgent(profile: string): Agent | null {
   const thinking = pick("thinking", preset.thinking);
   const tools = pick("tools", preset.tools);
   if (!model || !thinking || !tools) return null;
-  const exclude = has("exclude_extensions")
-    ? (Array.isArray(f.exclude_extensions) ? f.exclude_extensions : [])
-    : (config.exclude ?? []);
+  // 插件排除全局统一：所有子代理共用一份派生 settings.json，per-md 无法生效
   return {
     name: profile, model, thinking, tools,
-    exclude: exclude as string[], description: (f.description as string) ?? "",
+    exclude: (config.exclude ?? []) as string[], description: (f.description as string) ?? "",
     ...(mdName ? { md: join(agentsDir, mdName) } : {}),
   };
 }
@@ -81,8 +79,8 @@ function usage() {
   spawn-subagent -h | --help                  显示本帮助
 
 profile: 对应 ~/.pi/agent/agents/<profile>.md（文件名小写匹配）；frontmatter 的
-         model/thinking/tools/exclude_extensions 为唯一真相源，subagent-config.json
-         仅作全局默认，被具体 md 显式值覆盖。
+         model/thinking/tools 为唯一真相源，缺字段时回退 subagent-config.json。
+         插件排除由 subagent-config.json 的 exclude 全局统一，md 不支持单独声明。
 slug:    任务语义标识（小写字母/数字/连字符，agent 名上限 32 字符）
 task:    子代理任务描述，支持多行；派发后立即返回 pane ID，结论经 intercom 回传
 
@@ -271,7 +269,7 @@ if (!c0 || c0 === "-h" || c0 === "--help") {
 } else if (c0 === "--check") {
   prepareEnv(config.exclude ?? []);
   console.log(`派生 settings.json 就绪: ${join(homedir(), ".pi", "agent-subagent", "settings.json")}`);
-  console.log(`全局默认 exclude(仅当 md 未声明 exclude_extensions 时生效): ${JSON.stringify(config.exclude ?? [])}\n`);
+  console.log(`全局排除 exclude(subagent-config.json 统一生效): ${JSON.stringify(config.exclude ?? [])}\n`);
   listAgents();
 } else if (c0 === "close") {
   if (!c1) {
