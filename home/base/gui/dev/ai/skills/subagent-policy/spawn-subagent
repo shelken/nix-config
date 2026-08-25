@@ -256,12 +256,14 @@ function launchAgent(profile: string, slug: string, task: string): Launched {
   if (!mainPane || !intercom) throw new Error("需要 HERDR_PANE_ID 与 PI_INTERCOM_SESSION_ID");
 
   const ts = Date.now().toString(36);
-  const slugBudget = 32 - 1 - ts.length - 1 - profile.length;
+  // herdr agent 名必须小写字母开头：profile 统一小写（如 Explore md → explore agent）
+  const p = profile.toLowerCase();
+  const slugBudget = 32 - 1 - ts.length - 1 - p.length;
   let agentName: string;
   if (slugBudget >= 1) {
-    agentName = `${profile}-${slug.slice(0, slugBudget).replace(/-$/, "")}-${ts}`;
+    agentName = `${p}-${slug.slice(0, slugBudget).replace(/-$/, "")}-${ts}`;
   } else {
-    agentName = `${profile.slice(0, 32 - 1 - ts.length).replace(/-$/, "")}-${ts}`;
+    agentName = `${p.slice(0, 32 - 1 - ts.length).replace(/-$/, "")}-${ts}`;
   }
   if (agentName.length > 32) throw new Error(`无法构造 32 字符内的 agent 名（profile='${profile}' slug='${slug}'）`);
 
@@ -412,9 +414,14 @@ if (!c0 || c0 === "-h" || c0 === "--help") {
     console.error("spawn-subagent: close 需要 pane-id 参数");
     process.exit(1);
   }
-  execFileSync("herdr", ["pane", "close", c1]);
-  execFileSync("herdr", ["agent", "focus", process.env.HERDR_PANE_ID!]);
-  console.log(`closed ${c1}`);
+  try {
+    execFileSync("herdr", ["pane", "close", c1]);
+    execFileSync("herdr", ["agent", "focus", process.env.HERDR_PANE_ID!]);
+    console.log(`closed ${c1}`);
+  } catch (e: any) {
+    console.error(`spawn-subagent: 关闭失败（pane 不存在或已关闭）: ${c1}`);
+    process.exit(1);
+  }
 } else if (c0 === "resume") {
   const sep = process.argv.indexOf("--");
   const task = sep >= 0 ? process.argv.slice(sep + 1).join(" ") : rest.join(" ");

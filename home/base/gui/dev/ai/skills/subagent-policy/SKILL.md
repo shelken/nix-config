@@ -17,14 +17,14 @@ description: 发起、审查或规划子代理工作时阅读该技能
 
 ```sh
 spawn-subagent <profile> <slug> -- <task>
-spawn-subagent batch <manifest.json>    # 按 manifest 编排多 agent：共享 task、并发派发、独立健康门
+spawn-subagent batch <manifest.json>    # 按 manifest 文件路径（相对/绝对均可，不支持内联 JSON 或 stdin）编排多 agent：共享 task、并发派发、独立健康门
 spawn-subagent resume <pane-id> -- <task> # 复用已有 agent pane 注入新任务，不重启；失败非零退出且不关闭该 pane
 spawn-subagent list              # 列出所有 agent 的 name/model/thinking/tools/描述
 spawn-subagent --check           # 派生 settings + 打印所有 agent 生效值，不启动
-spawn-subagent close <pane-id>
+spawn-subagent close <pane-id>   # pane 不存在/已关闭时报错 exit 1，不抛堆栈
 ```
 
-`slug` 是任务语义标识（只含小写字母/数字/连字符；agent 名 `profile-slug-时间戳` 总长上限 32，时间戳为不截断的唯一后缀），用于 agent 命名（如 `explore-parse-errors-1786609381`）。
+`slug` 是任务语义标识（只含小写字母/数字/连字符；agent 名 `profile-slug-时间戳` 总长上限 32，时间戳为不截断的唯一后缀，超长 slug 会被自动截断到剩余预算，无需调用者计算），用于 agent 命名（如 `explore-parse-errors-lx3kq2ab`）。profile 名大小写不敏感（匹配 md 文件名），agent 名统一小写。
 
 脚本会按布局推导新 pane 并启动 pi 子代理，最后输出 pane ID 供记录：
 
