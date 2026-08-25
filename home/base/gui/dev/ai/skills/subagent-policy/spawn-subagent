@@ -72,23 +72,54 @@ function usage() {
 
 用法:
   spawn-subagent <profile> <slug> -- <task>   启动单个子代理，输出 pane ID
-  spawn-subagent batch <manifest.json>        按 manifest 并发编排多个子代理（共享 task）
+  spawn-subagent batch <manifest.json>        按 manifest 文件并发编排多个子代理（task 可共享可独立）
   spawn-subagent resume <pane-id> -- <task>   复用已有 agent pane，注入新任务（不重启）
   spawn-subagent list                         列出所有 agent(name/model/thinking/tools/描述)
   spawn-subagent --check                      派生 settings + 打印所有 agent 生效值，不启动
   spawn-subagent close <pane-id>              关闭子代理 pane 并聚焦回主 pane
   spawn-subagent -h | --help                  显示本帮助
 
-profile: 对应 ~/.pi/agent/agents/<profile>.md（文件名小写匹配）；frontmatter 的
-         model/thinking/tools 为唯一真相源，缺字段时回退 subagent-config.json。
-         插件排除由 subagent-config.json 的 exclude 全局统一，md 不支持单独声明。
-slug:    任务语义标识（小写字母/数字/连字符，agent 名上限 32 字符）
-task:    子代理任务描述，支持多行；派发后立即返回 pane ID，结论经 intercom 回传
+命令选择:
+  单个 agent → 单发；并发多个 agent（不论任务是否相同）→ batch，禁止循环单发
+  （batch 有校验先行 + 并发健康门，循环单发串行阻塞且无整体校验）
 
-manifest 格式 (batch):
-  { "task": "共享任务", "agents": ["reviewer-gpt", {"profile": "reviewer-glm", "slug": "glm"}] }
-  agents 为字符串时 slug 自动取 profile 去掉 reviewer- 前缀，可带 task 字段覆盖共享的
-  校验先行：任一 profile 无效/语法错，整体拒绝，不派发任何 agent；每 agent 独立健康门
+profile: 对应 ~/.pi/agent/agents/<profile>.md（文件名匹配大小写不敏感，agent 名统一小写）；
+         frontmatter 的 model/thinking/tools 为唯一真相源，缺字段时回退 subagent-config.json。
+         插件排除由 subagent-config.json 的 exclude 全局统一，md 不支持单独声明。
+slug:    任务语义标识（小写字母/数字/连字符；agent 名 profile-slug-时间戳上限 32，
+         超长自动截断，无需调用者计算）
+task:    子代理任务描述，支持多行；结论经 intercom 回传，不写文件
+
+健康门（单发与 batch 每 agent 独立生效）:
+  注入 task 后阻塞监听子代理会话文件（零模型调用）：
+  - 坏模型 assistant 必为 stopReason:error + 空 content + errorMessage；
+    健康模型的有内容（stopReason 为 toolUse/stop）
+  - pi 遇瞬时错误（503 等）会自动重试且可恢复（实测 2-17s），因此首个 error
+    不判死：error 后 15s 恢复窗口内出现新健康 assistant 判健康，窗口耗尽判失效
+  - 失效时自动关闭失败 pane（防残留），reason 带分类前缀:
+      config-error: 404/认证失败 → 跳过该模型，重试无意义
+      transient:    503 恢复失败/超时 → 可重试派发一次，二次失败跳过
+
+manifest 格式 (batch，文件路径，不支持内联 JSON 或 stdin):
+  {
+    "task": "共享任务全文",
+    "agents": [
+      "reviewer-ds",
+      { "profile": "reviewer-glm", "slug": "glm" },
+      { "profile": "reviewer-gemini", "slug": "gem", "task": "可选：覆盖共享 task" }
+    ]
+  }
+  agents 为字符串时 slug 自动取 profile 去掉 reviewer- 前缀。
+  校验先行：任一 profile/slug/task 无效则整体拒绝、零派发（防配置错烧 token）。
+  输出每 agent 一行 profile\tpane\tok|failed(reason)，任一失败 exit 1。
+
+示例:
+  spawn-subagent reviewer-ds review-auth -- "审查 src/auth 的安全问题"
+  spawn-subagent resume w1A:p3 -- "继续检查测试覆盖"
+  cat > /tmp/manifest.json <<'EOF'
+  { "task": "审查 flake.nix 顶层结构", "agents": ["reviewer-ds", "reviewer-glm"] }
+  EOF
+  spawn-subagent batch /tmp/manifest.json
 
 env: HERDR_PANE_ID, PI_INTERCOM_SESSION_ID`);
 }
