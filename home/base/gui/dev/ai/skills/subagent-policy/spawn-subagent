@@ -71,7 +71,8 @@ function usage() {
   console.log(`spawn-subagent - 在 Herdr 窗格中启动/关闭 pi 子代理
 
 用法:
-  spawn-subagent <profile> <slug> -- <task>   启动子代理，输出 pane ID
+  spawn-subagent <profile> <slug> -- <task>   启动单个子代理，输出 pane ID
+  spawn-subagent batch <manifest.json>        按 manifest 并发编排多个子代理（共享 task）
   spawn-subagent resume <pane-id> -- <task>   复用已有 agent pane，注入新任务（不重启）
   spawn-subagent list                         列出所有 agent(name/model/thinking/tools/描述)
   spawn-subagent --check                      派生 settings + 打印所有 agent 生效值，不启动
@@ -83,6 +84,11 @@ profile: 对应 ~/.pi/agent/agents/<profile>.md（文件名小写匹配）；fro
          插件排除由 subagent-config.json 的 exclude 全局统一，md 不支持单独声明。
 slug:    任务语义标识（小写字母/数字/连字符，agent 名上限 32 字符）
 task:    子代理任务描述，支持多行；派发后立即返回 pane ID，结论经 intercom 回传
+
+manifest 格式 (batch):
+  { "task": "共享任务", "agents": ["reviewer-gpt", {"profile": "reviewer-glm", "slug": "glm"}] }
+  agents 为字符串时 slug 自动取 profile 去掉 reviewer- 前缀，可带 task 字段覆盖共享的
+  校验先行：任一 profile 无效/语法错，整体拒绝，不派发任何 agent；每 agent 独立健康门
 
 env: HERDR_PANE_ID, PI_INTERCOM_SESSION_ID`);
 }
@@ -197,41 +203,89 @@ function resume(paneId: string, task: string) {
   console.log(paneId);
 }
 
-function spawn(profile: string, slug: string, task: string) {
+// ---------- 健康门 ----------
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+// 异步等待健康/失效信号: 会话文件出现 "stopReason":"error" → 失效；出现健康 assistant → 健康
+// 文件可能延迟创建（start 返回后 ms 级），内部等待至 deadline，找不到文件也算超时可疑
+async function healthGate(sessionFile: string | null, timeoutMs: number): Promise<{ healthy: boolean; reason?: string } | null> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (sessionFile && existsSync(sessionFile)) {
+      const text = readFileSync(sessionFile, "utf-8");
+      if (text.includes('"stopReason":"error"')) {
+        const m = text.match(/"errorMessage":"([^"]{0,120})/);
+        return { healthy: false, reason: m ? m[1] : "model error" };
+      }
+      if (text.includes('"role":"assistant"') && !text.includes('"stopReason":"error"')) {
+        return { healthy: true };
+      }
+    }
+    await sleep(1000);
+  }
+  return null; // 超时且未见任何信号（疑）
+}
+
+// ---------- 单 agent 派发（spawn / batch 共用）----------
+
+type DispatchResult = {
+  profile: string;
+  pane: string;
+  agentName: string;
+  healthy: boolean;
+  reason?: string;
+};
+
+type Launched = {
+  profile: string;
+  pane: string;
+  agentName: string;
+  sessionFile: string | null;
+};
+
+// 阶段一（同步串行）：布局 + 环境 + 启动 + 注入。返回派发信息，不等待模型响应
+function launchAgent(profile: string, slug: string, task: string): Launched {
   const g = resolveAgent(profile);
-  if (!g) {
-    console.error(`spawn-subagent: profile '${profile}' 无法解析（agents 目录无对应 md，或缺少 model/thinking/tools 字段）`);
-    process.exit(1);
-  }
-  if (!slug.match(/^[a-z0-9-]+$/)) {
-    console.error(`spawn-subagent: slug 只能含小写字母/数字/连字符: '${slug}'`);
-    process.exit(1);
-  }
+  if (!g) throw new Error(`profile '${profile}' 无法解析（agents 目录无对应 md，或缺少 model/thinking/tools 字段）`);
+  if (!slug.match(/^[a-z0-9-]+$/)) throw new Error(`slug 只能含小写字母/数字/连字符: '${slug}'`);
   const mainPane = process.env.HERDR_PANE_ID;
   const intercom = process.env.PI_INTERCOM_SESSION_ID;
-  if (!mainPane || !intercom) {
-    console.error("spawn-subagent: 需要 HERDR_PANE_ID 与 PI_INTERCOM_SESSION_ID");
-    process.exit(1);
-  }
-  const ts = Date.now().toString(36); // 唯一后缀，保证不被截断
-  const slugBudget = 32 - 1 - ts.length - 1 - profile.length; // ${profile}-${slug}-${ts} 两个分隔符
+  if (!mainPane || !intercom) throw new Error("需要 HERDR_PANE_ID 与 PI_INTERCOM_SESSION_ID");
+
+  const ts = Date.now().toString(36);
+  const slugBudget = 32 - 1 - ts.length - 1 - profile.length;
   let agentName: string;
   if (slugBudget >= 1) {
     agentName = `${profile}-${slug.slice(0, slugBudget).replace(/-$/, "")}-${ts}`;
   } else {
-    // slug 无空间：牺牲 profile 长度保时间戳
     agentName = `${profile.slice(0, 32 - 1 - ts.length).replace(/-$/, "")}-${ts}`;
   }
-  if (agentName.length > 32) {
-    console.error(`spawn-subagent: 无法构造 32 字符内的 agent 名（profile='${profile}' slug='${slug}'）`);
-    process.exit(1);
-  }
+  if (agentName.length > 32) throw new Error(`无法构造 32 字符内的 agent 名（profile='${profile}' slug='${slug}'）`);
+
+  // 会话文件定位：从 herdr agent start 返回的 agent_session.value 提取 sessions/ 相对路径
+  // value 形如 ~/.pi/agent/sessions/--cwd--/ts.jsonl；子代理实际写入 ~/.pi/agent-subagent/sessions/ 同相对段
+  const agentsDir = homedir() + "/.pi/agent-subagent";
+  let sessionFile: string | null = null;
+
   const newPane = layoutPane(mainPane);
   try {
     prepareEnv(g.exclude);
     execFileSync("herdr", ["pane", "run", newPane, `export PI_CODING_AGENT_DIR=${homedir()}/.pi/agent-subagent`]);
-    herdr(["agent", "start", agentName, "--kind", "pi", "--pane", newPane, "--", "--model", g.model, "--thinking", g.thinking, "--tools", g.tools]);
-    const prompt = `你是通过 spawn-subagent 启动的 pi 子代理（profile: ${profile}）。
+    const startOut = herdr(["agent", "start", agentName, "--kind", "pi", "--pane", newPane, "--", "--model", g.model, "--thinking", g.thinking, "--tools", g.tools]);
+    const sf = startOut?.result?.agent?.agent_session?.value;
+    if (typeof sf === "string") {
+      const m = sf.match(/(sessions\/--[^/]+\/[^/]+\.jsonl)/);
+      if (m) sessionFile = agentsDir + "/" + m[1];
+    }
+  } catch (e: any) {
+    try { execFileSync("herdr", ["pane", "close", newPane]); } catch { /* 已关闭 */ }
+    throw new Error(`启动失败: ${String(e.message ?? e)}`);
+  }
+
+  const prompt = `你是通过 spawn-subagent 启动的 pi 子代理（profile: ${profile}）。
 
 回传协议:
 - 完成或受阻时，用 intercom 工具向主代理 session 发送一条结论消息:
@@ -243,27 +297,109 @@ function spawn(profile: string, slug: string, task: string) {
 ---
 ${task}
 ---`;
-    let prompted = false;
-    for (let i = 0; i < 20 && !prompted; i++) {
-      try {
-        const out = execFileSync("herdr", ["agent", "prompt", newPane, prompt], { encoding: "utf8" });
-        prompted = out.includes('"type":"agent_prompted"');
-      } catch { /* pane 未就绪, 重试 */ }
-      if (!prompted) execSync("sleep 2");
+  let prompted = false;
+  for (let i = 0; i < 20 && !prompted; i++) {
+    try {
+      const out = execFileSync("herdr", ["agent", "prompt", newPane, prompt], { encoding: "utf8" });
+      prompted = out.includes('"type":"agent_prompted"');
+    } catch { /* pane 未就绪, 重试 */ }
+    if (!prompted) execSync("sleep 2");
+  }
+  if (!prompted) throw new Error("prompt 注入失败（20 次重试后 pane 未就绪）");
+
+  return { profile, pane: newPane, agentName, sessionFile };
+}
+
+// 阶段二（可并发）：独立健康门，等本 agent 的 stopReason:error / 健康 assistant，超时 30s
+async function gateAgent(l: Launched, timeoutMs: number): Promise<DispatchResult> {
+  const gate = await healthGate(l.sessionFile, timeoutMs);
+  if (!gate) return { profile: l.profile, pane: l.pane, agentName: l.agentName, healthy: false, reason: "health-check timeout (no model response)" };
+  return { profile: l.profile, pane: l.pane, agentName: l.agentName, healthy: gate.healthy, reason: gate.reason };
+}
+
+async function spawn(profile: string, slug: string, task: string) {
+  try {
+    const l = launchAgent(profile, slug, task);
+    const r = await gateAgent(l, 30000);
+    console.log(r.pane);
+    if (!r.healthy) {
+      console.error(`spawn-subagent: agent 已派发但模型失效（${r.reason}）`);
+      process.exit(1);
     }
-    if (!prompted) throw new Error("prompt 注入失败（20 次重试后 pane 未就绪）");
-    console.log(newPane);
   } catch (e: any) {
-    try { execFileSync("herdr", ["pane", "close", newPane]); } catch { /* 已关闭 */ }
     console.error("spawn-subagent: 启动失败:", String(e.message ?? e));
     process.exit(1);
   }
+}
+
+// ---------- batch 编排 ----------
+
+async function batch(manifestPath: string) {
+  let manifest: any;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+  } catch (e: any) {
+    console.error(`spawn-subagent: manifest 解析失败: ${e.message}`);
+    process.exit(1);
+  }
+  const sharedTask = manifest.task ?? "";
+  const rawAgents = manifest.agents;
+  if (!Array.isArray(rawAgents) || rawAgents.length === 0) {
+    console.error("spawn-subagent: manifest 需要非空 agents 数组");
+    process.exit(1);
+  }
+
+  // 校验先行：展开 agents 为 {profile, slug, task}，任一无效整体拒绝（零 token）
+  const entries: { profile: string; slug: string; task: string }[] = [];
+  const errors: string[] = [];
+  for (const a of rawAgents) {
+    const profile = typeof a === "string" ? a : a?.profile;
+    const slugRaw = typeof a === "string" ? undefined : a?.slug;
+    const task = typeof a === "string" ? sharedTask : (a?.task ?? sharedTask);
+    const slug = slugRaw ?? profile.replace(/^reviewer-/i, "").replace(/[^a-z0-9-]/gi, "-");
+    if (!profile) errors.push("缺少 profile");
+    else if (!resolveAgent(profile)) errors.push(`profile '${profile}' 无效`);
+    if (!slug.match(/^[a-z0-9-]+$/)) errors.push(`slug '${slug}' 只能含小写/数字/连字符`);
+    if (!task.trim()) errors.push(`profile '${profile}' 的 task 为空`);
+    entries.push({ profile, slug, task });
+  }
+  if (errors.length) {
+    console.error(`spawn-subagent: manifest 校验失败（未派发任何 agent）:`);
+    for (const err of errors) console.error(`  - ${err}`);
+    process.exit(1);
+  }
+
+  // 两阶段：串行 launchAgent（布局是累积操作必须串行），再并发健康门（互不阻塞）
+  console.log(`spawn-subagent: 派发 ${entries.length} 个 agent...`);
+  const launched: { entry: { profile: string; slug: string; task: string }; result: Launched | null; error?: string }[] = [];
+  for (const entry of entries) {
+    try {
+      launched.push({ entry, result: launchAgent(entry.profile, entry.slug, entry.task) });
+    } catch (e: any) {
+      launched.push({ entry, result: null, error: String(e.message ?? e) });
+    }
+  }
+  const results = await Promise.all(launched.map(async ({ entry, result, error }) => {
+    if (!result) return { profile: entry.profile, pane: "-", agentName: "-", healthy: false, reason: error };
+    return gateAgent(result, 30000);
+  }));
+  for (const r of results) {
+    console.log(`${r.profile}\t${r.pane}\t${r.healthy ? "ok" : "failed"}${r.reason ? `  (${r.reason})` : ""}`);
+  }
+  const anyFailed = results.some((r) => !r.healthy);
+  process.exit(anyFailed ? 1 : 0);
 }
 
 // ---------- main ----------
 const [c0, c1, ...rest] = process.argv.slice(2);
 if (!c0 || c0 === "-h" || c0 === "--help") {
   usage();
+} else if (c0 === "batch") {
+  if (!c1) {
+    console.error("spawn-subagent: batch 需要 manifest 文件路径");
+    process.exit(1);
+  }
+  await batch(c1);
 } else if (c0 === "list") {
   listAgents();
 } else if (c0 === "--check") {
@@ -294,5 +430,5 @@ if (!c0 || c0 === "-h" || c0 === "--help") {
     usage();
     process.exit(1);
   }
-  spawn(c0, c1, task);
+  await spawn(c0, c1, task);
 }

@@ -32,13 +32,22 @@ description: 对抗性代码审查。触发词 "interrogate"、"对抗审查"、
 
 ## 第 3 步，派发 reviewer
 
-用 `spawn-subagent list` 实时查看当前 `reviewer-<model>` 形式的 profile（reviewer-gpt、reviewer-glm、reviewer-gemini、reviewer-ds；不含裸 `reviewer`，那是通用审查代理），给**每一个**派发一个子代理，同一份变更、同一套指令：
+用 `spawn-subagent list` 实时查看当前 `reviewer-<model>` 形式的 profile（reviewer-gpt、reviewer-glm、reviewer-gemini、reviewer-ds；不含裸 `reviewer`，那是通用审查代理）。把发现的全部 profile 写进 manifest，**一次 batch 派发**，同一份变更、同一套指令：
 
-```sh
-spawn-subagent <reviewer-profile> <slug> -- <task>
+```json
+{
+  "task": "<按下方模板填充的完整 task，所有 reviewer 共享>",
+  "agents": ["reviewer-gpt", "reviewer-glm", "reviewer-gemini", "reviewer-ds"]
+}
 ```
 
-`<slug>` 是任务语义标识（小写字母/数字/连字符）。agent 名 `${profile}-${slug}-${ts}` 上限 32 字符，时间戳约 8 字符，profile 名越长 slug 预算越短，保持简短。
+```sh
+spawn-subagent batch <manifest.json>
+```
+
+batch 的保证：校验先行（任一 profile 无效则零派发，不烧 token）；并发派发；每 agent 独立健康门（模型失效立即报 failed + 错误摘要，不影响其余）。输出每 agent 一行 `profile\tpane\tok|failed(reason)`，任一失败 exit 1。
+
+**失效处理**：failed 的 reviewer 从本轮剔除，不派发替代、不重试；综合阶段按健康 reviewer 的结论继续。若全部失效，报告用户模型配置问题，不强行出裁决。
 
 每个 profile 的 frontmatter `model`/`thinking`/`tools` 是唯一真相源，profile 本身不带审查标准。审查标准由 task 文本承载：读 `references/reviewer-prompt.md` 模板，填入意图、diff、`references/rubric.md` 与 `references/code-quality-review.md` 全文，作为 `<task>` 发出。同一份模板发给所有 reviewer。
 
@@ -54,13 +63,13 @@ reviewer 不得再派生子代理。
 
 ### 等待模式
 
-派发后主代理**立即结束当前回合**（不再调任何工具、不 sleep、不轮询）。reviewer 结论经 intercom 自动注入并唤醒主代理继续。这是唯一可靠姿势：herdr 对未聚焦 pane 只报 idle，无 working/done 区分，阻塞等待无信号。
+batch 返回后主代理**立即结束当前回合**（不再调任何工具、不 sleep、不轮询）。健康 reviewer 的结论经 intercom 自动注入并唤醒主代理继续。这是唯一可靠姿势：herdr 对未聚焦 pane 只报 idle，无 working/done 区分，阻塞等待无信号。
 
-派发 N 个就等 N 条 intercom 消息。计数核对：收到的结论数必须等于派发数，缺失任何一条都不开始综合。
+计数只算 batch 输出中 ok 的 reviewer：应收到等于 ok 数的 intercom 结论，缺失任何一条都不开始综合（failed 的不指望回传）。
 
-### 模型多样性
+## 模型多样性
 
-对抗信号来自模型差异：同一份 diff 由多个模型独立审查，共识是高置信度信号，单模型发现降权。经济原则：不重复派发同一 profile；需要更多视角时新增 profile 而非重复派发。若某个 profile 解析失败（`spawn-subagent --check` 可见），跳过它继续，不要阻塞整轮审查。
+对抗信号来自模型差异：同一份 diff 由多个模型独立审查，共识是高置信度信号，单模型发现降权。经济原则：不重复派发同一 profile；需要更多视角时新增 profile 而非重复派发。模型失效由 batch 健康门当回合发现并剔除，不会阻塞整轮审查。
 
 ## 第 4 步，综合
 

@@ -17,6 +17,7 @@ description: 发起、审查或规划子代理工作时阅读该技能
 
 ```sh
 spawn-subagent <profile> <slug> -- <task>
+spawn-subagent batch <manifest.json>    # 按 manifest 编排多 agent：共享 task、并发派发、独立健康门
 spawn-subagent resume <pane-id> -- <task> # 复用已有 agent pane 注入新任务，不重启；失败非零退出且不关闭该 pane
 spawn-subagent list              # 列出所有 agent 的 name/model/thinking/tools/描述
 spawn-subagent --check           # 派生 settings + 打印所有 agent 生效值，不启动
@@ -35,6 +36,38 @@ spawn-subagent close <pane-id>
 派发后主代理**立即结束当前回合**（不再调用任何工具、不 sleep、不轮询）：子代理结论经 intercom 自动注入并唤醒主代理继续处理，这是唯一可靠姿势
 
 herdr 对未聚焦 pane 的 agent 全程仅报 idle（无 working/done 区分），阻塞等待无可靠信号，等待统一由 intercom 注入完成
+
+### 模型失效立即感知（健康门）
+
+派发不盲等：脚本在注入 task 后阻塞监听子代理会话文件（零模型调用），按确定性签名判别：
+
+- 坏模型必写 `"stopReason":"error"` + 空 content + errorMessage（404/503/配额耗尽等）→ 派发命令立刻报错退出（exit 1，附具体错误摘要）
+- 健康模型首条 assistant 有内容（stopReason 为 toolUse/stop）→ exit 0 正常交给 intercom 等结论
+- 30s 无任何信号 → 可疑，也按失败退出
+
+即：**模型失效在派发命令的返回值里就能看到**，主代理当回合即可跳过/降权该模型，不会死等一个永远不回传的子代理。多个 agent 并发时健康门互相独立，一个失效只标记自己。
+
+### batch 编排（多 agent 并发派发）
+
+适用场景：多个子代理共享同一份任务（如多模型对抗审查），或需要一次性编排多个 agent。
+
+manifest 格式：
+
+```json
+{
+  "task": "共享任务全文（所有 agent 共用）",
+  "agents": [
+    "reviewer-ds",
+    { "profile": "reviewer-glm", "slug": "glm" },
+    { "profile": "reviewer-gemini", "slug": "gem", "task": "可选：覆盖共享 task" }
+  ]
+}
+```
+
+- `agents` 元素为字符串时 slug 自动取 profile 去掉 `reviewer-` 前缀
+- **校验先行**：解析后先校验全部 profile/slug/task，任一无效则整体拒绝、零派发（防止一个配置错误烧掉全部 token）
+- 派发分两阶段：串行启动+注入（pane 布局是累积操作），并发健康门（每个 agent 独立等待，互不阻塞）
+- 输出每 agent 一行 `profile\tpane\tok|failed(reason)`，任一失败 exit 1；主代理按行处理失效者（跳过/降权），健康者照常等 intercom 回传
 
 ### 预设表
 
