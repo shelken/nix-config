@@ -81,7 +81,6 @@ function usage() {
 
 命令选择:
   单个 agent → 单发；并发多个 agent（不论任务是否相同）→ batch，禁止循环单发
-  （batch 有校验先行 + 并发健康门，循环单发串行阻塞且无整体校验）
 
 profile: 对应 ~/.pi/agent/agents/<profile>.md（文件名匹配大小写不敏感，agent 名统一小写）；
          frontmatter 的 model/thinking/tools 为唯一真相源，缺字段时回退 subagent-config.json。
@@ -90,17 +89,15 @@ slug:    任务语义标识（小写字母/数字/连字符；agent 名 profile-
          超长自动截断，无需调用者计算）
 task:    子代理任务描述，支持多行；结论经 intercom 回传，不写文件
 
-健康门（单发与 batch 每 agent 独立生效）:
-  注入 task 后阻塞监听子代理会话文件（零模型调用）：
-  - 坏模型 assistant 必为 stopReason:error + 空 content + errorMessage；
-    健康模型的有内容（stopReason 为 toolUse/stop）
-  - pi 遇瞬时错误（503 等）会自动重试且可恢复（实测 2-17s），因此首个 error
-    不判死：error 后 15s 恢复窗口内出现新健康 assistant 判健康，窗口耗尽判失效
-  - 失效时自动关闭失败 pane（防残留），reason 带分类前缀:
-      config-error: 404/认证失败 → 跳过该模型，重试无意义
-      transient:    503 恢复失败/超时 → 可重试派发一次，二次失败跳过
+退出码与输出:
+  exit 0: 派发成功。单发输出 pane ID；batch 每 agent 一行 profile\tpane\tok
+  exit 1: 失败。失败原因输出在 stderr，模型失效时 reason 带分类前缀:
+      config-error: 模型/认证配置错 → 跳过该模型，重试无意义
+      transient:    瞬时故障 → 可重试派发一次，二次失败跳过
+  失效 agent 的 pane 已由脚本自动关闭；退出码非零时不残留 pane
+  派发命令返回 ≠ 任务完成: 结论经 intercom 回传，派发成功后应结束回合等待
 
-manifest 格式 (batch，文件路径，不支持内联 JSON 或 stdin):
+manifest (batch，文件路径，不支持内联 JSON 或 stdin):
   {
     "task": "共享任务全文",
     "agents": [
@@ -110,8 +107,7 @@ manifest 格式 (batch，文件路径，不支持内联 JSON 或 stdin):
     ]
   }
   agents 为字符串时 slug 自动取 profile 去掉 reviewer- 前缀。
-  校验先行：任一 profile/slug/task 无效则整体拒绝、零派发（防配置错烧 token）。
-  输出每 agent 一行 profile\tpane\tok|failed(reason)，任一失败 exit 1。
+  任一 profile/slug/task 无效则整体拒绝、零派发；任一 agent 失败则 exit 1（健康者照常运行）
 
 示例:
   spawn-subagent reviewer-ds review-auth -- "审查 src/auth 的安全问题"
