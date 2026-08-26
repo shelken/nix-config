@@ -53,10 +53,12 @@ rec {
     {
       name,
       commandFile,
+      domain ? "user",
       config ? { },
     }:
     {
       enable = true;
+      inherit domain;
       config = {
         Label = "space.ooooo.${name}";
         ProgramArguments = [ "${commandFile}" ];
@@ -68,19 +70,26 @@ rec {
     };
 
   # 加载目录下所有 .nix 任务声明文件为 { <name> = 声明; } 映射
-  # 任务文件是裸 attrset（when/every/user/script），配合 shelven.tasks 的 attrsOf submodule 使用
+  # 任务文件支持裸 attrset 或函数 { pkgs, ... }: 声明，配合 shelken.tasks 的 attrsOf submodule 使用
   # 目录不存在时返回空，调用方无需守卫
   loadTasks =
-    path:
+    path: args:
     if !builtins.pathExists path then
       { }
     else
       builtins.listToAttrs (
         map
-          (f: {
-            name = lib.strings.removeSuffix ".nix" f;
-            value = import (path + "/${f}");
-          })
+          (
+            f:
+            let
+              raw = import (path + "/${f}");
+              val = if builtins.isFunction raw then raw args else raw;
+            in
+            {
+              name = lib.strings.removeSuffix ".nix" f;
+              value = val;
+            }
+          )
           (
             lib.filter (f: f != "default.nix" && lib.strings.hasSuffix ".nix" f) (
               builtins.attrNames (builtins.readDir path)

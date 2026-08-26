@@ -30,8 +30,8 @@ let
       parts = lib.splitString ":" t;
     in
     {
-      Hour = lib.toInt (lib.elemAt parts 0);
-      Minute = lib.toInt (lib.elemAt parts 1);
+      Hour = lib.toIntBase10 (lib.elemAt parts 0);
+      Minute = lib.toIntBase10 (lib.elemAt parts 1);
     };
 
   taskType =
@@ -213,7 +213,9 @@ in
     {
       # 约定优于配置：hosts/<hostname>/tasks/ 自动加载，目录存在即接入，
       # host 文件无需任何接线
-      shelken.tasks = mylib.loadTasks (mylib.relativeToRoot "hosts/${config.networking.hostName}/tasks");
+      shelken.tasks = mylib.loadTasks (mylib.relativeToRoot "hosts/${config.networking.hostName}/tasks") {
+        inherit pkgs lib;
+      };
 
       assertions = lib.mapAttrsToList (name: t: {
         assertion = (t.when != [ ]) != (t.every != null);
