@@ -1,34 +1,36 @@
-# ref: https://nix-darwin.github.io/nix-darwin/manual/#opt-launchd.user.agents
+# 定时任务约定见同目录 gc.nix 头部注释
 {
-  mylib,
   lib,
   config,
+  mylib,
   ...
 }:
 let
   cfg = config.shelken.tasks.loon;
-  # 保留 loon 最新日志，其他全部删除
-  script = ''
-    #!/usr/bin/env bash
-    LOON_LOG_PATH=/Users/Shared/com.loon.Loon/tunnelLog
-    /bin/ls -t $LOON_LOG_PATH | tail -n +2 | sudo xargs -I {} rm $LOON_LOG_PATH/{}
-  '';
+  logDir = "/Library/Application Support/com.loon.Loon/tunnelLog";
 in
 {
   options.shelken.tasks.loon = {
-    enable = mylib.mkBoolOpt false "Whether or not use to enable.";
+    enable = mylib.mkBoolOpt false "定时清理 Loon 隧道日志（仅保留最新一份）";
+
+    interval = lib.mkOption {
+      type = lib.types.int;
+      default = 7200;
+      description = "launchd StartInterval（秒）";
+    };
   };
+
   config = lib.mkIf cfg.enable {
-    launchd.agents.clean-loon-logs = {
-      inherit script;
+    # 日志文件属主为 root，必须以 root daemon 运行（用户态 sudo 无法交互）
+    launchd.daemons.clean-loon-logs = {
+      script = ''
+        cd "${logDir}" 2>/dev/null || exit 0
+        ls -t | tail -n +2 | while IFS= read -r f; do rm -f -- "$f"; done
+      '';
       serviceConfig = {
-        Label = "space.ooooo.clean-loon-logs";
         RunAtLoad = true;
         KeepAlive = false;
-        StartInterval = 7200; # 2h 清理一次
-        EnvironmentVariables = {
-        };
-        StandardErrorPath = "/Library/Logs/space.ooooo.clean-loon-logs.stderr.log";
+        StartInterval = cfg.interval;
       };
     };
   };
