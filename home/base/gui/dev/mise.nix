@@ -13,6 +13,7 @@
       settings.activate_aggressive = true;
       # 1.3.13 无 BUN_CONFIG_HTTP_IDLE_TIMEOUT，安装会在半开连接上永久挂起
       tools.bun = "1.3.14";
+      tools."pipx:cua-cli" = "latest";
     };
   };
 

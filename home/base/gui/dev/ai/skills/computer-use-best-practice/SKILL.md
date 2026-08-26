@@ -1,20 +1,46 @@
 ---
 name: computer-use-best-practice
-description: 当需要读取或控制 macOS App 界面时使用
+description: 当 需要阅读mac上任意App界面的内容/控制任意App/点击任意App 时阅读该技能
 ---
-
-## Workflow
-
-1. 项目已有专用控制方式时优先使用，否则使用 `cua-driver`。未安装时停止并告知用户。
-2. 首次调用工具前运行 `cua-driver describe <name>`；`list-tools` 只用于发现工具。
-3. 选择唯一窗口。当前 App 用 `list_apps` 配合 `list_windows`；指定 App 用 `get_accessibility_tree`，同时检查 `app_name` 和 `title`。存在多个候选时先消除歧义。
-4. 调用 `get_window_state` 读取界面。优先传入 `query` 并关闭截图；用 `tree_markdown` 理解结构，用 `elements` 获取可操作 token。
-5. 优先使用最近一次读取返回的 `element_token` 操作。token 失效时重新读取，不复用或硬编码 token。
-6. 操作后重新读取窗口，并根据新的状态确认预期结果。命令成功不代表任务完成。
 
 ## Rules
 
-- Accessibility 路径不可用时才使用像素坐标。坐标来自窗口截图且相对窗口；先用默认后台投递，需要前台交互时才设为 `foreground`。
-- 工具返回权限错误时运行 `cua-driver permissions status`，不要把权限检查加入每次操作。
-- 需要临时文件时使用 `mktemp`。构造包含外部文本的 JSON 时使用 `jq -n --arg` 或等价的安全编码方式。
-- 每次操作前确认目标窗口仍然匹配原来的 `pid`、`window_id` 和标题，避免对陈旧窗口执行副作用。
+- 除非项目有更专用的控制方式, 否则使用 `cua-driver`
+- `cua-driver --help` 看用法; 工具参数在 `describe <name>`, 用前先读; skill 只写查不到的逻辑
+- 不抢焦点: 启动用 `open -g`; 操作默认 `background`; 仅 `delivery_failed` 才 `foreground` (用毕自动恢复)
+
+## 读取
+
+一次 `get_window_state` = 一份服务端快照 (`tree_markdown` + `elements` 同一组 token)。快照供跨调用操作; 再调才废旧 token。bash 调用独立, 不存变量跨调用。
+
+一条主干命令, 输出全元素精简视图 (token/状态/坐标), 按需 jq 过滤:
+
+```bash
+# 选窗口
+cua-driver call get_accessibility_tree | jq -c '[.windows[]|{app_name,pid,window_id,title}]'
+# 读界面 (主干)
+cua-driver call get_window_state '{"pid":<pid>,"window_id":<wid>,"include_screenshot":false}' | jq -c '[.elements[]|{i:.element_index,token:.element_token,role:(.role|ltrimstr("AX")),label:.label,selected:.selected,enabled:.enabled,value:.value,frame:.frame}]'
+```
+
+变体 (同一条命令改参数): 看结构用 `.tree_markdown` 替代 `.elements`; 按文本收窄加 `"query":"<关键词>"` 服务端过滤; 限规模加 `"max_depth"/"max_elements"`。
+
+多数元素无 `frame`; 仅非 AX 表面需坐标。`tree_markdown` 无 `[index]` 的元素不可用 token。列表容器 (文件/邮件/列表) 的项名常在深层子节点, 按有 label 的 role 过滤, 勿用 `max_depth` 截掉深层项。
+
+## 操作
+
+用最近一次读取的 token 调 click/type_text/press_key (字段: click 用 `action`, type_text 用 `text`, press_key 用 `key`)。读取与操作紧贴, 中间勿再get_window_state否则旧 token 失效。命令成功 ≠ 完成, 用 verify_state 断言 (写法见 describe) 或重读验证真实结果。
+
+```bash
+cua-driver call click '{"pid":<pid>,"window_id":<wid>,"element_token":"<token>","action":"press"}'
+```
+
+## 坑
+
+- jq 过滤不命中返回 null, null token 报 `invalid_element_token`, 操作前确认非空
+- 进程含多 top-level/多个标签: `press_key` 可能被拒, AX 归属判定可能失败/落错 → 用 `foreground` (用毕恢复) 或专用控制工具
+- DOM 容器内输入 (webview/网页) `value_readback` 不可靠 (报 confirmed 但文本损坏) → 用专用 CDP 工具或重读验证
+- 像素路径 (x,y) 是 synthetic event, 后台/隐藏窗口无效需前台 (仅作非 AX 表面 fallback)
+- 权限: `cua-driver permissions status` 排查
+
+
+
