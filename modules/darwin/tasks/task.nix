@@ -74,7 +74,19 @@ let
         package = pkgs.writeShellApplication {
           name = "task-${name}";
           runtimeInputs = config.packages;
-          text = config.script;
+          text = ''
+            __on_exit() {
+              local code=$?
+              local end_time
+              end_time=$(date '+%Y-%m-%d %H:%M:%S')
+              echo "[$end_time] ===== Task '${name}' Finished (exit code: $code) ====="
+            }
+            trap __on_exit EXIT
+
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] ===== Task '${name}' Started ====="
+
+            ${config.script}
+          '';
         };
       };
     };
