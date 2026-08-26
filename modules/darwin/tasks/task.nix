@@ -34,6 +34,9 @@ let
       Minute = lib.toIntBase10 (lib.elemAt parts 1);
     };
 
+  # 用户家目录（task.nix 属 darwin 模块，但家目录由 users 模块解析，避免硬编码 /Users）
+  userHome = config.users.users.${myvars.username}.home;
+
   taskType =
     { config, name, ... }:
     {
@@ -80,6 +83,18 @@ let
               local end_time
               end_time=$(date '+%Y-%m-%d %H:%M:%S')
               echo "[$end_time] ===== Task '${name}' Finished (exit code: $code) ====="
+              ${lib.optionalString config.user ''
+                # 仅 launchd 触发且非零退出才发通知；手动 task run 调试保持静默
+                if [ "$code" -ne 0 ] && [ -n "$XPC_SERVICE_NAME" ]; then
+                  ${pkgs.terminal-notifier}/bin/terminal-notifier \
+                    -title "Task Failed: ${name}" \
+                    -message "退出码 ''${code}, 点击查看日志" \
+                    -sound Basso \
+                    -group "task-${name}" \
+                    -open "file://${userHome}/Library/Logs/task-${name}.log" \
+                    2>/dev/null || true
+                fi
+              ''}
             }
             trap __on_exit EXIT
 
@@ -109,8 +124,6 @@ in
           { StartCalendarInterval = map parseTime t.when; };
       userTasks = lib.filterAttrs (_: t: t.user) enabled;
       rootTasks = lib.filterAttrs (_: t: !t.user) enabled;
-
-      userHome = config.users.users.${myvars.username}.home;
 
       # 统一管理 CLI 工具: task
       taskCli = pkgs.writeShellApplication {

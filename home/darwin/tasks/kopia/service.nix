@@ -12,7 +12,10 @@ let
   effectivePaths = cfg.backupPaths ++ (lib.concatLists (lib.attrValues cfg.app));
   backupScript = pkgs.writeShellScript "kopia-backup.sh" ''
     notify() {
-      /usr/bin/osascript -e "display notification \"$2\" with title \"$1\"" || true
+      ${pkgs.terminal-notifier}/bin/terminal-notifier \
+        -title "$1" -message "$2" \
+        -group "kopia" -sound Basso \
+        2>/dev/null || true
     }
 
     log() {
@@ -42,7 +45,7 @@ let
     # 检查仓库连接
     ${pkgs.kopia}/bin/kopia repository status &>/dev/null || {
       log error "Repository not connected"
-      #notify "Kopia Backup Failed" "Repository not connected"
+      notify "Kopia Backup Failed" "Repository not connected"
       exit 1
     }
 
