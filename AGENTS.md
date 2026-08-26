@@ -42,3 +42,7 @@
 ### 领域文档
 
 采用单一上下文：根目录 `CONTEXT.md` 记录共享领域知识，架构决策记录放在 `docs/adr/`。详见 `docs/agents/domain.md`。
+
+### 声明式定时任务
+
+创建、修改或测试机器特定定时任务时使用 `.agents/skills/create-task/`。
