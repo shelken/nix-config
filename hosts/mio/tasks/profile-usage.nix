@@ -1,0 +1,22 @@
+{ pkgs, ... }:
+{
+  when = [
+    "0:00"
+    "12:00"
+  ];
+  user = true;
+  packages = with pkgs; [
+    ccusage
+    git
+    python3
+  ];
+  script = ''
+    REPO="$HOME/Code/active/shelken"
+    if [ ! -d "$REPO/.git" ]; then
+      echo "Profile repository $REPO not found, skipping."
+      exit 0
+    fi
+
+    exec python3 "$REPO/scripts/pi_usage.py" sync --push
+  '';
+}

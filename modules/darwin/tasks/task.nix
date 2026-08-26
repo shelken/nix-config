@@ -146,7 +146,9 @@ in
                     "${
                       if t.every != null then "every ${toString t.every}s" else "when ${lib.concatStringsSep ", " t.when}"
                     }" \
-                    "${if t.user then "~/Library/Logs/task-${name}.log" else "/Library/Logs/task-${name}.log"}"
+                    "${
+                      if t.user then "${userHome}/Library/Logs/task-${name}.log" else "/Library/Logs/task-${name}.log"
+                    }"
                 '') enabled
               )}
               ;;
