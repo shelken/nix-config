@@ -104,6 +104,8 @@ in
           mylib.mkLaunchCommand {
             inherit name;
             commandFile = "${t.package}/bin/task-${name}";
+            # 后台定时任务用 user domain，不依赖图形会话（gui domain 需登录 Aqua session）
+            domain = "user";
             config = {
               RunAtLoad = false;
               KeepAlive = false;

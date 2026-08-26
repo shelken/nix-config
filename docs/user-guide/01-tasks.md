@@ -50,10 +50,13 @@ modules/darwin/tasks/gc.nix  # 全设备默认：每天 3:15 nix GC（root）
 # 查看任务是否注册（root 任务）
 launchctl print system/org.nixos.<任务名>
 
+# 用户任务注册在 user domain
+launchctl print user/$(id -u)/space.ooooo.<任务名>
+
 # 手动跑一次（root 任务；用户任务去掉 sudo）
 sudo task-<任务名>
 
-# 立即触发定时器验证效果
+# 立即触发定时器验证效果（root 任务；用户任务把 system 换成 user/$(id -u)）
 sudo launchctl kickstart system/org.nixos.<任务名>
 ```
 
