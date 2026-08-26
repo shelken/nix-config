@@ -35,7 +35,22 @@
     # extra-platforms = aarch64-linux
   '';
 
-  nix.gc.automatic = false;
+  # Determinate Nix 下 nix.enable = false，nix.gc.automatic 会被 nix-darwin 断言拒绝
+  # （nix.gc.automatic requires nix.enable）。这里直接定义等价的 launchd daemon，
+  # 效果与 nix.gc 相同；与 NixOS 侧保持一致的 7d 保留期。
+  # launchd 睡眠错过的 StartCalendarInterval 会在唤醒后补跑（合并为一次）。
+  launchd.daemons.nix-gc = {
+    command = "/nix/var/nix/profiles/default/bin/nix-collect-garbage --delete-older-than 7d";
+    serviceConfig = {
+      RunAtLoad = false;
+      StartCalendarInterval = [
+        {
+          Hour = 3;
+          Minute = 15;
+        }
+      ];
+    };
+  };
 
   system.stateVersion = 5;
 }
