@@ -67,6 +67,23 @@ rec {
       // config;
     };
 
+  # 加载目录下所有 .nix 任务声明文件为 { <name> = 声明; } 映射
+  # 任务文件是裸 attrset（when/every/user/script），配合 shelven.tasks 的 attrsOf submodule 使用
+  loadTasks =
+    path:
+    builtins.listToAttrs (
+      map
+        (f: {
+          name = lib.strings.removeSuffix ".nix" f;
+          value = import (path + "/${f}");
+        })
+        (
+          lib.filter (f: f != "default.nix" && lib.strings.hasSuffix ".nix" f) (
+            builtins.attrNames (builtins.readDir path)
+          )
+        )
+    );
+
   # 计算hostname在指定时间段内的均匀分布时间
   # 将读取hosts目录下所有一级目录名来排序定位
   # 分钟数使用 hostname 长度

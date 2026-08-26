@@ -10,6 +10,8 @@
   ·
   <a href="#部署">部署</a>
   ·
+  <a href="docs/user-guide/README.md">用户指南</a>
+  ·
   <a href="#引用">引用</a>
 </h6>
 
