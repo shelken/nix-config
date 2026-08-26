@@ -1,4 +1,4 @@
-{ mylib, ... }:
+_:
 let
   hostname = "mio";
 in
@@ -53,8 +53,6 @@ in
     network.fl-clash.enable = false;
     network.loon.enable = true;
   };
-  # 定时任务：hosts/<host>/tasks/ 下加文件即生效（见 modules/darwin/tasks/task.nix）
-  shelken.tasks = mylib.loadTasks ./tasks;
 
   homebrew = {
     onActivation = {

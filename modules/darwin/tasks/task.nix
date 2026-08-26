@@ -92,6 +92,10 @@ in
       rootTasks = lib.filterAttrs (_: t: !t.user) enabled;
     in
     {
+      # 约定优于配置：hosts/<hostname>/tasks/ 自动加载，目录存在即接入，
+      # host 文件无需任何接线
+      shelken.tasks = mylib.loadTasks (mylib.relativeToRoot "hosts/${config.networking.hostName}/tasks");
+
       assertions = lib.mapAttrsToList (name: t: {
         assertion = (t.when != [ ]) != (t.every != null);
         message = "shelken.tasks.${name}: when 与 every 必须二选一";
