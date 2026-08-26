@@ -41,6 +41,16 @@ in
         ''"''${config.home.homeDirectory}/important-file.txt"''
       ];
     };
+    ignores = lib.mkOption {
+      type = with lib.types; listOf str;
+      default = [ ];
+      description = "用户自定义的忽略模式列表，自动与当前机器 user@host 默认策略合并去重（不影响其他 target）";
+      example = [
+        "node_modules"
+        "dist"
+        ".cache"
+      ];
+    };
     calendarInterval = lib.mkOption {
       type = with lib.types; listOf (attrsOf int);
       default =

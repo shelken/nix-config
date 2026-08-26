@@ -52,34 +52,77 @@ let
     # 配置策略
     log info "Setting up backup policies"
 
-    # 应用配置的策略（跳过 global 策略）
+    # 同步声明的 ignores（仅比对，无变化不写入；失败即终止，不带错误策略进入备份）
+    # ponytail: 顺序脚本无并发，clear+add 两条命令分两次执行即可，无需 policy import 原子替换
     ${toString (
-      lib.concatMapStringsSep "\n" (policyName: ''
-        ${lib.optionalString (policyName != "global") ''
-          log info "Applying policy: ${policyName}"
-          ${pkgs.kopia}/bin/kopia policy set \
-            ${lib.optionalString (policyName == "global") "--global"} \
-            ${lib.optionalString (policyName != "global") "\"${policyName}\""} \
-            --compression="${cfg.policy."${policyName}".compression}" \
-            ${
-              toString (
-                lib.concatMapStringsSep " \\\n          " (ignore: "--add-ignore \"${ignore}\"") (
-                  cfg.policy."${policyName}".ignores
-                )
-              )
-            } \
-            ${
-              toString (
-                lib.concatMapStringsSep " \\\n          " (
-                  retentionType:
-                  "--keep-${retentionType} ${toString (cfg.policy."${policyName}".retention."${retentionType}")}"
-                ) (builtins.attrNames cfg.policy."${policyName}".retention)
-              )
-            } || {
-            log warn "Failed to set policy for ${policyName}"
+      lib.concatMapStringsSep "\n" (
+        policyName:
+        let
+          policyObj = cfg.policy."${policyName}";
+          # host 级用户自定义 ignores 只合并进当前机器对应的 user@host target
+          effectiveIgnores =
+            if policyName == "${myvars.username}@${hostname}" then
+              lib.naturalSort (lib.unique (policyObj.ignores ++ cfg.ignores))
+            else
+              lib.naturalSort policyObj.ignores;
+          expectedJson = builtins.toJSON effectiveIgnores;
+        in
+        lib.optionalString (policyName != "global") ''
+          log info "Syncing ignores: ${policyName}"
+          current=$(${pkgs.kopia}/bin/kopia policy export "${policyName}" 2>/dev/null) || {
+            # target 不存在是首次部署的正常状态（走 update 创建）；其他错误（连接/权限）则终止
+            if ${pkgs.kopia}/bin/kopia policy export "${policyName}" 2>&1 | grep -q "policy not found"; then
+              current=""
+            else
+              log error "Failed to read policy for ${policyName}"
+              notify "Kopia Backup Failed" "Failed to read policy for ${policyName}"
+              exit 1
+            fi
           }
-        ''}
-      '') (builtins.attrNames cfg.policy)
+          current=$(echo "''${current:-}" | ${pkgs.jq}/bin/jq -c '."${policyName}".files.ignore // [] | sort' 2>/dev/null) || {
+            log error "Failed to parse policy for ${policyName}"
+            exit 1
+          }
+          if [ "$current" = '${expectedJson}' ]; then
+            log info "Ignores for ${policyName} up to date, skipping."
+          else
+            log info "Updating ignores for ${policyName}..."
+            ${pkgs.kopia}/bin/kopia policy set "${policyName}" --clear-ignore || {
+              log error "Failed to clear ignores for ${policyName}"
+              notify "Kopia Backup Failed" "Failed to clear ignores for ${policyName}"
+              exit 1
+            }
+            ${lib.optionalString (effectiveIgnores != [ ]) ''
+              ${pkgs.kopia}/bin/kopia policy set "${policyName}" \
+                ${
+                  toString (
+                    lib.concatMapStringsSep " \\\n              " (
+                      ignore: "--add-ignore \"${ignore}\""
+                    ) effectiveIgnores
+                  )
+                } || {
+                log error "Failed to set ignores for ${policyName}"
+                notify "Kopia Backup Failed" "Failed to set ignores for ${policyName}"
+                exit 1
+              }
+            ''}
+            # 压缩与保留策略仍然每次声明（幂等，kopia 值相同不会产生写操作差异）
+            ${pkgs.kopia}/bin/kopia policy set "${policyName}" \
+              --compression="${policyObj.compression}" \
+              ${
+                toString (
+                  lib.concatMapStringsSep " \\\n              " (
+                    retentionType: "--keep-${retentionType} ${toString (policyObj.retention."${retentionType}")}"
+                  ) (builtins.attrNames policyObj.retention)
+                )
+              } || {
+              log error "Failed to set policy for ${policyName}"
+              notify "Kopia Backup Failed" "Failed to set policy for ${policyName}"
+              exit 1
+            }
+          fi
+        ''
+      ) (builtins.attrNames cfg.policy)
     )}
 
     # 检查是否有备份路径
