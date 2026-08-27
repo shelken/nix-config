@@ -29,7 +29,7 @@ in
         "zed" # editor dev.zed.Zed
         # "zed@preview" # editor dev.zed.Zed-Preview
 
-        "bettershot" # cmd+shift+2
+        # "bettershot" # cmd+shift+2
 
         # "microsoft-remote-desktop"
         # "vnc-viewer"
@@ -48,10 +48,10 @@ in
     #   command = ''"/Applications/Raycast.app/Contents/MacOS/Raycast"'';
     #   serviceConfig.RunAtLoad = true;
     # };
-    launchd.user.agents.BetterShot = {
-      command = ''"/Applications/BetterShot.app/Contents/MacOS/BetterShot"'';
-      serviceConfig.RunAtLoad = true;
-    };
+    # launchd.user.agents.BetterShot = {
+    #   command = ''"/Applications/BetterShot.app/Contents/MacOS/BetterShot"'';
+    #   serviceConfig.RunAtLoad = true;
+    # };
 
     # =============
     system.defaults.CustomUserPreferences."com.colliderli.iina" = {
