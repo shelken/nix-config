@@ -22,6 +22,8 @@
       ".scratch"
       ".playwright-cli"
       ".build"
+      "target"
+      "kaiyuan"
     ];
     retention = {
       latest = 48;
