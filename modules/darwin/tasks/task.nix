@@ -23,16 +23,10 @@
 let
   taskCfg = config.shelken.tasks;
 
-  # "3:15" -> { Hour = 3; Minute = 15; }
-  parseTime =
-    t:
-    let
-      parts = lib.splitString ":" t;
-    in
-    {
-      Hour = lib.toIntBase10 (lib.elemAt parts 0);
-      Minute = lib.toIntBase10 (lib.elemAt parts 1);
-    };
+  tasksLib = mylib.mkTasksLib {
+    inherit lib pkgs;
+    homeDir = userHome;
+  };
 
   # 用户家目录（task.nix 属 darwin 模块，但家目录由 users 模块解析，避免硬编码 /Users）
   userHome = config.users.users.${myvars.username}.home;
@@ -74,34 +68,8 @@ let
         };
       };
       config = {
-        package = pkgs.writeShellApplication {
-          name = "task-${name}";
-          runtimeInputs = config.packages;
-          text = ''
-            __on_exit() {
-              local code=$?
-              local end_time
-              end_time=$(date '+%Y-%m-%d %H:%M:%S')
-              echo "[$end_time] ===== Task '${name}' Finished (exit code: $code) ====="
-              ${lib.optionalString config.user ''
-                # 仅 launchd 触发且非零退出才发通知；手动 task run 调试保持静默
-                if [ "$code" -ne 0 ] && [ -n "$XPC_SERVICE_NAME" ]; then
-                  ${pkgs.terminal-notifier}/bin/terminal-notifier \
-                    -title "Task Failed: ${name}" \
-                    -message "退出码 ''${code}, 点击查看日志" \
-                    -sound Basso \
-                    -group "task-${name}" \
-                    -open "file://${userHome}/Library/Logs/task-${name}.log" \
-                    2>/dev/null || true
-                fi
-              ''}
-            }
-            trap __on_exit EXIT
-
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] ===== Task '${name}' Started ====="
-
-            ${config.script}
-          '';
+        package = tasksLib.mkPackage name {
+          inherit (config) user packages script;
         };
       };
     };
@@ -115,14 +83,8 @@ in
 
   config =
     let
-      enabled = lib.filterAttrs (_: t: t.when != [ ] || t.every != null) taskCfg;
-      mkTrigger =
-        t:
-        if t.every != null then
-          { StartInterval = t.every; }
-        else
-          { StartCalendarInterval = map parseTime t.when; };
-      rootTasks = lib.filterAttrs (_: t: !t.user) enabled;
+      enabled = tasksLib.enabled taskCfg;
+      rootTasks = tasksLib.rootTasks taskCfg;
 
       # 统一管理 CLI 工具: task
       taskCli = pkgs.writeShellApplication {
@@ -257,7 +219,7 @@ in
           StandardOutPath = "/Library/Logs/task-${name}.log";
           StandardErrorPath = "/Library/Logs/task-${name}.log";
         }
-        // (mkTrigger t);
+        // (tasksLib.mkTrigger t);
       }) rootTasks;
 
       environment.systemPackages = lib.attrValues (lib.mapAttrs (_: t: t.package) rootTasks) ++ [

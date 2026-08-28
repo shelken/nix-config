@@ -13,6 +13,7 @@ rec {
   nixosSystem = import ./nixosSystem.nix;
   homeSystem = import ./homeSystem.nix;
   mkHomeConfig = name: modules: homeSystem (modules // { hostname = name; });
+  mkTasksLib = import ./tasks.nix;
   relativeToRoot = lib.path.append ../.;
   # 扫入当前目录所有除default.nix的以nix结尾的文件，以及第一层目录
   # 返回一个目录list
