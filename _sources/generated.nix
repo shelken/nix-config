@@ -30,6 +30,18 @@
     };
     date = "2026-04-20";
   };
+  anti-slop = {
+    pname = "anti-slop";
+    version = "6d538555cb151d4121ed51a27db81890eacf8ae9";
+    src = fetchFromGitHub {
+      owner = "dmmulroy";
+      repo = "anti-slop";
+      rev = "6d538555cb151d4121ed51a27db81890eacf8ae9";
+      fetchSubmodules = false;
+      sha256 = "sha256-1MewhQPqF55RkgWOhEgv4a9Wl9zRNDLImbhpDFSnz30=";
+    };
+    date = "2026-08-18";
+  };
   ast-grep-agent-skill = {
     pname = "ast-grep-agent-skill";
     version = "c2a9bc154f4ffe08b25d28d5e852dfac8c0d0d8a";

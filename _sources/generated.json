@@ -41,6 +41,27 @@
         },
         "version": "2c606141936f1eeef17fa3043a72095b4765b9c2"
     },
+    "anti-slop": {
+        "cargoLock": null,
+        "date": "2026-08-18",
+        "extract": null,
+        "name": "anti-slop",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "dmmulroy",
+            "repo": "anti-slop",
+            "rev": "6d538555cb151d4121ed51a27db81890eacf8ae9",
+            "sha256": "sha256-1MewhQPqF55RkgWOhEgv4a9Wl9zRNDLImbhpDFSnz30=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "6d538555cb151d4121ed51a27db81890eacf8ae9"
+    },
     "ast-grep-agent-skill": {
         "cargoLock": null,
         "date": "2026-07-03",

@@ -43,6 +43,12 @@ let
       skills.karpathy-guidelines = "skills/karpathy-guidelines";
     };
 
+    anti-slop = {
+      root = sources.anti-slop.src;
+      skills.install-anti-slop = "skills/install-anti-slop";
+      frontmatter.install-anti-slop.disable-model-invocation = true;
+    };
+
     ast-grep-agent-skill = {
       root = sources.ast-grep-agent-skill.src;
       skills.ast-grep = "ast-grep/skills/ast-grep";

@@ -28,6 +28,11 @@ src.git      = "https://github.com/forrestchang/andrej-karpathy-skills"
 src.branch   = "main"
 fetch.github = "forrestchang/andrej-karpathy-skills"
 
+[anti-slop]
+src.git      = "https://github.com/dmmulroy/anti-slop"
+src.branch   = "main"
+fetch.github = "dmmulroy/anti-slop"
+
 # [ai-design-skills]
 # src.git      = "https://github.com/elayadesign/ai-design-skills"
 # src.branch   = "main"
