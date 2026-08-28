@@ -103,6 +103,7 @@ let
         "interrogate"
       ];
       frontmatter.poteto-mode.name = "poteto-mode";
+      frontmatter.make-bot-ui.name = "make-bot-ui";
       frontmatter.setup-pstack.disable-model-invocation = true;
     };
 

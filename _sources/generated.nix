@@ -44,39 +44,39 @@
   };
   ast-grep-agent-skill = {
     pname = "ast-grep-agent-skill";
-    version = "c2a9bc154f4ffe08b25d28d5e852dfac8c0d0d8a";
+    version = "6b668aa526afdc623c1a9ed1d6ae920e04a717ad";
     src = fetchFromGitHub {
       owner = "ast-grep";
       repo = "agent-skill";
-      rev = "c2a9bc154f4ffe08b25d28d5e852dfac8c0d0d8a";
+      rev = "6b668aa526afdc623c1a9ed1d6ae920e04a717ad";
       fetchSubmodules = false;
-      sha256 = "sha256-awochSE2OupbsmaGx0xc7wHf0ovVMSdtHv4gZAGWOus=";
+      sha256 = "sha256-esxl6g4U2+0KPkcDAq0HsIYkZaHM3iYy0rqylM83/bk=";
     };
-    date = "2026-07-03";
+    date = "2026-08-21";
   };
   cursor-plugins = {
     pname = "cursor-plugins";
-    version = "46125561306434d8a1d7745d540d8932ab0cd2a2";
+    version = "397c8660da6d3d873a91e18c2ca2f22cac1f0ac1";
     src = fetchFromGitHub {
       owner = "cursor";
       repo = "plugins";
-      rev = "46125561306434d8a1d7745d540d8932ab0cd2a2";
+      rev = "397c8660da6d3d873a91e18c2ca2f22cac1f0ac1";
       fetchSubmodules = false;
-      sha256 = "sha256-rTkT/2dliMzvwDkza2+JNhSIzcTr9fXjvK2zwi/lRl8=";
+      sha256 = "sha256-P8+gp+yY61pYlUrUhGqjrJ24rIkF9Voco92EKip5Xjk=";
     };
-    date = "2026-08-20";
+    date = "2026-08-27";
   };
   humanlayer-skills = {
     pname = "humanlayer-skills";
-    version = "d3138e5898ff1bd98aeaf11c79a8c5880e917a52";
+    version = "3c2629142c5d437428269b1b722b08c0b87f574d";
     src = fetchFromGitHub {
       owner = "humanlayer";
       repo = "skills";
-      rev = "d3138e5898ff1bd98aeaf11c79a8c5880e917a52";
+      rev = "3c2629142c5d437428269b1b722b08c0b87f574d";
       fetchSubmodules = false;
-      sha256 = "sha256-13OR6Qw7JDJDmAyrpzL8RMCgQ6iIkDh2InjjQac7z68=";
+      sha256 = "sha256-lJvu9CGAN/+dzmzck0CodRXn/p7GUkCbfyZxys4nIoU=";
     };
-    date = "2026-08-09";
+    date = "2026-08-13";
   };
   kitty-icon = {
     pname = "kitty-icon";
@@ -103,15 +103,15 @@
   };
   mattpocock-skills = {
     pname = "mattpocock-skills";
-    version = "84fdeffd12f2ee307994d1eb6feb48173b6e0502";
+    version = "6654f6b60cd9d5be8b54c6fafe44346dabeb3b76";
     src = fetchFromGitHub {
       owner = "mattpocock";
       repo = "skills";
-      rev = "84fdeffd12f2ee307994d1eb6feb48173b6e0502";
+      rev = "6654f6b60cd9d5be8b54c6fafe44346dabeb3b76";
       fetchSubmodules = false;
-      sha256 = "sha256-pseSJJb5nBBGPzpxA1GzjGLB9OrT+u0At1saJ4NqZ1E=";
+      sha256 = "sha256-N5tpUIHO2VFeJntBTl6/VLDIVpqoshwFxNJlfXXUwsQ=";
     };
-    date = "2026-08-06";
+    date = "2026-08-24";
   };
   projects-yazi = {
     pname = "projects-yazi";
@@ -127,34 +127,34 @@
   };
   reverse-skill = {
     pname = "reverse-skill";
-    version = "41bd788c34f82d26ad9e51bcba838b0d1220928e";
+    version = "37162cf9547c571c680c07005e9863d4610282dd";
     src = fetchFromGitHub {
       owner = "zhaoxuya520";
       repo = "reverse-skill";
-      rev = "41bd788c34f82d26ad9e51bcba838b0d1220928e";
+      rev = "37162cf9547c571c680c07005e9863d4610282dd";
       fetchSubmodules = false;
-      sha256 = "sha256-dWpkbBLRf0S0Qhkkxw90lf4V8Gygh6yGXCQuMUBnTM8=";
+      sha256 = "sha256-dZ5PL7EeOxQVUI52nwFBlRG+9ZtA3ky2ccdAlILio58=";
     };
-    date = "2026-08-22";
+    date = "2026-08-27";
   };
   yazi-plugins = {
     pname = "yazi-plugins";
-    version = "0be29a913ad61c6d119abfaaf253e96e6af5db67";
+    version = "c591a36e7263e95497715d525e9c46c2f0a880ac";
     src = fetchFromGitHub {
       owner = "yazi-rs";
       repo = "plugins";
-      rev = "0be29a913ad61c6d119abfaaf253e96e6af5db67";
+      rev = "c591a36e7263e95497715d525e9c46c2f0a880ac";
       fetchSubmodules = false;
-      sha256 = "sha256-IDmmXzQKFx3QZ9u5lMwcTOeWeMPWzIBeKBXkGAgJMaI=";
+      sha256 = "sha256-mWT0yF2iG9+gYEuNiffpM93POlBqY+QKdFh5jSAxYls=";
     };
-    date = "2026-08-07";
+    date = "2026-08-25";
   };
   zjstatus = {
     pname = "zjstatus";
-    version = "v0.24.0";
+    version = "v0.25.0";
     src = fetchurl {
-      url = "https://github.com/dj95/zjstatus/releases/download/v0.24.0/zjstatus.wasm";
-      sha256 = "sha256-HM7ezh3tYs8+IJvmkM3TnKb7noIo7XGpUfZQf5lWZps=";
+      url = "https://github.com/dj95/zjstatus/releases/download/v0.25.0/zjstatus.wasm";
+      sha256 = "sha256-KCzqshnlbhkIyfrDOQckH+bD4e99hfqrPl9DjO+HuP4=";
     };
   };
 }
