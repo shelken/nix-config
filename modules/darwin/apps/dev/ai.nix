@@ -17,7 +17,6 @@ in
   config = mkIf cfg.enable {
     homebrew = {
       brews = [
-        "lycorp-jp/tap/sim-use"
       ];
       casks = [
         # "ollama-app"

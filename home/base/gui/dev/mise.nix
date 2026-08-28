@@ -21,7 +21,7 @@
       tools.worktrunk = "latest";
       tools.rtk = "latest";
       tools."pipx:cua-cli" = "latest";
-      tools."pipx" = "latest";
+      tools."github:lycorp-jp/sim-use" = "latest";
 
       # agent client
       tools.codex = "latest";

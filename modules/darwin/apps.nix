@@ -109,10 +109,6 @@ in
         name = "mhaeuser/mhaeuser";
         trusted = true;
       } # battery-toolkit
-      {
-        name = "lycorp-jp/tap";
-        trusted = true;
-      } # sim-use
     ];
 
     brews = [
