@@ -30,6 +30,9 @@ let
     # HOMEBREW_BREW_GIT_REMOTE = "https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/brew.git";
     # HOMEBREW_CORE_GIT_REMOTE = "https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/homebrew-core.git";
     HOMEBREW_PIP_INDEX_URL = "https://pypi.tuna.tsinghua.edu.cn/simple";
+    # Homebrew 6.x 起 `brew upgrade` 默认会升级 auto_updates true 的 cask（读 app 的 Info.plist 比对版本）。
+    # 关掉它，让这些 app 交由各自的 in-app updater 处理，brew 不再插手。需要时仍可用 --greedy 临时覆盖。
+    HOMEBREW_NO_UPGRADE_AUTO_UPDATES_CASKS = "1";
   };
 
   local_proxy_env = {
