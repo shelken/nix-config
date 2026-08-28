@@ -27,7 +27,7 @@ in
     # tools
     tools.battery.enable = true;
     tools.cap.enable = false; # 录屏obs
-    tools.cherry-studio.enable = true;
+    tools.cherry-studio.enable = false;
     tools.download.enable = true;
     tools.gpt.enable = true;
     tools.image.enable = true;
