@@ -18,7 +18,7 @@ in
     homebrew = {
       casks = [
         "intellij-idea" # IDEA
-        "manaflow-ai/cmux/cmux"
+        # "manaflow-ai/cmux/cmux"
         # "cursor"
       ];
     };

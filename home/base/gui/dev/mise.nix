@@ -13,7 +13,22 @@
       settings.activate_aggressive = true;
       # 1.3.13 无 BUN_CONFIG_HTTP_IDLE_TIMEOUT，安装会在半开连接上永久挂起
       tools.bun = "1.3.14";
+      tools.fastfetch = "latest";
+      tools.yt-dlp = "latest";
+
+      # agent tools
+      tools.herdr = "latest";
+      tools.worktrunk = "latest";
+      tools.rtk = "latest";
       tools."pipx:cua-cli" = "latest";
+      tools."pipx" = "latest";
+
+      # agent client
+      tools.codex = "latest";
+      tools.claude-code = "latest";
+      tools."npm:droid" = "latest";
+      tools.antigravity-cli = "latest";
+      tools.oh-my-pi = "latest";
     };
   };
 

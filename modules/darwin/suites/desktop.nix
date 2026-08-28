@@ -18,7 +18,6 @@ in
     homebrew = {
       brews = [
         "ffmpeg"
-        "yt-dlp"
       ];
       casks = [
         "betterdisplay" # 显示器

@@ -17,26 +17,11 @@ in
   config = mkIf cfg.enable {
     homebrew = {
       brews = [
-        "rtk" # for pi extension
-        # "ollama"
-        # "gemini-cli"
-
-        # "rust"
-        # "ripgrep"
-        "anomalyco/tap/opencode"
-        # "kimi-cli"
-
-        "max-sixty/worktrunk/wt" # 一个 Git Worktree 管理 CLI，旨在让 Worktree 的使用像分支一样简单。
+        "lycorp-jp/tap/sim-use"
       ];
       casks = [
         # "ollama-app"
         "lm-studio"
-
-        "droid"
-        "claude-code"
-        "codex"
-
-        # "shelken/tap/antigravity-tools"
 
         "alma"
         # "osaurus"

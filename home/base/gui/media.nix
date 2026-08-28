@@ -13,7 +13,6 @@
   config = lib.mkIf config.shelken.gui.media.enable {
     home.packages = with pkgs; [
       ffmpeg-full
-      yt-dlp
     ];
   };
 }

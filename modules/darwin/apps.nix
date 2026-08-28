@@ -35,15 +35,6 @@ let
     HOMEBREW_NO_UPGRADE_AUTO_UPDATES_CASKS = "1";
   };
 
-  local_proxy_env = {
-    # HTTP_PROXY = "http://127.0.0.1:7890";
-    # HTTPS_PROXY = "http://127.0.0.1:7890";
-  };
-
-  homebrew_env_script = lib.attrsets.foldlAttrs (
-    acc: name: value:
-    acc + "\nexport ${name}=${value}"
-  ) "" (homebrew_mirror_env // local_proxy_env);
 in
 {
   # Install packages from nix's official package repository.
@@ -85,14 +76,9 @@ in
 
     onActivation = {
       autoUpdate = lib.mkDefault true;
+      extraEnv.HOMEBREW_NO_REQUIRE_TAP_TRUST = "1";
       # 'zap': uninstalls all formulae(and related files) not listed in the generated Brewfile
       cleanup = lib.mkDefault "uninstall";
-      # 变更原因：Homebrew Bundle 的确认参数在不同版本间不一致，`--force` 同时兼容旧版和新版 cleanup。
-      extraFlags = lib.mkDefault (
-        lib.optionals (config.homebrew.onActivation.cleanup != "none") [
-          "--force"
-        ]
-      );
     };
 
     # Applications to install from Mac App Store using mas.
@@ -112,18 +98,6 @@ in
         trusted = true;
       } # self tap
       {
-        name = "hashicorp/tap";
-        trusted = true;
-      } # terraform
-      {
-        name = "FelixKratz/formulae";
-        trusted = true;
-      } # jankyborders
-      {
-        name = "gromgit/fuse";
-        trusted = true;
-      } # macfuse,mounty
-      {
         name = "nikitabobko/tap";
         trusted = true;
       } # aerospace
@@ -136,26 +110,13 @@ in
         trusted = true;
       } # battery-toolkit
       {
-        name = "farion1231/ccswitch";
+        name = "lycorp-jp/tap";
         trusted = true;
-      } # cc-switch
-      {
-        name = "max-sixty/worktrunk";
-        trusted = true;
-      } # worktrunk
-      {
-        name = "anomalyco/tap";
-        trusted = true;
-      } # opencode
-      {
-        name = "manaflow-ai/cmux";
-        trusted = true;
-      } # cmux
+      } # sim-use
     ];
 
     brews = [
       "just"
-      "fastfetch"
       "mas"
       # `brew install`
       "wget" # download tool
@@ -174,9 +135,6 @@ in
 
       # misc that nix do not have cache for.
       "git-trim"
-
-      # 后台任务运行; 替换zellij
-      "herdr"
     ];
 
     # `brew install --cask`
