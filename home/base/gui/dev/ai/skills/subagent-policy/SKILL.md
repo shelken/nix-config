@@ -15,25 +15,17 @@ description: 发起、审查或规划子代理工作时阅读该技能
 
 ## 流程
 
-命令用法、机制说明（健康门/失败分类/manifest 格式）与示例见 `spawn-subagent -h`，此处只记 SOP：
+**第一步：`spawn-subagent -h` 看帮助**。命令语法、单发/batch/resume/close 用法、失败分类、manifest 格式、profile 机制、退出码，全部以 -h 为准，不在此记录（可能过时）。
+
+然后按 SOP：
 
 1. `spawn-subagent list` 查看可用 profile 与生效配置
-2. 选择命令：单个 agent 单发；并发多个用 batch（禁止循环单发）
-3. 派发成功后主代理**立即结束当前回合**（不再调用任何工具、不 sleep、不轮询）：子代理结论经 intercom 自动注入并唤醒主代理继续处理，这是唯一可靠姿势
-4. 派发失败（exit 1）当回合剔除该模型即可：pi 已在同一会话内完成瞬时错误重试，失败 pane 已由脚本自动关闭，无需补救动作
-5. 结论收齐后按需 `spawn-subagent close <pane-id>` 清理；子代理 blocked / failed 时 pane 保留供用户检查，不自动关闭
+2. 派发成功后主代理**立即结束当前回合**（不再调用任何工具、不 sleep、不轮询）：子代理结论经 intercom 自动注入并唤醒主代理继续处理，这是唯一可靠姿势
+3. 结论收齐后按需 `spawn-subagent close <pane-id>` 清理；子代理 blocked / failed 时 pane 保留供用户检查，不自动关闭
 
 ### 等待模式为何是唯一姿势
 
 herdr 对未聚焦 pane 的 agent 全程仅报 idle（无 working/done 区分），阻塞等待无可靠信号，等待统一由 intercom 注入完成
-
-### 预设表
-
-profile 清单与生效配置实时获取（`spawn-subagent list`），不在文档记录。每个 profile 对应 agents 目录下 `<profile>.md` 模板，frontmatter 的 `model` / `thinking` / `tools` 为**唯一真相源**，缺字段时回退 `subagent-config.json` 预设
-
-新增 profile：在 agents 目录新建 `<profile>.md`，最小 frontmatter 即可（`description` 一句中文用途 + `model` + `thinking` + `tools`），不要声明正文和 `exclude_extensions`（插件排除全局统一，见 `subagent-config.json`）
-
-> 脚本只解析 frontmatter，**不把 md 正文作为预设 prompt 注入**；协调 prompt 仅含回传协议和 task 原文。md 里的正文与 `prompt_mode: append` 仅供其他读取该 md 的插件使用
 
 ## 使用规则
 
