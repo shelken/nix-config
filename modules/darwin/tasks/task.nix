@@ -122,7 +122,6 @@ in
           { StartInterval = t.every; }
         else
           { StartCalendarInterval = map parseTime t.when; };
-      userTasks = lib.filterAttrs (_: t: t.user) enabled;
       rootTasks = lib.filterAttrs (_: t: !t.user) enabled;
 
       # 统一管理 CLI 工具: task
@@ -248,27 +247,6 @@ in
         assertion = (t.when != [ ]) != (t.every != null);
         message = "shelken.tasks.${name}: when 与 every 必须二选一";
       }) taskCfg;
-
-      # 用户任务：HM launchd agent + task-<name> 手动命令
-      home-manager.users.${myvars.username} = {
-        launchd.agents = lib.mapAttrs (
-          name: t:
-          mylib.mkLaunchCommand {
-            inherit name;
-            commandFile = "${t.package}/bin/task-${name}";
-            # 后台定时任务用 user domain，不依赖图形会话（gui domain 需登录 Aqua session）
-            domain = "user";
-            config = {
-              RunAtLoad = false;
-              KeepAlive = false;
-              StandardOutPath = "${userHome}/Library/Logs/task-${name}.log";
-              StandardErrorPath = "${userHome}/Library/Logs/task-${name}.log";
-            }
-            // (mkTrigger t);
-          }
-        ) userTasks;
-        home.packages = lib.attrValues (lib.mapAttrs (_: t: t.package) userTasks) ++ [ taskCli ];
-      };
 
       # root 任务：launchd daemon；手动执行 sudo task-<name>
       launchd.daemons = lib.mapAttrs (name: t: {
