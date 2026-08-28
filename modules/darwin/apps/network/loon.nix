@@ -17,7 +17,7 @@ in
   config = mkIf cfg.enable {
     homebrew = {
       casks = [
-        "loon@0.2.0.61"
+        "loon"
       ];
       brews = [
       ];
