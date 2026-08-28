@@ -22,6 +22,8 @@
 
     secrets.enable = true;
     tools.hammerspoon.enable = false;
+    # 与 darwin 侧（hosts/mio/default.nix）同名同值，两棵树互不相见需手动镜像
+    tools.autoinputswitch.enable = true;
     tools.backup.enable = true;
     wm.aerospace.enable = true;
   };
