@@ -22,6 +22,8 @@ in
         # "ollama-app"
         "lm-studio"
 
+        "agentsview"
+
         "alma"
         # "osaurus"
       ];
