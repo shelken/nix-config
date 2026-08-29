@@ -3,7 +3,11 @@
   username = "shelken";
   userfullname = "Shelken Pan";
   useremail = "shelken.pxk@gmail.com";
-  catppuccin_flavor = "Macchiato"; # Mocha
+  catppuccin = rec {
+    flavor = "macchiato";
+    accent = "pink";
+    displayName = "Catppuccin ${lib.toSentenceCase flavor}";
+  };
   fontFamilies = {
     monospace = "Iosevka Nerd Font Mono";
     cjkMonospace = "Maple Mono NF CN";

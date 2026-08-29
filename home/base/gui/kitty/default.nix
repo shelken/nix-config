@@ -1,8 +1,15 @@
 {
+  config,
+  lib,
   myvars,
   sources,
   ...
 }:
+let
+  palette =
+    (lib.importJSON "${config.catppuccin.sources.palette}/palette.json")
+    .${myvars.catppuccin.flavor}.colors;
+in
 {
   programs.kitty = {
     enable = true;
@@ -90,8 +97,7 @@
       # 只显示活跃 panel 标题的最后一级（去掉 :N: 窗口数、去掉长路径前缀）
       tab_title_template = "{title.rsplit('/', 1)[-1]}";
 
-      # 默认 #181926 与 inactive tab 近黑糊在一起
-      tab_bar_background = "#363A4F";
+      tab_bar_background = palette.surface0.hex;
 
       macos_option_as_alt = "yes";
 

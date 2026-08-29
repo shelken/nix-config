@@ -5,6 +5,7 @@
   ...
 }:
 let
+  themeName = myvars.catppuccin.displayName;
   snippetsSourcePath = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/zed/snippets";
   snippetFiles = builtins.attrNames (
     lib.filterAttrs (name: type: type == "regular" && lib.strings.hasSuffix ".json" name) (
@@ -173,8 +174,8 @@ in
 
       icon_theme = {
         mode = "system";
-        light = "Catppuccin Macchiato";
-        dark = "Catppuccin Macchiato";
+        light = themeName;
+        dark = themeName;
       };
 
       # ssh_connections = [
@@ -221,8 +222,8 @@ in
 
       theme = {
         mode = "system";
-        light = "Catppuccin Macchiato";
-        dark = "Catppuccin Macchiato";
+        light = themeName;
+        dark = themeName;
       };
 
       # agent_servers = {

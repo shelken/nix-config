@@ -1,11 +1,16 @@
 {
-  pkgs,
   anyrun,
+  config,
+  lib,
   myvars,
+  pkgs,
   ...
 }:
 let
   anyrunPackages = anyrun.packages.${pkgs.stdenv.hostPlatform.system};
+  palette =
+    (lib.importJSON "${config.catppuccin.sources.palette}/palette.json")
+    .${myvars.catppuccin.flavor}.colors;
 in
 {
   imports = [
@@ -70,5 +75,9 @@ in
   # https://github.com/anyrun-org/anyrun/discussions/179
   xdg.configFile."anyrun/style.css".source = pkgs.replaceVars ./conf/anyrun/style.css {
     inherit (myvars.fontFamilies) cjkMonospace monospace;
+    background = palette.surface0.hex;
+    foreground = palette.text.hex;
+    primary = palette.blue.hex;
+    secondary = palette.mauve.hex;
   };
 }

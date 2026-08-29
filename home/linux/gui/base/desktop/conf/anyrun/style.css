@@ -1,9 +1,10 @@
 /* ===== Color variables ===== */
+/* prettier-ignore */
 :root {
-  --bg-color: #313244;
-  --fg-color: #cdd6f4;
-  --primary-color: #89b4fa;
-  --secondary-color: #cba6f7;
+  --bg-color: @background@;
+  --fg-color: @foreground@;
+  --primary-color: @primary@;
+  --secondary-color: @secondary@;
   --border-color: var(--primary-color);
   --selected-bg-color: var(--primary-color);
   --selected-fg-color: var(--bg-color);

@@ -7,7 +7,7 @@ local config = {
 		{ family = "@monospace@", weight = "Medium" },
 		"@cjkMonospace@",
 	}),
-	color_scheme = "Catppuccin Macchiato", -- or Mocha, Frappe, Latte, Macchiato
+	color_scheme = "@themeName@",
 
 	-- cursor
 	default_cursor_style = "BlinkingBlock",
