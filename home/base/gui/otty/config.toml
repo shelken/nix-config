@@ -1,10 +1,10 @@
 # Otty — 对齐 kitty 手感（home/base/gui/kitty）
-# 注意：Otty Settings / `otty config set` 会写穿软链并重写本文件
-# CLI `otty config reload` 与快捷键 reload 目前不可靠；改完后用
+# 字体由 vars/default.nix 注入，修改后执行 `just hm`
+# CLI `otty config reload` 与快捷键 reload 目前不可靠；构建后用
 # Settings → Advanced → Config File → Reload Config，或命令面板 "Reload Config"
 
 # Font
-font-family = "Iosevka Nerd Font Mono"
+font-family = "@monospace@"
 font-size = 14
 
 # Theme

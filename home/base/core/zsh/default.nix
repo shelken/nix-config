@@ -2,6 +2,7 @@
   pkgs,
   lib,
   config,
+  myvars,
   ...
 }:
 let
@@ -148,7 +149,13 @@ in
     defaultCommand = "fd --type f";
   };
 
-  fonts.fontconfig.enable = true;
+  fonts.fontconfig = {
+    enable = true;
+    defaultFonts.monospace = [
+      myvars.fontFamilies.monospace
+      myvars.fontFamilies.cjkMonospace
+    ];
+  };
   home.packages = with pkgs; [
     # Meslo Nerd Font patched for Powerlevel10k
     # Restart Konsole and configure it (profile) to choose MesloLGS NF

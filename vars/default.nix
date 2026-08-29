@@ -4,6 +4,10 @@
   userfullname = "Shelken Pan";
   useremail = "shelken.pxk@gmail.com";
   catppuccin_flavor = "Macchiato"; # Mocha
+  fontFamilies = {
+    monospace = "Iosevka Nerd Font Mono";
+    cjkMonospace = "Maple Mono NF CN";
+  };
   networking = import ./networking.nix { inherit lib; };
   mainSshAuthorizedKeys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINfTmo7KkKR3PFxUQ8mKx8lmJ3ykwaeOfkpOxsFgdaRH shelken@sakamoto"

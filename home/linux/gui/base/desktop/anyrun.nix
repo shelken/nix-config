@@ -1,6 +1,7 @@
 {
   pkgs,
   anyrun,
+  myvars,
   ...
 }:
 let
@@ -67,5 +68,7 @@ in
   };
 
   # https://github.com/anyrun-org/anyrun/discussions/179
-  xdg.configFile."anyrun/style.css".source = ./conf/anyrun/style.css;
+  xdg.configFile."anyrun/style.css".source = pkgs.replaceVars ./conf/anyrun/style.css {
+    inherit (myvars.fontFamilies) cjkMonospace monospace;
+  };
 }

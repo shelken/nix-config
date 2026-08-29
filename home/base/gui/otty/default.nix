@@ -1,10 +1,13 @@
-{ config, ... }:
-let
-  ottyTomlPath = "${config.home.homeDirectory}/nix-config/home/base/gui/otty/config.toml";
-in
+{
+  myvars,
+  pkgs,
+  ...
+}:
 {
   xdg.configFile."otty/config.toml" = {
-    source = config.lib.file.mkOutOfStoreSymlink ottyTomlPath;
+    source = pkgs.replaceVars ./config.toml {
+      inherit (myvars.fontFamilies) monospace;
+    };
     force = true;
   };
 }

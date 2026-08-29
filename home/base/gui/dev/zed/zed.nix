@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  myvars,
   ...
 }:
 let
@@ -179,10 +180,13 @@ in
       # ssh_connections = [
       # ];
 
-      ui_font_family = "Maple Mono NF CN";
-      buffer_font_family = "Iosevka Nerd Font Mono";
+      ui_font_family = myvars.fontFamilies.cjkMonospace;
+      buffer_font_family = myvars.fontFamilies.monospace;
+      buffer_font_fallbacks = [ myvars.fontFamilies.cjkMonospace ];
 
       terminal = {
+        font_family = myvars.fontFamilies.monospace;
+        font_fallbacks = [ myvars.fontFamilies.cjkMonospace ];
         option_as_meta = true;
       };
 

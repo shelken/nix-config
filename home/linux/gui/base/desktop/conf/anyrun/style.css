@@ -12,7 +12,7 @@
 /* ===== Global reset ===== */
 * {
   all: unset;
-  font-family: "Iosevka Nerd Font Mono", monospace;
+  font-family: "@monospace@", "@cjkMonospace@", monospace;
 }
 
 /* ===== Transparent window ===== */

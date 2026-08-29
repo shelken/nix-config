@@ -3,7 +3,10 @@ local config = {
 	-- Displaying correct colors on mac
 	front_end = "WebGpu",
 	font_size = 18,
-	font = wezterm.font("Iosevka Nerd Font Mono", { weight = "Medium" }),
+	font = wezterm.font_with_fallback({
+		{ family = "@monospace@", weight = "Medium" },
+		"@cjkMonospace@",
+	}),
 	color_scheme = "Catppuccin Macchiato", -- or Mocha, Frappe, Latte, Macchiato
 
 	-- cursor

@@ -1,4 +1,5 @@
 {
+  myvars,
   sources,
   ...
 }:
@@ -11,7 +12,7 @@
     ];
 
     font = {
-      name = "Iosevka Nerd Font Mono";
+      name = myvars.fontFamilies.monospace;
       size = 18;
     };
 
@@ -68,6 +69,8 @@
     };
 
     settings = {
+      symbol_map = "U+2E80-U+9FFF,U+F900-U+FAFF,U+FE30-U+FE4F,U+FF00-U+FFEF,U+20000-U+3FFFF ${myvars.fontFamilies.cjkMonospace}";
+
       # 允许远程控制例如执行`kitty @ --new-tab --cwd /path/to/your/directory`
       # ref: https://sw.kovidgoyal.net/kitty/remote-control/
       allow_remote_control = "no";
