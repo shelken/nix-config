@@ -17,6 +17,6 @@
       exit 0
     fi
 
-    exec python3 "$REPO/scripts/pi_usage.py" sync --push
+    python3 -u "$REPO/scripts/pi_usage.py" sync --push
   '';
 }
