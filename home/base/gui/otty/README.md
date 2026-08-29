@@ -15,12 +15,12 @@
 
 ## 与 kitty 的对应
 
-| kitty                        | otty                                 |
-| ---------------------------- | ------------------------------------ |
-| JetBrainsMono Nerd Font Mono | 同                                   |
-| background_opacity 0.88      | background-opacity 0.88              |
-| macos_option_as_alt          | macos-option-as-alt                  |
-| tab sidebar / bottom bar     | window-layout = sidebar-left         |
-| Catppuccin Macchiato         | Catppuccin Mocha（内置无 Macchiato） |
-| cmd+[ / ] 切 tab             | 同                                   |
-| cmd+ctrl+, reload            | cmd+ctrl+comma=reload_config         |
+| kitty                    | otty                                 |
+| ------------------------ | ------------------------------------ |
+| Iosevka Nerd Font Mono   | 同                                   |
+| background_opacity 0.88  | background-opacity 0.88              |
+| macos_option_as_alt      | macos-option-as-alt                  |
+| tab sidebar / bottom bar | window-layout = sidebar-left         |
+| Catppuccin Macchiato     | Catppuccin Mocha（内置无 Macchiato） |
+| cmd+[ / ] 切 tab         | 同                                   |
+| cmd+ctrl+, reload        | cmd+ctrl+comma=reload_config         |

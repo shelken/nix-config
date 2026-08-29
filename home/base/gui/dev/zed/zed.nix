@@ -179,11 +179,10 @@ in
       # ssh_connections = [
       # ];
 
-      ui_font_family = "JetBrainsMono Nerd Font Mono";
-      buffer_font_family = "JetBrainsMono Nerd Font Mono";
+      ui_font_family = "Maple Mono NF CN";
+      buffer_font_family = "Iosevka Nerd Font Mono";
 
       terminal = {
-        font_size = 15.0;
         option_as_meta = true;
       };
 
@@ -215,8 +214,6 @@ in
 
       linked_edits = true;
       tab_size = 2;
-      ui_font_size = 18.0;
-      buffer_font_size = 16.0;
 
       theme = {
         mode = "system";

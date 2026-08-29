@@ -11,7 +11,7 @@
     ];
 
     font = {
-      name = "JetBrainsMono Nerd Font Mono";
+      name = "Iosevka Nerd Font Mono";
       size = 18;
     };
 
