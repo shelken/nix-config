@@ -1,6 +1,8 @@
+{ pkgs, ... }:
 {
   when = "0:00";
   user = true;
+  packages = [ pkgs.nodejs ];
   script = ''
     # 每日零点自动执行 pi ping 测试
     PATH="$HOME/.cache/.bun/bin:$HOME/.local/bin:$PATH"
