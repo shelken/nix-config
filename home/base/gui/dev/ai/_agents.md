@@ -59,7 +59,7 @@
 - 需要查阅库的最新文档时，优先使用 `ctx7` 命令，例如：`ctx7 library "<name>"`；所有查询都必须用双引号包住：`ctx7 docs <id> "<query>"`
 - 所有依赖和安装包应该优先留在项目内，不污染全局环境
 - 如果项目没有特别说明，项目优先使用 mise 管理系统中**缺失的工具/cli**；没有特别说明, 必须使用最新版本;npm 依赖使用 bun 管理；python 依赖使用 uv 管理
-- 工具（如果存在）优先级：ffgrep(tool) > grep(tool) > rg(bash) > grep(bash)；fffind(tool) > find(tool) > fd(bash) > find(bash)
+- 工具（如果存在）优先级：ffgrep(tool) > > rg(bash) > grep(bash)；fffind(tool) > find(bash)
 - todo 仅在任务有规划有计划 或者 任务很大 或 用户要求 时使用
 
 ## 常用目录
