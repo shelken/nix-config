@@ -31,11 +31,12 @@
 | `every`    | 整数（秒）     | 无     | 间隔执行（launchd `StartInterval`）；与 `when` 互斥、二选一           |
 | `user`     | bool           | `true` | `true`：用户态 LaunchAgent；`false`：root LaunchDaemon                |
 | `packages` | package 列表   | `[ ]`  | 依赖的 CLI 工具，注入隔离的运行时 PATH                                |
+| `secrets`  | 属性集         | `{ }`  | 环境变量到 `secretPath "sops/key"` 的映射，运行时按需注入             |
 | `script`   | bash 脚本      | 必填   | 脚本内容，经 shellcheck 校验打包                                      |
 
 ## 统一管理命令 (`task`)
 
-系统提供全局 `task` 命令一站式管理所有定时任务：
+系统提供 `task` 命令，运行时读取当前已安装的 `space.ooooo.task-*` launchd plist：
 
 ```bash
 # 1. 查看所有已注册任务、调度时间、权限层与日志路径
@@ -75,4 +76,4 @@ modules/darwin/tasks/gc.nix # 全设备默认：每天 3:15 nix GC（root）
 
 ## 边界
 
-此模型只覆盖"定时跑一段脚本"。需要 secrets、复杂 policy 配置的重型服务（如 kopia 备份）仍走常规 module（`home/darwin/tasks/kopia/`）。
+此模型只覆盖「定时跑一段脚本」。需要复杂生命周期或 policy 配置的重型服务仍走常规 module，例如 `home/darwin/tasks/kopia/`

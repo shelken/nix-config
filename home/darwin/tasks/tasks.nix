@@ -19,16 +19,19 @@ let
 
   taskCfg = mylib.loadTasks (mylib.relativeToRoot "hosts/${hostname}/tasks") {
     inherit pkgs lib;
+    secretPath = secret: config.sops.secrets.${secret}.path;
   };
 
   tasks = lib.mapAttrs (name: t: tasksLib.withDefaults (tasksLib.checkTask name t)) taskCfg;
   userTasks = tasksLib.userTasks tasks;
+
+  taskCli = tasksLib.mkTaskCli;
 in
 {
   launchd.agents = lib.mapAttrs (
     name: t:
     mylib.mkLaunchCommand {
-      inherit name;
+      name = "task-${name}";
       commandFile = "${tasksLib.mkPackage name t}/bin/task-${name}";
       # 后台定时任务用 user domain，不依赖图形会话（gui domain 需登录 Aqua session）
       domain = "user";
@@ -42,5 +45,5 @@ in
     }
   ) userTasks;
 
-  home.packages = lib.mapAttrsToList tasksLib.mkPackage userTasks;
+  home.packages = (lib.mapAttrsToList tasksLib.mkPackage userTasks) ++ [ taskCli ];
 }

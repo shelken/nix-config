@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, secretPath, ... }:
 {
   when = [
     "0:00"
@@ -10,6 +10,10 @@
     git
     python3
   ];
+  secrets = {
+    GH_TOKEN = secretPath "github/cli-token";
+    GITHUB_TOKEN = secretPath "github/cli-token";
+  };
   script = ''
     REPO="$HOME/Code/active/shelken"
     if [ ! -d "$REPO/.git" ]; then
