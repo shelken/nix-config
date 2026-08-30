@@ -14,6 +14,7 @@
     enable = true;
     ignores = [
       ".DS_Store"
+      ".idea"
       ".papercuts.jsonl"
     ];
     attributes = [
