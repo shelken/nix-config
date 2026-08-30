@@ -20,7 +20,7 @@
 ## 基本约束
 
 - 中文注释，中文文档
-- commit 前先在 direnv 环境运行一次 pre-commit（`direnv exec . pre-commit run -a`）
+- commit 前先add然后运行一次 pre-commit
 - 优先使用 Conventional Commits 格式提交，标题 **英文**，内容 **中文**
 - 修改配置后，使用 `just bd`(nix-darwin范围验证) / `just hm-build`(home-manager 范围验证) 等命令进行验证
 - 使用 `just sw`(nix-darwin范围变更) / `just hm`(home-manager 范围变更) 前; 确保新增或删除的文件已 `git add`，否则不生效;

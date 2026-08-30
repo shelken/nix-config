@@ -117,7 +117,7 @@ git config --unset-all core.hooksPath   # git-hooks.nix 残留,不清理会致 p
 mise trust                  # 首次信任 mise.toml
 mise install                # 装所有工具
 mise run setup              # 初始化
-pre-commit run --all-files  # 全部 hook Passed(若项目用 pre-commit)
+pre-commit run  # 全部 hook Passed(若项目用 pre-commit)
 ```
 
 工具来源验证(应指向 mise 安装路径,而非系统/旧 nix 路径):
