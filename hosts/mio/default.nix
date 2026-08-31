@@ -8,7 +8,8 @@ in
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
     # window manager
-    wm.aerospace.enable = true;
+    wm.aerospace.enable = false;
+    wm.omniwm.enable = true;
     tools.hammerspoon.enable = false;
     wm.thaw.enable = true;
 
