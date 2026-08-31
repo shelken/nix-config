@@ -38,11 +38,6 @@ let
 
   # 外部来源只声明仓库根目录和选择策略，解析后统一进入现有分组/平铺流程。
   fetchedSkillRepos = {
-    andrej-karpathy-skills = {
-      root = sources.andrej-karpathy-skills.src;
-      skills.karpathy-guidelines = "skills/karpathy-guidelines";
-    };
-
     anti-slop = {
       root = sources.anti-slop.src;
       skills.install-anti-slop = "skills/install-anti-slop";
