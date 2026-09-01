@@ -1,6 +1,7 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["config:recommended", ":dependencyDashboard"],
+  enabledManagers: ["github-actions", "nix"],
   timezone: "Asia/Shanghai",
   schedule: ["before 4am"],
   labels: ["dependencies", "renovate"],
@@ -38,8 +39,7 @@
     },
     {
       matchManagers: ["nix"],
-      matchPackageNames: ["secrets", "dotfiles"],
-      matchPackagePatterns: [".*secrets.*", ".*dotfiles.*"],
+      matchDepNames: ["secrets", "dotfiles", "herdr"],
       enabled: false,
     },
   ],
