@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
 
 concurrency:
@@ -25,6 +26,9 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
 
+      - name: Save source baseline
+        run: cp _sources/generated.json /tmp/nvfetcher-base.json
+
       - name: Run nvfetcher
         run: |
           nix develop --command nvfetcher -c nvfetcher.toml -o _sources
@@ -41,3 +45,24 @@ jobs:
           commit-message: "chore(nvfetcher): sync _sources generated files"
           title: "chore(nvfetcher): sync _sources generated files"
           body: "Automated synchronization of nvfetcher sources."
+
+      - name: Find automation pull request
+        id: automation_pull_request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "number=$(gh pr list \
+            --base main \
+            --head automation/nvfetcher-sync \
+            --json number \
+            --jq '.[0].number // empty')" >> "$GITHUB_OUTPUT"
+
+      - name: Update source diff comment
+        if: steps.automation_pull_request.outputs.number != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/renovate-skill-diff.py \
+            --base-file /tmp/nvfetcher-base.json \
+            --head-file _sources/generated.json \
+            --pull-request "${{ steps.automation_pull_request.outputs.number }}"
