@@ -18,50 +18,14 @@ src.git      = "https://github.com/cursor/plugins"
 src.branch   = "main"
 fetch.github = "cursor/plugins"
 
-# [anthropics-skills]
-# src.git      = "https://github.com/anthropics/skills"
-# src.branch   = "main"
-# fetch.github = "anthropics/skills"
-
 [andrej-karpathy-skills]
 src.git      = "https://github.com/forrestchang/andrej-karpathy-skills"
 src.branch   = "main"
 fetch.github = "forrestchang/andrej-karpathy-skills"
 
 [anti-slop]
-src.git      = "https://github.com/dmmulroy/anti-slop"
-src.branch   = "main"
-fetch.github = "dmmulroy/anti-slop"
-
-# [ai-design-skills]
-# src.git      = "https://github.com/elayadesign/ai-design-skills"
-# src.branch   = "main"
-# fetch.github = "elayadesign/ai-design-skills"
-
-# [bilibili-cli]
-# src.git      = "https://github.com/public-clis/bilibili-cli"
-# src.branch   = "main"
-# fetch.github = "public-clis/bilibili-cli"
-
-# [caveman]
-# src.git      = "https://github.com/JuliusBrussee/caveman"
-# src.branch   = "main"
-# fetch.github = "JuliusBrussee/caveman"
-
-# [dotclaude-skills]
-# src.git      = "https://github.com/FradSer/dotclaude"
-# src.branch   = "main"
-# fetch.github = "FradSer/dotclaude"
-
-# [hindsight-skills]
-# src.git      = "https://github.com/vectorize-io/hindsight"
-# src.branch   = "main"
-# fetch.github = "vectorize-io/hindsight"
-
-# [emilkowalski-skills]
-# src.git      = "https://github.com/emilkowalski/skills"
-# src.branch   = "main"
-# fetch.github = "emilkowalski/skills"
+src.github_tag = "dmmulroy/anti-slop"
+fetch.github   = "dmmulroy/anti-slop"
 
 [humanlayer-skills]
 src.git      = "https://github.com/humanlayer/skills"
@@ -74,75 +38,14 @@ src.branch   = "main"
 fetch.github = "run-llama/llamaparse-agent-skills"
 
 [mattpocock-skills]
-src.git      = "https://github.com/mattpocock/skills"
-src.branch   = "main"
-fetch.github = "mattpocock/skills"
+src.github_tag = "mattpocock/skills"
+fetch.github   = "mattpocock/skills"
 
 [reverse-skill]
-src.git      = "https://github.com/zhaoxuya520/reverse-skill"
-src.branch   = "main"
-fetch.github = "zhaoxuya520/reverse-skill"
+src.github_tag = "zhaoxuya520/reverse-skill"
+fetch.github   = "zhaoxuya520/reverse-skill"
 
-# [redesign-skill]
-# src.git      = "https://github.com/elayadesign/redesign-skill"
-# src.branch   = "main"
-# fetch.github = "elayadesign/redesign-skill"
-
-# [impeccable]
-# src.git      = "https://github.com/pbakaus/impeccable"
-# src.branch   = "main"
-# fetch.github = "pbakaus/impeccable"
-
-# [obra-superpowers]
-# src.git      = "https://github.com/obra/superpowers"
-# src.branch   = "main"
-# fetch.github = "obra/superpowers"
-
-# [playwright-cli]
-# src.git      = "https://github.com/microsoft/playwright-cli"
-# src.branch   = "main"
-# fetch.github = "microsoft/playwright-cli"
-
-# [software-design-philosophy-skill]
-# src.git      = "https://github.com/shelken/software-design-philosophy-skill"
-# src.branch   = "main"
-# fetch.github = "shelken/software-design-philosophy-skill"
-
-# [shuorenhua]
-# src.git      = "https://github.com/shelken/shuorenhua"
-# src.branch   = "main"
-# fetch.github = "shelken/shuorenhua"
-
-# [sidkh-skills]
-# src.git      = "https://github.com/SidKH/skills"
-# src.branch   = "main"
-# fetch.github = "SidKH/skills"
-
-# [taches-cc-resources]
-# src.git      = "https://github.com/glittercowboy/taches-cc-resources"
-# src.branch   = "main"
-# fetch.github = "glittercowboy/taches-cc-resources"
-
-# [taste-skill]
-# src.git      = "https://github.com/Leonxlnx/taste-skill"
-# src.branch   = "main"
-# fetch.github = "Leonxlnx/taste-skill"
-
-# [twitter-cli]
-# src.git      = "https://github.com/public-clis/twitter-cli"
-# src.branch   = "main"
-# fetch.github = "public-clis/twitter-cli"
-
-# [waza-skills]
-# src.git      = "https://github.com/tw93/Waza"
-# src.branch   = "main"
-# fetch.github = "tw93/Waza"
-
-# [paperwm-spoon]
-# src.git      = "https://github.com/mogenson/PaperWM.spoon"
-# src.branch   = "main"
-# fetch.github = "mogenson/PaperWM.spoon"
-
+# Tools & Plugins
 [zjstatus]
 src.github = "dj95/zjstatus"
 fetch.url  = "https://github.com/dj95/zjstatus/releases/download/$ver/zjstatus.wasm"
@@ -156,7 +59,3 @@ fetch.github = "yazi-rs/plugins"
 src.git      = "https://github.com/MasouShizuka/projects.yazi"
 src.branch   = "main"
 fetch.github = "MasouShizuka/projects.yazi"
-
-# [hammerspoon]
-# src.github = "Hammerspoon/hammerspoon"
-# fetch.url = "https://github.com/Hammerspoon/hammerspoon/releases/download/$ver/Hammerspoon-$ver.zip"

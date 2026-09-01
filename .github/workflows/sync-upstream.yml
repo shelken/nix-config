@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       input:
-        type: string
+        type: choice
         description: flake input to be synced
         options:
           - dotfiles
