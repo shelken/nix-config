@@ -11,8 +11,11 @@ description: 获取外部skill
 
 1. 用户提供关于skill的链接，通常情况下是个github repo
 2. 阅读相关代码 `nvfetcher.toml` `home/base/gui/dev/ai/skill.nix`
-3. 在 nvfetcher.toml 添加 skill（按字母顺序），更新
-   `nvfetcher -c nvfetcher.toml -f '^{the_skill_you_add}$'`
+3. 检查 upstream 仓库是否有 Release/Tag：
+   - 若有 Tag，优先使用 `src.github_tag = "owner/repo"`
+   - 若无 Tag（仅 main 分支），使用 `src.git` + `src.branch = "main"`
+   - 在 nvfetcher.toml 添加 skill（按字母顺序），更新：
+     `nvfetcher -c nvfetcher.toml -f '^{the_skill_you_add}$'`
 4. 在 skill.nix 添加引用，按字母顺序
 5. `just hm` 更新并应用 home-manager
 6. 一切没有问题就提交

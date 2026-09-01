@@ -27,6 +27,7 @@
 - 一般使用 `nh search` 搜索 nixpkgs 中的包
 - 项目级 skill 必须放在项目根目录 `.agents/skills/` 下，不要放到 `home/` 等用户环境配置目录
 - 更多常用命令在 `justfile`，用 `just` 查看可用快捷命令
+- 禁止 nix run / nix shell 命令; 在devshell引入缺失工具
 
 ## 软件源与秘密
 
