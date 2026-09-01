@@ -63,3 +63,7 @@ fetch.github = "MasouShizuka/projects.yazi"
 [nvfetcher-action-e2e-one]
 src.github_tag = "DinkDonk/kitty-icon"
 fetch.github   = "DinkDonk/kitty-icon"
+
+[nvfetcher-action-e2e-two]
+src.github_tag = "mattpocock/skills"
+fetch.github   = "mattpocock/skills"
