@@ -72,7 +72,7 @@ function usage() {
 
 用法:
   spawn-subagent <profile> <slug> -- <task>   启动单个子代理，输出 pane ID
-  spawn-subagent batch <manifest.json>        按 manifest 文件并发编排多个子代理（task 可共享可独立）
+  spawn-subagent batch <manifest.json>        按 manifest 文件并发编排多个子代理（共享 task + 可选专项 task）
   spawn-subagent resume <pane-id> -- <task>   复用已有 agent pane，注入新任务（不重启）
   spawn-subagent list                         列出所有 agent(name/model/thinking/tools/描述)
   spawn-subagent --check                      派生 settings + 打印所有 agent 生效值，不启动
@@ -101,23 +101,20 @@ task:    子代理任务描述，支持多行；结论经 intercom 回传，不�
 
 manifest (batch，文件路径，不支持内联 JSON 或 stdin):
   {
-    "task": "共享任务全文",
+    "task": "审查 src/auth。检查正确性、安全性和测试覆盖；结论引用文件与行号。",
     "agents": [
       "reviewer-ds",
-      { "profile": "reviewer-glm", "slug": "glm" },
-      { "profile": "reviewer-gemini", "slug": "gem", "task": "可选：覆盖共享 task" }
+      { "profile": "reviewer-gemini", "slug": "auth-security", "task": "重点检查权限边界。" }
     ]
   }
+  reviewer-ds 收到顶层 task；reviewer-gemini 收到顶层 task + 专项 task。
   agents 为字符串时 slug 自动取 profile 去掉 reviewer- 前缀。
   任一 profile/slug/task 无效则整体拒绝、零派发；任一 agent 失败则 exit 1（健康者照常运行）
 
 示例:
   spawn-subagent reviewer-ds review-auth -- "审查 src/auth 的安全问题"
+  spawn-subagent batch /tmp/review-auth.json
   spawn-subagent resume w1A:p3 -- "继续检查测试覆盖"
-  cat > /tmp/manifest.json <<'EOF'
-  { "task": "审查 flake.nix 顶层结构", "agents": ["reviewer-ds", "reviewer-glm"] }
-  EOF
-  spawn-subagent batch /tmp/manifest.json
 
 env: HERDR_PANE_ID, PI_INTERCOM_SESSION_ID`);
 }
@@ -409,6 +406,26 @@ async function spawn(profile: string, slug: string, task: string) {
   }
 }
 
+// ---------- 任务组合 ----------
+
+function composeTask(sharedTask: string, agentTask: string | undefined): string {
+  if (!sharedTask) return agentTask ?? "";
+  if (!agentTask) return sharedTask;
+  return `${sharedTask}\n\n专项任务:\n---\n${agentTask}`;
+}
+
+function checkTaskComposition() {
+  if (composeTask("共享背景", "专项分工") !== "共享背景\n\n专项任务:\n---\n专项分工") {
+    throw new Error("任务组合自检失败: 共享背景与专项任务未正确组合");
+  }
+  if (composeTask("共享背景", undefined) !== "共享背景") {
+    throw new Error("任务组合自检失败: 仅共享任务时内容发生变化");
+  }
+  if (composeTask("", "专项分工") !== "专项分工") {
+    throw new Error("任务组合自检失败: 仅专项任务时内容发生变化");
+  }
+}
+
 // ---------- batch 编排 ----------
 
 async function batch(manifestPath: string) {
@@ -433,7 +450,7 @@ async function batch(manifestPath: string) {
     const profile = typeof a === "string" ? a : a?.profile;
     if (!profile) { errors.push("缺少 profile"); continue; }
     const slugRaw = typeof a === "string" ? undefined : a?.slug;
-    const task = typeof a === "string" ? sharedTask : (a?.task ?? sharedTask);
+    const task = typeof a === "string" ? composeTask(sharedTask, undefined) : composeTask(sharedTask, a?.task);
     const slug = slugRaw ?? profile.replace(/^reviewer-/i, "").replace(/[^a-z0-9-]/gi, "-");
     if (!resolveAgent(profile)) errors.push(`profile '${profile}' 无效`);
     if (!slug.match(/^[a-z0-9-]+$/)) errors.push(`slug '${slug}' 只能含小写/数字/连字符`);
@@ -482,6 +499,7 @@ if (!c0 || c0 === "-h" || c0 === "--help") {
   listAgents();
 } else if (c0 === "--check") {
   checkHealthParser();
+  checkTaskComposition();
   prepareEnv(config.exclude ?? []);
   console.log("健康门签名自检通过");
   console.log(`派生 settings.json 就绪: ${join(homedir(), ".pi", "agent-subagent", "settings.json")}`);
