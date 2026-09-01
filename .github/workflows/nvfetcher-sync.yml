@@ -20,7 +20,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: main
+          ref: test/nvfetcher-action-e2e
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
@@ -36,7 +36,7 @@ jobs:
             _sources/generated.json
             _sources/generated.nix
           branch: automation/nvfetcher-sync
-          base: main
+          base: test/nvfetcher-action-e2e
           delete-branch: true
           commit-message: "chore(nvfetcher): sync _sources generated files"
           title: "chore(nvfetcher): sync _sources generated files"

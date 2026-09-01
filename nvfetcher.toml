@@ -59,3 +59,7 @@ fetch.github = "yazi-rs/plugins"
 src.git      = "https://github.com/MasouShizuka/projects.yazi"
 src.branch   = "main"
 fetch.github = "MasouShizuka/projects.yazi"
+
+[nvfetcher-action-e2e-one]
+src.github_tag = "DinkDonk/kitty-icon"
+fetch.github   = "DinkDonk/kitty-icon"
