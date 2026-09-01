@@ -188,6 +188,48 @@
         },
         "version": "v1.2.3"
     },
+    "nvfetcher-action-e2e-one": {
+        "cargoLock": null,
+        "date": null,
+        "extract": null,
+        "name": "nvfetcher-action-e2e-one",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "DinkDonk",
+            "repo": "kitty-icon",
+            "rev": "v1.1.0",
+            "sha256": "sha256-q5wNdFRMvQDx3DlO7zdy/xPJbqcNlm4iVKaBwjxlSMs=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "v1.1.0"
+    },
+    "nvfetcher-action-e2e-two": {
+        "cargoLock": null,
+        "date": null,
+        "extract": null,
+        "name": "nvfetcher-action-e2e-two",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "mattpocock",
+            "repo": "skills",
+            "rev": "v1.2.3",
+            "sha256": "sha256-I/EXHGW92nXz6JCLp8SKGgzXrbbUTkLAfxv8bc/ThwQ=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "v1.2.3"
+    },
     "projects-yazi": {
         "cargoLock": null,
         "date": "2026-07-11",
