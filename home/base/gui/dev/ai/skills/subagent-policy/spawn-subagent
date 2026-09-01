@@ -12,8 +12,19 @@ import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
-const agentsDir = join(homedir(), ".pi", "agent", "agents");
-const config = JSON.parse(readFileSync(join(scriptDir, "subagent-config.json"), "utf8"));
+const agentDir = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
+const subagentDir = join(dirname(agentDir), `${basename(agentDir)}-subagent`);
+const agentsDir = join(agentDir, "agents");
+
+function loadSubagentConfig(): any {
+  const primary = join(agentDir, "subagent-config.json");
+  if (existsSync(primary)) return JSON.parse(readFileSync(primary, "utf8"));
+  const fallback = join(scriptDir, "subagent-config.json");
+  if (existsSync(fallback)) return JSON.parse(readFileSync(fallback, "utf8"));
+  throw new Error(`未找到 subagent-config.json（搜索路径: ${primary}, ${fallback}）`);
+}
+
+const config = loadSubagentConfig();
 const AGENT_FIELDS = ["description", "model", "thinking", "tools"];
 
 type Agent = {
@@ -71,18 +82,21 @@ function usage() {
   console.log(`spawn-subagent - 在 Herdr 窗格中启动/关闭 pi 子代理
 
 用法:
-  spawn-subagent <profile> <slug> -- <task>   启动单个子代理，输出 pane ID
-  spawn-subagent batch <manifest.json>        按 manifest 文件并发编排多个子代理（task 可共享可独立）
-  spawn-subagent resume <pane-id> -- <task>   复用已有 agent pane，注入新任务（不重启）
-  spawn-subagent list                         列出所有 agent(name/model/thinking/tools/描述)
-  spawn-subagent --check                      派生 settings + 打印所有 agent 生效值，不启动
-  spawn-subagent close <pane-id>              关闭子代理 pane 并聚焦回主 pane
-  spawn-subagent -h | --help                  显示本帮助
+  spawn-subagent <profile> <slug> [-s|--sandvault] -- <task>   启动单个子代理，输出 pane ID
+  spawn-subagent batch <manifest.json>                         按 manifest 文件并发编排多个子代理（task 可共享可独立）
+  spawn-subagent resume <pane-id> -- <task>                    复用已有 agent pane，注入新任务（不重启）
+  spawn-subagent list                                          列出所有 agent(name/model/thinking/tools/描述)
+  spawn-subagent --check                                       派生 settings + 打印所有 agent 生效值，不启动
+  spawn-subagent close <pane-id>                               关闭子代理 pane 并聚焦回主 pane
+  spawn-subagent -h | --help                                   显示本帮助
 
 命令选择:
   单个 agent → 单发；并发多个 agent（不论任务是否相同）→ batch，禁止循环单发
 
-profile: 对应 ~/.pi/agent/agents/<profile>.md（文件名匹配大小写不敏感，agent 名统一小写）；
+选项:
+  -s, --sandvault   在 SandVault 沙盒中派发子代理（默认在宿主环境）
+
+profile: 对应 agents/<profile>.md（文件名匹配大小写不敏感，agent 名统一小写）；
          frontmatter 的 model/thinking/tools 为唯一真相源，缺字段时回退 subagent-config.json。
          插件排除由 subagent-config.json 的 exclude 全局统一，md 不支持单独声明。
 slug:    任务语义标识（小写字母/数字/连字符；agent 名 profile-slug-时间戳上限 32，
@@ -102,10 +116,11 @@ task:    子代理任务描述，支持多行；结论经 intercom 回传，不�
 manifest (batch，文件路径，不支持内联 JSON 或 stdin):
   {
     "task": "共享任务全文",
+    "sandvault": false,
     "agents": [
       "reviewer-ds",
       { "profile": "reviewer-glm", "slug": "glm" },
-      { "profile": "reviewer-gemini", "slug": "gem", "task": "可选：覆盖共享 task" }
+      { "profile": "reviewer-gemini", "slug": "gem", "task": "可选：覆盖共享 task", "sandvault": true }
     ]
   }
   agents 为字符串时 slug 自动取 profile 去掉 reviewer- 前缀。
@@ -113,6 +128,7 @@ manifest (batch，文件路径，不支持内联 JSON 或 stdin):
 
 示例:
   spawn-subagent reviewer-ds review-auth -- "审查 src/auth 的安全问题"
+  spawn-subagent reviewer-ds review-auth --sandvault -- "在沙盒中审查 src/auth 的安全问题"
   spawn-subagent resume w1A:p3 -- "继续检查测试覆盖"
   cat > /tmp/manifest.json <<'EOF'
   { "task": "审查 flake.nix 顶层结构", "agents": ["reviewer-ds", "reviewer-glm"] }
@@ -135,16 +151,26 @@ function listAgents() {
   }
 }
 
-// 子代理环境: ~/.pi/agent-subagent 只隔离 settings/sessions/tmp, 其余链接回主目录;
+function getSandvaultPaths(): { agentDir: string; subagentDir: string } {
+  const user = process.env.USER || homedir().split("/").pop() || "shelken";
+  const base = `/Users/Shared/sv-${user}/user/.pi`;
+  const svAgentDir = join(base, "agent");
+  const svSubagentDir = join(base, "agent-subagent");
+  return { agentDir: svAgentDir, subagentDir: svSubagentDir };
+}
+
+// 子代理环境: agent-subagent 只隔离 settings/sessions/tmp, 其余链接回主目录;
 // packages 里命中 exclude 的包加 "-" 前缀禁用。
-function prepareEnv(exclude: string[]) {
-  const main = join(homedir(), ".pi", "agent");
-  const sub = join(homedir(), ".pi", "agent-subagent");
-  mkdirSync(join(sub, "sessions"), { recursive: true });
-  mkdirSync(join(sub, "tmp"), { recursive: true });
-  for (const ent of readdirSync(main)) {
+function prepareEnv(
+  exclude: string[],
+  baseAgentDir: string = agentDir,
+  baseSubagentDir: string = subagentDir,
+) {
+  mkdirSync(join(baseSubagentDir, "sessions"), { recursive: true });
+  mkdirSync(join(baseSubagentDir, "tmp"), { recursive: true });
+  for (const ent of readdirSync(baseAgentDir)) {
     if (["settings.json", "sessions", "tmp"].includes(ent)) continue;
-    const src = join(main, ent), dst = join(sub, ent);
+    const src = join(baseAgentDir, ent), dst = join(baseSubagentDir, ent);
     try { rmSync(dst, { recursive: true, force: true }); } catch { /* 首次无 dst */ }
     symlinkSync(src, dst, lstatSync(src).isDirectory() ? "dir" : "file");
   }
@@ -155,25 +181,29 @@ function prepareEnv(exclude: string[]) {
     const bare = s.includes(":") && !s.startsWith("/") ? s.split(":").slice(1).join(":") : s;
     return bare.split("/").filter(Boolean).at(-1) ?? null;
   };
-  const settings = JSON.parse(readFileSync(join(main, "settings.json"), "utf8"));
-  settings.packages = settings.packages.map((p: any) => {
-    const name = pkgName(p);
-    if (name && exclude.includes(name)) {
-      if (p && typeof p === "object") {
-        const src = String(p.source);
-        return src.startsWith("-") ? p : { ...p, source: "-" + src };
+  const settings = JSON.parse(readFileSync(join(baseAgentDir, "settings.json"), "utf8"));
+  if (Array.isArray(settings.packages)) {
+    settings.packages = settings.packages.map((p: any) => {
+      const name = pkgName(p);
+      if (name && exclude.includes(name)) {
+        if (p && typeof p === "object") {
+          const src = String(p.source);
+          return src.startsWith("-") ? p : { ...p, source: "-" + src };
+        }
+        if (typeof p === "string" && !p.startsWith("-")) return "-" + p;
       }
-      if (typeof p === "string" && !p.startsWith("-")) return "-" + p;
-    }
-    return p;
-  });
-  writeFileSync(join(sub, "settings.json"), JSON.stringify(settings, null, 2) + "\n");
+      return p;
+    });
+  }
+  writeFileSync(join(baseSubagentDir, "settings.json"), JSON.stringify(settings, null, 2) + "\n");
 }
 
 // 布局: 首个右侧分列(55%), 后续右列内向下堆叠并均分等高
 function layoutPane(mainPane: string): string {
   const layout = herdr(["pane", "layout", "--pane", mainPane]).result.layout;
-  const mainX = layout.panes.find((p: any) => p.pane_id === mainPane).rect.x;
+  const main = layout.panes.find((p: any) => p.pane_id === mainPane);
+  if (!main) throw new Error(`主窗格 '${mainPane}' 未在布局中找到`);
+  const mainX = main.rect.x;
   const right = layout.panes
     .filter((p: any) => p.rect.x > mainX)
     .sort((a: any, b: any) => a.rect.y - b.rect.y);
@@ -303,7 +333,7 @@ type Launched = {
 };
 
 // 阶段一（同步串行）：布局 + 环境 + 启动 + 注入。返回派发信息，不等待模型响应
-function launchAgent(profile: string, slug: string, task: string): Launched {
+function launchAgent(profile: string, slug: string, task: string, sandvault: boolean = false): Launched {
   const g = resolveAgent(profile);
   if (!g) throw new Error(`profile '${profile}' 无法解析（agents 目录无对应 md，或缺少 model/thinking/tools 字段）`);
   if (!slug.match(/^[a-z0-9-]+$/)) throw new Error(`slug 只能含小写字母/数字/连字符: '${slug}'`);
@@ -323,20 +353,26 @@ function launchAgent(profile: string, slug: string, task: string): Launched {
   }
   if (agentName.length > 32) throw new Error(`无法构造 32 字符内的 agent 名（profile='${profile}' slug='${slug}'）`);
 
-  // 会话文件定位：从 herdr agent start 返回的 agent_session.value 提取 sessions/ 相对路径
-  // value 形如 ~/.pi/agent/sessions/--cwd--/ts.jsonl；子代理实际写入 ~/.pi/agent-subagent/sessions/ 同相对段
-  const agentsDir = homedir() + "/.pi/agent-subagent";
+  const targetAgentDir = sandvault ? getSandvaultPaths().agentDir : agentDir;
+  const targetSubagentDir = sandvault ? getSandvaultPaths().subagentDir : subagentDir;
+  if (!existsSync(targetAgentDir)) {
+    throw new Error(`代理目录不存在: ${targetAgentDir}`);
+  }
+
   let sessionFile: string | null = null;
 
   const newPane = layoutPane(mainPane);
   try {
-    prepareEnv(g.exclude);
-    execFileSync("herdr", ["pane", "run", newPane, `export PI_CODING_AGENT_DIR=${homedir()}/.pi/agent-subagent`]);
+    prepareEnv(g.exclude, targetAgentDir, targetSubagentDir);
+    if (sandvault) {
+      execFileSync("herdr", ["pane", "run", newPane, "sv shell"]);
+    }
+    execFileSync("herdr", ["pane", "run", newPane, `export PI_CODING_AGENT_DIR=${targetSubagentDir}`]);
     const startOut = herdr(["agent", "start", agentName, "--kind", "pi", "--pane", newPane, "--", "--model", g.model, "--thinking", g.thinking, "--tools", g.tools]);
     const sf = startOut?.result?.agent?.agent_session?.value;
     if (typeof sf === "string") {
       const m = sf.match(/(sessions\/--[^/]+\/[^/]+\.jsonl)/);
-      if (m) sessionFile = agentsDir + "/" + m[1];
+      if (m) sessionFile = targetSubagentDir + "/" + m[1];
     }
   } catch (e: any) {
     try { execFileSync("herdr", ["pane", "close", newPane]); } catch { /* 已关闭 */ }
@@ -395,9 +431,9 @@ async function gateAgent(l: Launched, timeoutMs: number): Promise<DispatchResult
   return { profile: l.profile, pane: l.pane, agentName: l.agentName, healthy: true };
 }
 
-async function spawn(profile: string, slug: string, task: string) {
+async function spawn(profile: string, slug: string, task: string, sandvault: boolean = false) {
   try {
-    const r = await gateAgent(launchAgent(profile, slug, task), 45000);
+    const r = await gateAgent(launchAgent(profile, slug, task, sandvault), 45000);
     if (!r.healthy) {
       console.error(`spawn-subagent: 模型失效（${r.reason}）`);
       process.exit(1);
@@ -406,6 +442,26 @@ async function spawn(profile: string, slug: string, task: string) {
   } catch (e: any) {
     console.error("spawn-subagent: 启动失败:", String(e.message ?? e));
     process.exit(1);
+  }
+}
+
+// ---------- 任务组合 ----------
+
+function composeTask(sharedTask: string, agentTask: string | undefined): string {
+  if (!sharedTask) return agentTask ?? "";
+  if (!agentTask) return sharedTask;
+  return `${sharedTask}\n\n专项任务:\n---\n${agentTask}`;
+}
+
+function checkTaskComposition() {
+  if (composeTask("共享背景", "专项分工") !== "共享背景\n\n专项任务:\n---\n专项分工") {
+    throw new Error("任务组合自检失败: 共享背景与专项任务未正确组合");
+  }
+  if (composeTask("共享背景", undefined) !== "共享背景") {
+    throw new Error("任务组合自检失败: 仅共享任务时内容发生变化");
+  }
+  if (composeTask("", "专项分工") !== "专项分工") {
+    throw new Error("任务组合自检失败: 仅专项任务时内容发生变化");
   }
 }
 
@@ -420,25 +476,29 @@ async function batch(manifestPath: string) {
     process.exit(1);
   }
   const sharedTask = manifest.task ?? "";
+  const defaultSandvault = Boolean(manifest.sandvault);
   const rawAgents = manifest.agents;
   if (!Array.isArray(rawAgents) || rawAgents.length === 0) {
     console.error("spawn-subagent: manifest 需要非空 agents 数组");
     process.exit(1);
   }
 
-  // 校验先行：展开 agents 为 {profile, slug, task}，任一无效整体拒绝（零 token）
-  const entries: { profile: string; slug: string; task: string }[] = [];
+  // 校验先行：展开 agents 为 {profile, slug, task, sandvault}，任一无效整体拒绝（零 token）
+  const entries: { profile: string; slug: string; task: string; sandvault: boolean }[] = [];
   const errors: string[] = [];
   for (const a of rawAgents) {
     const profile = typeof a === "string" ? a : a?.profile;
     if (!profile) { errors.push("缺少 profile"); continue; }
     const slugRaw = typeof a === "string" ? undefined : a?.slug;
-    const task = typeof a === "string" ? sharedTask : (a?.task ?? sharedTask);
+    const task = typeof a === "string" ? composeTask(sharedTask, undefined) : composeTask(sharedTask, a?.task);
+    const sandvault = typeof a === "object" && a !== null && typeof a.sandvault === "boolean"
+      ? a.sandvault
+      : defaultSandvault;
     const slug = slugRaw ?? profile.replace(/^reviewer-/i, "").replace(/[^a-z0-9-]/gi, "-");
     if (!resolveAgent(profile)) errors.push(`profile '${profile}' 无效`);
     if (!slug.match(/^[a-z0-9-]+$/)) errors.push(`slug '${slug}' 只能含小写/数字/连字符`);
     if (!task.trim()) errors.push(`profile '${profile}' 的 task 为空`);
-    entries.push({ profile, slug, task });
+    entries.push({ profile, slug, task, sandvault });
   }
   if (errors.length) {
     console.error(`spawn-subagent: manifest 校验失败（未派发任何 agent）:`);
@@ -448,10 +508,10 @@ async function batch(manifestPath: string) {
 
   // 两阶段：串行 launchAgent（布局是累积操作必须串行），再并发健康门（互不阻塞）
   console.log(`spawn-subagent: 派发 ${entries.length} 个 agent...`);
-  const launched: { entry: { profile: string; slug: string; task: string }; result: Launched | null; error?: string }[] = [];
+  const launched: { entry: { profile: string; slug: string; task: string; sandvault: boolean }; result: Launched | null; error?: string }[] = [];
   for (const entry of entries) {
     try {
-      launched.push({ entry, result: launchAgent(entry.profile, entry.slug, entry.task) });
+      launched.push({ entry, result: launchAgent(entry.profile, entry.slug, entry.task, entry.sandvault) });
     } catch (e: any) {
       launched.push({ entry, result: null, error: String(e.message ?? e) });
     }
@@ -469,10 +529,13 @@ async function batch(manifestPath: string) {
 }
 
 // ---------- main ----------
-const [c0, c1, ...rest] = process.argv.slice(2);
+const rawArgs = process.argv.slice(2);
+const c0 = rawArgs[0];
+
 if (!c0 || c0 === "-h" || c0 === "--help") {
   usage();
 } else if (c0 === "batch") {
+  const c1 = rawArgs[1];
   if (!c1) {
     console.error("spawn-subagent: batch 需要 manifest 文件路径");
     process.exit(1);
@@ -482,12 +545,19 @@ if (!c0 || c0 === "-h" || c0 === "--help") {
   listAgents();
 } else if (c0 === "--check") {
   checkHealthParser();
+  checkTaskComposition();
   prepareEnv(config.exclude ?? []);
   console.log("健康门签名自检通过");
-  console.log(`派生 settings.json 就绪: ${join(homedir(), ".pi", "agent-subagent", "settings.json")}`);
+  console.log(`宿主派生 settings.json 就绪: ${join(subagentDir, "settings.json")}`);
+  const svPaths = getSandvaultPaths();
+  if (existsSync(svPaths.agentDir)) {
+    prepareEnv(config.exclude ?? [], svPaths.agentDir, svPaths.subagentDir);
+    console.log(`沙盒派生 settings.json 就绪: ${join(svPaths.subagentDir, "settings.json")}`);
+  }
   console.log(`全局排除 exclude(subagent-config.json 统一生效): ${JSON.stringify(config.exclude ?? [])}\n`);
   listAgents();
 } else if (c0 === "close") {
+  const c1 = rawArgs[1];
   if (!c1) {
     console.error("spawn-subagent: close 需要 pane-id 参数");
     process.exit(1);
@@ -501,19 +571,26 @@ if (!c0 || c0 === "-h" || c0 === "--help") {
     process.exit(1);
   }
 } else if (c0 === "resume") {
-  const sep = process.argv.indexOf("--");
-  const task = sep >= 0 ? process.argv.slice(sep + 1).join(" ") : rest.join(" ");
+  const c1 = rawArgs[1];
+  const sep = rawArgs.indexOf("--");
+  const task = sep >= 0 ? rawArgs.slice(sep + 1).join(" ") : rawArgs.slice(2).join(" ");
   if (!c1 || !task.trim()) {
     usage();
     process.exit(1);
   }
   resume(c1, task);
 } else {
-  const sep = process.argv.indexOf("--");
-  const task = sep >= 0 ? process.argv.slice(sep + 1).join(" ") : rest.join(" ");
-  if (!c1 || !task.trim()) {
+  const sep = rawArgs.indexOf("--");
+  const beforeSep = sep >= 0 ? rawArgs.slice(0, sep) : rawArgs;
+  const task = sep >= 0 ? rawArgs.slice(sep + 1).join(" ") : "";
+
+  const sandvault = beforeSep.includes("-s") || beforeSep.includes("--sandvault");
+  const posArgs = beforeSep.filter((a) => a !== "-s" && a !== "--sandvault");
+
+  const [profile, slug] = posArgs;
+  if (!profile || !slug || !task.trim()) {
     usage();
     process.exit(1);
   }
-  await spawn(c0, c1, task);
+  await spawn(profile, slug, task, sandvault);
 }
