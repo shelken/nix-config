@@ -7,9 +7,10 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-main
   cancel-in-progress: true
 
 jobs:
@@ -17,24 +18,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.ref_name }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
+          ref: main
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v16
-
-      - name: Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@v9
+        uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
 
       - name: Run nvfetcher
         run: |
           nix develop --command nvfetcher -c nvfetcher.toml -o _sources
 
-      - name: Commit and push changes
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          commit_message: "chore(nvfetcher): sync _sources generated files"
-          file_pattern: "_sources/*"
+          add-paths: |
+            _sources/generated.json
+            _sources/generated.nix
+          branch: automation/nvfetcher-sync
+          base: main
+          delete-branch: true
+          commit-message: "chore(nvfetcher): sync _sources generated files"
+          title: "chore(nvfetcher): sync _sources generated files"
+          body: "Automated synchronization of nvfetcher sources."
