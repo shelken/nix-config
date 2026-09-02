@@ -6,6 +6,5 @@
   shelken = {
     secrets.enable = true;
     wm.aerospace.enable = true;
-    dev.minikube.enable = true;
   };
 }
