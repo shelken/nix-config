@@ -33,9 +33,9 @@ src.branch   = "main"
 fetch.github = "humanlayer/skills"
 
 [llamaparse-agent-skills]
-src.git      = "https://github.com/run-llama/llamaparse-agent-skills"
-src.branch   = "main"
-fetch.github = "run-llama/llamaparse-agent-skills"
+src.github_tag    = "run-llama/llamaparse-agent-skills"
+src.include_regex = "liteparse-.*"
+fetch.github      = "run-llama/llamaparse-agent-skills"
 
 [mattpocock-skills]
 src.github_tag = "mattpocock/skills"
