@@ -122,17 +122,6 @@
       sha256 = "sha256-q5wNdFRMvQDx3DlO7zdy/xPJbqcNlm4iVKaBwjxlSMs=";
     };
   };
-  nvfetcher-action-e2e-two = {
-    pname = "nvfetcher-action-e2e-two";
-    version = "v1.2.3";
-    src = fetchFromGitHub {
-      owner = "mattpocock";
-      repo = "skills";
-      rev = "v1.2.3";
-      fetchSubmodules = false;
-      sha256 = "sha256-I/EXHGW92nXz6JCLp8SKGgzXrbbUTkLAfxv8bc/ThwQ=";
-    };
-  };
   projects-yazi = {
     pname = "projects-yazi";
     version = "22a4006f531b7c8e71704f64e48feed659164104";
