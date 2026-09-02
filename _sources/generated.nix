@@ -111,17 +111,6 @@
       sha256 = "sha256-I/EXHGW92nXz6JCLp8SKGgzXrbbUTkLAfxv8bc/ThwQ=";
     };
   };
-  nvfetcher-action-e2e-one = {
-    pname = "nvfetcher-action-e2e-one";
-    version = "v1.1.0";
-    src = fetchFromGitHub {
-      owner = "DinkDonk";
-      repo = "kitty-icon";
-      rev = "v1.1.0";
-      fetchSubmodules = false;
-      sha256 = "sha256-q5wNdFRMvQDx3DlO7zdy/xPJbqcNlm4iVKaBwjxlSMs=";
-    };
-  };
   nvfetcher-action-e2e-two = {
     pname = "nvfetcher-action-e2e-two";
     version = "v1.2.3";
