@@ -32,13 +32,13 @@
   };
   anti-slop = {
     pname = "anti-slop";
-    version = "6d538555cb151d4121ed51a27db81890eacf8ae9";
+    version = "v0.1.2";
     src = fetchFromGitHub {
       owner = "dmmulroy";
       repo = "anti-slop";
-      rev = "6d538555cb151d4121ed51a27db81890eacf8ae9";
+      rev = "v0.1.2";
       fetchSubmodules = false;
-      sha256 = "sha256-4Yf/8+UqJ9iCqQd/zT3z8e1Z/0rX2Q7+r8s9t0u1v2w=";
+      sha256 = "sha256-K+nxeaH2h33Ixjn5HbFTw2n2d+s12SpKbVP90tkyj9A=";
     };
   };
   ast-grep-agent-skill = {
@@ -55,15 +55,15 @@
   };
   cursor-plugins = {
     pname = "cursor-plugins";
-    version = "b9ddc83c32972210b8a94d389130713e8eed346e";
+    version = "23a56e2dac2efd54788056db8eced26e371d7b5e";
     src = fetchFromGitHub {
       owner = "cursor";
       repo = "plugins";
-      rev = "b9ddc83c32972210b8a94d389130713e8eed346e";
+      rev = "23a56e2dac2efd54788056db8eced26e371d7b5e";
       fetchSubmodules = false;
-      sha256 = "sha256-JAbkPR/pWmv0Qn5Pxa4ctcjrUuUiHS1tcchTD9oLXnQ=";
+      sha256 = "sha256-9Qkq1QUBH6qT+etNasuQTDYfmdG0LFcBFQ7Nyg1G88Q=";
     };
-    date = "2026-08-31";
+    date = "2026-09-01";
   };
   humanlayer-skills = {
     pname = "humanlayer-skills";
@@ -135,15 +135,15 @@
   };
   yazi-plugins = {
     pname = "yazi-plugins";
-    version = "c591a36e7263e95497715d525e9c46c2f0a880ac";
+    version = "4dc7f1b6458c2578f4494f10d468c68c1082214f";
     src = fetchFromGitHub {
       owner = "yazi-rs";
       repo = "plugins";
-      rev = "c591a36e7263e95497715d525e9c46c2f0a880ac";
+      rev = "4dc7f1b6458c2578f4494f10d468c68c1082214f";
       fetchSubmodules = false;
-      sha256 = "sha256-mWT0yF2iG9+gYEuNiffpM93POlBqY+QKdFh5jSAxYls=";
+      sha256 = "sha256-BSAOkL4H4LVMbTRFv4kzGGRpLgtKkfNTEsDH2EQ219Q=";
     };
-    date = "2026-08-25";
+    date = "2026-09-02";
   };
   zjstatus = {
     pname = "zjstatus";
