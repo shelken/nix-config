@@ -32,13 +32,13 @@
   };
   anti-slop = {
     pname = "anti-slop";
-    version = "6d538555cb151d4121ed51a27db81890eacf8ae9";
+    version = "v0.1.2";
     src = fetchFromGitHub {
       owner = "dmmulroy";
       repo = "anti-slop";
-      rev = "6d538555cb151d4121ed51a27db81890eacf8ae9";
+      rev = "v0.1.2";
       fetchSubmodules = false;
-      sha256 = "sha256-4Yf/8+UqJ9iCqQd/zT3z8e1Z/0rX2Q7+r8s9t0u1v2w=";
+      sha256 = "sha256-K+nxeaH2h33Ixjn5HbFTw2n2d+s12SpKbVP90tkyj9A=";
     };
   };
   ast-grep-agent-skill = {
