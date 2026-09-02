@@ -32,13 +32,13 @@
   };
   anti-slop = {
     pname = "anti-slop";
-    version = "6d538555cb151d4121ed51a27db81890eacf8ae9";
+    version = "v0.1.2";
     src = fetchFromGitHub {
       owner = "dmmulroy";
       repo = "anti-slop";
-      rev = "6d538555cb151d4121ed51a27db81890eacf8ae9";
+      rev = "v0.1.2";
       fetchSubmodules = false;
-      sha256 = "sha256-4Yf/8+UqJ9iCqQd/zT3z8e1Z/0rX2Q7+r8s9t0u1v2w=";
+      sha256 = "sha256-K+nxeaH2h33Ixjn5HbFTw2n2d+s12SpKbVP90tkyj9A=";
     };
   };
   ast-grep-agent-skill = {
@@ -90,17 +90,40 @@
   };
   llamaparse-agent-skills = {
     pname = "llamaparse-agent-skills";
-    version = "liteparse-1.0.1";
+    version = "2dcef7c62417bd2ec4671fce4621bb1e8cce48d0";
     src = fetchFromGitHub {
       owner = "run-llama";
       repo = "llamaparse-agent-skills";
-      rev = "liteparse-1.0.1";
+      rev = "2dcef7c62417bd2ec4671fce4621bb1e8cce48d0";
       fetchSubmodules = false;
-      sha256 = "sha256-BGZyNJXJ1Yt/k4jm+CEwRwqcTSBAb+pG7yGxqoK35tI=";
+      sha256 = "sha256-KzYcArVClk1mUBYLM/EmU3+rKzAHtpHRLAFVY1LbtKQ=";
     };
+    date = "2026-07-03";
   };
   mattpocock-skills = {
     pname = "mattpocock-skills";
+    version = "v1.2.3";
+    src = fetchFromGitHub {
+      owner = "mattpocock";
+      repo = "skills";
+      rev = "v1.2.3";
+      fetchSubmodules = false;
+      sha256 = "sha256-I/EXHGW92nXz6JCLp8SKGgzXrbbUTkLAfxv8bc/ThwQ=";
+    };
+  };
+  nvfetcher-action-e2e-one = {
+    pname = "nvfetcher-action-e2e-one";
+    version = "v1.1.0";
+    src = fetchFromGitHub {
+      owner = "DinkDonk";
+      repo = "kitty-icon";
+      rev = "v1.1.0";
+      fetchSubmodules = false;
+      sha256 = "sha256-q5wNdFRMvQDx3DlO7zdy/xPJbqcNlm4iVKaBwjxlSMs=";
+    };
+  };
+  nvfetcher-action-e2e-two = {
+    pname = "nvfetcher-action-e2e-two";
     version = "v1.2.3";
     src = fetchFromGitHub {
       owner = "mattpocock";

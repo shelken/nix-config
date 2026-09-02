@@ -55,12 +55,12 @@
             "name": null,
             "owner": "dmmulroy",
             "repo": "anti-slop",
-            "rev": "6d538555cb151d4121ed51a27db81890eacf8ae9",
-            "sha256": "sha256-4Yf/8+UqJ9iCqQd/zT3z8e1Z/0rX2Q7+r8s9t0u1v2w=",
+            "rev": "v0.1.2",
+            "sha256": "sha256-K+nxeaH2h33Ixjn5HbFTw2n2d+s12SpKbVP90tkyj9A=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "6d538555cb151d4121ed51a27db81890eacf8ae9"
+        "version": "v0.1.2"
     },
     "ast-grep-agent-skill": {
         "cargoLock": null,
@@ -148,7 +148,7 @@
     },
     "llamaparse-agent-skills": {
         "cargoLock": null,
-        "date": null,
+        "date": "2026-07-03",
         "extract": null,
         "name": "llamaparse-agent-skills",
         "passthru": null,
@@ -160,18 +160,60 @@
             "name": null,
             "owner": "run-llama",
             "repo": "llamaparse-agent-skills",
-            "rev": "liteparse-1.0.1",
-            "sha256": "sha256-BGZyNJXJ1Yt/k4jm+CEwRwqcTSBAb+pG7yGxqoK35tI=",
+            "rev": "2dcef7c62417bd2ec4671fce4621bb1e8cce48d0",
+            "sha256": "sha256-KzYcArVClk1mUBYLM/EmU3+rKzAHtpHRLAFVY1LbtKQ=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "liteparse-1.0.1"
+        "version": "2dcef7c62417bd2ec4671fce4621bb1e8cce48d0"
     },
     "mattpocock-skills": {
         "cargoLock": null,
         "date": null,
         "extract": null,
         "name": "mattpocock-skills",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "mattpocock",
+            "repo": "skills",
+            "rev": "v1.2.3",
+            "sha256": "sha256-I/EXHGW92nXz6JCLp8SKGgzXrbbUTkLAfxv8bc/ThwQ=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "v1.2.3"
+    },
+    "nvfetcher-action-e2e-one": {
+        "cargoLock": null,
+        "date": null,
+        "extract": null,
+        "name": "nvfetcher-action-e2e-one",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "DinkDonk",
+            "repo": "kitty-icon",
+            "rev": "v1.1.0",
+            "sha256": "sha256-q5wNdFRMvQDx3DlO7zdy/xPJbqcNlm4iVKaBwjxlSMs=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "v1.1.0"
+    },
+    "nvfetcher-action-e2e-two": {
+        "cargoLock": null,
+        "date": null,
+        "extract": null,
+        "name": "nvfetcher-action-e2e-two",
         "passthru": null,
         "pinned": false,
         "src": {
