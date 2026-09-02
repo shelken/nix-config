@@ -90,15 +90,14 @@
   };
   llamaparse-agent-skills = {
     pname = "llamaparse-agent-skills";
-    version = "2dcef7c62417bd2ec4671fce4621bb1e8cce48d0";
+    version = "liteparse-1.0.1";
     src = fetchFromGitHub {
       owner = "run-llama";
       repo = "llamaparse-agent-skills";
-      rev = "2dcef7c62417bd2ec4671fce4621bb1e8cce48d0";
+      rev = "liteparse-1.0.1";
       fetchSubmodules = false;
-      sha256 = "sha256-KzYcArVClk1mUBYLM/EmU3+rKzAHtpHRLAFVY1LbtKQ=";
+      sha256 = "sha256-BGZyNJXJ1Yt/k4jm+CEwRwqcTSBAb+pG7yGxqoK35tI=";
     };
-    date = "2026-07-03";
   };
   mattpocock-skills = {
     pname = "mattpocock-skills";

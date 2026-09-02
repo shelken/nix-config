@@ -148,7 +148,7 @@
     },
     "llamaparse-agent-skills": {
         "cargoLock": null,
-        "date": "2026-07-03",
+        "date": null,
         "extract": null,
         "name": "llamaparse-agent-skills",
         "passthru": null,
@@ -160,12 +160,12 @@
             "name": null,
             "owner": "run-llama",
             "repo": "llamaparse-agent-skills",
-            "rev": "2dcef7c62417bd2ec4671fce4621bb1e8cce48d0",
-            "sha256": "sha256-KzYcArVClk1mUBYLM/EmU3+rKzAHtpHRLAFVY1LbtKQ=",
+            "rev": "liteparse-1.0.1",
+            "sha256": "sha256-BGZyNJXJ1Yt/k4jm+CEwRwqcTSBAb+pG7yGxqoK35tI=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "2dcef7c62417bd2ec4671fce4621bb1e8cce48d0"
+        "version": "liteparse-1.0.1"
     },
     "mattpocock-skills": {
         "cargoLock": null,
