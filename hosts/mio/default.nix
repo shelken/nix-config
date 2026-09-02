@@ -23,6 +23,7 @@ in
     dev.container.enable = true; # docker/orbstack
     dev.ai.enable = true;
     dev.ide.enable = true;
+    dev.xcode.enable = true;
     dev.dbclient.enable = true;
 
     # tools
