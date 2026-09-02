@@ -32,6 +32,7 @@ jobs:
       - name: Run nvfetcher
         run: |
           nix develop --command nvfetcher -c nvfetcher.toml -o _sources
+          cp _sources/generated.json /tmp/nvfetcher-head.json
 
       - name: Create pull request
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
@@ -64,5 +65,5 @@ jobs:
         run: |
           python3 scripts/renovate-skill-diff.py \
             --base-file /tmp/nvfetcher-base.json \
-            --head-file _sources/generated.json \
+            --head-file /tmp/nvfetcher-head.json \
             --pull-request "${{ steps.automation_pull_request.outputs.number }}"

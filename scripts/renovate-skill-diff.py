@@ -59,8 +59,11 @@ def github_json(
 
 def compare_files(owner: str, repo: str, base: str, head: str, token: str | None) -> list[dict]:
     url = f"https://api.github.com/repos/{owner}/{repo}/compare/{base}...{head}"
-    response = github_json("GET", url, token=token)
-    return response["files"]
+    try:
+        response = github_json("GET", url, token=token)
+        return response.get("files", []) if isinstance(response, dict) else []
+    except urllib.error.URLError:
+        return []
 
 
 def relevant_file(filename: str) -> bool:
