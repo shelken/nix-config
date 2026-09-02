@@ -18,6 +18,7 @@
     # dev.ai.claudePreset = "anti-tools";
 
     dev.go.enable = true;
+    dev.mise.enable = true;
     dev.cloud-native.enable = true;
 
     secrets.enable = true;
