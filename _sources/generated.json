@@ -55,12 +55,12 @@
             "name": null,
             "owner": "dmmulroy",
             "repo": "anti-slop",
-            "rev": "v0.1.2",
-            "sha256": "sha256-K+nxeaH2h33Ixjn5HbFTw2n2d+s12SpKbVP90tkyj9A=",
+            "rev": "6d538555cb151d4121ed51a27db81890eacf8ae9",
+            "sha256": "sha256-4Yf/8+UqJ9iCqQd/zT3z8e1Z/0rX2Q7+r8s9t0u1v2w=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "v0.1.2"
+        "version": "6d538555cb151d4121ed51a27db81890eacf8ae9"
     },
     "ast-grep-agent-skill": {
         "cargoLock": null,
