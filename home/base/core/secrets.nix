@@ -152,6 +152,17 @@ in
   config = mkIf cfg.enable {
     sops.secrets = mylib.mkSopsSecrets enabledSecrets;
 
+    sops.templates."gh-hosts.yml" = {
+      path = "${config.home.homeDirectory}/.config/gh/hosts.yml";
+      content = ''
+        github.com:
+            user: ${config.home.username}
+            oauth_token: ${config.sops.placeholder."github/cli-token"}
+            git_protocol: ssh
+      '';
+      mode = "0600";
+    };
+
     home.packages = [
       secRun
       secEnv
