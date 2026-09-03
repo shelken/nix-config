@@ -1,0 +1,45 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:recommended", ":dependencyDashboard"],
+  timezone: "Asia/Shanghai",
+  schedule: ["before 4am"],
+  labels: ["dependencies", "renovate"],
+  commitMessagePrefix: "chore(deps):",
+  commitMessageAction: "update",
+  rebaseWhen: "conflicted",
+  prConcurrentLimit: 10,
+  prHourlyLimit: 0,
+
+  nix: {
+    enabled: true,
+  },
+
+  packageRules: [
+    {
+      matchManagers: ["github-actions"],
+      pinDigests: true,
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: true,
+      groupName: "GitHub Actions Dependencies",
+    },
+    {
+      matchManagers: ["nix"],
+      matchDepNames: [
+        "nixos/nixpkgs",
+        "nixpkgs",
+        "nixpkgs-darwin",
+        "nixpkgs-unstable",
+        "nix-darwin/nix-darwin",
+        "nix-community/home-manager",
+      ],
+      groupName: "Nix Core Inputs",
+      automerge: false,
+    },
+    {
+      matchManagers: ["nix"],
+      matchPackagePatterns: ["secrets", "dotfiles", "herdr"],
+      enabled: false,
+    },
+  ],
+}

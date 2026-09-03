@@ -43,7 +43,7 @@
     },
     "anti-slop": {
         "cargoLock": null,
-        "date": "2026-08-18",
+        "date": null,
         "extract": null,
         "name": "anti-slop",
         "passthru": null,
@@ -55,12 +55,12 @@
             "name": null,
             "owner": "dmmulroy",
             "repo": "anti-slop",
-            "rev": "6d538555cb151d4121ed51a27db81890eacf8ae9",
-            "sha256": "sha256-1MewhQPqF55RkgWOhEgv4a9Wl9zRNDLImbhpDFSnz30=",
+            "rev": "v0.1.2",
+            "sha256": "sha256-K+nxeaH2h33Ixjn5HbFTw2n2d+s12SpKbVP90tkyj9A=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "6d538555cb151d4121ed51a27db81890eacf8ae9"
+        "version": "v0.1.2"
     },
     "ast-grep-agent-skill": {
         "cargoLock": null,
@@ -148,7 +148,7 @@
     },
     "llamaparse-agent-skills": {
         "cargoLock": null,
-        "date": "2026-07-03",
+        "date": null,
         "extract": null,
         "name": "llamaparse-agent-skills",
         "passthru": null,
@@ -160,16 +160,16 @@
             "name": null,
             "owner": "run-llama",
             "repo": "llamaparse-agent-skills",
-            "rev": "2dcef7c62417bd2ec4671fce4621bb1e8cce48d0",
-            "sha256": "sha256-KzYcArVClk1mUBYLM/EmU3+rKzAHtpHRLAFVY1LbtKQ=",
+            "rev": "liteparse-1.0.1",
+            "sha256": "sha256-BGZyNJXJ1Yt/k4jm+CEwRwqcTSBAb+pG7yGxqoK35tI=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "2dcef7c62417bd2ec4671fce4621bb1e8cce48d0"
+        "version": "liteparse-1.0.1"
     },
     "mattpocock-skills": {
         "cargoLock": null,
-        "date": "2026-08-24",
+        "date": null,
         "extract": null,
         "name": "mattpocock-skills",
         "passthru": null,
@@ -181,12 +181,12 @@
             "name": null,
             "owner": "mattpocock",
             "repo": "skills",
-            "rev": "6654f6b60cd9d5be8b54c6fafe44346dabeb3b76",
-            "sha256": "sha256-N5tpUIHO2VFeJntBTl6/VLDIVpqoshwFxNJlfXXUwsQ=",
+            "rev": "v1.2.3",
+            "sha256": "sha256-I/EXHGW92nXz6JCLp8SKGgzXrbbUTkLAfxv8bc/ThwQ=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "6654f6b60cd9d5be8b54c6fafe44346dabeb3b76"
+        "version": "v1.2.3"
     },
     "projects-yazi": {
         "cargoLock": null,
@@ -211,7 +211,7 @@
     },
     "reverse-skill": {
         "cargoLock": null,
-        "date": "2026-08-27",
+        "date": null,
         "extract": null,
         "name": "reverse-skill",
         "passthru": null,
@@ -223,12 +223,12 @@
             "name": null,
             "owner": "zhaoxuya520",
             "repo": "reverse-skill",
-            "rev": "37162cf9547c571c680c07005e9863d4610282dd",
-            "sha256": "sha256-dZ5PL7EeOxQVUI52nwFBlRG+9ZtA3ky2ccdAlILio58=",
+            "rev": "v1.0.1",
+            "sha256": "sha256-jLcC22X7tRAHrW+B32PH+dID0tcVoUJ1CdBbS1SwNgY=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "37162cf9547c571c680c07005e9863d4610282dd"
+        "version": "v1.0.1"
     },
     "yazi-plugins": {
         "cargoLock": null,
