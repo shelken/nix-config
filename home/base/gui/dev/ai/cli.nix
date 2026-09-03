@@ -2,7 +2,6 @@
   lib,
   config,
   pkgs,
-  sources,
   ...
 }:
 let
@@ -24,7 +23,13 @@ let
     exec ${pkgs.bun}/bin/bunx @llamaindex/liteparse "$@"
   '';
 
-  spawnSubagentDir = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/skills/subagent-policy";
+  computer-use = pkgs.writeShellScriptBin "computer-use" ''
+    exec ${pkgs.bun}/bin/bun ${./skills/computer-use-best-practice/scripts/computer-use.ts} "$@"
+  '';
+
+  spawn-subagent = pkgs.writeShellScriptBin "spawn-subagent" ''
+    exec ${pkgs.bun}/bin/bun ${./skills/subagent-policy/spawn-subagent} "$@"
+  '';
 in
 {
   config = lib.mkIf config.shelken.dev.ai.enable {
@@ -34,13 +39,9 @@ in
       enable = false; # use homebrew
     };
 
-    # spawn-subagent：与 subagent-policy skill 同源，软链保持可编辑
-    home.file.".local/bin/spawn-subagent" = {
-      source = config.lib.file.mkOutOfStoreSymlink "${spawnSubagentDir}/spawn-subagent";
-      force = true;
-    };
-
     home.packages = [
+      computer-use
+      spawn-subagent
       ctx7
       pkgs.ast-grep
       # bil
