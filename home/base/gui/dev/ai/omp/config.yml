@@ -1,0 +1,48 @@
+providers:
+  webSearchOrder:
+    - gemini
+    - exa
+    - brave
+    - perplexity
+    - anthropic
+    - codex
+    - xai
+    - zai
+    - tinyfish
+    - jina
+    - kagi
+    - tavily
+    - firecrawl
+    - kimi
+    - parallel
+    - synthetic
+    - searxng
+    - startpage
+    - duckduckgo
+    - ecosia
+    - google
+    - mojeek
+    - public
+modelRoles:
+  default: opencode-go/deepseek-v4-flash
+  slow: openai-codex/gpt-5.6-sol:high
+  smol: opencode-go/deepseek-v4-flash:high
+  task: google-antigravity/gemini-3.8-flash-high:high
+  advisor: opencode-go/deepseek-v4-flash:high
+  vision: openai-codex/gpt-5.6-luna:high
+  plan: google-antigravity/gemini-3.8-flash-high:high
+  designer: google-antigravity/gemini-3.8-flash-high:high
+  commit: opencode-go/deepseek-v4-flash:low
+  tiny: google-antigravity/gemini-3.1-flash-lite:auto
+  review: openai-codex/gpt-5.6-sol:high
+symbolPreset: nerd
+composer:
+  shape: band
+theme:
+  dark: dark-catppuccin
+setupVersion: 2
+statusLine:
+  compactThinkingLevel: false
+task:
+  agentModelOverrides:
+    reviewer: "@review"

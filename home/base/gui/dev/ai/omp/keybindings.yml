@@ -1,0 +1,10 @@
+# 释放占用 Ctrl+L 的动作
+app.live.toggle: []
+app.display.reset: []
+
+# 遵循 Pi 习惯：选择/切换模型
+app.model.select: Ctrl+L
+
+# 遵循 Pi 习惯：队列消息追加与撤回
+app.message.followUp: Super+Shift+Enter
+app.message.dequeue: Ctrl+Shift+Q

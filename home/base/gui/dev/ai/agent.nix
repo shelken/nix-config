@@ -1,7 +1,6 @@
 {
   config,
   lib,
-  mylib,
   ...
 }:
 let
@@ -35,6 +34,10 @@ let
     }
     {
       targetPath = ".pi/agent";
+      fileName = "AGENTS.md";
+    }
+    {
+      targetPath = ".omp/agent";
       fileName = "AGENTS.md";
     }
     {
