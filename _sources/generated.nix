@@ -32,15 +32,14 @@
   };
   anti-slop = {
     pname = "anti-slop";
-    version = "6d538555cb151d4121ed51a27db81890eacf8ae9";
+    version = "v0.1.2";
     src = fetchFromGitHub {
       owner = "dmmulroy";
       repo = "anti-slop";
-      rev = "6d538555cb151d4121ed51a27db81890eacf8ae9";
+      rev = "v0.1.2";
       fetchSubmodules = false;
-      sha256 = "sha256-1MewhQPqF55RkgWOhEgv4a9Wl9zRNDLImbhpDFSnz30=";
+      sha256 = "sha256-K+nxeaH2h33Ixjn5HbFTw2n2d+s12SpKbVP90tkyj9A=";
     };
-    date = "2026-08-18";
   };
   ast-grep-agent-skill = {
     pname = "ast-grep-agent-skill";
@@ -91,27 +90,25 @@
   };
   llamaparse-agent-skills = {
     pname = "llamaparse-agent-skills";
-    version = "2dcef7c62417bd2ec4671fce4621bb1e8cce48d0";
+    version = "liteparse-1.0.1";
     src = fetchFromGitHub {
       owner = "run-llama";
       repo = "llamaparse-agent-skills";
-      rev = "2dcef7c62417bd2ec4671fce4621bb1e8cce48d0";
+      rev = "liteparse-1.0.1";
       fetchSubmodules = false;
-      sha256 = "sha256-KzYcArVClk1mUBYLM/EmU3+rKzAHtpHRLAFVY1LbtKQ=";
+      sha256 = "sha256-BGZyNJXJ1Yt/k4jm+CEwRwqcTSBAb+pG7yGxqoK35tI=";
     };
-    date = "2026-07-03";
   };
   mattpocock-skills = {
     pname = "mattpocock-skills";
-    version = "6654f6b60cd9d5be8b54c6fafe44346dabeb3b76";
+    version = "v1.2.3";
     src = fetchFromGitHub {
       owner = "mattpocock";
       repo = "skills";
-      rev = "6654f6b60cd9d5be8b54c6fafe44346dabeb3b76";
+      rev = "v1.2.3";
       fetchSubmodules = false;
-      sha256 = "sha256-N5tpUIHO2VFeJntBTl6/VLDIVpqoshwFxNJlfXXUwsQ=";
+      sha256 = "sha256-I/EXHGW92nXz6JCLp8SKGgzXrbbUTkLAfxv8bc/ThwQ=";
     };
-    date = "2026-08-24";
   };
   projects-yazi = {
     pname = "projects-yazi";
@@ -127,15 +124,14 @@
   };
   reverse-skill = {
     pname = "reverse-skill";
-    version = "37162cf9547c571c680c07005e9863d4610282dd";
+    version = "v1.0.1";
     src = fetchFromGitHub {
       owner = "zhaoxuya520";
       repo = "reverse-skill";
-      rev = "37162cf9547c571c680c07005e9863d4610282dd";
+      rev = "v1.0.1";
       fetchSubmodules = false;
-      sha256 = "sha256-dZ5PL7EeOxQVUI52nwFBlRG+9ZtA3ky2ccdAlILio58=";
+      sha256 = "sha256-jLcC22X7tRAHrW+B32PH+dID0tcVoUJ1CdBbS1SwNgY=";
     };
-    date = "2026-08-27";
   };
   yazi-plugins = {
     pname = "yazi-plugins";

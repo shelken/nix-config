@@ -277,6 +277,7 @@
               prettier
               nixos-anywhere
               nvfetcher
+              actionlint
               # nh # 不要引入，会把nix放进来
               nix-prefetch-github
               nix-prefetch-git

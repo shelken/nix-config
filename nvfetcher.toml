@@ -29,9 +29,8 @@ src.branch   = "main"
 fetch.github = "forrestchang/andrej-karpathy-skills"
 
 [anti-slop]
-src.git      = "https://github.com/dmmulroy/anti-slop"
-src.branch   = "main"
-fetch.github = "dmmulroy/anti-slop"
+src.github_tag = "dmmulroy/anti-slop"
+fetch.github   = "dmmulroy/anti-slop"
 
 # [ai-design-skills]
 # src.git      = "https://github.com/elayadesign/ai-design-skills"
@@ -69,19 +68,17 @@ src.branch   = "main"
 fetch.github = "humanlayer/skills"
 
 [llamaparse-agent-skills]
-src.git      = "https://github.com/run-llama/llamaparse-agent-skills"
-src.branch   = "main"
-fetch.github = "run-llama/llamaparse-agent-skills"
+src.github_tag    = "run-llama/llamaparse-agent-skills"
+src.include_regex = "^liteparse-.*$"
+fetch.github      = "run-llama/llamaparse-agent-skills"
 
 [mattpocock-skills]
-src.git      = "https://github.com/mattpocock/skills"
-src.branch   = "main"
-fetch.github = "mattpocock/skills"
+src.github_tag = "mattpocock/skills"
+fetch.github   = "mattpocock/skills"
 
 [reverse-skill]
-src.git      = "https://github.com/zhaoxuya520/reverse-skill"
-src.branch   = "main"
-fetch.github = "zhaoxuya520/reverse-skill"
+src.github_tag = "zhaoxuya520/reverse-skill"
+fetch.github   = "zhaoxuya520/reverse-skill"
 
 # [redesign-skill]
 # src.git      = "https://github.com/elayadesign/redesign-skill"
