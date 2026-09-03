@@ -13,6 +13,10 @@ in
     mermaid-cli # for npm:pi-markdown-preview
   ];
 
+  home.shellAliases = {
+    pi = "sec-run pi";
+  };
+
   # ponytail 扩展配置: 隐藏状态栏显示, 保留规则注入
   # 可编辑：软链到仓库源文件 home/base/gui/dev/ai/ponytail/config.json
   home.file.".config/ponytail/config.json" = {

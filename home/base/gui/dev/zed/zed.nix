@@ -25,6 +25,9 @@ in
 {
   catppuccin.zed.enable = false;
   home.file = snippetLinks;
+  home.shellAliases = {
+    zed = "sec-run zed";
+  };
   programs.zed-editor = {
     enable = true;
     package = null; # homebrew
