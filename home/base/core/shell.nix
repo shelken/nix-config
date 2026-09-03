@@ -40,10 +40,6 @@ let
 
   initContent = ''
     ${proxy_fun}
-    ################
-    # 特定机器配置 #
-    ################
-    [[ -s "$HOME/.specific.zsh" ]] && source $HOME/.specific.zsh
   '';
 in
 {
