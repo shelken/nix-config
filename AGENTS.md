@@ -22,7 +22,7 @@
 - 中文注释，中文文档
 - commit 前先add然后运行一次 pre-commit
 - 优先使用 Conventional Commits 格式提交，标题 **英文**，内容 **中文**
-- 修改配置后，使用 `just bd`(nix-darwin范围验证) / `just hm-build`(home-manager 范围验证) 等命令进行验证
+- 修改配置后，只有本机情况(检查.env对应的PROFILE), 才使用 `just bd`(nix-darwin范围验证) / `just hm-build`(home-manager 范围验证) 等命令进行验证; 其他机器的情况仅使用轻量化的命令进行校验
 - 使用 `just sw`(nix-darwin范围变更) / `just hm`(home-manager 范围变更) 前; 确保新增或删除的文件已 `git add`，否则不生效;
 - 一般使用 `nh search` 搜索 nixpkgs 中的包
 - 项目级 skill 必须放在项目根目录 `.agents/skills/` 下，不要放到 `home/` 等用户环境配置目录
