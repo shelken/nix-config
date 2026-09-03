@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import sys
 import urllib.parse
 import urllib.request
 
@@ -116,7 +117,10 @@ def main() -> None:
     parser.add_argument("--source", required=True)
     parser.add_argument("--pull-request", required=True)
     args = parser.parse_args()
-    token = os.environ["GITHUB_TOKEN"]
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if not token:
+        print("缺少 GitHub token，请设置 GITHUB_TOKEN 或 GH_TOKEN", file=sys.stderr)
+        raise SystemExit(1)
     body = report(read_json(args.base_file), read_json(args.head_file), args.source, token)
     if body:
         sync_comment(os.environ["GITHUB_REPOSITORY"], args.pull_request, body, token)

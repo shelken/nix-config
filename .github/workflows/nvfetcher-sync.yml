@@ -29,5 +29,6 @@ jobs:
 
       - name: Sync sources
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: nix develop --command python3 scripts/sync-sources.py
