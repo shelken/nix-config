@@ -94,6 +94,10 @@ in
         defaultInit = ''
           bindkey '^f' autosuggest-accept
 
+          # K8s Pod 交互式路径选择 widget
+          zle -N kube-pod-path-widget
+          bindkey '^k' kube-pod-path-widget
+
           # p10k custom
           POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION='🤘'
           # mitigation: https://github.com/romkatv/powerlevel10k?tab=readme-ov-file#mitigation
