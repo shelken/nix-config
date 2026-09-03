@@ -21,5 +21,12 @@
       antigravity-cli = "latest";
       oh-my-pi = "latest";
     };
+
+    programs.zsh.initContent = ''
+      # worktrunk (wt) shell integration
+      if command -v wt >/dev/null 2>&1; then
+        eval "$(wt config shell init zsh)"
+      fi
+    '';
   };
 }
