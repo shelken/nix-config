@@ -15,7 +15,7 @@
     cache.enable = false;
     # issue: https://github.com/catppuccin/nix/issues/927#issuecomment-4456677608
     sources = catppuccin.packages.${pkgs.stdenv.hostPlatform.system}.overrideScope (
-      final: prev: {
+      _final: _prev: {
         whiskers = pkgs.catppuccin-whiskers;
       }
     );

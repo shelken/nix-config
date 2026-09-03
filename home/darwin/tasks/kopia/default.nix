@@ -1,6 +1,5 @@
 {
   mylib,
-  config,
   lib,
   myvars,
   hostname,
