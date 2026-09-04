@@ -2,7 +2,7 @@ name: Sync nvfetcher Sources
 
 on:
   schedule:
-    - cron: "0 20 * * *" # 每日 04:00 Asia/Shanghai
+    - cron: "0 20 * * *" # Daily 04:00 AM Asia/Shanghai
   workflow_dispatch:
 
 permissions:
@@ -15,20 +15,107 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  nvfetcher-sync:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      sources: ${{ steps.changed_sources.outputs.sources }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+
+      - name: Discover changed sources
+        id: changed_sources
+        run: |
+          cp _sources/generated.json /tmp/nvfetcher-base.json
+          nix develop --command nvfetcher -c nvfetcher.toml -o _sources
+          python3 - <<'PY'
+          import json
+          import os
+
+          with open("/tmp/nvfetcher-base.json", encoding="utf-8") as file:
+              base = json.load(file)
+          with open("_sources/generated.json", encoding="utf-8") as file:
+              head = json.load(file)
+          changed = sorted(name for name in set(base) | set(head) if base.get(name) != head.get(name))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              print(f"sources={json.dumps(changed, separators=(',', ':'))}", file=output)
+          PY
+
+  update:
+    needs: discover
+    if: needs.discover.outputs.sources != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        source: ${{ fromJSON(needs.discover.outputs.sources) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
-          fetch-depth: 0
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
 
-      - name: Sync sources
+      - name: Update source
+        env:
+          SOURCE: ${{ matrix.source }}
+        run: |
+          cp _sources/generated.json /tmp/nvfetcher-base.json
+          nix develop --command nvfetcher -c nvfetcher.toml -f "^${SOURCE}$" -o _sources
+          cp _sources/generated.json /tmp/nvfetcher-head.json
+
+      - name: Create pull request
+        id: create_pull_request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          add-paths: |
+            _sources/generated.json
+            _sources/generated.nix
+          branch: automation/nvfetcher/${{ matrix.source }}
+          base: main
+          delete-branch: true
+          commit-message: "chore(nvfetcher): update ${{ matrix.source }}"
+          title: "chore(nvfetcher): update ${{ matrix.source }}"
+          body: "Automated update of `${{ matrix.source }}` managed by nvfetcher."
+
+      - name: Update source diff comment
+        if: steps.create_pull_request.outputs.pull-request-number != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: nix develop --command python3 scripts/sync-sources.py
+        run: |
+          python3 scripts/renovate-skill-diff.py \
+            --base-file /tmp/nvfetcher-base.json \
+            --head-file /tmp/nvfetcher-head.json \
+            --source "${{ matrix.source }}" \
+            --pull-request "${{ steps.create_pull_request.outputs.pull-request-number }}"
+
+  cleanup:
+    needs: [discover, update]
+    if: always() && needs.discover.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close obsolete source pull requests
+        env:
+          CHANGED_SOURCES: ${{ needs.discover.outputs.sources }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr list \
+            --repo "${{ github.repository }}" \
+            --base main \
+            --state open \
+            --json number,headRefName \
+            --jq '.[] | select(.headRefName | startswith("automation/nvfetcher/")) | [.number, .headRefName] | @tsv' |
+          while IFS=$'\t' read -r number branch; do
+            source="${branch#automation/nvfetcher/}"
+            if ! jq -e --arg source "$source" 'index($source) != null' <<< "$CHANGED_SOURCES" >/dev/null; then
+              gh pr close "$number" --repo "${{ github.repository }}" --delete-branch
+            fi
+          done
