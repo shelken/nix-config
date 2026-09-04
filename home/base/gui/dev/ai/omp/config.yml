@@ -54,6 +54,23 @@ theme:
 setupVersion: 2
 statusLine:
   compactThinkingLevel: false
+  preset: custom
+  # 复刻 default 预设左右段，右侧追加 usage（provider 5h/7d 限额）。
+  # 注：usage 段仅对报告含 5h/7d 窗口的 provider 生效(openai-codex/anthropic)；
+  # opencode-go 报告为 rolling-5h/weekly/monthly，不会显示。
+  leftSegments:
+    - pi
+    - model
+    - mode
+    - collab
+    - path
+    - git
+    - pr
+    - context_pct
+    - cost
+  rightSegments:
+    - session_name
+    - usage
 task:
   agentModelOverrides:
     reviewer: "@review"
