@@ -136,49 +136,66 @@ export interface ExtensionAPI {
 // ============================================================================
 
 export const BUILTIN_COMMANDS: Rule[] = [
-  { value: "rm -rf /", source: "builtin" },
-  { value: "rm -rf ~", source: "builtin" },
-  { value: "find /", source: "builtin" },
-  { value: "find ~", source: "builtin" },
-  { value: "env", source: "builtin" },
-  { value: "printenv", source: "builtin" },
-  { value: "export -p", source: "builtin" },
-  { value: "curl *| bash", source: "builtin" },
-  { value: "curl *|bash", source: "builtin" },
-  { value: "wget *| bash", source: "builtin" },
-  { value: "wget *|bash", source: "builtin" },
-  { value: "curl *| sh", source: "builtin" },
-  { value: "curl *|sh", source: "builtin" },
-  { value: "wget *| sh", source: "builtin" },
-  { value: "wget *|sh", source: "builtin" },
+  // --- 破坏性文件系统递归删除 ---
+  { value: "rm -rf /", reason: "禁止根目录递归强制删除", source: "builtin" },
+  { value: "rm -rf ~", reason: "禁止家目录递归强制删除", source: "builtin" },
+  { value: "rm -rf *", reason: "禁止全量通配递归强制删除", source: "builtin" },
+  { value: "rm -rf ./*", reason: "禁止全量通配递归强制删除", source: "builtin" },
+  { value: "rm -rf .*", reason: "禁止全量通配递归强制删除", source: "builtin" },
+  { value: "rm -rf /*", reason: "禁止根目录通配递归强制删除", source: "builtin" },
+  // --- 全盘遍历与耗尽 ---
+  { value: "find /", reason: "禁止根目录全盘遍历", source: "builtin" },
+  { value: "find ~", reason: "禁止家目录全盘遍历", source: "builtin" },
+  // --- 破坏性磁盘裸写与低级格式化 ---
+  { value: "dd of=/dev/*", reason: "禁止裸设备覆盖写入", source: "builtin" },
+  { value: "mkfs*", reason: "禁止磁盘低级格式化", source: "builtin" },
+  // --- 环境变量全量 dump 泄露（允许有参查询如 printenv PATH）---
+  { value: "env", reason: "禁止直接批量读取环境变量", source: "builtin" },
+  { value: "printenv", reason: "禁止直接批量读取环境变量", source: "builtin" },
+  { value: "export", reason: "禁止直接批量读取环境变量", source: "builtin" },
+  { value: "export -p", reason: "禁止直接批量读取环境变量", source: "builtin" },
+  // --- 未落盘管道下载并直接交付 Shell / 解释器执行 ---
+  { value: "curl *|*sh*", reason: "禁止网络下载直接管道执行", source: "builtin" },
+  { value: "curl *| *sh*", reason: "禁止网络下载直接管道执行", source: "builtin" },
+  { value: "wget *|*sh*", reason: "禁止网络下载直接管道执行", source: "builtin" },
+  { value: "wget *| *sh*", reason: "禁止网络下载直接管道执行", source: "builtin" },
+  { value: "curl *|*python*", reason: "禁止网络下载直接管道执行", source: "builtin" },
+  { value: "curl *| *python*", reason: "禁止网络下载直接管道执行", source: "builtin" },
+  { value: "wget *|*python*", reason: "禁止网络下载直接管道执行", source: "builtin" },
+  { value: "wget *| *python*", reason: "禁止网络下载直接管道执行", source: "builtin" },
 ];
 
 export const BUILTIN_PATHS: Rule[] = [
+  // --- SSH 私钥与主机密钥 ---
   { value: "~/.ssh", source: "builtin" },
   { value: "~/.ssh/*", source: "builtin" },
+  // --- 主流云厂商机密凭据主目录 ---
   { value: "~/.aws", source: "builtin" },
   { value: "~/.aws/*", source: "builtin" },
   { value: "~/.azure", source: "builtin" },
   { value: "~/.azure/*", source: "builtin" },
   { value: "~/.gcp", source: "builtin" },
   { value: "~/.gcp/*", source: "builtin" },
+  // --- GnuPG 钥匙环 ---
   { value: "~/.gnupg", source: "builtin" },
   { value: "~/.gnupg/*", source: "builtin" },
+  // --- SOPS age 私钥 ---
+  { value: "~/.config/sops/age", source: "builtin" },
+  { value: "~/.config/sops/age/*", source: "builtin" },
+  // --- 通用认证与令牌配置 ---
   { value: "~/.netrc", source: "builtin" },
   { value: "~/.pypirc", source: "builtin" },
   { value: "~/.git-credentials", source: "builtin" },
   { value: "~/.config/gh/hosts.yml", source: "builtin" },
-  { value: "~/.config/hub", source: "builtin" },
-  {
-    value: "~/.config/gcloud/application_default_credentials.json",
-    source: "builtin",
-  },
-  { value: "~/.config/doctl/config.yaml", source: "builtin" },
   { value: "~/.kube/config", source: "builtin" },
   { value: "~/.docker/config.json", source: "builtin" },
-  { value: "~/.azure/accessTokens.json", source: "builtin" },
+  // --- 终端与各类解释器交互历史统一拦截 ---
   { value: "~/.bash_history", source: "builtin" },
   { value: "~/.zsh_history", source: "builtin" },
+  { value: "~/.zhistory", source: "builtin" },
+  { value: "~/.node_repl_history", source: "builtin" },
+  { value: "~/.python_history", source: "builtin" },
+  // --- 环境变量机密文件 ---
   { value: ".env", source: "builtin" },
   { value: ".env.*", source: "builtin" },
   { value: "**/.env", source: "builtin" },
@@ -479,8 +496,53 @@ function patternWordsOf(pattern: string): string[] | null {
   return words.length > 0 ? words : null;
 }
 
+function isUnconstrainedEnvDump(argv: string[]): boolean {
+  if (argv.length === 0) return false;
+  const head = basenames(argv[0]);
+  if (head === "printenv") {
+    // 若没有参数，或仅有 -0/--null 等标志位而没有指定具体变量名，则为全量 dump
+    const nonFlags = argv.slice(1).filter((a) => !a.startsWith("-"));
+    return nonFlags.length === 0;
+  }
+  if (head === "export") {
+    // 若没有参数，或仅有 -p，则为全量 dump
+    if (argv.length === 1) return true;
+    const nonFlags = argv.slice(1).filter((a) => a !== "-p");
+    return nonFlags.length === 0;
+  }
+  return false;
+}
+
 function argvStartsWith(argv: string[], patternWords: string[]): boolean {
   const normArgv = normalizeRmArgv(argv);
+  if (normArgv.length === 0) return false;
+
+  const head = basenames(normArgv[0]);
+  if (patternWords[0] === "printenv" && head === "printenv") {
+    return isUnconstrainedEnvDump(normArgv);
+  }
+  if (patternWords[0] === "export" && head === "export") {
+    return isUnconstrainedEnvDump(normArgv);
+  }
+  if (patternWords[0] === "dd" && head === "dd") {
+    if (patternWords.some((p) => p.startsWith("of=/dev/"))) {
+      return normArgv.some((a) => /^of=\/dev\//.test(a));
+    }
+  }
+
+  // rm -rf 通配类规则（如 "rm -rf *"、"rm -rf ./*"、"rm -rf /*"）：
+  // 只有当真实删除目标中含有 shell 通配符（* ? [）时才命中，
+  // 避免把「定向删除具体路径/文件」（如 rm -rf /tmp/x）误判为全量通配清空。
+  const isRmForceGlobPattern =
+    head === "rm" &&
+    normArgv[1] === "-rf" &&
+    patternWords[1] === "-rf" &&
+    patternWords.slice(2).some((w) => /[*?\[]/.test(w));
+  if (isRmForceGlobPattern) {
+    const targets = normArgv.slice(2).filter((t) => !t.startsWith("-"));
+    return targets.some((t) => /[*?\[]/.test(t));
+  }
+
   if (normArgv.length < patternWords.length) return false;
   for (let i = 0; i < patternWords.length; i++) {
     const a = normArgv[i];
@@ -508,8 +570,22 @@ export function commandMatchesPattern(
   command: string,
   pattern: string,
 ): boolean {
+  // 结构性检测：curl/wget 未落盘直接管道交付 Shell / 解释器执行即命中，
+  // 必须在下方通配正则分支之前判定，否则含 * 与 | 的规则会提前 return 使其失效
+  if (
+    pattern.includes("curl") ||
+    pattern.includes("wget")
+  ) {
+    if (
+      /\b(curl|wget)\b[^|;&]*\|[^|;&]*\b(bash|ash|zsh|dash|sh|python\d*|node|bun|perl|ruby)\b/i.test(
+        command,
+      )
+    ) {
+      return true;
+    }
+  }
   if (pattern.includes("*") && /[|;&\n]/.test(pattern)) {
-    return new RegExp(globToRegExpSource(pattern)).test(command);
+    return new RegExp(globToRegExpSource(pattern), "i").test(command);
   }
   const argvs = simpleCommandArgvs(tokenizeShell(command));
   const patternWords = patternWordsOf(pattern);
@@ -714,18 +790,18 @@ export function resolveBlockReason(
     rule.reason !== undefined && rule.reason !== ""
       ? oneLineBody(rule.reason)
       : undefined;
-  const header =
-    ruleReason !== undefined
-      ? "BY USER"
-      : kind === "command"
-        ? "COMMAND"
-        : "PATH";
+  const isUserRule = rule.source === "user";
+  const header = isUserRule
+    ? "BY USER"
+    : kind === "command"
+      ? "COMMAND"
+      : "PATH";
   const targetKey = kind === "command" ? "command" : "path";
   const targetLine = `${targetKey}: ${rule.value}`;
   let detail = ruleReason;
   if (
     detail === undefined &&
-    rule.source !== "builtin" &&
+    isUserRule &&
     defaultReason !== undefined &&
     defaultReason !== ""
   ) {

@@ -31,12 +31,9 @@ deny_paths:
   - path: "~/.docker/.token_seed"
     reason: "docker token seed"
 
-  # --- github / gitlab CLI ---
-  - path: "~/.config/gh/access-token"
-    reason: "gh access token (sops-nix link)"
+  # --- gitlab CLI ---
   - path: "~/.config/glab-cli/config.yml"
     reason: "glab CLI token config"
-
   # --- azure token cache ---
   - path: "~/.azure/msal_token_cache.json"
     reason: "Azure MSAL token cache"
@@ -54,14 +51,6 @@ deny_paths:
     reason: "codex account auth"
   - path: "~/.kilocode/cli/global/secrets.json"
     reason: "kilocode secrets"
-
-  # --- rclone remotes ---
-  - path: "~/.config/rclone/rclone.conf"
-    reason: "rclone remote credentials"
-
-  # --- sops / age private keys ---
-  - path: "~/.config/sops/age/*"
-    reason: "sops age private keys"
 
   # --- wrangler (oauth / account) ---
   - path: "~/.config/.wrangler/config/default.toml"
