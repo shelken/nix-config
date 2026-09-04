@@ -8,6 +8,7 @@
   packages = with pkgs; [
     ccusage
     git
+    just
     python3
   ];
   secrets = {
@@ -21,6 +22,6 @@
       exit 0
     fi
 
-    python3 -u "$REPO/scripts/pi_usage.py" sync --push
+    just -f "$REPO/justfile" -d "$REPO" sync-push
   '';
 }
