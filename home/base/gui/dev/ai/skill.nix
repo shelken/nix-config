@@ -279,7 +279,7 @@ in
 
             flatten = mkOption {
               type = types.bool;
-              default = false;
+              default = true;
               description = ''
                 是否平铺本地 skill。
                 true: 递归查找含 SKILL.md 的目录并平铺（/ -> --）。
@@ -292,22 +292,18 @@ in
       default = [
         {
           path = ".claude/skills";
-          flatten = true;
         }
         {
           path = ".agents/skills"; # codex,opencode
         }
         {
           path = ".gemini/config/skills";
-          flatten = true;
         }
         {
           path = ".workbuddy/skills";
-          flatten = true;
         }
         {
           path = ".dsh/skills"; # dsh (deepseek-harness) 用户级 skills, 读取 $DSH_HOME/skills; dsh 不支持多目录结构, 必须展平
-          flatten = true;
         }
       ];
       description = "skill 目标目录及映射策略";

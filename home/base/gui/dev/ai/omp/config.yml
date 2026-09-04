@@ -1,3 +1,68 @@
+# =====================================================================
+# 外部来源 Provider 加载控制 —— 能关的都在此禁用
+# omp 会把"别人家工具"的目录(技能/上下文/规则/MCP/命令…)也导入会话。
+# 下列条目按 provider id 逐一禁用(启动时读取, 改后需重启 omp 会话)。
+# 括号内为发现优先级: 数字越大越先, 同名内容优先取它。
+#
+# 保留项 —— omp 自身核心来源, 默认不关(需要时可自行移入下方列表):
+#   native(100)      ~/.omp + 各项目 .omp 本体: 配置/SYSTEM.md/扩展(guard.ts、
+#                    copy-cut.ts 等)/hooks/AGENTS.md 上下文/内置规则等
+#   omp-plugins(90)  ~/.omp/plugins 安装的插件包(ponytail、co-authored-by 等)
+#   agents(70)       ~/.agents + 各项目 .agents: 技能/AGENTS.md/规则/命令
+#                    (skill.nix 的主通道, 见 home/base/gui/dev/ai/skill.nix)
+#   agents-md(10)    仓库及祖先目录的独立 AGENTS.md 上下文
+#   另: mcp-json(5, 项目根 mcp.json/.mcp.json 标准 MCP)、ssh-json(5, ssh 主机
+#   清单)、auto-learn managed skills —— 若想彻底自控也可加入下方禁用。
+# =====================================================================
+disabledProviders:
+  # ---- claude 系(已全部关闭) ----
+  # claude(80): 不再读取任何 .claude 内容:
+  #   - skills: ~/.claude/skills(用户级) + 各项目 .claude/skills(项目级)
+  #   - 上下文: ~/.claude/CLAUDE.md 与项目 .claude/CLAUDE.md
+  #   - 其余: .claude 的 MCP(.claude.json / mcp.json)、hooks、tools、
+  #           slash 命令、SYSTEM.md、settings.json、extension modules
+  # 已知影响: 仅存在于 ~/.claude/skills 平铺目录的技能会从会话消失
+  #   (code-review / tdd / prototype / research / grilling /
+  #    domain-modeling / writing-for-agents / diagnosing-bugs);
+  #   同名技能若 ~/.agents 或其他保留 provider 也有, 则自动由它们接管。
+  # 只关其中一部分时的替代键(provider 级禁用下无需再设):
+  #   skills.enableClaudeUser: false      # 仅关 ~/.claude/skills 用户级技能
+  #   skills.enableClaudeProject: false   # 仅关项目 .claude/skills 技能
+  #   commands.enableClaudeUser: false    # 仅关 ~/.claude/commands 斜杠命令
+  #   commands.enableClaudeProject: false # 仅关项目 .claude/commands
+  - claude
+  # claude-plugins(70): Claude Code 市场插件 —— 不再加载 ~/.claude/plugins
+  #   安装的第三方插件贡献的 skills / slash 命令 / hooks / tools / MCP。
+  # 注: 该 provider 原受"任一 claude 系开关为真即启用"的门控(与 opencode /
+  #   github / codex 项目级共享), provider 级禁用不受该门控影响。
+  - claude-plugins
+
+  # ---- 其它外部 CLI / IDE 来源(全部关闭) ----
+  # codex(70): 不再读取 ~/.codex 与各项目 .codex ——
+  #   AGENTS.md 上下文、skills(~/.codex/skills、.codex/skills)、
+  #   extensions / commands / prompts / hooks / tools、
+  #   config.toml 里的 MCP 与 settings
+  - codex
+  # opencode(55): 不再读取 ~/.config/opencode 与各项目 .opencode ——
+  #   AGENTS.md 上下文、skills、plugins、commands、opencode.json 的 MCP/settings
+  - opencode
+  # # github(30): 不再读取 GitHub Copilot 项目源 —— .github/copilot-instructions.md
+  # #   上下文、.github/skills/* 技能、.github/instructions 规则与 .github/prompts
+  # #   (及 ~/.copilot、COPILOT_CUSTOM_INSTRUCTIONS_DIRS)
+  # - github
+  # gemini(60): 不再读取 ~/.gemini 与各项目 .gemini —— GEMINI.md 上下文、
+  #   system.md、settings.json 里的 MCP、extensions
+  - gemini
+  # # cursor(50): 不再读取 ~/.cursor 与各项目 .cursor —— mcp.json、
+  # #   .cursor/rules/*.mdc 与旧 .cursorrules 规则、settings.json
+  # - cursor
+  # # windsurf(50): 不再读取 Windsurf —— mcp_config、.windsurf/rules、.windsurfrules
+  # - windsurf
+  # # cline(40): 不再读取 .clinerules(单文件或目录形式)
+  # - cline
+  # # vscode(20): 不再读取项目 .vscode/mcp.json
+  # - vscode
+
 providers:
   webSearchOrder:
     - gemini
@@ -34,7 +99,7 @@ modelRoles:
   review: openai-codex/gpt-5.6-sol:high
   smol: opencode-go/deepseek-v4-flash:high
   slow: openai-codex/gpt-5.6-sol:medium
-  default: google-antigravity/gemini-3.8-flash-high:high
+  default: opencode-go/deepseek-v4-flash:high
 cycleOrder:
   - smol
   - default
