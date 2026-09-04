@@ -2,7 +2,6 @@
   "name": "omp-plugins",
   "private": true,
   "dependencies": {
-    "@dietrichgebert/ponytail": "https://github.com/DietrichGebert/ponytail",
     "@shelken/pi-co-authored-by": "npm:@shelken/pi-co-authored-by@0.2.14"
   }
 }
