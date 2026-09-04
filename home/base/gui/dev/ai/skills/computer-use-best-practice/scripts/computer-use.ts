@@ -6,7 +6,7 @@
 //   computer-use windows                                  2. 找已有窗口（pid + window_id）
 //   computer-use snapshot <pid> <wid> [--depth N] [--query Q]  3. 读界面并缓存动作 token
 //   computer-use click <pid> <wid> <t<idx>|x y> [action]  4. 单击（x/y 为最近快照 PNG 坐标）
-//   computer-use double-click <pid> <wid> <t<idx>|x y>    5. 双击（用于列表行播放/打开，支持 AX 与像素）
+//   computer-use double-click <pid> <wid> <t<idx>|x y>    5. 双击（默认短暂置前自动恢复；驱动后台双击缺激活前奏）
 //   computer-use type <pid> <wid> [t<idx>] <text>         6. 输入文本（优先 set_value 毫秒级后台写入）
 //   computer-use key <pid> <wid> <key> [mods..]           7. 按键（return/space/escape 等）
 //   computer-use scroll <pid> <wid> t<idx> down           8. 滚动
@@ -73,7 +73,8 @@ computer-use — 快照/操作 CLI（Token 极致高效率版）
                                                           --json        原始 JSON
   computer-use click <pid> <wid> <t<idx>|x y> [action]   4. 单击：t<idx> 复用最近快照；x/y 必须是 PNG 像素坐标
                                                           可选验证: --wait <t<idx>|media:playing|media:paused> [--timeout <ms>]
-  computer-use double-click <pid> <wid> <t<idx>|x y>     5. 双击：打开/播放列表项；支持 --foreground 与 --wait
+  computer-use double-click <pid> <wid> <t<idx>|x y>     5. 双击：打开/播放列表项；默认短暂置前并自动恢复原前台，
+                                                          无需 --foreground（驱动后台双击缺 no-raise 激活，非前台会被忽略）
   computer-use type <pid> <wid> [t<idx>] <text>          6. 输入文本：写入指定元素或当前焦点控件；支持 --wait
   computer-use key <pid> <wid> [t<idx>] <key> [mods..] 7. 按键，如: computer-use key 16881 3399 space
                                                           支持指定目标控件后台聚焦按键，如: key 75797 3735 t4 return；支持 --wait
@@ -746,27 +747,26 @@ function cmdClick(pid: number, wid: number, rest: string[]): void {
 }
 
 function cmdDoubleClick(pid: number, wid: number, rest: string[]): void {
-  const isForeground = rest.includes("--foreground");
-  const filtered = rest.filter((arg) => arg !== "--foreground");
-
-  const x = Number(filtered[0]);
-  const y = Number(filtered[1]);
-  if (!Number.isNaN(x) && !Number.isNaN(y) && !filtered[0].startsWith("t")) {
+  // 双击默认走 foreground 交付:驱动会短暂置前目标窗口 → 双击 → 自动恢复原前台。
+  // 原因:cua-driver 后台双击路径缺少 no-raise 激活前奏(单击在 1fbcacf6f 已补,双击漏了),
+  // 非前台 AppKit 窗口的双击会被静默忽略(Audirvana 列表实测:后台双击无效)。
+  // 上游关联: https://github.com/trycua/cua/issues/2206 (foreground 交付 = 动作级激活 + 保证恢复的审计)
+  // 保留 --foreground 仅为命令行兼容:参数在尾部,不影响下方坐标/token 解析。
+  const x = Number(rest[0]);
+  const y = Number(rest[1]);
+  if (!Number.isNaN(x) && !Number.isNaN(y) && !rest[0].startsWith("t")) {
     requirePixelSnapshot(pid, wid);
-    const args: Record<string, unknown> = { pid, window_id: wid, x, y };
-    if (isForeground) args.delivery_mode = "foreground";
-    act("double_click", args);
+    act("double_click", { pid, window_id: wid, x, y, delivery_mode: "foreground" });
     return;
   }
 
-  const el = resolveElement(pid, wid, filtered[0]);
-  const args: Record<string, unknown> = {
+  const el = resolveElement(pid, wid, rest[0]);
+  act("double_click", {
     pid,
     window_id: wid,
     element_token: el.element_token,
-  };
-  if (isForeground) args.delivery_mode = "foreground";
-  act("double_click", args);
+    delivery_mode: "foreground",
+  });
 }
 
 function cmdType(pid: number, wid: number, rest: string[]): void {

@@ -45,7 +45,9 @@ computer-use snapshot <pid> <wid>
 
 # 4. 常见操作，t<idx> 使用最近一次 snapshot 的缓存 token
 computer-use click <pid> <wid> t<idx> [action] [--foreground]
-computer-use double-click <pid> <wid> t<idx> [--foreground]
+# 双击默认短暂置前目标窗口并自动恢复原前台（驱动后台双击缺 no-raise 激活前奏，
+# 非前台 AppKit 窗口的双击会被静默忽略，如 Audirvana 列表）；--foreground 仅兼容保留
+computer-use double-click <pid> <wid> t<idx>
 
 # 动作后置验证（规避脆弱的手动 sleep）：
 # - 通用 AX 属性差分验证：等待目标 t<idx> 属性位移或改变
@@ -56,7 +58,7 @@ computer-use click <pid> <wid> t41 --wait media:playing
 # 只有 AX 不可用的自绘控件才使用像素路径。x/y 是最近 PNG 的像素坐标
 computer-use snapshot <pid> <wid> --screenshot "$TMPDIR/computer-use-window.png"
 computer-use click <pid> <wid> <x> <y> [--foreground]
-computer-use double-click <pid> <wid> <x> <y> [--foreground]
+computer-use double-click <pid> <wid> <x> <y>
 
 # 输入文本：优先走 Cocoa 原生 set_value 毫秒级后台写入并带 value_readback 验证；支持输入至指定元素或当前焦点
 computer-use type <pid> <wid> t<idx> "YOASOBI" [--foreground]
