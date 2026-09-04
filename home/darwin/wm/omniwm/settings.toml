@@ -171,256 +171,256 @@ yOffset = 0.0
 [workspaceBar.iconOverrides]
 
 [[appRules]]
+assignToWorkspace = "2"
 bundleId = "com.openai.codex"
 id = "6A31F08A-4051-4354-B439-42F4C71894A3"
 layout = "tile"
-assignToWorkspace = "2"
-minWidth = 800.0
 minHeight = 600.0
+minWidth = 800.0
 
 [[appRules]]
 bundleId = "com.eltima.cmd1.pro.mas"
 id = "4BA546DA-2875-4BEF-B13F-1539E833B1A0"
 layout = "float"
-minWidth = 950.0
 minHeight = 550.0
+minWidth = 950.0
 
 [[appRules]]
+assignToWorkspace = "9"
 bundleId = "com.google.Chrome"
 id = "486CEFA6-69AA-4A3C-AF27-BCD38F4F138B"
 layout = "tile"
-assignToWorkspace = "9"
-minWidth = 500.0
 minHeight = 375.0
+minWidth = 500.0
 
 [[appRules]]
+assignToWorkspace = "2"
 bundleId = "dev.zed.Zed"
 id = "979F05F4-FFA2-4EDD-B23F-08A9944C759F"
 layout = "tile"
-assignToWorkspace = "2"
-minWidth = 360.0
 minHeight = 240.0
+minWidth = 360.0
 
 [[appRules]]
+assignToWorkspace = "1"
 bundleId = "com.apple.Safari"
 id = "81426D13-C1A5-475E-AFBC-00BBA05042D0"
 layout = "tile"
-assignToWorkspace = "1"
-minWidth = 574.0
 minHeight = 220.0
+minWidth = 574.0
 
 [[appRules]]
 bundleId = "app.zen-browser.zen"
 id = "1CF39647-F30D-4E76-9686-79B551F1B094"
 layout = "float"
-minWidth = 500.0
 minHeight = 495.0
+minWidth = 500.0
 
 [[appRules]]
 bundleId = "org.mozilla.firefox"
 id = "005C00D3-F665-47F8-BDAE-D80790E9E46B"
 layout = "float"
-minWidth = 500.0
 minHeight = 120.0
+minWidth = 500.0
 
 [[appRules]]
 bundleId = "company.thebrowser.dia"
 id = "C21156B1-0224-4998-97E3-8F4FA65B9F3B"
 layout = "float"
-minWidth = 500.0
 minHeight = 420.0
+minWidth = 500.0
 
 [[appRules]]
 bundleId = "com.spotify.client"
 id = "2DE9390B-0DB4-4D0C-9ABA-06F76F1D4EA9"
 layout = "float"
-minWidth = 800.0
 minHeight = 600.0
+minWidth = 800.0
 
 [[appRules]]
 bundleId = "com.hnc.Discord"
 id = "AF752D95-8497-4844-BE20-4C93E73BAEF2"
 layout = "float"
-minWidth = 800.0
 minHeight = 500.0
+minWidth = 800.0
 
 [[appRules]]
 bundleId = "com.mitchellh.ghostty"
 id = "7876C9EF-437E-4D4F-9C27-B1B02F4AABCE"
 layout = "float"
-minWidth = 90.0
 minHeight = 48.0
+minWidth = 90.0
 
 [[appRules]]
 bundleId = "com.microsoft.Outlook"
 id = "8ECAB78B-BCDD-4245-BC25-1609A49B1C86"
 layout = "float"
-minWidth = 930.0
 minHeight = 650.0
+minWidth = 930.0
 
 [[appRules]]
 bundleId = "com.apple.MobileSMS"
 id = "552FB77D-BF0E-4737-90A6-B5BC6986C579"
 layout = "float"
-minWidth = 660.0
 minHeight = 320.0
+minWidth = 660.0
 
 [[appRules]]
+assignToWorkspace = "1"
 bundleId = "net.imput.helium"
 id = "7E3A9A22-BFFE-5017-8840-3E8423721BDF"
 layout = "tile"
-assignToWorkspace = "1"
 
 [[appRules]]
+assignToWorkspace = "1"
 bundleId = "com.openai.atlas"
 id = "75BAF63D-AB79-53C9-8D85-F74EE2C3B0CC"
 layout = "tile"
-assignToWorkspace = "1"
 
 [[appRules]]
+assignToWorkspace = "2"
 bundleId = "com.jetbrains.intellij"
 id = "B847F8E3-1E9A-5526-9377-20150776E129"
 layout = "tile"
-assignToWorkspace = "2"
 
 [[appRules]]
+assignToWorkspace = "2"
 bundleId = "com.microsoft.VSCode"
 id = "4583C304-4712-58F6-97AA-9338E1F71576"
 layout = "tile"
-assignToWorkspace = "2"
 
 [[appRules]]
+assignToWorkspace = "2"
 bundleId = "dev.zed.Zed-Preview"
 id = "EB901EDA-BDC2-57F7-8397-C9C1DDA46667"
 layout = "tile"
-assignToWorkspace = "2"
 
 [[appRules]]
+assignToWorkspace = "2"
 bundleId = "com.yetone.alma"
 id = "886ACEE8-E4AF-5431-84E6-FEA66DEF5FEF"
 layout = "tile"
-assignToWorkspace = "2"
 
 [[appRules]]
+assignToWorkspace = "2"
 bundleId = "com.conductor.app"
 id = "D7BD53B2-D54B-5EE6-8A16-201EF3721B0D"
 layout = "tile"
-assignToWorkspace = "2"
 
 [[appRules]]
+assignToWorkspace = "2"
 bundleId = "com.todesktop.230313mzl4w4u92"
 id = "559A42BA-66FF-50F2-8705-86B837E1656C"
 layout = "tile"
-assignToWorkspace = "2"
 
 [[appRules]]
+assignToWorkspace = "2"
 bundleId = "com.muxy.app"
 id = "0CB7B644-A813-51FE-8A91-1D788D40EE5E"
 layout = "tile"
-assignToWorkspace = "2"
 
 [[appRules]]
+assignToWorkspace = "3"
 bundleId = "net.kovidgoyal.kitty"
 id = "F46232B2-05F5-542D-A5D5-903E878436B3"
 layout = "tile"
-assignToWorkspace = "3"
 
 [[appRules]]
+assignToWorkspace = "3"
 bundleId = "com.cmuxterm.app"
 id = "FD18AF09-ACA0-57FA-8246-18EE4133E53F"
 layout = "tile"
-assignToWorkspace = "3"
 
 [[appRules]]
+assignToWorkspace = "5"
 bundleId = "com.tencent.xinWeChat"
 id = "D632B0D6-1142-511D-B66F-C417B5FC9D5C"
 layout = "tile"
-assignToWorkspace = "5"
 
 [[appRules]]
+assignToWorkspace = "5"
 bundleId = "com.tencent.qq"
 id = "9CAEC60A-C440-55CF-B3CF-A000EA958395"
 layout = "tile"
-assignToWorkspace = "5"
 
 [[appRules]]
+assignToWorkspace = "5"
 bundleId = "ru.keepcoder.Telegram"
 id = "90EFE589-86F7-52F2-A09C-818A56AF8B2B"
 layout = "tile"
-assignToWorkspace = "5"
 
 [[appRules]]
+assignToWorkspace = "6"
 bundleId = "com.apple.Music"
 id = "2864ACA4-4722-5B21-836A-20B4C1DD81F4"
 layout = "tile"
-assignToWorkspace = "6"
 
 [[appRules]]
+appNameSubstring = "NewsNow"
+assignToWorkspace = "1"
 bundleId = ""
 id = "86397E7A-E35D-51DF-B3F2-1346B5C13179"
-appNameSubstring = "NewsNow"
 layout = "tile"
-assignToWorkspace = "1"
 
 [[appRules]]
+assignToWorkspace = "3"
 bundleId = "com.apple.Terminal"
 id = "9B7E2300-C006-52BE-932B-2DE51F3AA52C"
 layout = "float"
-assignToWorkspace = "3"
 
 [[appRules]]
+assignToWorkspace = "4"
 bundleId = "md.obsidian"
 id = "44281419-C8CC-5CE1-9345-3DAD9C0A4ACA"
 layout = "float"
-assignToWorkspace = "4"
 
 [[appRules]]
+assignToWorkspace = "6"
 bundleId = "com.audirvana.Audirvana"
 id = "EDCCABA8-C79B-5B1D-B42E-778C3F252BED"
 layout = "float"
-assignToWorkspace = "6"
 
 [[appRules]]
+assignToWorkspace = "8"
 bundleId = "com.apple.finder"
 id = "65B83D9A-396F-5A74-B809-DCD5725142EA"
 layout = "float"
-assignToWorkspace = "8"
 
 [[appRules]]
+assignToWorkspace = "8"
 bundleId = "com.apple.Preview"
 id = "406FB169-8FA0-545C-9683-A623F59E0EBA"
 layout = "float"
-assignToWorkspace = "8"
 
 [[appRules]]
+assignToWorkspace = "9"
 bundleId = "com.apple.ScreenSharing"
 id = "62E47C02-10B3-578A-9AC9-CB40314F3D05"
 layout = "float"
-assignToWorkspace = "9"
 
 [[appRules]]
+assignToWorkspace = "9"
 bundleId = "tv.parsec.www"
 id = "4BF78868-C153-549A-A4E8-9136A7192B9D"
 layout = "float"
-assignToWorkspace = "9"
 
 [[appRules]]
+assignToWorkspace = "9"
 bundleId = "app.motrix.native"
 id = "BDFC83DD-3818-5486-97EA-45898F22B1A3"
 layout = "float"
-assignToWorkspace = "9"
 
 [[appRules]]
+assignToWorkspace = "9"
 bundleId = "com.now.gg.BlueStacks"
 id = "3FFB99B4-B77F-5491-8DC9-9AD894430ADA"
 layout = "float"
-assignToWorkspace = "9"
 
 [[appRules]]
+assignToWorkspace = "9"
 bundleId = "com.now.gg.BlueStacksMIM"
 id = "DA3BB564-E050-5378-B364-FDD94563EC72"
 layout = "float"
-assignToWorkspace = "9"
 
 [[appRules]]
 bundleId = ""
