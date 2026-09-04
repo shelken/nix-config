@@ -1,0 +1,72 @@
+# guard 全局权限防护规则 — 机器级特定拦截规则
+# 通用机密凭据（如 ~/.ssh, ~/.aws, .env 等）已内置硬编码在 guard 扩展中；
+# 本文件用于声明机器特有凭据、个人敏感路径及操作规范拦截。
+
+default_reason: "BLOCKED BY USER (GLOBAL)"
+
+deny_commands:
+  - pattern: "git add -A"
+    reason: "请显式指定文件"
+  - pattern: "git add ."
+    reason: "请显式指定文件"
+  - pattern: "git reset --hard"
+    reason: "禁止硬reset"
+  - pattern: "tccutil reset All"
+    reason: "禁止 tccutil reset 所有"
+  - pattern: "/bin/rm"
+    reason: "不要尝试绕过rm"
+  - pattern: "nix run"
+    reason: "不准使用nix run"
+  - pattern: "nix shell"
+    reason: "不准使用nix shell"
+
+deny_paths:
+  # --- personal shell secrets ---
+  - path: "~/.specific.zsh"
+    reason: "personal shell secrets"
+  - path: "~/.specific.bash"
+    reason: "personal shell secrets"
+
+  # --- docker ---
+  - path: "~/.docker/.token_seed"
+    reason: "docker token seed"
+
+  # --- github / gitlab CLI ---
+  - path: "~/.config/gh/access-token"
+    reason: "gh access token (sops-nix link)"
+  - path: "~/.config/glab-cli/config.yml"
+    reason: "glab CLI token config"
+
+  # --- azure token cache ---
+  - path: "~/.azure/msal_token_cache.json"
+    reason: "Azure MSAL token cache"
+  - path: "~/.azure/msal_http_cache.bin"
+    reason: "Azure MSAL HTTP cache"
+
+  # --- pi / omp / AI tool auth files ---
+  - path: "~/.omp/agent/auth.json"
+    reason: "omp provider credentials"
+  - path: "~/.pi/agent/auth.json"
+    reason: "pi provider credentials"
+  - path: "~/.codex/auth.json"
+    reason: "codex auth"
+  - path: "~/.codex/accounts/*.auth.json"
+    reason: "codex account auth"
+  - path: "~/.kilocode/cli/global/secrets.json"
+    reason: "kilocode secrets"
+
+  # --- rclone remotes ---
+  - path: "~/.config/rclone/rclone.conf"
+    reason: "rclone remote credentials"
+
+  # --- sops / age private keys ---
+  - path: "~/.config/sops/age/*"
+    reason: "sops age private keys"
+
+  # --- wrangler (oauth / account) ---
+  - path: "~/.config/.wrangler/config/default.toml"
+    reason: "wrangler oauth/config"
+
+  # --- sops-nix decrypted secret material (this machine) ---
+  - path: "~/.config/sops-nix/secrets/*"
+    reason: "sops-nix secret files"

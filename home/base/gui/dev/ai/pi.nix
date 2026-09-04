@@ -23,6 +23,12 @@ in
     source = config.lib.file.mkOutOfStoreSymlink "${ponytailDir}/config.json";
     force = true;
   };
+
+  # 权限防护规则软链到 omp 目录下的 permissions.yaml（与 omp 共享同一份规则库）
+  home.file.".pi/agent/permissions.yaml" = {
+    source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/omp/permissions.yaml";
+    force = true;
+  };
   shelken.backup.app.pi = [
     "${config.home.homeDirectory}/.pi"
   ];

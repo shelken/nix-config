@@ -24,17 +24,21 @@ providers:
     - mojeek
     - public
 modelRoles:
-  default: opencode-go/deepseek-v4-flash
-  slow: openai-codex/gpt-5.6-sol:high
-  smol: opencode-go/deepseek-v4-flash:high
   task: google-antigravity/gemini-3.8-flash-high:high
   advisor: opencode-go/deepseek-v4-flash:high
   vision: openai-codex/gpt-5.6-luna:high
   plan: google-antigravity/gemini-3.8-flash-high:high
   designer: google-antigravity/gemini-3.8-flash-high:high
   commit: opencode-go/deepseek-v4-flash:low
-  tiny: google-antigravity/gemini-3.1-flash-lite:auto
+  tiny: opencode-go/deepseek-v4-flash:low
   review: openai-codex/gpt-5.6-sol:high
+  smol: opencode-go/deepseek-v4-flash:high
+  slow: openai-codex/gpt-5.6-sol:medium
+  default: google-antigravity/gemini-3.8-flash-high:high
+cycleOrder:
+  - smol
+  - default
+  - slow
 symbolPreset: nerd
 composer:
   shape: band
@@ -46,3 +50,7 @@ statusLine:
 task:
   agentModelOverrides:
     reviewer: "@review"
+browser:
+  headless: true
+coAuthor:
+  email: hakase@ooooo.space
