@@ -54,3 +54,9 @@ browser:
   headless: true
 coAuthor:
   email: hakase@ooooo.space
+skills:
+  ignoredSkills:
+    - ponytail-debt
+    - ponytail-gain
+    - ponytail-help
+    - ponytail-audit
