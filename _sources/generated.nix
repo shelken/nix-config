@@ -55,15 +55,15 @@
   };
   cursor-plugins = {
     pname = "cursor-plugins";
-    version = "7314f723a487ec406b6369fe5865ba034cfed166";
+    version = "93b00b89ef425a9c1bac0d0b317dfc49c930ac99";
     src = fetchFromGitHub {
       owner = "cursor";
       repo = "plugins";
-      rev = "7314f723a487ec406b6369fe5865ba034cfed166";
+      rev = "93b00b89ef425a9c1bac0d0b317dfc49c930ac99";
       fetchSubmodules = false;
-      sha256 = "sha256-/9i9uAhF6VytUM6vR00eChwXGy5/2zMP5nAet3A5EI8=";
+      sha256 = "sha256-wA+B7ho81xzhoLgg+30fX9Cx1RvEF2N4qsQZexSZT0s=";
     };
-    date = "2026-09-02";
+    date = "2026-09-04";
   };
   humanlayer-skills = {
     pname = "humanlayer-skills";
