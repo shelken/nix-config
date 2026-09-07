@@ -9,7 +9,6 @@ providers:
     - gemini
     - exa
     - brave
-    - perplexity
     - anthropic
     - codex
     - xai
@@ -29,18 +28,20 @@ providers:
     - google
     - mojeek
     - public
+    - perplexity
+  webSearchGeminiModel: gemini-3.8-flash
 modelRoles:
   task: google-antigravity/gemini-3.8-flash-high:high
   advisor: opencode-go/deepseek-v4-flash:high
-  vision: openai-codex/gpt-5.6-luna:high
-  plan: google-antigravity/gemini-3.8-flash-high:high
+  vision: google-antigravity/gemini-3.8-flash:medium
+  plan: openai-codex/gpt-5.6-sol:high
   designer: google-antigravity/gemini-3.8-flash-high:high
   commit: opencode-go/deepseek-v4-flash:low
   tiny: opencode-go/deepseek-v4-flash:low
   review: openai-codex/gpt-5.6-sol:high
   smol: opencode-go/deepseek-v4-flash:high
-  slow: openai-codex/gpt-5.6-sol:medium
-  default: google-antigravity/gemini-3.8-flash-high:high
+  slow: openai-codex/gpt-5.6-sol:high
+  default: opencode-go/deepseek-v4-flash:high
 cycleOrder:
   - smol
   - task
@@ -55,9 +56,6 @@ setupVersion: 2
 statusLine:
   compactThinkingLevel: false
   preset: custom
-  # 复刻 default 预设左右段，右侧追加 usage（provider 5h/7d 限额）。
-  # 注：usage 段仅对报告含 5h/7d 窗口的 provider 生效(openai-codex/anthropic)；
-  # opencode-go 报告为 rolling-5h/weekly/monthly，不会显示。
   leftSegments:
     - pi
     - model
@@ -87,3 +85,5 @@ skills:
     - ponytail-audit
 dev:
   autoqaConsent: granted
+codexResets:
+  autoRedeem: "no"
