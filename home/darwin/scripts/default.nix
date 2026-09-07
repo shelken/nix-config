@@ -5,9 +5,7 @@ let
   reset-fcp-trial = import ./reset-fcp-trial.nix { inherit pkgs; };
 in
 {
-  imports = [
-    ./raycast.nix
-  ];
+  imports = [ ];
   home.packages = [
     idea.script
     loon-ctl.script

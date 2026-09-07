@@ -48,8 +48,7 @@
 - `core.nix`: 安装 macOS 特有的包，如 `gh` (GitHub CLI), `rclone`。
 - `shell.nix`: 为 `bash` 和 `zsh` 添加 Homebrew 相关的路径。
 - `wm/`: 配置 macOS 的窗口管理器，如 `aerospace`。
-- `raycast/`: Raycast 配置。
-- `scripts/`: 存放 macOS 特有的脚本，例如用于 Raycast 的快捷指令。
+- `scripts/`: 存放 macOS 特有的脚本。
 
 ### `linux/`
 

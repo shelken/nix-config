@@ -23,7 +23,7 @@ in
         "betterdisplay" # 显示器
         "iina"
 
-        "raycast"
+        "tinycast"
 
         "zed" # editor dev.zed.Zed
         # "zed@preview" # editor dev.zed.Zed-Preview
@@ -43,10 +43,6 @@ in
     };
 
     #==============
-    # launchd.user.agents.raycast = {
-    #   command = ''"/Applications/Raycast.app/Contents/MacOS/Raycast"'';
-    #   serviceConfig.RunAtLoad = true;
-    # };
     # launchd.user.agents.BetterShot = {
     #   command = ''"/Applications/BetterShot.app/Contents/MacOS/BetterShot"'';
     #   serviceConfig.RunAtLoad = true;

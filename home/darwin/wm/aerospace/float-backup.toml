@@ -59,11 +59,7 @@ if.app-id = 'com.now.gg.BlueStacks'
 run       = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'com.raycast.macos'
-run       = ['layout floating']
-
-[[on-window-detected]]
-if.app-id = 'com.raycast-x.macos'
+if.app-id = 'com.tinycast.app'
 run       = ['layout floating']
 
 [[on-window-detected]]
