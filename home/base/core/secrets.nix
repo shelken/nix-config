@@ -150,7 +150,19 @@ in
     enable = mkBoolOpt false "Whether or not use secrets";
   };
   config = mkIf cfg.enable {
-    sops.secrets = mylib.mkSopsSecrets enabledSecrets;
+    # ─── 统一明确的 Age 解密密钥 ───
+    sops.age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
+    home.sessionVariables.SOPS_AGE_KEY_FILE = config.sops.age.keyFile;
+
+    # ─── 统一凭据定义 ───
+    sops.secrets = (mylib.mkSopsSecrets enabledSecrets) // {
+      "wakatime/conf" = mylib.mkDefaultSecret {
+        path = "${config.home.homeDirectory}/.wakatime.cfg";
+      };
+      "asciinema/install-id" = mylib.mkDefaultSecret {
+        path = "${config.home.homeDirectory}/.config/asciinema/install-id";
+      };
+    };
 
     sops.templates."gh-hosts.yml" = {
       path = "${config.home.homeDirectory}/.config/gh/hosts.yml";

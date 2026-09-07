@@ -6,6 +6,8 @@ set dotenv-load := true
 # from .env
 
 profile := "$PROFILE"
+local_secrets_dir := env_var_or_default("LOCAL_SECRETS_DIR", home_dir() + "/code/MyRepo/nix/secrets.nix")
+
 
 alias b := rebuild
 alias bd := rebuild-debug
@@ -278,6 +280,16 @@ hm-build *args:
 hm *args:
     # nix run nixpkgs#nh -- home switch -c {{ profile }} . -v -- {{ args }}
     nh home switch -c {{ profile }} . -v --show-activation-logs -- {{ args }}
+
+# 本地联动调试构建：直接挂载本地 secrets.nix，无需等待 push 到 GitHub 和 upp
+[macos]
+hm-dev-build *args:
+    nh home build -c {{ profile }} . -v -- --override-input secrets path:{{ local_secrets_dir }} {{ args }}
+
+# 本地联动快速应用：直接挂载本地 secrets.nix 应用配置，秒级生效
+[macos]
+hm-dev *args:
+    nh home switch -c {{ profile }} . -v --show-activation-logs -- --override-input secrets path:{{ local_secrets_dir }} {{ args }}
 
 # 更新整个输入
 up:

@@ -1,66 +1,55 @@
-# secrets
+# 凭据管理架构 (Secrets & SOPS)
 
-## sops
+本项目使用 [sops-nix](https://github.com/Mic92/sops-nix) 配合 [age](https://github.com/FiloSottile/age) 进行系统与用户凭据的加解密管理。
 
-> [repo](https://github.com/Mic92/sops-nix)
+> 敏感凭据源密文独立存储在外部私有仓库：[secrets.nix](https://github.com/shelken/secrets.nix)
 
-> 以下参考[来源](https://github.com/Mic92/sops-nix?tab=readme-ov-file#usage-example)
+---
 
-> sops 的 secrets 存储在我的私人仓库中[secrets.nix](https://github.com/shelken/secrets.nix)
+## 1. 核心设计原则
 
-```nix
+- **职责解耦（心智清晰）**：
+  - **网络登录归 SSH**：使用各自主机与个人的 SSH 密钥对，由 `just rotate ssh` 闭环管理。
+  - **配置解密归 Age**：使用独立的原生 Age 根密钥，由 `~/.config/sops/age/keys.txt` 提供解密私钥，公钥声明在 `secrets.nix/.sops.yaml`。
+  - 两套密钥完全独立，轮换 SSH 密钥绝不影响 SOPS 解密，反之亦然。
+- **配置集中收敛**：
+  - 系统内所有用户态凭据与 SOPS 选项统一收敛在 `home/base/core/secrets.nix`。
+  - 明确声明密钥路径：`sops.age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt"`。
 
-# 引入sops-nix
+---
 
-sops-nix = {
-  url = "github:Mic92/sops-nix";
-  inputs.nixpkgs.follows = "nixpkgs";
-};
+## 2. 密钥初始化与编辑
 
-# 使用home-manager 模块
-imports = [
-  # sops-nix
-  sops-nix.homeManagerModules.sops
-]
-
-# 配置
-
-sops.age = {
-  generateKey = true;
-  keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
-  sshKeyPaths = [
-    "${config.home.homeDirectory}/.ssh/id_ed25519"
-  ];
-};
-home.sessionVariables.SOPS_AGE_KEY_FILE = config.sops.age.keyFile;
-
-```
-
-然后生成一个密钥用于编辑secrets
+### 初始化本地解密私钥
 
 ```shell
+mkdir -p ~/.config/sops/age
+# 生成独立原生 age 密钥
+age-keygen -o ~/.config/sops/age/keys.txt
 
-# for age..
-$ mkdir -p ~/.config/sops/age
-$ age-keygen -o ~/.config/sops/age/keys.txt
-# or to convert an ssh ed25519 key to an age key
-$ mkdir -p ~/.config/sops/age
-$ nix run nixpkgs#ssh-to-age -- -private-key -i ~/.ssh/id_ed25519 > ~/.config/sops/age/keys.txt
-
-```
-
-然后根据用户或者机器的公钥生成一个age公钥
-
-```shell
-
-# 如果已经有了上一个的密钥，可以根据上一步的密钥反推公钥
+# 查看对应的 public key (age1...)
 age-keygen -y ~/.config/sops/age/keys.txt
-
-# 或者
-nix run nixpkgs#ssh-to-age -- < ~/.ssh/id_ed25519.pub
-
 ```
 
-将生成的age公钥放入`.sops.yaml`中，根据`creation_rules`来配置哪些公钥读取哪些secrets
+### 授权与编辑
 
-每次编辑secrets时，使用命令`sops xxx/xxx.yaml`
+1. 将获取的 `age1...` 公钥填入 `secrets.nix` 仓库的 `.sops.yaml` 对应机器列表中。
+2. 在 `secrets.nix` 仓库中编辑密文：
+   ```shell
+   sops sops/secrets/shelken/default.yaml
+   ```
+
+---
+
+## 3. 日常维护与开发工作流
+
+- **日常轮换 Age 根密钥**：
+  在 `secrets.nix` 仓库根目录下执行一键自动化向导：
+  ```shell
+  just rotate age
+  ```
+- **本地开发极速联调**：
+  在 `secrets.nix` 修改密文后，在 `nix-config` 执行以下命令即可直接读取本地修改构建，无需等待 push 到 GitHub：
+  ```shell
+  just hm-dev
+  ```

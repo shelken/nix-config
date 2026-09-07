@@ -121,7 +121,6 @@
           ];
           home-modules = map mylib.relativeToRoot [
             "home/darwin"
-            "secrets/home.nix"
             "hosts/yuuko/home.nix"
           ];
         };
@@ -134,7 +133,6 @@
           ];
           home-modules = map mylib.relativeToRoot [
             "home/darwin"
-            "secrets/home.nix"
             "hosts/sakamoto/home.nix"
           ];
         };
@@ -147,7 +145,6 @@
           ];
           home-modules = map mylib.relativeToRoot [
             "home/darwin"
-            "secrets/home.nix"
             "hosts/mio/home.nix"
           ];
         };
