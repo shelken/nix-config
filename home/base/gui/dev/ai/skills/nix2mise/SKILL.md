@@ -94,10 +94,13 @@ programs.mise = {
 
 ### 5. 手写 .pre-commit-config.yaml
 
-把原 git-hooks.nix 生成的配置转成手写 YAML。**完成标准:所有 hook 配置逻辑与原生成物一致,格式为可读 YAML。**
+把原 git-hooks.nix 生成的配置转成手写 YAML。**完成标准:所有 hook 配置逻辑与原生成物一致,格式为可读 YAML,通用 hook 优先使用标准远端源。**
 
-原生成物是 JSON 且带 `DO NOT MODIFY`,迁移后改为可读 YAML。所有 hook 用 `language: system`(依赖 mise 提供的工具链)。逐条核对原 hook 的 `entry`/`files`/`pass_filenames` 等字段,原样保留语义;涉及 `--staged` 等不接收文件名的命令,保持 `pass_filenames: false`。
+原生成物是 JSON 且带 `DO NOT MODIFY`,迁移后改为可读 YAML:
 
+- **标准远端 hook(默认优先)**:对于常见的通用代码质量、文本格式检查(如 `end-of-file-fixer`、`trailing-whitespace`、`check-merge-conflict` 等 `pre-commit-hooks`,以及 `ruff`、`shellcheck` 等),**必须使用官方标准远端源**(`repo: https://github.com/...` 并锁定 `rev: <版本号>`),由 pre-commit 原生管理其独立隔离环境。**严禁**为了在本地跑基础 hook 而在 `mise.toml` 中引入 `pipx:pre-commit-hooks` 等外围包装工具污染项目配置。
+- **本地系统 hook(仅限复用项目主工具)**:仅当 hook 执行的是项目自身的主构建/检查工具(如 `cargo clippy`、`golangci-lint`、项目既有 npm scripts),且该工具已由 `mise.toml` 的 `[tools]` 或项目主包管理器管理时,才使用 `repo: local` + `language: system`。
+- 逐条核对原 hook 的 `entry`/`files`/`pass_filenames` 等字段,原样保留语义;涉及 `--staged` 等不接收文件名的命令,保持 `pass_filenames: false`。
 ### 6. 清理 nix 残留
 
 删除 flake 文件,清理 git 和 .gitignore。**完成标准:无 flake.nix/flake.lock;原被 gitignore 的生成物(如 `.pre-commit-config.yaml`)移出忽略;`core.hooksPath` 已 unset。**
@@ -164,3 +167,4 @@ mise trust / mise untrust # 信任/取消信任配置
 - **`mise trust`**:首次进入 mise.toml 未信任,所有工具显示 "not installed",需 `mise trust`。
 - **系统级工具不进 mise**:设备通信、GUI 应用、厂商自托管二进制等,mise 的 aqua/github backend 覆盖不到(它们依赖标准分发渠道),plugin 方案往往绕且不稳。判断标准是「是否需要项目级版本锁定」,不需要则交给系统包管理器。
 - **版本号写死**:用具体版本号而非 `latest`,保证可复现;升级时手动改。
+- **pre-commit hook 优先使用标准远端源**:通用 hook 走标准 `repo: https://github.com/...` 远端仓库,由 pre-commit 原生管理隔离环境;严禁为了 `repo: local` 而在 `mise.toml` 塞入 `pipx:pre-commit-hooks` 等伪系统依赖。`language: system` 仅限调用项目自身的核心工具。
