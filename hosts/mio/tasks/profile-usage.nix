@@ -6,10 +6,10 @@
   ];
   user = true;
   packages = with pkgs; [
-    ccusage
+    bun
     git
     just
-    python3
+    openssh
   ];
   secrets = {
     GH_TOKEN = secretPath "github/cli-token";
@@ -21,6 +21,10 @@
       echo "Profile repository $REPO not found, skipping."
       exit 0
     fi
+    if [ ! -f "$REPO/node_modules/.bin/ccusage" ]; then
+      bun install --cwd "$REPO" --frozen-lockfile 2>/dev/null || bun install --cwd "$REPO"
+    fi
+
 
     just -f "$REPO/justfile" -d "$REPO" sync-push
   '';
