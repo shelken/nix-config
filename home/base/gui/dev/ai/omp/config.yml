@@ -29,19 +29,19 @@ providers:
     - mojeek
     - public
     - perplexity
-  webSearchGeminiModel: gemini-3.8-flash
+  webSearchGeminiModel: gemini-3.5-flash
 modelRoles:
   task: google-antigravity/gemini-3.8-flash-high:high
   advisor: opencode-go/deepseek-v4-flash:high
-  vision: google-antigravity/gemini-3.8-flash:medium
-  plan: openai-codex/gpt-5.6-terra:xhigh
+  vision: openai-codex/gpt-5.6-luna:high
+  plan: openai-codex/gpt-5.6-sol:high
   designer: google-antigravity/gemini-3.8-flash-high:high
-  commit: opencode-go/deepseek-v4-flash:low
-  tiny: opencode-go/deepseek-v4-flash:low
-  review: openai-codex/gpt-5.6-terra:xhigh
-  smol: opencode-go/deepseek-v4-flash:high
-  slow: openai-codex/gpt-5.6-terra:xhigh
-  default: google-antigravity/gemini-3.8-flash:high
+  commit: openai-codex/gpt-5.6-luna:high
+  tiny: openai-codex/gpt-5.6-luna:high
+  review: openai-codex/gpt-5.6-sol:high
+  smol: google-antigravity/gemini-3.8-flash-high:high
+  slow: openai-codex/gpt-5.6-sol:medium
+  default: google-antigravity/gemini-3.8-flash-high:high
 cycleOrder:
   - smol
   - task
