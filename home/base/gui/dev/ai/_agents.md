@@ -38,7 +38,7 @@
 
 - 接手任何一个项目时，先检查项目下的尸检报告`ls postmortems`;记住标题就行，后续遇到相关`难解的问题`就往回查看;结束一个`阶段/大型的/长时间`的任务之后，如果有值得记下的`坑/难题`，阅读`postmortems`skill后，然后记下来并提交
 - 不准直接修改 `AGENTS.md`，永远只能提醒与建议
-- 项目的架构决策通常放入`{project-dir}/docs/adr/`中, 具体格式阅读`domain-modeling`skill; 在回答相关项目问题前手动检查adr目录
+- 项目的架构决策通常放入`{project-dir}/docs/adr/`中, 具体格式阅读`domain-modeling`skill
 
 ## 交付物
 
