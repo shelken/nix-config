@@ -1,6 +1,7 @@
 ---
 name: papercuts
 description: When you hit friction during work — a dead-end tool call, a broken link, a misleading doc, a footgun config, a missing helper — file it before moving on
+disable-model-invocation: true
 ---
 
 When you hit friction during work — a dead-end tool call, a broken link, a
