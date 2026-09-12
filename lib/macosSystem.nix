@@ -39,7 +39,8 @@ nix-darwin.lib.darwinSystem {
           home-manager.extraSpecialArgs = specialArgs // {
             hostname = config.networking.hostName;
           };
-          home-manager.users."${myvars.username}".imports = home-modules;
+          home-manager.users."${myvars.username}".imports =
+            home-modules ++ config.shelken.internal.homeModules;
         }
       )
     ]);
