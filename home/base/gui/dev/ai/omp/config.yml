@@ -40,8 +40,8 @@ modelRoles:
   tiny: openai-codex/gpt-5.6-luna:high
   review: openai-codex/gpt-5.6-sol:high
   smol: google-antigravity/gemini-3.8-flash-high:high
-  slow: openai-codex/gpt-5.6-sol:medium
-  default: google-antigravity/gemini-3.8-flash-high:high
+  slow: openai-codex/gpt-6-astra:medium
+  default: google-antigravity/gemini-3.8-flash:high
 cycleOrder:
   - smol
   - task
