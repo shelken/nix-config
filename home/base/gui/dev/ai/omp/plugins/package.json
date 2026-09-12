@@ -3,7 +3,8 @@
   "private": true,
   "dependencies": {
     "@shelken/pi-co-authored-by": "npm:@shelken/pi-co-authored-by@0.2.14",
-    "@shelken/pi-auto-model-prompts": "npm:@shelken/pi-auto-model-prompts@0.3.0",
+    "@shelken/pi-auto-model-prompts": "npm:@shelken/pi-auto-model-prompts@0.3.1",
+    "pi-qwenwork-provider": "git+ssh://git@github.com/shelken/pi-qwenwork-provider.git#main",
     "pi-zed-provider": "git+ssh://git@github.com/shelken/pi-zed-provider.git#main"
   }
 }
