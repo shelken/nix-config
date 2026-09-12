@@ -9,6 +9,25 @@ let
   cfg = config.shelken.dev.ai;
 
   ompDir = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/omp";
+
+  # 软链仓库内文件，仓库中直接编辑即生效
+  linkOmp = rel: {
+    source = config.lib.file.mkOutOfStoreSymlink "${ompDir}/${rel}";
+    force = true;
+  };
+
+  # 扩展目录内除 *.test.ts 外的 .ts 逐个软链；目录内还含测试与 AGENTS.md，不能整目录软链
+  extensionFiles = builtins.attrNames (
+    lib.filterAttrs (
+      name: type: type == "regular" && lib.hasSuffix ".ts" name && !lib.hasSuffix ".test.ts" name
+    ) (builtins.readDir ./extensions)
+  );
+  extensionLinks = lib.listToAttrs (
+    map (name: {
+      name = ".omp/agent/extensions/${name}";
+      value = linkOmp "extensions/${name}";
+    }) extensionFiles
+  );
 in
 {
   config = mkIf cfg.enable {
@@ -17,29 +36,14 @@ in
       omp = "sec-run omp";
     };
 
-    # 将 omp 的全局配置文件软链到本仓库的 config.yml（可直接编辑并由 git 管理）
-    home.file.".omp/agent/config.yml" = {
-      source = config.lib.file.mkOutOfStoreSymlink "${ompDir}/config.yml";
-      force = true;
-    };
-
-    # 将快捷键配置软链到本仓库的 keybindings.yml
-    home.file.".omp/agent/keybindings.yml" = {
-      source = config.lib.file.mkOutOfStoreSymlink "${ompDir}/keybindings.yml";
-      force = true;
-    };
-
-    # 将全局权限防护规则软链到本仓库的 permissions.yaml（可直接编辑并由 git 管理）
-    home.file.".omp/agent/permissions.yaml" = {
-      source = config.lib.file.mkOutOfStoreSymlink "${ompDir}/permissions.yaml";
-      force = true;
-    };
-
-    # 将 omp 插件清单软链到本仓库的 plugins/package.json（可直接编辑并由 git 管理）
-    home.file.".omp/plugins/package.json" = {
-      source = config.lib.file.mkOutOfStoreSymlink "${ompDir}/plugins/package.json";
-      force = true;
-    };
+    home.file = {
+      # omp 全局配置 / 快捷键 / 权限防护规则 / 插件清单
+      ".omp/agent/config.yml" = linkOmp "config.yml";
+      ".omp/agent/keybindings.yml" = linkOmp "keybindings.yml";
+      ".omp/agent/permissions.yaml" = linkOmp "permissions.yaml";
+      ".omp/plugins/package.json" = linkOmp "plugins/package.json";
+    }
+    // extensionLinks;
 
     # 自动化依赖安装：配置切换时静默确保 node_modules 就绪，无需手动敲命令
     home.activation.installOmpPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -52,23 +56,6 @@ in
       fi
     '';
 
-    # 引入 copy-cut 扩展（Shift+Alt+X 剪切输入框全文到剪贴板）
-    home.file.".omp/agent/extensions/copy-cut.ts" = {
-      source = ./extensions/copy-cut.ts;
-      force = true;
-    };
-
-    # 引入 omp-guard 扩展（硬拦截高危命令与敏感机密路径）
-    home.file.".omp/agent/extensions/guard.ts" = {
-      source = ./extensions/guard.ts;
-      force = true;
-    };
-
-    # 引入 antigravity-fix 扩展（规避 CCA 对 <system-conventions> 标签的假 429）
-    home.file.".omp/agent/extensions/antigravity-fix.ts" = {
-      source = ./extensions/antigravity-fix.ts;
-      force = true;
-    };
     # 备份 omp 数据目录
     shelken.backup.app.omp = [
       "${config.home.homeDirectory}/.omp"

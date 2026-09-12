@@ -8,8 +8,7 @@ const TAG = "system-conventions";
 
 export default function antigravityFixExtension(pi: any): void {
 	pi.on("before_provider_request", async (event: any, ctx: any) => {
-		const model = ctx?.getModel?.();
-		if (model?.provider !== "google-antigravity") return;
+		if (ctx?.model?.provider !== "google-antigravity") return;
 
 		const parts = event?.payload?.request?.systemInstruction?.parts;
 		if (!Array.isArray(parts)) return;
