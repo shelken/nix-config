@@ -16,7 +16,7 @@ description: 编写或审查任何 pi 插件的 factory、事件、命令、配�
 
 ## 参考文档
 
-- [session-start 规范](./references/session-start.md): Provider 的 `session_start` / `model_select` / `turn_start` 契约 (`activate`、模型门闩、`hasUI`、跨进程锁), 编写或审查 Provider 激活逻辑时加载
+- [session-start 规范](./references/session-start.md): Provider 的 `session_start` / `model_select` 契约 (`activate`、模型门闩、`hasUI`、跨进程锁), 编写或审查 Provider 激活逻辑时加载
 - [e2e 契约测试规范](./references/e2e-testing.md): 插件对外暴露能力、CLI 黑盒发现与回归测试规范, 包含测试选跑矩阵、零外部依赖测试模板及验证门禁, 编写或重构插件测试时加载
 
 ## 通用原则
