@@ -15,6 +15,8 @@ in
 
     suites.desktop.enable = true;
 
+    neovim.enable = true;
+
     tools.virts.enable = true;
 
     wm.aerospace.enable = true;

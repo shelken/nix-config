@@ -15,6 +15,11 @@ in
 
     suites.desktop.enable = true;
 
+    neovim = {
+      enable = true;
+      minimal = true;
+    };
+
     wm.aerospace.enable = true;
   };
 }

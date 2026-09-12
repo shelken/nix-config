@@ -72,6 +72,10 @@
     # ];
   };
 
+  shelken = {
+    neovim.enable = true;
+  };
+
   security.sudo.extraRules = [
     {
       users = [ username ];

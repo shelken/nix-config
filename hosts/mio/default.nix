@@ -25,6 +25,11 @@ in
     dev.ide.enable = true;
     dev.xcode.enable = true;
     dev.dbclient.enable = true;
+    dev.go.enable = true;
+    dev.cloud-native.enable = true;
+
+    # editor
+    neovim.enable = true;
 
     # tools
     tools.battery.enable = true;

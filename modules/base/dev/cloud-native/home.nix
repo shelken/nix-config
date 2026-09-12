@@ -1,7 +1,7 @@
 {
   pkgs,
   lib,
-  config,
+  osConfig,
   ...
 }:
 let
@@ -94,7 +94,7 @@ let
   '';
 in
 {
-  config = lib.mkIf config.shelken.dev.cloud-native.enable {
+  config = lib.mkIf osConfig.shelken.dev.cloud-native.enable {
     home.packages =
       (with pkgs; [
         dive # A tool for exploring each layer in a docker image

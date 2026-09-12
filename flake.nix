@@ -107,6 +107,7 @@
           system = "x86_64-linux";
           nixos-modules = map mylib.relativeToRoot [
             "modules/nixos/server.nix"
+            "hosts/vm/work-test"
           ];
           home-modules = map mylib.relativeToRoot [
             "home/linux/tui.nix"

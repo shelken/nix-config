@@ -1,0 +1,6 @@
+{ ... }:
+{
+  shelken = {
+    neovim.enable = true;
+  };
+}

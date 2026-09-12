@@ -7,5 +7,6 @@ in
   networking.computerName = hostname;
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
+    neovim.enable = true;
   };
 }

@@ -1,29 +1,23 @@
 {
-  lib,
-  mylib,
-  pkgs,
   config,
+  lib,
+  osConfig,
+  pkgs,
   pkgs-unstable,
   ...
 }:
 let
   # astronvim-config = dotfiles.packages.${system}.dot-astro-nvim;
   astronvim-config = pkgs.dot-astro-nvim;
-  inherit (lib) mkIf;
-  inherit (mylib) mkBoolOpt;
-  cfg = config.shelken.neovim;
+  cfg = osConfig.shelken.neovim;
 in
 {
-  options.shelken.neovim = {
-    minimal = mkBoolOpt false "最小化安装nvim（不带配置）";
-  };
-
   imports = [
     ./packages.nix
   ];
 
-  config = {
-    home.activation.installAstroNvim = mkIf (!cfg.minimal) (
+  config = lib.mkIf cfg.enable {
+    home.activation.installAstroNvim = lib.mkIf (!cfg.minimal) (
       lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         ${pkgs.rsync}/bin/rsync -avz --delete --chmod=D2755,F744 ${astronvim-config}/ ${config.xdg.configHome}/nvim/
       ''
@@ -41,13 +35,12 @@ in
 
       viAlias = true;
       vimAlias = true;
-    }
-    // lib.optionalAttrs (!cfg.minimal) {
+
       # extraLuaPackages = ps: [ ps.magick ]; # for nvim image plugin https://github.com/3rd/image.nvim
       # extraPackages = [ pkgs.imagemagick ]; # for nvim image plugin https://github.com/3rd/image.nvim
     };
 
     # Disable catppuccin to avoid conflict with my non-nix config.
-    catppuccin.nvim.enable = mkIf (!cfg.minimal) false;
+    catppuccin.nvim.enable = lib.mkIf (!cfg.minimal) false;
   };
 }

@@ -1,15 +1,15 @@
 {
   pkgs,
   pkgs-unstable,
-  config,
+  osConfig,
   lib,
   ...
 }:
 let
-  cfg = config.shelken.neovim;
+  cfg = osConfig.shelken.neovim;
 in
 {
-  home.packages =
+  home.packages = lib.mkIf cfg.enable (
     with pkgs;
     lib.optionals (!cfg.minimal) (
       [
@@ -105,5 +105,6 @@ in
     ++ lib.optionals (!stdenv.isDarwin) [
       gcc
       clang-tools
-    ];
+    ]
+  );
 }
