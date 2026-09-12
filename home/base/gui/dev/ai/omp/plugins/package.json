@@ -2,6 +2,7 @@
   "name": "omp-plugins",
   "private": true,
   "dependencies": {
-    "@shelken/pi-co-authored-by": "npm:@shelken/pi-co-authored-by@0.2.14"
+    "@shelken/pi-co-authored-by": "npm:@shelken/pi-co-authored-by@0.2.14",
+    "@shelken/pi-auto-model-prompts": "npm:@shelken/pi-auto-model-prompts@0.3.0"
   }
 }
