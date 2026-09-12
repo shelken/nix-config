@@ -39,23 +39,29 @@ in
       };
 
       home.file = {
-        # omp 全局配置 / 快捷键 / 权限防护规则 / 插件清单
+        # omp 全局配置 / 快捷键 / 权限防护规则
+        # 插件清单不在此列：它必须是普通副本，软链会被 omp plugin install 写穿到仓库
         ".omp/agent/config.yml" = linkOmp "config.yml";
         ".omp/agent/keybindings.yml" = linkOmp "keybindings.yml";
         ".omp/agent/permissions.yaml" = linkOmp "permissions.yaml";
-        ".omp/plugins/package.json" = linkOmp "plugins/package.json";
       }
       // extensionLinks;
 
-      # 自动化依赖安装：配置切换时静默确保 node_modules 就绪，无需手动敲命令
+      # 插件目录以仓库清单为准：每次激活重放清单并重装，手装插件随之消失。
+      # 清单用普通副本而非软链，否则 omp plugin install 会写穿到仓库文件；
+      # bun install 不会移除多余包，所以 node_modules 直接删掉重建。
       home.activation.installOmpPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        if [ -f "$HOME/.omp/plugins/package.json" ]; then
-          BUN="${pkgs.bun}/bin/bun"
-          if command -v bun >/dev/null 2>&1; then
-            BUN="$(command -v bun)"
-          fi
-          (cd "$HOME/.omp/plugins" && "$BUN" install --silent)
+        plugins="$HOME/.omp/plugins"
+        mkdir -p "$plugins"
+        rm -f "$plugins/package.json"
+        cp -f ${lib.escapeShellArg "${ompDir}/plugins/package.json"} "$plugins/package.json"
+        rm -rf "$plugins/node_modules" "$plugins/omp-plugins.lock.json"
+
+        BUN="${pkgs.bun}/bin/bun"
+        if command -v bun >/dev/null 2>&1; then
+          BUN="$(command -v bun)"
         fi
+        (cd "$plugins" && "$BUN" install --silent)
       '';
 
     }
