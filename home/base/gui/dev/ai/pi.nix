@@ -1,4 +1,10 @@
-{ pkgs, config, ... }:
+{
+  pkgs,
+  config,
+  lib,
+  system,
+  ...
+}:
 let
   ponytailDir = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/ponytail";
   shellInit = ''
@@ -29,8 +35,10 @@ in
     source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/omp/permissions.yaml";
     force = true;
   };
+  programs.zsh.initContent = shellInit;
+}
+// lib.optionalAttrs (lib.hasSuffix "darwin" system) {
   shelken.backup.app.pi = [
     "${config.home.homeDirectory}/.pi"
   ];
-  programs.zsh.initContent = shellInit;
 }

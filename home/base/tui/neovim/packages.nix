@@ -11,93 +11,97 @@ in
 {
   home.packages =
     with pkgs;
-    lib.optionals (!cfg.minimal) [
-      # c
-      # gcc # 插件需要
-      # c/c++ tools with clang-tools, the unwrapped version won't
-      # add alias like `cc` and `c++`, so that it won't conflict with gcc
-      # llvmPackages.clang-unwrapped
-      # clang-tools
-      gnumake
-      # 查询文件内容使用
-      ripgrep
+    lib.optionals (!cfg.minimal) (
+      [
+        # c
+        # gcc # 插件需要
+        # c/c++ tools with clang-tools, the unwrapped version won't
+        # add alias like `cc` and `c++`, so that it won't conflict with gcc
+        # llvmPackages.clang-unwrapped
+        # clang-tools
+        gnumake
+        # 查询文件内容使用
+        ripgrep
 
-      #-- python
-      pyright
-      ruff
-      # ruff-lsp has been deprecated, use `ruff server` instead
-      # ruff-lsp
-      (python313.withPackages (
-        ps: with ps; [
-          pip
-          # ruff
-          black # python formatter
-        ]
-      ))
+        #-- python
+        pyright
+        ruff
+        # ruff-lsp has been deprecated, use `ruff server` instead
+        # ruff-lsp
+        (python313.withPackages (
+          ps: with ps; [
+            pip
+            # ruff
+            black # python formatter
+          ]
+        ))
 
-      #-- nix
-      nil
-      nixd
-      nixfmt
-      # rnix-lsp  # has been remove
-      statix # Lints and suggestions for the nix programming language
-      deadnix # Find and remove unused code in .nix source files
+        #-- nix
+        nil
+        nixd
+        nixfmt
+        # rnix-lsp  # has been remove
+        statix # Lints and suggestions for the nix programming language
+        deadnix # Find and remove unused code in .nix source files
 
-      #-- go
-      go
-      gomodifytags
-      iferr # generate error handling code for go
-      impl # generate function implementation for go
-      gotools # contains tools like: godoc, goimports, etc.
-      gopls # go language server
-      delve # go debugger
+        #-- go
+        go
+        gomodifytags
+        iferr # generate error handling code for go
+        impl # generate function implementation for go
+        gotools # contains tools like: godoc, goimports, etc.
+        gopls # go language server
+        delve # go debugger
 
-      #-- lua
-      stylua
-      lua-language-server
+        #-- lua
+        stylua
+        lua-language-server
 
-      #-- rust
-      pkgs-unstable.rust-analyzer
-      pkgs-unstable.cargo # rust package manager
-      pkgs-unstable.rustfmt
+        #-- rust
+        pkgs-unstable.rust-analyzer
+        pkgs-unstable.cargo # rust package manager
+        pkgs-unstable.rustfmt
 
-      #-- misc
-      marksman # lsp for markdown
-      markdown-oxide # lsp for markdown
-      glow # markdown preview
-      taplo # TOML language server / formatter / validator
-      yaml-language-server
-      # sqlfluff # SQL linter
+        #-- misc
+        marksman # lsp for markdown
+        markdown-oxide # lsp for markdown
+        glow # markdown preview
+        taplo # TOML language server / formatter / validator
+        yaml-language-server
+        # sqlfluff # SQL linter
 
-      #FIXME issue: https://github.com/NixOS/nixpkgs/issues/449970
-      actionlint # GitHub Actions linter
-      buf # bufls
-      tree-sitter # common language parser/highlighter
-      prettier # common code formatter
-      lazygit
-      pngpaste # for img-clip plugins on mac
-      chafa # for alpha.nvim
+        #FIXME issue: https://github.com/NixOS/nixpkgs/issues/449970
+        actionlint # GitHub Actions linter
+        buf # bufls
+        tree-sitter # common language parser/highlighter
+        prettier # common code formatter
+        lazygit
+      ]
+      ++ lib.optional stdenv.isDarwin pngpaste
+      ++ [
+        chafa # for alpha.nvim
 
-      #-- Cloud
-      dockerfile-language-server
-      # terraform  # install via brew on macOS
-      terraform-ls
-      hadolint # Dockerfile linter
-      helm-ls # helm lsp
+        #-- Cloud
+        dockerfile-language-server
+        # terraform  # install via brew on macOS
+        terraform-ls
+        hadolint # Dockerfile linter
+        helm-ls # helm lsp
 
-      #-- frontend
-      #javascript/typescript --#
-      nodejs
-      typescript
-      typescript-language-server
-      # html/css lsp
-      vscode-langservers-extracted
+        #-- frontend
+        #javascript/typescript --#
+        nodejs
+        typescript
+        typescript-language-server
+        # html/css lsp
+        vscode-langservers-extracted
 
-      #-- bash
-      bash-language-server
-      shellcheck
-      shfmt
-    ]
+        #-- bash
+        bash-language-server
+        shellcheck
+        shfmt
+      ]
+    )
     ++ lib.optionals (!stdenv.isDarwin) [
       gcc
       clang-tools

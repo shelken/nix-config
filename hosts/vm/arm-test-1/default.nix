@@ -48,7 +48,6 @@
 
   networking = {
     hostName = "nixos-arm-test-1";
-    wireless.enable = false; # Enables wireless support via wpa_supplicant.
 
     # Configure network proxy if necessary
     # proxy.default = "http://user:password@proxy:port/";

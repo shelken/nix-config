@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  system,
   ...
 }:
 let
@@ -30,35 +31,39 @@ let
   );
 in
 {
-  config = mkIf cfg.enable {
-    # 别名：支持与 pi 并存，使用 sec-run omp
-    home.shellAliases = {
-      omp = "sec-run omp";
-    };
+  config = mkIf cfg.enable (
+    {
+      # 别名：支持与 pi 并存，使用 sec-run omp
+      home.shellAliases = {
+        omp = "sec-run omp";
+      };
 
-    home.file = {
-      # omp 全局配置 / 快捷键 / 权限防护规则 / 插件清单
-      ".omp/agent/config.yml" = linkOmp "config.yml";
-      ".omp/agent/keybindings.yml" = linkOmp "keybindings.yml";
-      ".omp/agent/permissions.yaml" = linkOmp "permissions.yaml";
-      ".omp/plugins/package.json" = linkOmp "plugins/package.json";
-    }
-    // extensionLinks;
+      home.file = {
+        # omp 全局配置 / 快捷键 / 权限防护规则 / 插件清单
+        ".omp/agent/config.yml" = linkOmp "config.yml";
+        ".omp/agent/keybindings.yml" = linkOmp "keybindings.yml";
+        ".omp/agent/permissions.yaml" = linkOmp "permissions.yaml";
+        ".omp/plugins/package.json" = linkOmp "plugins/package.json";
+      }
+      // extensionLinks;
 
-    # 自动化依赖安装：配置切换时静默确保 node_modules 就绪，无需手动敲命令
-    home.activation.installOmpPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      if [ -f "$HOME/.omp/plugins/package.json" ]; then
-        BUN="${pkgs.bun}/bin/bun"
-        if command -v bun >/dev/null 2>&1; then
-          BUN="$(command -v bun)"
+      # 自动化依赖安装：配置切换时静默确保 node_modules 就绪，无需手动敲命令
+      home.activation.installOmpPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        if [ -f "$HOME/.omp/plugins/package.json" ]; then
+          BUN="${pkgs.bun}/bin/bun"
+          if command -v bun >/dev/null 2>&1; then
+            BUN="$(command -v bun)"
+          fi
+          (cd "$HOME/.omp/plugins" && "$BUN" install --silent)
         fi
-        (cd "$HOME/.omp/plugins" && "$BUN" install --silent)
-      fi
-    '';
+      '';
 
-    # 备份 omp 数据目录
-    shelken.backup.app.omp = [
-      "${config.home.homeDirectory}/.omp"
-    ];
-  };
+    }
+    // lib.optionalAttrs (lib.hasSuffix "darwin" system) {
+      # 备份 omp 数据目录
+      shelken.backup.app.omp = [
+        "${config.home.homeDirectory}/.omp"
+      ];
+    }
+  );
 }
