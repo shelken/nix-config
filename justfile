@@ -261,23 +261,22 @@ switch *args: rebuild-debug
 # 仅构建 Home Manager（查看差异，不应用）
 [macos]
 hm-build *args:
-    nh home build -c {{ profile }} . -v -- {{ args }}
+    nix build --no-link --print-out-paths ".#homeConfigurations.{{ profile }}.activationPackage" {{ args }}
 
 # 仅应用 Home Manager
 [macos]
 hm *args:
-    # nix run nixpkgs#nh -- home switch -c {{ profile }} . -v -- {{ args }}
-    nh home switch -c {{ profile }} . -v --show-activation-logs -- {{ args }}
+    $(nix build --no-link --print-out-paths ".#homeConfigurations.{{ profile }}.activationPackage" {{ args }})/activate --driver-version 1
 
 # 本地联动调试构建：直接挂载本地 secrets.nix，无需等待 push 到 GitHub 和 upp
 [macos]
 hm-dev-build *args:
-    nh home build -c {{ profile }} . -v -- --override-input secrets path:{{ local_secrets_dir }} {{ args }}
+    nix build --no-link --print-out-paths ".#homeConfigurations.{{ profile }}.activationPackage" --override-input secrets path:{{ local_secrets_dir }} {{ args }}
 
 # 本地联动快速应用：直接挂载本地 secrets.nix 应用配置，秒级生效
 [macos]
 hm-dev *args:
-    nh home switch -c {{ profile }} . -v --show-activation-logs -- --override-input secrets path:{{ local_secrets_dir }} {{ args }}
+    $(nix build --no-link --print-out-paths ".#homeConfigurations.{{ profile }}.activationPackage" --override-input secrets path:{{ local_secrets_dir }} {{ args }})/activate --driver-version 1
 
 # 更新整个输入
 up:

@@ -175,7 +175,9 @@
 
       darwinHosts = lib.filterAttrs (_: v: v.type == "darwin") hosts;
       nixosHosts = lib.filterAttrs (_: v: v.type == "nixos") hosts;
-      homeHosts = lib.filterAttrs (_: v: v ? "home-modules") hosts;
+      systemConfigurations =
+        lib.mapAttrs (_: v: mylib.macosSystem v) darwinHosts
+        // lib.mapAttrs (_: v: mylib.nixosSystem v) nixosHosts;
 
       colmenaHosts = lib.filterAttrs (_: v: v.colmena or false) hosts;
 
@@ -194,9 +196,22 @@
       forAllSystems = func: (nixpkgs.lib.genAttrs allSystemAbove func);
     in
     {
-      nixosConfigurations = lib.mapAttrs (_: v: mylib.nixosSystem v) nixosHosts;
-      darwinConfigurations = lib.mapAttrs (_: v: mylib.macosSystem v) darwinHosts;
-      homeConfigurations = lib.mapAttrs (name: v: mylib.mkHomeConfig name v) homeHosts;
+      nixosConfigurations = lib.filterAttrs (
+        name: _: builtins.hasAttr name nixosHosts
+      ) systemConfigurations;
+      darwinConfigurations = lib.filterAttrs (
+        name: _: builtins.hasAttr name darwinHosts
+      ) systemConfigurations;
+      homeConfigurations = lib.mapAttrs (
+        _: host:
+        let
+          homeConfig = host.config.home-manager.users.${myvars.username};
+        in
+        {
+          config = homeConfig;
+          activationPackage = homeConfig.home.activationPackage;
+        }
+      ) systemConfigurations;
 
       colmena = {
         meta = (
