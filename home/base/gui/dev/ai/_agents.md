@@ -11,7 +11,8 @@
 - 完成一项任务后，通常在交付用户前，如果可以，自己应该验证功能；验证应非破坏性，且不是简单的单元测试
 - 永远不要在代码库里留下调试或测试垃圾。工作交付前清理自己产生的临时文件/临时代码
 - 对于错误修复和回归，使用红绿测试驱动开发，并尽可能减少所需的代码行数
-- 不需要任何 赞扬/道歉/夸奖, 只需要客观/友善/真诚地和用户对话
+- 不需要任何 `赞扬/道歉/夸奖`, 只需要 `客观/友善/真诚` 地和用户对话
+- 用户有严重`ADHD`症状, 阅读障碍; 沟通时要让用户更加容易理解
 
 ### 代码注释
 
@@ -27,12 +28,10 @@
 
 ## 常用目录
 
-- nix-config: 通常在 `~/nix-config` 下，用 nix 控制所有 `.config`、所有全局 `skills/AGENTS.md`、所有机器的持久化配置
-- home-ops: 通常在 `~/Code/active/home-ops`，homelab 集群配置，包含 VPS/router 相关服务部署
+- nix-config: 通常在 `~/nix-config` 下，用 nix 控制所有 `dot-config`、所有全局 `skills/AGENTS.md`、所有机器的持久化配置
 - kaiyuan: 通常在 `~/Code/kaiyuan`，存放大量其他人开源项目，一般将需要研究的开源项目放在里面
 - active: 通常在 `~/Code/active`，本地开发的大部分项目都在这
 - wiki: 通常在 `~/Code/wiki`，跨项目可复用的技术知识库，agent 写读为主；会话/研究中产生的有价值结论统一存入这里，遵守其 AGENTS.md 规范（来源引用 + 同步 index/log）
-- knowledge-base: 通常在 `~/Code/knowledge-base`（symlink → iCloud Obsidian 库），存量个人笔记与博客，只读不写，不新增内容
 
 ## 项目记忆
 
@@ -48,14 +47,14 @@
 
 **如果没有特别说明，skills 大部分都在 `~/.agents/skills/`可以找到，项目 skills 一般都在 `{project}/.agents/skills/`可以找到, 优化与改善的话在nix-config/home.../skills中**
 
-- Git 提交、GitHub 日常操作、提交前检查：`git-workflow`
-- 项目文档约定（非专项写作流程）：`docs-policy`
-- 写 README：`doc-readme`；写用户指南：`doc-user-guide`；写 `AGENTS.md`：`doc-agent-file`
-- 发起子代理：`subagent-policy`
+- Git 提交前：`git-workflow`
+- 项目文档（非专项写作流程）：`docs-policy`
+- 写 `README` 时：`doc-readme`；写用户指南时：`doc-user-guide`；写 `AGENTS.md` 时：`doc-agent-file`
+- 发起子代理前：`subagent-policy`
 - 用户要求回忆/沉淀/审计项目知识时：`project-memory`
 - 写尸检报告：`postmortem`
 - DEBUG: `debug-best-practice`
 - 控制浏览器: `browser-best-practice`
-- 控制和读取任意系统App: `computer-use-best-practice`
+- 控制和读取任意系统APP: `computer-use-best-practice`
 - 编写、修改、调试、测试或审查代码时: `ai-coding-discipline`
 - 需要查阅库的最新文档时: `code-context`
