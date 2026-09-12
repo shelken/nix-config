@@ -63,6 +63,12 @@ in
       source = ./extensions/guard.ts;
       force = true;
     };
+
+    # 引入 antigravity-fix 扩展（规避 CCA 对 <system-conventions> 标签的假 429）
+    home.file.".omp/agent/extensions/antigravity-fix.ts" = {
+      source = ./extensions/antigravity-fix.ts;
+      force = true;
+    };
     # 备份 omp 数据目录
     shelken.backup.app.omp = [
       "${config.home.homeDirectory}/.omp"
