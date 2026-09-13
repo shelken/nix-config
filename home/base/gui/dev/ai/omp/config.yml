@@ -31,20 +31,22 @@ providers:
     - perplexity
   webSearchGeminiModel: gemini-3.8-flash
 modelRoles:
-  task: commandcode-local/deepseek/deepseek-v4.1-flash:high
   vision: openai-codex/gpt-5.6-luna:high
   plan: openai-codex/gpt-6-astra:high
   commit: openai-codex/gpt-5.6-luna:high
   tiny: openai-codex/gpt-5.6-luna:high
-  review: openai-codex/gpt-6-astra:medium
-  smol: commandcode-local/deepseek/deepseek-v4.1-flash:high
-  slow: openai-codex/gpt-6-astra:medium
+  review: google-antigravity/gemini-3.8-flash-high:high
+  smol: google-antigravity/gemini-3.8-flash-high:high
+  slow: openai-codex/gpt-6-astra:low
   default: commandcode-local/deepseek/deepseek-v4.1-flash:high
+  test: cpa/workbuddy/glm-5.3-flash:max
+  task: cpa/workbuddy/glm-5.3-flash:max
 cycleOrder:
   - smol
   - task
   - default
   - slow
+  - test
 symbolPreset: nerd
 composer:
   shape: band

@@ -44,6 +44,8 @@ in
         ".omp/agent/config.yml" = linkOmp "config.yml";
         ".omp/agent/keybindings.yml" = linkOmp "keybindings.yml";
         ".omp/agent/permissions.yaml" = linkOmp "permissions.yaml";
+        # 模型配置: provider 清单 + 自定义模型 (apiKey 为环境变量名, OMP resolveConfigValue 先查 env 后降级字面量)
+        ".omp/agent/models.yml" = linkOmp "models.yml";
       }
       // extensionLinks;
 

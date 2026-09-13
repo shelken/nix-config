@@ -1,0 +1,295 @@
+providers:
+  openai:
+    baseUrl: http://192.168.69.60:8317/v1
+    apiKey: CPA_PI_API_KEY
+    api: openai-responses
+  commandcode-local:
+    baseUrl: http://127.0.0.1:3050/v1
+    apiKey: COMMANDCODE_API_KEY
+    api: openai-completions
+    discovery:
+      type: openai-models-list
+  cpa:
+    baseUrl: http://192.168.69.60:8317/v1
+    apiKey: CPA_PI_API_KEY
+    api: openai-responses
+    discovery:
+      type: openai-models-list
+    # 档位权威来源: cpa-plugins/plugins/workbuddy/data/static-config.json
+    # 宿主 /v1/models 只回 id/object/created/owned_by, 无能力字段, 发现结果查内置目录会命中
+    # 同名无关行 (如 hy3 命中 opencode-go 的 minimal..xhigh), 故在此逐 id 覆盖为上游真实档位。
+    # omitReasoningEffort: false 必须显式声明: 同一次查表还会把无关行的 omitReasoningEffort: true 带进来,
+    # 该标志优先于 supportsReasoningEffort, 会让 effort 整个从请求里消失 (glm-5.3-flash, kimi-k2.6, minimax-m3 实测)。
+    modelOverrides:
+      workbuddy/deepseek-v4.1-flash:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [high]
+          defaultLevel: high
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/deepseek-v4-flash:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [high, xhigh]
+          defaultLevel: high
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/deepseek-v4-pro:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [high, xhigh]
+          defaultLevel: high
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/glm-5.0-turbo:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [medium]
+          defaultLevel: medium
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/glm-5.1:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [medium]
+          defaultLevel: medium
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/glm-5.2:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [high, xhigh]
+          defaultLevel: high
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/glm-5.3:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, high, max]
+          defaultLevel: high
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/glm-5.3-flash:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, high, max]
+          defaultLevel: high
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/glm-5v-turbo:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [medium]
+          defaultLevel: medium
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/hunyuan-2.0-instruct:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [medium]
+          defaultLevel: medium
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/hunyuan-chat:
+        reasoning: false
+      workbuddy/hy3:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, high]
+          defaultLevel: high
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/hy3-x:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, high]
+          defaultLevel: high
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/hy4-preview:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [high]
+          defaultLevel: high
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/hy4-preview-f:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [high]
+          defaultLevel: high
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/kimi-k2.5:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [medium]
+          defaultLevel: medium
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/kimi-k2.6:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [medium]
+          defaultLevel: medium
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/kimi-k2.7:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [medium]
+          defaultLevel: medium
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/kimi-k2.8-preview:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, high, max]
+          defaultLevel: high
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/kimi-k3-1:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, high, xhigh]
+          defaultLevel: high
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+          # 内置 catalog 的 kimi k3 lineage 映射会把 xhigh 翻成 max (厂商表里没有 max), 这里钉回原值。
+          reasoningEffortMap: { xhigh: xhigh }
+      workbuddy/minimax-m3:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [medium]
+          defaultLevel: medium
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+  wx:
+    baseUrl: https://chatapi.weixin.qq.com/openai/v1
+    apiKey: WX_PI_API_KEY
+    api: openai-completions
+    compat:
+      supportsDeveloperRole: false
+    models:
+      - id: Deepseek-v4-flash
+        name: DeepSeek V4 Flash
+        reasoning: true
+        input:
+          - text
+        contextWindow: 256000
+        maxTokens: 48000
+        thinking:
+          mode: effort
+          efforts:
+            - low
+            - high
+            - max
+      - id: GLM-5.2
+        name: GLM-5.2
+        reasoning: true
+        input:
+          - text
+        contextWindow: 200000
+        maxTokens: 48000
+        thinking:
+          mode: effort
+          efforts:
+            - medium
+            - high
+  omlx:
+    baseUrl: http://localhost:8900/v1
+    api: openai-completions
+    apiKey: OMLX_API_KEY
+    models:
+      - id: LFM2.5-8B-A1B-MLX-4bit
+        name: LFM2.5 8B A1B MLX 4bit
+        input:
+          - text
+        reasoning: false
+        contextWindow: 100000
+        maxTokens: 8192
+      - id: Qwen3.5-2B-6bit
+        name: Qwen3.5 2B
+        input:
+          - text
+          - image
+        reasoning: false
+        contextWindow: 100000
+        maxTokens: 4096
+      - id: Qwen3.5-4B-MLX-4bit
+        name: Qwen3.5 4B 4bit
+        input:
+          - text
+          - image
+        reasoning: true
+        contextWindow: 100000
+        maxTokens: 8192
+      - id: Qwen3.5-4B-MLX-8bit
+        name: Qwen3.5 4B 8bit
+        input:
+          - text
+          - image
+        reasoning: true
+        contextWindow: 100000
+        maxTokens: 8192
