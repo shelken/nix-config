@@ -9,6 +9,7 @@
     bun
     git
     just
+    nodejs
     openssh
   ];
   secrets = {
