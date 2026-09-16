@@ -196,7 +196,37 @@
     {
       nixosConfigurations = lib.mapAttrs (_: v: mylib.nixosSystem v) nixosHosts;
       darwinConfigurations = lib.mapAttrs (_: v: mylib.macosSystem v) darwinHosts;
-      homeConfigurations = lib.mapAttrs (name: v: mylib.mkHomeConfig name v) homeHosts;
+      # Home 不是第二套配置，只导出系统结果中已经求值的 Home 子配置：
+      # config 指向它，activationPackage 指向同一个 derivation，
+      # 供 `nh home build/switch -c <host>` 读取（nh 走 config.home.activationPackage）。
+      homeConfigurations = lib.mapAttrs (
+        name: host:
+        let
+          systemConfig =
+            if host.type == "darwin" then
+              self.darwinConfigurations.${name}
+            else if host.type == "nixos" then
+              self.nixosConfigurations.${name}
+            else
+              throw "Unsupported Home host type: ${host.type}";
+
+          hm = systemConfig.config.home-manager.users.${myvars.username};
+
+          # 与上游 homeManagerConfiguration 等价的断言/告警检查，避免请求 Home 时静默跳过失败断言
+          failed = map (x: x.message) (lib.filter (x: !x.assertion) hm.assertions);
+          checkedHome =
+            if failed != [ ] then
+              throw ''
+                Failed assertions:
+                ${lib.concatStringsSep "\n" (map (x: "- ${x}") failed)}''
+            else
+              lib.foldr (warning: result: builtins.trace "warning: ${warning}" result) hm hm.warnings;
+        in
+        {
+          config = checkedHome;
+          activationPackage = checkedHome.home.activationPackage;
+        }
+      ) homeHosts;
 
       colmena = {
         meta = (

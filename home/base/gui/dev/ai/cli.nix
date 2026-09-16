@@ -23,13 +23,9 @@ let
     exec ${pkgs.bun}/bin/bunx @llamaindex/liteparse "$@"
   '';
 
-  computer-use = pkgs.writeShellScriptBin "computer-use" ''
-    exec ${pkgs.bun}/bin/bun ${./skills/computer-use-best-practice/scripts/computer-use.ts} "$@"
-  '';
-
-  spawn-subagent = pkgs.writeShellScriptBin "spawn-subagent" ''
-    exec ${pkgs.bun}/bin/bun ${./skills/subagent-policy/spawn-subagent} "$@"
-  '';
+  # 软链到工作树源码：改脚本即时生效，无需 rebuild。
+  # 路径用字符串拼接而不是 ${./…} 插值，插值会把文件复制进 store。
+  skillsDir = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/skills";
 in
 {
   config = lib.mkIf config.shelken.dev.ai.enable {
@@ -39,9 +35,17 @@ in
       enable = false; # use homebrew
     };
 
+    # computer-use / spawn-subagent 与 skills 同源，软链到工作树源码即时生效
+    home.file.".local/bin/computer-use" = {
+      source = config.lib.file.mkOutOfStoreSymlink "${skillsDir}/computer-use-best-practice/scripts/computer-use.ts";
+      force = true;
+    };
+    home.file.".local/bin/spawn-subagent" = {
+      source = config.lib.file.mkOutOfStoreSymlink "${skillsDir}/subagent-policy/spawn-subagent";
+      force = true;
+    };
+
     home.packages = [
-      computer-use
-      spawn-subagent
       ctx7
       pkgs.ast-grep
       # bil
