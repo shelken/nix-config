@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  mylib,
   ...
 }:
 let
@@ -44,8 +45,22 @@ let
     in
     "${builtins.substring 0 8 h}-${builtins.substring 8 4 h}-${builtins.substring 12 4 h}-${builtins.substring 16 4 h}-${builtins.substring 20 12 h}";
 
+  # 原生 App 快捷键 (直连 Bundle ID，双向 Toggle：前台隐藏/后台唤起)
+  appHotkeys = {
+    "alt-f" = "com.apple.finder";
+    "alt-w" = "com.tencent.xinWeChat";
+    "alt-c" = "dev.zed.Zed";
+    "alt-shift-enter" = "net.kovidgoyal.kitty";
+  };
+
   # 声明需要在 Tinycast 启动器中直接搜索和调用的自定义命令
   commands = [
+    {
+      name = "Helium (Debug)";
+      command = ''open -a "Helium" --args "--remote-debugging-port=9333"'';
+      iconSymbol = "globe";
+      hotkey = "alt-b";
+    }
     {
       name = "New Kitty Window";
       command = lib.getExe basePackages.new-kitty;
@@ -73,6 +88,27 @@ let
     }
   ];
 
+  hotkeyedCommands = builtins.filter (c: c ? hotkey) commands;
+
+  # 生成 targets.darwin.defaults 所需的偏好字典 (快捷键使用 mylib.darwinKeyCombo 统一换算)
+  tinycastDefaults =
+    (lib.mapAttrs' (
+      chord: bundleID: lib.nameValuePair "hotkey.app.${bundleID}" (mylib.darwinKeyCombo chord)
+    ) appHotkeys)
+    // {
+      boundAppBundleIDs = builtins.attrValues appHotkeys;
+    }
+    // (lib.listToAttrs (
+      map (cmd: {
+        name = "hotkey.customCommand.${lib.toLower (mkUUID cmd.name)}";
+        value = mylib.darwinKeyCombo cmd.hotkey;
+      }) hotkeyedCommands
+    ))
+    // {
+      boundCustomCommandIDs = map (cmd: lib.toLower (mkUUID cmd.name)) hotkeyedCommands;
+      customCommandsEnabled = true;
+      customCommandsShowInLauncher = true;
+    };
   managedCommands = map (cmd: {
     id = mkUUID cmd.name;
     inherit (cmd) name command iconSymbol;
@@ -113,6 +149,8 @@ let
 in
 {
   home.packages = (builtins.attrValues basePackages) ++ presetPackages;
+  # 原生接管快捷键与命令索引映射
+  targets.darwin.defaults."com.tinycast.app" = tinycastDefaults;
 
   # 软链接脚本目录至 ~/.config/tinycast/scripts，便于调试
   xdg.configFile."tinycast/scripts" = {
