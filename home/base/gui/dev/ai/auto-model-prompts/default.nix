@@ -24,6 +24,7 @@ let
     "glm-*" = "glm-*";
     "gpt-5.5" = "gpt-5.5";
     "gpt-5.6-*" = "gpt-5.6-*";
+    "gpt-6-*" = "gpt-5.6-*";
     "grok*" = "grok*";
     "mimo*" = "cn-model";
     "qwen*" = "cn-model";
