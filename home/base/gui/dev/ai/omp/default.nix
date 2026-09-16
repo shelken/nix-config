@@ -59,14 +59,12 @@ in
         rm -f "$plugins/package.json"
         cp -f ${lib.escapeShellArg "${ompDir}/plugins/package.json"} "$plugins/package.json"
         rm -rf "$plugins/node_modules" "$plugins/omp-plugins.lock.json"
-
         BUN="${pkgs.bun}/bin/bun"
         if command -v bun >/dev/null 2>&1; then
           BUN="$(command -v bun)"
         fi
         (cd "$plugins" && "$BUN" install --silent)
       '';
-
     }
     // lib.optionalAttrs (lib.hasSuffix "darwin" system) {
       # 备份 omp 数据目录

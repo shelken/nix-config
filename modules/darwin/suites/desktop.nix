@@ -23,7 +23,7 @@ in
         "betterdisplay" # 显示器
         "iina"
 
-        "tinycast"
+        "shelken/tap/tinycast"
 
         "zed" # editor dev.zed.Zed
         # "zed@preview" # editor dev.zed.Zed-Preview

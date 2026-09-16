@@ -27,6 +27,11 @@
     reattach = true;
   };
 
+  # 系统级切换提权时保留 SSH_AUTH_SOCK，供内嵌的 Home Manager 激活与私有仓库访问
+  security.sudo.extraConfig = ''
+    Defaults:${myvars.username} env_keep += "SSH_AUTH_SOCK"
+  '';
+
   system = {
     # activationScripts are executed every time you boot the system or run `nixos-rebuild` / `darwin-rebuild`.
     activationScripts.postActivation.text = ''
