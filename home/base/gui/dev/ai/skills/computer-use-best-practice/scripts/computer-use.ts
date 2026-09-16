@@ -28,9 +28,6 @@ export type WindowState = {
   pid: number;
   window_id: number;
   snapshot_id?: string;
-  returned_element_count?: number;
-  total_element_count?: number;
-  elements_complete?: boolean;
   screenshot_file_path?: string;
   screenshot_width?: number;
   screenshot_height?: number;
@@ -220,9 +217,11 @@ export class AutomationSession {
     const png = options.screenshotPath;
     const part = png ? `${png}.part${process.pid}` : undefined;
     const args: Record<string, unknown> = { pid: this.pid, window_id: wid, include_screenshot: Boolean(png) };
+    // 驱动默认深度 25、元素 2000；脚本自己砍到 3/300 会让整棵子树消失，而遍历成本由树本身决定，
+    // 省下的时间接近零。只有调用方显式收紧时才下发上限。
     if (!options.full) {
-      args.max_depth = options.depth ?? 3;
-      args.max_elements = options.maxElements ?? 300;
+      if (options.depth != null) args.max_depth = options.depth;
+      if (options.maxElements != null) args.max_elements = options.maxElements;
     }
     if (part && png) {
       mkdirSync(dirname(png), { recursive: true });
@@ -620,6 +619,8 @@ export class AutomationSession {
 
 const cacheDir = process.env.COMPUTER_USE_CACHE_DIR ?? join(tmpdir(), "computer-use");
 const defaultDriver = new CliDriverAdapter();
+// 脚本不下发上限时驱动按这个值截断；到达它说明可能还有元素没返回。
+const DRIVER_DEFAULT_MAX_ELEMENTS = 2000;
 
 const overview = `computer-use — macOS 窗口快照与自动化操作 CLI
 
@@ -737,23 +738,27 @@ off-viewport 表示窗口被平铺窗口管理器推到了屏幕外，Zed 与 He
   appshot: `computer-use appshot [目标] [--full] [--screenshot <path>]
 
 一次采集同时拿到 AX 树与 PNG 截图，并刷新动作 token。
-  --full            交给驱动完整遍历预算，大树慎用
+  --full            完全解除遍历预算，交给驱动走到底
   --screenshot      截图另存到指定路径，默认写缓存目录 <pid>-<wid>.png
 
 输出:
   snapshot= 快照 id   target= <pid>:<wid>   shown= 本次打印的元素数
-  walked= 已遍历/总数   cut=N 表示被遍历预算砍掉 N 个
+  walked= 驱动本次走过的元素数
+  tree= full | depth-limited(depth=N)   depth-limited 表示最深元素正好停在 N 层，可能还有更深的
+  unindexed= 树里存在但没有 token 的节点数，只能读不能按 t<idx> 操作
   off-viewport 表示窗口在屏幕外：AX 可用，像素投递会被拒绝
   screenshot= 路径与 PNG 像素尺寸   coordinates=png-pixels
   t<idx> 行: 元素角色、标签、ax= 屏幕点、sel/on 标志
+  ~ 行: 无索引节点，格式为 role / label / no-token
 
-默认 depth=3、max-elements=300，只打印窗口视口内元素以控制 token 开销。
-元素多的时候先 find 投影，不要用 --all 全量打印。`,
+默认不下发遍历预算，交给驱动（深度 25、元素 2000）；--depth / --max-elements 可收紧。
+只打印窗口视口内元素以控制 token 开销，元素多的时候先 find 投影，不要用 --all 全量打印。`,
 
-  snapshot: `computer-use snapshot [目标] [--depth N] [--max-elements N] [--query Q] [--all] [--json]
+  snapshot: `computer-use snapshot [目标] [--depth N] [--max-elements N] [--query Q] [--all] [--full] [--json]
 
 只取 AX 树不截图，同样刷新动作 token。输出字段与 appshot 相同。
-  --depth / --max-elements   覆盖默认遍历预算
+  --depth / --max-elements   收紧遍历预算；默认不下发，交给驱动（深度 25、元素 2000）
+  --full                     完全解除遍历预算
   --query                    只打印命中项及其祖先链，缓存里仍是完整快照
   --all                      跳过视口过滤，输出全部已遍历元素
   --json                     输出原始 JSON，该模式不打印 duration_ms`,
@@ -765,7 +770,10 @@ off-viewport 表示窗口被平铺窗口管理器推到了屏幕外，Zed 与 He
 
 匹配为大小写不敏感的子串，同时比对角色、标签、值与描述。
 投影只作用于打印：快照缓存仍是完整树，所以后续动作的 observe 基线不受影响；
-但驱动的遍历开销不变，大树依然要等。`,
+但驱动的遍历开销不变，大树依然要等。
+
+驱动只给可操作元素发 token。命中落在无索引节点上时按 '~	角色	标签	no-token' 打印，
+这类节点读得到、操作不了；需要动它们时改用像素坐标。`,
 
   click: `computer-use click [目标] <t<idx>|x y> [action] [--foreground] [--wait <t<idx>|media:playing>] [--timeout N]
 
@@ -1077,6 +1085,39 @@ function elementRow(e: AxElement): string {
   return `t${e.element_index}\t${e.role.replace(/^AX/, "")}\t${(e.label ?? e.value ?? "").replace(/[\t\n]/g, " ").trim()}\t${f ? `ax=(${Math.floor(f.x)},${Math.floor(f.y)})` : "ax=none"}\t${flags}`;
 }
 
+// 驱动的 total_element_count 恒等于 returned_element_count、elements_complete 恒为 false，
+// 两者都不携带信息。完整性只能自己算：深度墙看最深元素停在哪，缺失量看 markdown 与 elements 的节点数差。
+function countMarkdownNodes(md?: string): number {
+  if (!md) return 0;
+  let n = 0;
+  for (const line of md.split("\n")) if (/^\s*-/.test(line)) n++;
+  return n;
+}
+
+function deepestDepth(elements: AxElement[]): number {
+  let d = 0;
+  for (const e of elements) if ((e.depth ?? 0) > d) d = e.depth;
+  return d;
+}
+
+// 驱动只给可操作元素发 token，其余节点只出现在 markdown 里。它们真实存在于界面上，
+// 但没有 token，所以只能读、不能按 <t<idx>> 操作——之前 find 对它们一律报零命中。
+type TextOnlyNode = { role: string; label: string };
+
+const MD_NODE = /^(\s*)-\s+(?:\[(\d+)\]\s+)?(AX\w+)(.*)$/;
+
+function markdownOnlyNodes(md?: string): TextOnlyNode[] {
+  if (!md) return [];
+  const out: TextOnlyNode[] = [];
+  for (const line of md.split("\n")) {
+    const m = line.match(MD_NODE);
+    if (!m || m[2] != null) continue; // 有索引的已在 elements 里，不重复列出
+    const lbl = (m[4] ?? "").match(/^\s*(?:"([^"]*)"|\(([^)]*)\)|=\s*"([^"]*)")/);
+    out.push({ role: m[3], label: lbl?.[1] ?? lbl?.[2] ?? lbl?.[3] ?? "" });
+  }
+  return out;
+}
+
 function describeDelivery(d: Delivery): string[] {
   const { tool, response: resp, setValueReadback } = d;
   if (setValueReadback) return [`${tool}: effect=confirmed (value_readback verified)`];
@@ -1280,11 +1321,13 @@ function dispatch(cmd: string | undefined, args: string[]): void {
     const qIdx = rest.indexOf("--query");
     const pattern = cmd === "find" ? rest.find((a) => !a.startsWith("-")) : qIdx >= 0 ? rest[qIdx + 1] : undefined;
     if (cmd === "find" && !pattern) fail("'find' 需要匹配词，例如: computer-use find 播放");
+    const depth = dIdx >= 0 ? Number(rest[dIdx + 1]) || undefined : undefined;
+    const useFull = rest.includes("--full");
     const state = s.capture({
-      depth: dIdx >= 0 ? Number(rest[dIdx + 1]) || undefined : undefined,
+      depth,
       maxElements: mIdx >= 0 ? Number(rest[mIdx + 1]) || undefined : undefined,
       screenshotPath: cmd === "appshot" ? shot ?? join(cacheDir, `${pid}-${wid}.png`) : shot,
-      full: cmd === "appshot" && rest.includes("--full"),
+      full: useFull,
     });
     if (rest.includes("--json")) return console.log(JSON.stringify(state));
     const root = state.elements.find((e) => e.role === "AXWindow")?.frame;
@@ -1300,13 +1343,20 @@ function dispatch(cmd: string | undefined, args: string[]): void {
     const screen = screenSize();
     const rect = state.window_bounds ?? (root ? { x: root.x, y: root.y, width: root.w, height: root.h } : undefined);
     const view = viewportState(rect, screen);
-    const walked = state.returned_element_count ?? state.elements.length;
-    const total = state.total_element_count ?? state.elements.length;
-    // state= 这个字段在真实窗口上恒为 truncated，恒定的值不携带信息。
-    // 只报真正被遍历预算砍掉的部分，即 walked < total。
-    const flags = [view === "outside" ? "off-viewport" : view === "clipped" ? "clipped" : "", walked < total ? `cut=${total - walked}` : ""].filter(Boolean).join(" ");
+    // 命中词落在无索引节点上时投影结果为空，之前据此报「没有可操作元素」，
+    // 把真实存在于界面上的文字说成不存在。这里把 markdown 里的命中项一并捞出来。
+    const textOnly = pattern
+      ? markdownOnlyNodes(state.tree_markdown).filter((n) => `${n.role} ${n.label}`.toLowerCase().includes(pattern.toLowerCase()))
+      : [];
+    const summarized = Boolean(pattern) && vis.length === 0 && textOnly.length > 0;
+    const shown = vis.length + textOnly.length;
+    // 驱动只给可操作元素发 token，markdown 与 elements 的节点数差就是「看得见但拿不到」的量。
+    const unindexed = Math.max(0, countMarkdownNodes(state.tree_markdown) - state.elements.length);
+    // 最深元素正好停在请求深度上，说明下面可能还被砍着；这是保守判定，不做额外一次探测。
+    const tree = depth != null && deepestDepth(state.elements) >= depth ? `depth-limited(depth=${depth})` : "full";
+    const flags = [view === "outside" ? "off-viewport" : view === "clipped" ? "clipped" : ""].filter(Boolean).join(" ");
     const head = cmd === "find" ? `find="${pattern}"` : `snapshot=${state.snapshot_id ?? "?"}`;
-    console.log(`${head} target=${pid}:${wid} shown=${vis.length} walked=${walked}/${total}${flags ? ` ${flags}` : ""}`);
+    console.log(`${head} target=${pid}:${wid} shown=${shown} walked=${state.elements.length} tree=${tree} unindexed=${unindexed}${flags ? ` ${flags}` : ""}`);
     if (state.screenshot_file_path) console.log(`screenshot=${state.screenshot_file_path} size=${state.screenshot_width ?? "?"}x${state.screenshot_height ?? "?"} coordinates=png-pixels`);
     const routes = state.background_input?.routes ?? [];
     const blocked = routes.filter((r) => r.status !== "available");
@@ -1316,11 +1366,20 @@ function dispatch(cmd: string | undefined, args: string[]): void {
       const detail = routes.map((r) => `${r.route}=${r.status}${r.reason ? `(${r.reason})` : ""}`).join(" ") || "unknown";
       console.log(`routes: ${ax ? `ax=${ax} ` : ""}${detail}`);
     }
-    if (!vis.length) {
-      console.log("note=该窗口没有可操作元素；改用 'computer-use appshot' 拿截图走像素，或确认窗口是否还在初始化");
-    } else if (view !== "visible" && rect) {
-      console.log(`note=窗口大部分在屏幕外 (x=${Math.round(rect.x)} w=${Math.round(rect.width)} screen=${screen.width})；需要像素坐标时先用 'computer-use move' 挪回屏幕内`);
+    const notes: string[] = [];
+    if (!state.elements.length) {
+      notes.push("该窗口没有可操作元素；改用 'computer-use appshot' 拿截图走像素，或确认窗口是否还在初始化");
+    } else if (!shown) {
+      notes.push(pattern
+        ? `匹配词没有命中；树里有 ${state.elements.length} 个元素，换词或用 '--all' 查看`
+        : `视口内没有元素；树里有 ${state.elements.length} 个，用 '--all' 查看`);
     }
+    if (summarized) notes.push(`命中的 ${textOnly.length} 个节点没有索引，只能读不能按 token 操作；需要操作时用像素坐标`);
+    if (unindexed) notes.push(`树里有 ${unindexed} 个节点没有索引（驱动只给可操作元素发 token）；'find' 会把命中的这类节点标为 ~ 行`);
+    if (!useFull && state.elements.length >= DRIVER_DEFAULT_MAX_ELEMENTS) notes.push(`已达驱动默认元素上限 ${DRIVER_DEFAULT_MAX_ELEMENTS}，可能仍有未返回元素；用 '--full' 解除`);
+    if (view !== "visible" && rect) notes.push(`窗口大部分在屏幕外 (x=${Math.round(rect.x)} w=${Math.round(rect.width)} screen=${screen.width})；需要像素坐标时先用 'computer-use move' 挪回屏幕内`);
+    for (const n of notes) console.log(`note=${n}`);
+    for (const n of textOnly) console.log(`~\t${n.role.replace(/^AX/, "")}\t${n.label.replace(/[\t\n]/g, " ").trim()}\tno-token`);
     for (const e of vis.sort((a, b) => (a.frame?.y ?? Infinity) - (b.frame?.y ?? Infinity) || (a.frame?.x ?? Infinity) - (b.frame?.x ?? Infinity))) console.log(elementRow(e));
     return;
   }

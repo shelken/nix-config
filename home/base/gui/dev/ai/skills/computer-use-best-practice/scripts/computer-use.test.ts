@@ -47,12 +47,12 @@ if (tool === "get_window_state") {
   const flipAfter = Number(process.env.MOCK_FLIP_AFTER ?? "1");
   const interactiveRole = process.env.MOCK_TEXT_INPUT === "1" ? "AXTextArea" : "AXButton";
   let elements = [
-    { element_index: 0, element_token: sid + ":0", role: "AXWindow", label: "Test", value: null, selected: null, enabled: true, frame: { x: 100, y: 50, w: 800, h: 600 }, parent_index: null },
-    { element_index: 1, element_token: sid + ":1", role: interactiveRole, label: "Play", value: snaps > flipAfter ? "Playing" : null, selected: snaps > flipAfter, enabled: true, frame: { x: 200, y: 150, w: 40, h: 20 }, parent_index: 0 },
-    { element_index: 3, element_token: sid + ":3", role: "AXStaticText", label: "Queue", value: null, selected: null, enabled: true, frame: { x: 200, y: 200, w: 60, h: 18 }, parent_index: 0 }
+    { element_index: 0, element_token: sid + ":0", role: "AXWindow", label: "Test", value: null, selected: null, enabled: true, depth: 0, frame: { x: 100, y: 50, w: 800, h: 600 }, parent_index: null },
+    { element_index: 1, element_token: sid + ":1", role: interactiveRole, label: "Play", value: snaps > flipAfter ? "Playing" : null, selected: snaps > flipAfter, enabled: true, depth: 1, frame: { x: 200, y: 150, w: 40, h: 20 }, parent_index: 0 },
+    { element_index: 3, element_token: sid + ":3", role: "AXStaticText", label: "Queue", value: null, selected: null, enabled: true, depth: 1, frame: { x: 200, y: 200, w: 60, h: 18 }, parent_index: 0 }
   ];
   if (process.env.MOCK_DUPLICATE_PLAY === "1") {
-    elements.push({ element_index: 2, element_token: sid + ":2", role: "AXButton", label: "Play", value: null, selected: false, enabled: true, frame: { x: 260, y: 150, w: 40, h: 20 }, parent_index: 0 });
+    elements.push({ element_index: 2, element_token: sid + ":2", role: "AXButton", label: "Play", value: null, selected: false, enabled: true, depth: 1, frame: { x: 260, y: 150, w: 40, h: 20 }, parent_index: 0 });
   }
   // 忠实复现驱动的 query 语义：只回命中项加祖先链，其余元素在响应里消失
   if (args.query) {
@@ -71,13 +71,15 @@ if (tool === "get_window_state") {
     snapshot_id: sid,
     returned_element_count: elements.length,
     total_element_count: elements.length,
-    elements_complete: true,
+    elements_complete: false,
     window_bounds: process.env.MOCK_WINDOW_BOUNDS ? JSON.parse(process.env.MOCK_WINDOW_BOUNDS) : { x: 100, y: 50, width: 800, height: 600 },
     screenshot_file_path: pngPath,
     screenshot_width: pngPath ? 1200 : undefined,
     screenshot_height: pngPath ? 900 : undefined,
     elements,
-    tree_markdown: "- [0] AXWindow \\"Test\\"\\n  - [1] " + interactiveRole + " \\"Play\\" actions=[press]"
+    // markdown 是 elements 的超集：驱动只给可操作元素发索引，其余节点只在这里出现。
+    tree_markdown: "- [0] AXWindow \\"Test\\"\\n  - [1] " + interactiveRole + " \\"Play\\" actions=[press]\\n  - [3] AXStaticText = \\"Queue\\""
+      + (process.env.MOCK_TEXT_ONLY === "1" ? "\\n  - AXButton (上一首)" : "")
   }));
 } else if (tool === "list_windows") {
   const windows = [
@@ -218,7 +220,7 @@ describe("computer-use action protocol", () => {
     expect(result.stderr).not.toContain("at cmdWindows");
   });
 
-  test("appshot --full asks the driver for an unbounded walk", () => {
+  test("computes the walk budget only when asked", () => {
     const { env, log } = setup();
     expect(run(env, ["appshot", "42:7", "--full"]).code).toBe(0);
 
@@ -227,11 +229,58 @@ describe("computer-use action protocol", () => {
     expect(capture.args.max_depth).toBeUndefined();
     expect(capture.args.max_elements).toBeUndefined();
 
-    expect(run(env, ["appshot", "42:7"]).code).toBe(0);
+    // 省略预算时不下发任何上限，交给驱动默认值；这里的树只是一小片，回来的是同样的元素
+    expect(run(env, ["snapshot", "42:7"]).code).toBe(0);
     calls = callsOf(log);
     capture = calls.filter((call) => call.tool === "get_window_state").pop();
-    expect(capture.args.max_depth).toBe(3);
-    expect(capture.args.max_elements).toBe(300);
+    expect(capture.args.max_depth).toBeUndefined();
+    expect(capture.args.max_elements).toBeUndefined();
+
+    expect(run(env, ["snapshot", "42:7", "--depth", "5", "--max-elements", "120"]).code).toBe(0);
+    calls = callsOf(log);
+    capture = calls.filter((call) => call.tool === "get_window_state").pop();
+    expect(capture.args.max_depth).toBe(5);
+    expect(capture.args.max_elements).toBe(120);
+  });
+
+  test("reports the walk-completeness readings instead of a never-firing cut", () => {
+    const { env } = setup();
+    const out = run(env, ["snapshot", "42:7"]);
+
+    expect(out.code).toBe(0);
+    expect(out.stdout).toContain("shown=3 walked=3 tree=full unindexed=0");
+    // 驱动的 total_element_count 恒等于 returned_element_count，cut= 的判据永不成立
+    expect(out.stdout).not.toContain("cut=");
+    expect(out.stdout).not.toContain("walked=3/3");
+  });
+
+  test("reports a depth wall when the deepest element stops at the requested depth", () => {
+    const { env } = setup();
+
+    const walled = run(env, ["snapshot", "42:7", "--depth", "1"]);
+    expect(walled.code).toBe(0);
+    expect(walled.stdout).toContain("tree=depth-limited(depth=1)");
+
+    const deeper = run(env, ["snapshot", "42:7", "--depth", "4"]);
+    expect(deeper.code).toBe(0);
+    expect(deeper.stdout).toContain("tree=full");
+  });
+
+  test("surfaces a match that only exists in the tree markdown", () => {
+    const { env } = setup();
+
+    const indexed = run(env, ["find", "42:7", "Queue"]);
+    expect(indexed.code).toBe(0);
+    expect(indexed.stdout).toContain("unindexed=0");
+
+    const textOnly = run({ ...env, MOCK_TEXT_ONLY: "1" }, ["find", "42:7", "上一首"]);
+    expect(textOnly.code).toBe(0);
+    expect(textOnly.stdout).toContain("shown=1");
+    expect(textOnly.stdout).toContain("~\tButton\t上一首\tno-token");
+    expect(textOnly.stdout).toContain("unindexed=1");
+    // 改前这里会报「该窗口没有可操作元素」，把真实存在的文字说成不存在
+    expect(textOnly.stdout).not.toContain("没有可操作元素");
+    expect(textOnly.stdout).toContain("没有索引");
   });
 
   test("verifies a UI predicate through verify_state and echoes its verdict", () => {
