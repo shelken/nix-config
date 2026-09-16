@@ -1,144 +1,179 @@
 ---
 name: computer-use-best-practice
-description: 当 需要阅读mac上任意App界面的内容/控制任意App/点击任意App 时阅读该技能
+description: 当需要读取 macOS 上任意 App 的界面内容，或对它点击、输入、按键、滚动时阅读该技能
 ---
 
-## 核心原则与 CLI 工具要求（禁止删除）
+# computer-use
 
-**最高原则：Token 效率、语义明确与所见即所得。**
-本技能必须优先使用全局 CLI `computer-use`（底层由 Nix 原生封装，源码位于同级 `scripts/computer-use.ts`），杜绝直接暴露庞大臃肿且充满缓存垃圾的原始 AX 树。
+控制 macOS 应用界面走全局 CLI `computer-use`。它把原始 AX 树裁剪成视口内元素与有界差分，直接读原始树会撑爆上下文。
 
-`computer-use` 脚本必须严格满足以下硬性保证：
-1. **默认不打扰用户**：优先使用后台 AX 读取与操作，不抢焦点、不切工作区、不移动窗口。只有后台路径失败且任务必须依赖前台输入时，才可在说明影响后使用 `front` 或 `--foreground`；
-2. **Token 效率保证**：默认浅层扫描并仅输出窗口视口内元素。`appshot`/`snapshot` 一次采集即缓存 token，后续动作直接复用；每个动作投递后再自动刷新一次缓存；
-3. **有界遍历**：默认 `depth=3`、`max-elements=300`。`query` 只过滤返回内容，不能降低 AX 遍历成本；
-4. **坐标分域**：输出的 `ax=(x,y)` 只用于辅助定位。像素操作必须读 PNG 坐标：`appshot` 默认产出 PNG，`snapshot --screenshot <path>` 指定导出路径；
-5. **语义与动作完备**：从 AXDescription/Help 提取语义说明；支持单击、双击、右击、拖拽、文本写入、按键、滚动与区域放大（`zoom`）；
-6. **显式前台升级**：`front` 与 `--foreground` 只处理明确要求的前台交互，不自动移动窗口；
-7. **状态透明**：动作输出 `effect`、`route`、`delivery`、`evidence`、`state` 和 `duration_ms`。只有 `state=confirmed` 表示驱动已验证结果；
-8. **动作后闭环**：所有动作投递后自动重新采集 PNG+AX，输出有界差分（`observe: delta added/removed/changed`）并用新快照替换缓存，旧 `t<idx>` 立即失效；在此基础上 `--wait <t<idx>>` 做有界轮询判定属性位移，`--wait media:playing` 才触碰系统媒体通道；
-9. **结构化三态验证**：`verify` 用 `role + label + field` 谓词请驱动判定，退出码 `0=satisfied / 1=unsatisfied / 2=unknown`；`unknown` 永远不等于成功；
-10. **全命令耗时输出**：所有子命令（无论执行成功、等待超时、参数报错还是异常退出）必须在末尾与上方输出内容通过空行区隔，统一输出 `duration_ms=<毫秒>` 耗时行（`--json` 原始模式除外），禁止任何退出路径遗漏。
-11. **显式传参契约与 Agent 友好引导**：所有针对特定窗口的操作必须显式传入目标 `<pid> <wid>`，禁止任何无参数隐式猜测或默认执行。缺少参数时必须输出 Agent 友好化的帮助文本，明确给出错误原因、用法示例以及通过 'computer-use windows' 或 'computer-use apps' 获取所需参数的标准路径。
-
-## 端到端完整闭环操作命令
+命令的参数、标志与输出字段写在脚本自带帮助里：
 
 ```bash
-# 0. 查看最近常用应用（🟢 开启中(带PID) / ⚪️ 未开启，按真实使用时间倒序）
-computer-use apps [--recent [N]]
-# 支持按名称或 Bundle ID 搜索已安装应用
-computer-use apps zed
+computer-use --help                # 总览与硬性契约
+computer-use --help <子命令>        # 单个命令的全部细节
+computer-use --help output         # 动作结果字段语义
+```
 
-# 1. 启动/定位应用（已有窗口直接返回 PID/WID，未启动则冷启动并等待就绪）
-computer-use open <name|bundle_id>
+## SOP
 
-# 2. 发现已有窗口 (获取 pid 与 window_id)
-computer-use windows
+四步。每步末尾给出完成判据，判据不成立就不要进入下一步。
 
-# 3. appshot：一次采集同时拿到 PNG + AX（必须指定 pid 与 wid，禁止无参数猜测）
-#    输出含 app/title/z/bounds，便于先确认“我在看哪个窗口”再动手
-computer-use appshot <pid> <wid>
-#   默认 depth=3/max-elements=300；--full 才交给驱动完整预算（大树慎用）
-computer-use appshot <pid> <wid> --full
-#   PNG 默认写到缓存路径（每个窗口只保留最新一张），--screenshot 可另存
-computer-use appshot <pid> <wid> --screenshot "$TMPDIR/shot.png"
-# 3'. snapshot：只要 AX（省掉截图开销）并刷新动作 token
-computer-use snapshot <pid> <wid> [--depth N] [--max-elements N] [--query Q] [--all] [--json]
+### 1. 定位窗口
 
-# 4. 操作，t<idx> 使用最近一次采集（appshot/snapshot/上一次动作）的 token
-#    每个动作结束都会自动打印 observe 差分并刷新缓存，t<idx> 请取新输出里的值
-computer-use click <pid> <wid> <t<idx>|x y> [action] [--foreground]
-computer-use right-click <pid> <wid> <t<idx>|x y>        # 元素的上下文菜单，纯 AX 后台可用
-#    双击默认短暂置前目标窗口并自动恢复原前台（驱动后台双击缺 no-raise 激活前奏，
-#    非前台 AppKit 窗口的双击会被静默忽略，如 Audirvana 列表）
-computer-use double-click <pid> <wid> <t<idx>>
-computer-use drag <pid> <wid> <x1> <y1> <x2> <y2>        # 框选/拖放/拖手柄，PNG 像素坐标
-#    输入文本优先走 Cocoa 原生 set_value 毫秒级后台写入并带 value_readback 验证
-computer-use type <pid> <wid> t<idx> "YOASOBI"
-computer-use type <pid> <wid> "搜索关键词"
-#    按键支持指向特定控件后台聚焦输入，无需激活前台
-computer-use key <pid> <wid> t<idx> return
-computer-use key <pid> <wid> space
-computer-use key <pid> <wid> return [cmd|shift|option|ctrl..]
-computer-use scroll <pid> <wid> <t<idx>> down [line|page]
+```bash
+computer-use apps                  # 已装应用与运行状态，「开启中」表示进程在跑
+computer-use open Audirvana        # 未启动则拉起并等待窗口就绪
+computer-use windows               # 拿到 pid 与 window_id
+```
 
-# 4'. zoom：读小字/精确定位；产出 JPEG（≤500px 宽，四周各留 20% 边距）
-computer-use zoom <pid> <wid> <x1> <y1> <x2> <y2>
-#    读图后用 --from-zoom 点击（坐标即 zoom 图内的像素）
-computer-use click <pid> <wid> <x> <y> --from-zoom
+判据：手上有一对可用的 `<pid> <wid>`。
 
-# 4''. verify：结构化谓词验证，不看“感觉”看驱动判定
-computer-use verify <pid> <wid> <role> <label子串> exists
-computer-use verify <pid> <wid> TextField 地址栏 value "https://example.com"
+窗口列表里的应用名会被系统本地化，`TextEdit` 显示为「文本编辑」，`Finder` 显示为「访达」。
+
+### 2. 读取界面
+
+```bash
+computer-use appshot <pid> <wid>       # AX 树与 PNG 截图一起拿
+computer-use snapshot <pid> <wid>      # 只要 AX 树，省掉截图开销
+```
+
+判据：输出里有 `t<idx>` 元素 token，需要像素操作时还要有 PNG 尺寸。
+
+两者都会刷新动作缓存，`t<idx>` 从这里取。
+
+### 3. 执行动作
+
+```bash
+computer-use click <pid> <wid> t41
+computer-use type <pid> <wid> t7 "搜索词"
+computer-use key <pid> <wid> t3 return
+computer-use scroll <pid> <wid> t12 down
+```
+
+每个动作结束后脚本自动重采一次，打印 `observe` 差分，旧 `t<idx>` 立即失效。
+
+判据：`observe` 的 `added`、`removed`、`changed` 与预期一致。
+
+### 4. 确认结果
+
+```bash
 computer-use verify <pid> <wid> Button 播放 selected true
-
-# 5. 有界等待（仅在动作结果不是立即出现时使用）
-computer-use click <pid> <wid> t41 --wait t45 [--timeout 2000]
-computer-use click <pid> <wid> t41 --wait media:playing
-
-# 6. 显式前台升级，仅在后台路径失败且任务必须依赖前台输入时使用
-computer-use front <pid> <wid>
-
-# 7. 窗口移动与调整大小
-computer-use move <pid> <wid> <x> <y> [w] [h]
+computer-use click <pid> <wid> t41 --wait t45
 ```
 
-### 阅读动作结果
+判据：`verify` 退出码为 0，或 `--wait` 输出 `verdict=confirmed`。
 
-```text
-click: effect=unverifiable route=synthetic_events delivery=background evidence=none
-state=delivered_unverified
-observe: snapshot=s00000006 delta added=2 removed=20 changed=0
-  + Window mio: nix-config
+## 确认纪律
+
+`effect: unverifiable` 只说明动作投递出去了。选中态不等于执行态：在 Audirvana、Apple Music、访达这类列表里，点击只让该行获得焦点，播放要另发 `double-click`，或在选中后发 `key <pid> <wid> space`。
+
+判定播放或运行需要客观证据，下列任一条成立即可：
+
+- 进度条或播放时间在间隔 1 秒的两次 `appshot` 之间持续增加；
+- 播放按钮语义翻转，例如 `Play` 变 `Pause`；
+- `verify` 返回 `verdict=satisfied`；
+- 应用原生接口确证，例如 `osascript -e 'tell application "Audirvana" to get player state'` 返回 `Playing`。
+
+`verify` 的三态各有含义。`satisfied` 是成立，`unsatisfied` 是明确不成立，`unknown` 是驱动无法判定。`unknown` 等于没有证据，按没有证据上报。
+
+`observe` 差分是同一份新状态的读数，可以直接引用。差分为空只说明 AX 树没有反映变化。
+
+## 常用方式
+
+**往输入框写文本**
+
+`type` 带 `t<idx>` 时优先走 Cocoa 原生写入并回报 `value_readback`，无需激活前台。
+
+```bash
+computer-use type 1435 112 t7 "https://example.com"
+computer-use key 1435 112 t7 return
 ```
 
-- `effect`/`state` 只说**投递**结果，`delivered_unverified` 不等于成功；
-- `observe` 是同一动作后的**新状态**：`+`/`-`/`~` 是有界差分（≤6 行，其余折叠成计数）；
-- 差分按 `role + label` 比对（无 label 的行用子元素文本），因此滚动不会把整棵树报成变更；
-- 差分为空只能说“AX 树没看到变化”，要结论就上 `verify` 或 `--wait`。
+**读小字或精确取点**
 
----
+```bash
+computer-use zoom 1435 112 300 200 420 260      # 产出放大 JPEG
+computer-use click 1435 112 60 30 --from-zoom   # 坐标是 zoom 图内像素
+```
 
-## 严守验证客观纪律（禁止虚假确认）
+**展开元素的上下文菜单**
 
-**严禁将“尝试操作了”当作“操作成功了”，绝不能用 `effect: unverifiable` 或仅仅是列表项高亮来推定结果！**
+```bash
+computer-use right-click 1435 112 t18
+```
 
-1. **选中态不代表执行态**：
-   - 绝大多数桌面应用（Audirvana、Apple Music、访达、IDE 列表）中，点击某行只会使其获得焦点或选中态（`selected: true` / `sel`），**绝不代表触发了播放或打开动作**。
-2. **播放/运行的铁证标准**（满足其一即可断定，但必须有客观证据）：
-   - **进度条持续位移**：相隔 1 秒调用两次 `appshot`/`snapshot`，观察进度条（`Slider`）或播放时间（`Time`）的数值发生持续增加；
-   - **按钮状态明确翻转**：播放按钮语义发生变化（如 `Play` 翻转为 `Pause`，或相关状态字段翻转）；
-   - **结构化谓词**：`computer-use verify <pid> <wid> <role> <label> <field> <expect>` 返回 `verdict=satisfied`（退出码 0）；
-   - **原生底层状态确证**：通过应用原生接口直接读取（例如 Audirvana 运行 `osascript -e 'tell application "Audirvana" to get player state'` 返回 `Playing`）。
-3. **三态语义不可混用**：`satisfied` 才是成立；`unsatisfied` 是明确不成立；`unknown`（含 `target_missing`、`observation_unavailable`、`stability_unproven`、`unsupported_predicate`）表示驱动无法判定，**必须当作“没有证据”上报**，不得转述为成功或失败。
-4. **`observe` 差分是证据而非结论**：`delta added/removed/changed` 与 `t<idx>` 是同一份新状态的客观读数，可以直接引用；但“无变化”只说明 AX 树没反映出来，不能反推动作失败或成功。
+**等一个异步结果**
 
----
+```bash
+computer-use click 1435 112 t41 --wait t45 --timeout 3000
+computer-use click 1435 112 t41 --wait media:playing
+```
 
-## 规则与实测坑位
+**在拖动类界面上框选**
 
-- **庞大列表与 AX 遍历截断**：
-  - Audirvana、音乐库、上万文件的访达窗口会让深层 DFS 遍历等待 20 秒
-  - 先用默认浅层快照读取全局控件。需要深层自绘列表时，使用截图；`query` 不能消除遍历成本
-  - 截断本身会造成 `observe` 噪声：超出 `max_elements` 边界的一批元素会以 `+/-` 批量出现，那不是业务变化（实测某终端窗口 `removed=20` 全是菜单项越界）
-- **列表项播放方式**：
-  - 单击只能用于选中；若要播放列表曲目，必须使用 `double-click <pid> <wid> t<idx>` 或在选定后发送 `key <pid> <wid> space`。
-- **平铺窗口管理器（OmniWM / AeroSpace）离屏陷阱**：
-  - 后台 AX 读取与窗口截图对离屏窗口（`bounds.x=1919` 之类）依然有效
-  - 但**输入投递要求窗口真实可见**：驱动会以 `point lies outside window ... frame; background delivery refused` 拒绝，`scroll`/`click` 都会失败
-  - `appshot` 输出的 `bounds=` 就是判据：`x` 超出屏幕宽度即说明该窗口被 WM 推到屏外
-  - 需要抢焦点、切工作区或移动窗口时，先说明影响并取得用户明确许可
-- **appshot 的前台窗口判定**：
-  - 省略 `pid`/`wid` 时按 `z_index` 取当前屏幕最前台窗口；状态栏 1×1 挂件（`BetterDisplay` 等）与中心点落在屏幕外的窗口都不算候选
-  - 因此 `appshot` 可能报 “没有可用窗口” 而拒绝猜：此时显式传 `pid`/`wid`
-  - 驱动拒绝操作它自己的授权窗口（`Cua Driver refuses operations that target its own authorization process`）
-- **输入框操作**：
-  - 原生 `AXTextField` 不支持 `AXPress`（调用会报 `-25206`）；`computer-use` 对其已自动优化为 `confirm` 或使用 `type` 直接写入
-- **verify 的适用范围**：
-  - `value`/`selected`/`enabled` 只对可信控件（`AXTextField`、`AXButton` 等）成立；对 `AXWindow` 这类无对应属性的角色，驱动返回 `unknown/unsupported_predicate`
-  - 选择器命中多个元素时 `computer-use` 直接拒绝验证，先收窄 `label`
-  - `exists` 的否定形式（断言“不存在”）驱动不接受：absence 无法被证明
-- **驱动身份决定 TCC 授权**：
-  - `cua-driver serve` 在终端里直接启动时，TCC 归属终端进程，会缺 Accessibility/Screen Recording 并弹出权限闸门；此时 `get_window_state` 仍返回结构，但截图落盘会失败（`computer-use` 会明确报 `未能取得有效图片` 而不是缓存假路径）
-  - 正确启动方式：`open -n -g -a CuaDriver --args serve`（或 `cua-driver permissions grant`），授权状态用 `cua-driver permissions status` 复核
-  - `computer-use` 自身不启动驱动、不申请权限，只如实报告失败
+四个坐标都取最近一次 `appshot` 的 PNG 像素。
+
+```bash
+computer-use drag 1435 112 200 300 600 520
+```
+
+## 坑点
+
+### 遍历成本与截断噪声
+
+Audirvana、音乐库、上万文件的访达窗口会让深层遍历等待 20 秒。先用默认浅层快照读全局控件，需要深层自绘列表时改用截图。`--query` 只过滤返回内容，不降低遍历成本。
+
+截断会让 `observe` 产生噪声：越过 `max-elements` 边界的一批元素成批出现在 `added` 或 `removed` 里。实测某终端窗口 `removed=20` 全是越界菜单项。
+
+### 两套坐标
+
+`appshot` 输出的 `ax=(x,y)` 是 AX 屏幕点，只用于判断元素的相对位置。像素操作必须读同一张 PNG 的坐标：`click`、`right-click`、`double-click`、`drag` 的目标，以及 `zoom` 的四个边界，都取 PNG 像素。
+
+先 `zoom` 再点，得到的坐标是 zoom 图内的像素，要配 `--from-zoom` 才能直接用。
+
+### 离屏窗口
+
+平铺窗口管理器（OmniWM、AeroSpace）会把窗口推到屏幕外，例如 `bounds.x=1919`。
+
+读取与截图对离屏窗口依然有效。输入投递要求窗口真实可见，驱动会以 `point lies outside window frame; background delivery refused` 拒绝，`click` 与 `scroll` 都失败。
+
+`appshot` 的 `bounds=` 就是判据：`x` 超出屏幕宽度即说明窗口被推到屏外。这种情况要抢焦点、切工作区或移动窗口时，先说明影响并取得许可。
+
+### 前台升级
+
+默认走后台投递，不抢焦点、不切工作区、不移动窗口。后台路径失败且任务必须依赖前台输入时，才用 `front` 或 `--foreground`，并说明影响。
+
+### 文本控件
+
+原生 `AXTextField` 不支持 `AXPress`，调用会报 `-25206`。`computer-use` 对文本控件自动改为中心像素点击，或直接走 `type` 原生写入。
+
+### 双击
+
+驱动的后台双击缺少 no-raise 激活前奏，非前台 AppKit 窗口会被静默忽略，例如 Audirvana 列表。`double-click` 默认短暂置前目标窗口，随后恢复原前台。
+
+### verify 的边界
+
+`value`、`selected`、`enabled` 只对具备该属性的角色成立。`AXWindow` 这类角色没有对应属性，驱动返回 `unknown/unsupported_predicate`。
+
+选择器命中多个元素时脚本直接拒绝，先用更精确的 `label` 收窄。`exists` 没有否定形式，断言「不存在」驱动不接受。
+
+### 调用契约
+
+针对窗口的命令必须显式给出 `<pid> <wid>`，脚本不会隐式猜测前台窗口。缺少参数时脚本输出错误原因与查询参数的标准路径。
+
+所有子命令都会在内容之后空一行输出 `duration_ms=<毫秒>`，包括等待超时、参数报错与异常退出。`--json` 模式除外。
+
+### 驱动身份决定 TCC 授权
+
+用 `cua-driver serve` 在终端里直接启动时，TCC 归属终端进程，Accessibility 与 Screen Recording 都会缺失，每次调用弹出授权闸门。此时 `get_window_state` 仍返回结构，但截图落盘失败，脚本报 `未能取得有效图片`。
+
+以 App 身份启动即可带上已有授权：
+
+```bash
+open -n -g -a CuaDriver --args serve        # 以 App 身份启动守护进程
+cua-driver permissions grant                # 授权并验证
+cua-driver permissions status               # 只读复核，不弹窗
+```
+
+`computer-use` 自身不启动驱动、不申请权限，只如实报告失败。

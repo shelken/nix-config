@@ -579,27 +579,168 @@ export class AutomationSession {
 const cacheDir = process.env.COMPUTER_USE_CACHE_DIR ?? join(tmpdir(), "computer-use");
 const defaultDriver = new CliDriverAdapter();
 
-const usage = `computer-use — 窗口快照与自动化操作 CLI
+const overview = `computer-use — macOS 窗口快照与自动化操作 CLI
 
 闭环工作流 (SOP):
-  1. 找窗口: computer-use windows 或 computer-use open <应用名>
-  2. 读界面: computer-use appshot <pid> <wid> [--full] [--screenshot <path>]
-  3. 做操作: computer-use click / type / key / scroll / drag ...
+  1. 定位窗口   computer-use windows                    列出 pid / window_id
+                computer-use open <应用名|bundle_id>    冷启动并等待窗口就绪
+  2. 读取界面   computer-use appshot <pid> <wid>         AX 树 + PNG 截图
+                computer-use snapshot <pid> <wid>        只要 AX 树
+  3. 执行动作   computer-use click / type / key / scroll / drag / zoom
+  4. 确认结果   computer-use verify <pid> <wid> <role> <label> <field> [expect]
 
-子命令:
-  apps [--recent [N]] | open <name|bid> | windows
-  appshot <pid> <wid> [--full] [--screenshot <path>]
-  snapshot <pid> <wid> [--depth N] [--max-elements N] [--query Q] [--all] [--json]
-  click <pid> <wid> <tN|x y> [action] [--foreground] [--wait <tN|media>]
-  right-click <pid> <wid> <tN|x y> [--foreground]
-  double-click <pid> <wid> <tN|x y>
-  drag <pid> <wid> <x1> <y1> <x2> <y2> [--foreground]
-  type <pid> <wid> [tN] <text> [--foreground] [--wait <tN>]
-  key <pid> <wid> [tN] <key> [mods..] [--foreground] [--wait <tN>]
-  scroll <pid> <wid> <tN> <up|down|left|right> [line|page] [--foreground]
-  zoom <pid> <wid> <x1> <y1> <x2> <y2>
-  verify <pid> <wid> <role> <label> <exists|value|selected|enabled> [expect]
-  front <pid> [wid] | move <pid> <wid> <x> <y> [w] [h]`;
+硬性契约:
+  · 针对窗口的命令必须显式给出 <pid> <wid>，不接受隐式猜测
+  · t<idx> 只在最近一次 appshot、snapshot 或动作之后有效，动作会刷新缓存
+  · ax=(x,y) 是 AX 屏幕点，只用于定位；像素操作必须用 appshot 的 PNG 坐标
+  · --wait 只在动作结果不是立即出现时使用
+
+子命令: apps open windows appshot snapshot click right-click double-click
+        drag type key scroll zoom verify front move
+
+单命令细节: computer-use --help <子命令>
+输出字段语义: computer-use --help output`;
+
+// 细节引导由脚本自带：每条的参数、标志、输出与坑位都写在这里，
+// 技能文档只保留 SOP、跨命令坑位与常用举例。
+const helpTopics: Record<string, string> = {
+  apps: `computer-use apps [--recent [N]] [查询词]
+
+列出应用及其运行状态与最近使用时间。
+  --recent [N]   只按最近使用倒序取前 N 条，默认 15
+  查询词         同时匹配应用名与 Bundle ID
+
+输出列: 状态 / PID / 应用名称 / Bundle ID / 最近使用
+  🟢 开启中 进程在跑，PID 可用
+  ⚪️ 未开启 只是装过，用它拿不到窗口
+
+来源是 Spotlight 索引加上 lsappinfo，因此正在运行但未被索引的应用也会出现。`,
+
+  open: `computer-use open <应用名|bundle_id>
+
+窗口已存在时只回报 pid 与 window_id，不重复启动；未启动则拉起并轮询等待窗口就绪。
+目标含点号按 Bundle ID 处理，否则按应用名处理。
+
+冷启动受系统首次启动耗时影响，轮询上限约 5 秒。超时后本条命令提示稍后自行运行
+computer-use windows，而不是继续阻塞。`,
+
+  windows: `computer-use windows
+
+输出 PID / WINDOW_ID / APP / TITLE，制表符分隔。
+
+应用名会被系统本地化，例如 TextEdit 显示为「文本编辑」、Finder 显示为「访达」。
+按名称过滤窗口时按实际显示名匹配。`,
+
+  appshot: `computer-use appshot <pid> <wid> [--full] [--screenshot <path>]
+
+一次采集同时拿到 AX 树与 PNG 截图，并刷新动作 token。
+  --full            交给驱动完整遍历预算，大树慎用
+  --screenshot      截图另存到指定路径，默认写缓存目录 <pid>-<wid>.png
+
+输出:
+  snapshot= 快照 id   state=complete|truncated   viewport= 视口内元素数
+  returned= / total=   screenshot= 路径与像素尺寸   coordinates=png-pixels
+  t<idx> 行: 元素角色、标签、ax= 屏幕点、sel/on 标志
+
+默认 depth=3、max-elements=300，只输出窗口视口内元素以控制 token 开销。
+state=truncated 表示没遍历完；超出边界的元素会在 observe 差分里成批出现，那不是业务变化。`,
+
+  snapshot: `computer-use snapshot <pid> <wid> [--depth N] [--max-elements N] [--query Q] [--all] [--json]
+
+只取 AX 树不截图，同样刷新动作 token。
+  --depth / --max-elements   覆盖默认遍历预算
+  --query                    只过滤返回内容，不降低遍历成本
+  --all                      跳过视口过滤，输出全部已遍历元素
+  --json                     输出原始 JSON，该模式不打印 duration_ms`,
+
+  click: `computer-use click <pid> <wid> <t<idx>|x y> [action] [--foreground] [--wait <t<idx>|media:playing>] [--timeout N]
+
+  t<idx>         走元素语义动作
+  x y            appshot PNG 像素坐标
+  action         省略时按元素角色选择；文本控件自动改为中心像素点击，规避 AXPress -25206
+  --foreground   只在后台投递失败且任务必须依赖前台输入时使用
+  --wait         动作后轮询等属性位移，t<idx> 可加 :val 或 :sel 只比较该字段
+  --timeout      等待上限，默认 2000 毫秒`,
+
+  "right-click": `computer-use right-click <pid> <wid> <t<idx>|x y> [--foreground]
+
+元素目标走上下文菜单，纯后台可用。像素目标走 PNG 坐标。`,
+
+  "double-click": `computer-use double-click <pid> <wid> <t<idx>|x y>
+
+默认短暂把目标窗口置前再恢复原前台。驱动的后台双击缺少 no-raise 激活前奏，
+非前台 AppKit 窗口的双击会被静默忽略。`,
+
+  drag: `computer-use drag <pid> <wid> <x1> <y1> <x2> <y2> [--foreground]
+
+四个坐标都是最近一次 appshot 的 PNG 像素。用于框选、拖放、拖拽手柄。`,
+
+  type: `computer-use type <pid> <wid> [t<idx>] <text> [--foreground] [--wait <t<idx>]
+
+带 t<idx> 时优先走 Cocoa 原生 set_value 后台写入，回报 value_readback 验证；
+驱动拒绝或元素不可写时回退到 type_text。不带 t<idx> 时投给当前焦点。`,
+
+  key: `computer-use key <pid> <wid> [t<idx>] <key> [mods..] [--foreground] [--wait <t<idx>]
+
+  computer-use key 1435 112 t1 return        后台聚焦该控件后按单键
+  computer-use key 1435 112 space            投给当前焦点
+  computer-use key 1435 112 t1 cmd a         带修饰键，改走驱动 hotkey 工具
+
+带 t<idx> 时无需激活前台。纯单键走 press_key，带修饰键走 hotkey。`,
+
+  scroll: `computer-use scroll <pid> <wid> <t<idx>> <up|down|left|right> [line|page] [--foreground]
+
+按元素定位滚动，粒度默认 line。窗口被平铺窗口管理器推到屏外时驱动拒绝投递。`,
+
+  zoom: `computer-use zoom <pid> <wid> <x1> <y1> <x2> <y2>
+
+截取区域放大成 JPEG，宽度不超过 500 像素，四周各留 20% 边距。用于读小字或精确取点。
+输出的坐标是 zoom 图内像素，配合 computer-use click ... --from-zoom 使用。`,
+
+  verify: `computer-use verify <pid> <wid> <role> <label子串> <exists|value|selected|enabled> [expect]
+
+用 role 加 label 加 field 组成谓词请驱动判定，不依赖 AX 树差分。
+退出码 0=satisfied  1=unsatisfied  2=unknown
+unknown 表示驱动无法判定，例如 target_missing 或 unsupported_predicate，等于没有证据。
+
+value、selected、enabled 只对具备该属性的角色成立，AXWindow 一类会返回 unsupported_predicate。
+选择器命中多个元素时本条命令直接拒绝，先用更精确的 label 收窄。
+exists 没有否定形式，断言「不存在」驱动不接受。`,
+
+  front: `computer-use front <pid> [wid]
+
+把目标窗口提到最前。会改变窗口状态，使用前说明影响。`,
+
+  move: `computer-use move <pid> <wid> <x> <y> [w] [h]
+
+移动窗口，可选同时调整尺寸；省略 w 与 h 时沿用当前尺寸。会改变窗口状态，使用前说明影响。`,
+
+  output: `动作结果字段
+
+target:  本次动作解析到的目标及其快照 id 与年龄；年龄过大说明该重跑 appshot
+
+投递行:  <工具>: effect=... route=... delivery=... evidence=...
+  effect=confirmed        投递并已由驱动验证
+  effect=unverifiable     只是投递出去了，不等于成功
+  state=confirmed         驱动已验证
+  state=delivered_unverified   投递完成但无验证
+
+observe: 动作后的新状态与有界差分，delta added/removed/changed 最多展开 6 行
+  差分按角色加标签比对，滚动不会把整棵树报成变更
+  差分为空只说明 AX 树没看到变化，要结论就上 verify 或 --wait
+
+verify:  target  verdict=confirmed|timeout  diff / state  elapsed
+  verdict=timeout 时退出码为 2
+
+所有子命令在内容后空一行输出 duration_ms=<毫秒>，--json 模式除外。`,
+};
+
+function helpText(topic?: string): string {
+  if (!topic) return overview;
+  const detail = helpTopics[topic];
+  if (detail) return detail;
+  return `未知帮助主题 '${topic}'；可用主题: ${Object.keys(helpTopics).join(", ")}\n\n${overview}`;
+}
 
 function fail(msg: string): never { throw new ComputerUseError(msg); }
 
@@ -665,7 +806,10 @@ function renderExec(r: ExecutionResult): void {
 }
 
 function dispatch(cmd: string | undefined, args: string[]): void {
-  if (!cmd || ["help", "-h", "--help"].includes(cmd)) return console.log(usage);
+  if (!cmd || ["help", "-h", "--help"].includes(cmd)) {
+    console.log(helpText(args[0]));
+    return;
+  }
   if (cmd === "apps") {
     const running = new Map<string, { pid: number; name: string; bid: string }>();
     try {
@@ -857,7 +1001,7 @@ function dispatch(cmd: string | undefined, args: string[]): void {
     renderExec(s.execute({ kind: "move", x, y, width: rest[2] ? Number(rest[2]) : undefined, height: rest[3] ? Number(rest[3]) : undefined }));
     return;
   }
-  fail(`error: unknown subcommand '${cmd}'\n${usage}`);
+  fail(`error: unknown subcommand '${cmd}'\n\n${overview}`);
 }
 
 if (import.meta.main) {
