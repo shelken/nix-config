@@ -35,6 +35,11 @@ export type WindowState = {
   screenshot_width?: number;
   screenshot_height?: number;
   window_bounds?: { x: number; y: number; width: number; height: number };
+  // 驱动逐条报告每种投递路由此刻是否可用，是判断「为什么动作落不下去」的权威来源。
+  background_input?: {
+    exact_window?: { status?: string };
+    routes?: Array<{ route?: string; status?: string; reason?: string }>;
+  };
   _note?: string;
   elements: AxElement[];
   tree_markdown?: string;
@@ -46,6 +51,11 @@ export type WindowRecord = {
   app_name?: string;
   title?: string;
   bounds?: { x: number; y: number; width: number; height: number };
+  z_index?: number | null;
+  is_on_screen?: boolean;
+  on_current_space?: boolean;
+  space_ids?: number[];
+  current_space_id?: number | null;
 };
 
 export type ElementTarget = { kind: "element"; token: string };
@@ -66,26 +76,43 @@ export type TargetResolution =
   | { kind: "element"; snapshotId: string; ageMs: number; token: string; role: string; label: string }
   | { kind: "pixel"; snapshotId: string; ageMs: number; screenshotWidth?: number; screenshotHeight?: number };
 
+export type DeliveryResponse = {
+  effect?: string;
+  route?: string;
+  path?: string;
+  code?: string;
+  delivered_chars?: number;
+  requested_chars?: number;
+  retry_from_character?: number;
+  retryable?: boolean;
+  delivery?: { mode?: string };
+  evidence?: Array<{ kind?: string }>;
+  refusal?: { code?: string; message?: string };
+};
+
+export type Delivery = {
+  tool: string;
+  response: DeliveryResponse;
+  setValueReadback?: boolean;
+  // 驱动 hotkey 不认 element_token，指向文本控件时必须先把焦点点上去。
+  // 那一步本身也是投递，必须随主结果一起上报，否则调用方只看到后半截。
+  prefocus?: { tool: string; response: DeliveryResponse };
+};
+
+export type Observation = {
+  // 动作关掉窗口后无法重新采集。这不是动作失败，用 unavailable 如实区分。
+  state?: WindowState;
+  hasBaseline: boolean;
+  added: string[];
+  removed: string[];
+  changed: string[];
+  unavailable?: string;
+};
+
 export type ExecutionResult = {
-  delivery: {
-    tool: string;
-    response: {
-      effect?: string;
-      route?: string;
-      path?: string;
-      code?: string;
-      delivered_chars?: number;
-      requested_chars?: number;
-      retry_from_character?: number;
-      retryable?: boolean;
-      delivery?: { mode?: string };
-      evidence?: Array<{ kind?: string }>;
-      refusal?: { code?: string; message?: string };
-    };
-    setValueReadback?: boolean;
-  };
+  delivery: Delivery;
   target?: TargetResolution;
-  observation?: { state: WindowState; hasBaseline: boolean; added: string[]; removed: string[]; changed: string[] };
+  observation?: Observation;
   verification?: {
     target: string;
     verdict: "confirmed" | "timeout";
@@ -188,7 +215,7 @@ export class AutomationSession {
     return new AutomationSession(pid, windowId, options);
   }
 
-  capture(options: { depth?: number; query?: string; maxElements?: number; screenshotPath?: string; full?: boolean } = {}): WindowState {
+  capture(options: { depth?: number; maxElements?: number; screenshotPath?: string; full?: boolean } = {}): WindowState {
     const wid = this.requireWindow();
     const png = options.screenshotPath;
     const part = png ? `${png}.part${process.pid}` : undefined;
@@ -197,7 +224,6 @@ export class AutomationSession {
       args.max_depth = options.depth ?? 3;
       args.max_elements = options.maxElements ?? 300;
     }
-    if (options.query) args.query = options.query;
     if (part && png) {
       mkdirSync(dirname(png), { recursive: true });
       args.screenshot_out_file = part;
@@ -239,6 +265,16 @@ export class AutomationSession {
     return state;
   }
 
+  // capture 在窗口已消失时抛错。动作结论比观察重要，观察走这条容忍路径。
+  private tryCapture(screenshotPath: string): { ok: true; state: WindowState } | { ok: false; reason: string } {
+    try {
+      return { ok: true, state: this.capture({ screenshotPath }) };
+    } catch (e) {
+      const m = e instanceof ComputerUseError ? e.message : String((e as { message?: string })?.message ?? e);
+      return { ok: false, reason: m.replace(/\s+/g, " ").trim().slice(0, 200) };
+    }
+  }
+
   execute(action: AutomationAction, options: { observe?: boolean; waitTarget?: string; timeoutMs?: number } = {}): ExecutionResult {
     const wid = this.requireWindow();
     let beforeSig = "";
@@ -256,10 +292,14 @@ export class AutomationSession {
     let observation: ExecutionResult["observation"];
     if (options.observe ?? true) {
       const before = this.readSnapshot();
-      const after = this.capture({ screenshotPath: join(this.cacheDir, `${this.pid}-${wid}.png`) });
-      if (!before) {
-        observation = { state: after, hasBaseline: false, added: [], removed: [], changed: [] };
+      const shot = this.tryCapture(join(this.cacheDir, `${this.pid}-${wid}.png`));
+      if (!shot.ok) {
+        // 动作关掉目标窗口是正常结果，不是失败：观察降级为不可用，动作结论照常上报。
+        observation = { hasBaseline: Boolean(before), added: [], removed: [], changed: [], unavailable: shot.reason };
+      } else if (!before) {
+        observation = { state: shot.state, hasBaseline: false, added: [], removed: [], changed: [] };
       } else {
+        const after = shot.state;
         const f = (els: AxElement[]) => {
           const m = new Map<string, Set<string>>();
           for (const e of els) {
@@ -438,18 +478,20 @@ export class AutomationSession {
       else args.key = action.key;
 
       let target: TargetResolution | undefined;
+      let prefocus: Delivery["prefocus"];
       if (action.target) {
         const res = this.resolve(action.target.token);
         target = res.target;
         if (isHotkey && (res.element.role === "AXTextField" || res.element.role === "AXTextArea")) {
-          this.clickCenter(res.element);
+          // hotkey 不认 element_token，必须先把焦点点上去，这一步本身就是一次投递。
+          prefocus = this.clickCenter(res.element);
         } else {
           args.element_token = res.element.element_token;
         }
       }
       if (action.foreground) args.delivery_mode = "foreground";
       const tool = isHotkey ? "hotkey" : "press_key";
-      return { delivery: { tool, response: this.parseJson(this.callDriver(tool, args, `${tool} failed`), "") }, target };
+      return { delivery: { tool, response: this.parseJson(this.callDriver(tool, args, `${tool} failed`), ""), prefocus }, target };
     }
     if (action.kind === "scroll") {
       const res = this.resolve(action.target.token);
@@ -581,24 +623,33 @@ const defaultDriver = new CliDriverAdapter();
 
 const overview = `computer-use — macOS 窗口快照与自动化操作 CLI
 
+目标寻址 (所有针对窗口的子命令通用):
+  <pid>:<wid>      显式窗口，windows 的 TARGET 列可直接复制
+  <应用名>          取该应用 z 序最前的窗口；同名多窗口写 <应用名>#标题片段
+  省略              复用上一次的目标，open 也会顺带设定目标
+  裸整数永远是动作参数而不是目标，因此 'click 500 235' 只能是像素坐标
+
 闭环工作流 (SOP):
-  1. 定位窗口   computer-use windows                    列出 pid / window_id
-                computer-use open <应用名|bundle_id>    冷启动并等待窗口就绪
-  2. 读取界面   computer-use appshot <pid> <wid>         AX 树 + PNG 截图
-                computer-use snapshot <pid> <wid>        只要 AX 树
+  1. 定位窗口   computer-use windows                     TARGET 列带 z 序、几何与视口外标记
+                computer-use open <应用名>                冷启动并设定目标
+  2. 读取界面   computer-use appshot [目标]               AX 树 + PNG 截图
+                computer-use snapshot [目标]              只要 AX 树
+                computer-use find [目标] <词>             只回匹配元素，大树省 token
   3. 执行动作   computer-use click / type / key / scroll / drag / zoom
-  4. 确认结果   computer-use verify <pid> <wid> <role> <label> <field> [expect]
+                computer-use menu [目标] <菜单段...>       按菜单路径直接调用
+  4. 确认结果   computer-use verify [目标] <role> <label> <field> [expect]
 
-硬性契约:
-  · 针对窗口的命令必须显式给出 <pid> <wid>，不接受隐式猜测
-  · t<idx> 只在最近一次 appshot、snapshot 或动作之后有效，动作会刷新缓存
-  · ax=(x,y) 是 AX 屏幕点，只用于定位；像素操作必须用 appshot 的 PNG 坐标
-  · --wait 只在动作结果不是立即出现时使用
+后台契约:
+  · 默认走驱动的后台档：不抢焦点、不切工作区、不动光标
+  · 元素目标 (t<idx>) 走 AX 档，后台窗口与屏外窗口都能用
+  · 像素目标 (x y) 走 CGEvent 档，要求窗口在屏幕内可见
+  · 只有 --foreground 会短暂置前再恢复原前台；其余路径不打扰使用者
 
-子命令: apps open windows appshot snapshot click right-click double-click
-        drag type key scroll zoom verify front move
+子命令: apps open windows screen use menu appshot snapshot find
+        click right-click double-click drag type key scroll zoom verify front move
 
 单命令细节: computer-use --help <子命令>
+目标寻址细节: computer-use --help target
 输出字段语义: computer-use --help output`;
 
 // 细节引导由脚本自带：每条的参数、标志、输出与坑位都写在这里，
@@ -624,36 +675,99 @@ const helpTopics: Record<string, string> = {
 冷启动受系统首次启动耗时影响，轮询上限约 5 秒。超时后本条命令提示稍后自行运行
 computer-use windows，而不是继续阻塞。`,
 
-  windows: `computer-use windows
+  windows: `computer-use windows [--all] [查询词]
 
-输出 PID / WINDOW_ID / APP / TITLE，制表符分隔。
+按 z 序从前往后列出可操作窗口，TARGET 列可直接复制到任意子命令。
+  --all       连零尺寸与隐藏窗口一起列出
+  查询词       同时匹配应用名与标题
 
-应用名会被系统本地化，例如 TextEdit 显示为「文本编辑」、Finder 显示为「访达」。
-按名称过滤窗口时按实际显示名匹配。`,
+列: TARGET  Z  APP  TITLE  BOUNDS  STATE
+  BOUNDS 是屏幕坐标与逻辑尺寸，不是 PNG 像素
+  STATE 取值 ok / clipped / off-viewport / hidden / other-space，可叠加
+    clipped        窗口被屏幕边缘裁掉一部分，剩下部分仍可投递像素事件
+    off-viewport   窗口整个在屏幕外，像素投递必被拒绝
+    hidden         未显示（最小化或未上屏），仅 --all 下出现
+    other-space    在别的 Space 上，仅 --all 下出现
 
-  appshot: `computer-use appshot <pid> <wid> [--full] [--screenshot <path>]
+默认只列 is_on_screen 为真的窗口，也就是使用者眼前的东西。
+
+off-viewport 表示窗口被平铺窗口管理器推到了屏幕外，Zed 与 Helium 常见。
+这类窗口 AX 读写照常可用，像素投递会被驱动以 point lies outside window frame 拒绝，
+先用 'computer-use move' 把它挪回屏幕内。
+
+应用名会被系统本地化，例如 TextEdit 显示为「文本编辑」、Finder 显示为「访达」。`,
+
+  target: `目标寻址
+
+三种写法任选其一:
+  <pid>:<wid>                     显式窗口，例如 1435:112
+  <应用名> 或 <应用名>#标题片段     取该应用 z 序最前的窗口，例如 'Zed#cpa-plugins'
+  省略                            复用上一次的目标
+
+粘性目标在三种时机被记住: 显式指定窗口、open 成功、以及任何一次成功解析。
+'computer-use use <目标>' 只设定目标并回显，不执行动作。
+
+裸整数永远被当作动作参数而不是目标，因此 'click 500 235' 唯一含义是像素坐标，
+不会与窗口参数混淆。应用名匹配是大小写不敏感的子串。
+
+同一应用有多个窗口时取 z 序最前的那个，并在 note 行报告候选数量。`,
+
+  screen: `computer-use screen [--refresh]
+
+打印主显示的逻辑尺寸与原点，用于判断窗口是否在视口外。
+
+结果缓存 10 分钟；改过分辨率后用 --refresh 强制重读。`,
+
+  use: `computer-use use <目标>
+
+只设定粘性目标并回显，不执行任何动作。之后所有子命令都可以省略目标。
+
+不带参数调用时回显当前粘性目标。`,
+
+  menu: `computer-use menu [目标] <菜单段> [菜单段...]
+
+按应用菜单路径直接调用菜单项，走驱动的无障碍接口，不依赖像素坐标。
+例如: computer-use menu 文件 新建窗口
+
+每段必须精确匹配，菜单项被禁用、缺失或匹配到多个时直接拒绝，不回退到像素点击。
+
+注意: 逐层解析会真实展开该菜单。目标应用正被使用时不要用它探测菜单路径，
+否则菜单栏会进入追踪状态并吞掉使用者接下来的点击与按键。`,
+
+  appshot: `computer-use appshot [目标] [--full] [--screenshot <path>]
 
 一次采集同时拿到 AX 树与 PNG 截图，并刷新动作 token。
   --full            交给驱动完整遍历预算，大树慎用
   --screenshot      截图另存到指定路径，默认写缓存目录 <pid>-<wid>.png
 
 输出:
-  snapshot= 快照 id   state=complete|truncated   viewport= 视口内元素数
-  returned= / total=   screenshot= 路径与像素尺寸   coordinates=png-pixels
+  snapshot= 快照 id   target= <pid>:<wid>   shown= 本次打印的元素数
+  walked= 已遍历/总数   cut=N 表示被遍历预算砍掉 N 个
+  off-viewport 表示窗口在屏幕外：AX 可用，像素投递会被拒绝
+  screenshot= 路径与 PNG 像素尺寸   coordinates=png-pixels
   t<idx> 行: 元素角色、标签、ax= 屏幕点、sel/on 标志
 
-默认 depth=3、max-elements=300，只输出窗口视口内元素以控制 token 开销。
-state=truncated 表示没遍历完；超出边界的元素会在 observe 差分里成批出现，那不是业务变化。`,
+默认 depth=3、max-elements=300，只打印窗口视口内元素以控制 token 开销。
+元素多的时候先 find 投影，不要用 --all 全量打印。`,
 
-  snapshot: `computer-use snapshot <pid> <wid> [--depth N] [--max-elements N] [--query Q] [--all] [--json]
+  snapshot: `computer-use snapshot [目标] [--depth N] [--max-elements N] [--query Q] [--all] [--json]
 
-只取 AX 树不截图，同样刷新动作 token。
+只取 AX 树不截图，同样刷新动作 token。输出字段与 appshot 相同。
   --depth / --max-elements   覆盖默认遍历预算
-  --query                    只过滤返回内容，不降低遍历成本
+  --query                    只打印命中项及其祖先链，缓存里仍是完整快照
   --all                      跳过视口过滤，输出全部已遍历元素
   --json                     输出原始 JSON，该模式不打印 duration_ms`,
 
-  click: `computer-use click <pid> <wid> <t<idx>|x y> [action] [--foreground] [--wait <t<idx>|media:playing>] [--timeout N]
+  find: `computer-use find [目标] <匹配词>
+
+只打印命中匹配词的元素及其祖先链，是 snapshot --query 的短入口。
+在长列表或大树里先 find 定位，再按 t<idx> 操作，比全量打印省一个数量级的 token。
+
+匹配为大小写不敏感的子串，同时比对角色、标签、值与描述。
+投影只作用于打印：快照缓存仍是完整树，所以后续动作的 observe 基线不受影响；
+但驱动的遍历开销不变，大树依然要等。`,
+
+  click: `computer-use click [目标] <t<idx>|x y> [action] [--foreground] [--wait <t<idx>|media:playing>] [--timeout N]
 
   t<idx>         走元素语义动作
   x y            appshot PNG 像素坐标
@@ -662,42 +776,44 @@ state=truncated 表示没遍历完；超出边界的元素会在 observe 差分�
   --wait         动作后轮询等属性位移，t<idx> 可加 :val 或 :sel 只比较该字段
   --timeout      等待上限，默认 2000 毫秒`,
 
-  "right-click": `computer-use right-click <pid> <wid> <t<idx>|x y> [--foreground]
+  "right-click": `computer-use right-click [目标] <t<idx>|x y> [--foreground]
 
 元素目标走上下文菜单，纯后台可用。像素目标走 PNG 坐标。`,
 
-  "double-click": `computer-use double-click <pid> <wid> <t<idx>|x y>
+  "double-click": `computer-use double-click [目标] <t<idx>|x y>
 
 默认短暂把目标窗口置前再恢复原前台。驱动的后台双击缺少 no-raise 激活前奏，
 非前台 AppKit 窗口的双击会被静默忽略。`,
 
-  drag: `computer-use drag <pid> <wid> <x1> <y1> <x2> <y2> [--foreground]
+  drag: `computer-use drag [目标] <x1> <y1> <x2> <y2> [--foreground]
 
 四个坐标都是最近一次 appshot 的 PNG 像素。用于框选、拖放、拖拽手柄。`,
 
-  type: `computer-use type <pid> <wid> [t<idx>] <text> [--foreground] [--wait <t<idx>]
+  type: `computer-use type [目标] [t<idx>] <text> [--foreground] [--wait <t<idx>]
 
 带 t<idx> 时优先走 Cocoa 原生 set_value 后台写入，回报 value_readback 验证；
 驱动拒绝或元素不可写时回退到 type_text。不带 t<idx> 时投给当前焦点。`,
 
-  key: `computer-use key <pid> <wid> [t<idx>] <key> [mods..] [--foreground] [--wait <t<idx>]
+  key: `computer-use key [目标] [t<idx>] <key> [mods..] [--foreground] [--wait <t<idx>]
 
-  computer-use key 1435 112 t1 return        后台聚焦该控件后按单键
-  computer-use key 1435 112 space            投给当前焦点
-  computer-use key 1435 112 t1 cmd a         带修饰键，改走驱动 hotkey 工具
+  computer-use key 1435:112 t1 return        后台聚焦该控件后按单键
+  computer-use key 1435:112 space            投给当前焦点
+  computer-use key 1435:112 t1 cmd a         带修饰键，改走驱动 hotkey 工具
 
-带 t<idx> 时无需激活前台。纯单键走 press_key，带修饰键走 hotkey。`,
+带 t<idx> 时无需激活前台。纯单键走 press_key，带修饰键走 hotkey。
+带修饰键且目标是文本控件时，脚本会先点击该控件聚焦，这次点击是独立投递，
+会以 prefocus 行单独打印，不与随后的 hotkey 结果混在一起。`,
 
-  scroll: `computer-use scroll <pid> <wid> <t<idx>> <up|down|left|right> [line|page] [--foreground]
+  scroll: `computer-use scroll [目标] <t<idx>> <up|down|left|right> [line|page] [--foreground]
 
 按元素定位滚动，粒度默认 line。窗口被平铺窗口管理器推到屏外时驱动拒绝投递。`,
 
-  zoom: `computer-use zoom <pid> <wid> <x1> <y1> <x2> <y2>
+  zoom: `computer-use zoom [目标] <x1> <y1> <x2> <y2>
 
 截取区域放大成 JPEG，宽度不超过 500 像素，四周各留 20% 边距。用于读小字或精确取点。
 输出的坐标是 zoom 图内像素，配合 computer-use click ... --from-zoom 使用。`,
 
-  verify: `computer-use verify <pid> <wid> <role> <label子串> <exists|value|selected|enabled> [expect]
+  verify: `computer-use verify [目标] <role> <label子串> <exists|value|selected|enabled> [expect]
 
 用 role 加 label 加 field 组成谓词请驱动判定，不依赖 AX 树差分。
 退出码 0=satisfied  1=unsatisfied  2=unknown
@@ -707,11 +823,11 @@ value、selected、enabled 只对具备该属性的角色成立，AXWindow 一�
 选择器命中多个元素时本条命令直接拒绝，先用更精确的 label 收窄。
 exists 没有否定形式，断言「不存在」驱动不接受。`,
 
-  front: `computer-use front <pid> [wid]
+  front: `computer-use front [目标]
 
-把目标窗口提到最前。会改变窗口状态，使用前说明影响。`,
+把目标窗口提到最前并保持。会改变前台状态，使用前说明影响。`,
 
-  move: `computer-use move <pid> <wid> <x> <y> [w] [h]
+  move: `computer-use move [目标] <x> <y> [w] [h]
 
 移动窗口，可选同时调整尺寸；省略 w 与 h 时沿用当前尺寸。会改变窗口状态，使用前说明影响。`,
 
@@ -725,9 +841,14 @@ target:  本次动作解析到的目标及其快照 id 与年龄；年龄过大�
   state=confirmed         驱动已验证
   state=delivered_unverified   投递完成但无验证
 
+prefocus: 前置投递的结果。某些动作要分两步，例如对着文本控件按修饰键需先点击聚焦。
+  该行与主投递各算一次事件，不要按一次事件理解。
+
 observe: 动作后的新状态与有界差分，delta added/removed/changed 最多展开 6 行
   差分按角色加标签比对，滚动不会把整棵树报成变更
   差分为空只说明 AX 树没看到变化，要结论就上 verify 或 --wait
+  observe: unavailable (原因) 表示动作之后窗口已无法采集，例如刚被关掉。
+  这只是观察失败，动作结论照常按上面的 effect 判读。
 
 verify:  target  verdict=confirmed|timeout  diff / state  elapsed
   verdict=timeout 时退出码为 2
@@ -744,13 +865,166 @@ function helpText(topic?: string): string {
 
 function fail(msg: string): never { throw new ComputerUseError(msg); }
 
-function pair(cmd: string, args: string[]): [number, number] {
-  const pid = Number(args[0]);
-  const wid = Number(args[1]);
-  if (!Number.isInteger(pid) || pid <= 0 || !Number.isInteger(wid) || wid <= 0) {
-    fail(`'${cmd}' 必须显式指定目标窗口的整数 <pid> 和 <wid>作为前两个参数\n\n参数引导: 先运行 'computer-use windows' 查询窗口`);
+// ---------------------------------------------------------------------------
+// 目标寻址：<pid>:<wid>、<应用名[#标题子串]>、或省略走粘性目标
+// ---------------------------------------------------------------------------
+
+// 目标写成单个参数，逗号前面带冒号更好认。裸整数永远是动作参数而不是目标，
+// 这条规则让「click 500 235」只能是像素坐标，不需要靠参数个数猜。
+const MIN_WINDOW_EDGE = 2;
+
+function allWindows(): WindowRecord[] {
+  try {
+    const raw = defaultDriver.call("list_windows", {});
+    return (JSON.parse(raw) as { windows?: WindowRecord[] }).windows ?? [];
+  } catch (e) {
+    throw new ComputerUseError(`list_windows failed${describeError(e)}`);
   }
-  return [pid, wid];
+}
+
+// 一次抓取，两种视图。listed 是使用者眼前的窗口，适合直接列给人看；
+// all 是几何上可操作的窗口，含隐藏与别的 Space，用于按应用名兜底找窗口。
+function scanWindows(): { listed: WindowRecord[]; all: WindowRecord[] } {
+  const all = allWindows().filter((w) => {
+    const b = w.bounds;
+    return !b || (b.width >= MIN_WINDOW_EDGE && b.height >= MIN_WINDOW_EDGE);
+  });
+  const listed = all.filter((w) => {
+    const b = w.bounds;
+    return Boolean(b) && b!.width >= MIN_WINDOW_EDGE && b!.height >= MIN_WINDOW_EDGE && w.is_on_screen === true;
+  });
+  return { listed, all };
+}
+
+// 视口状态按屏幕坐标与几何实算。is_on_screen 靠不住：
+// 被平铺窗口管理器推到 x=1919 的窗口依然报 on_screen=true。
+function viewportState(bounds: WindowRecord["bounds"], screen: { width: number; height: number }): "visible" | "clipped" | "outside" {
+  if (!bounds) return "visible";
+  const visW = Math.min(bounds.x + bounds.width, screen.width) - Math.max(bounds.x, 0);
+  const visH = Math.min(bounds.y + bounds.height, screen.height) - Math.max(bounds.y, 0);
+  if (visW <= 0 || visH <= 0) return "outside";
+  if (visW < bounds.width || visH < bounds.height) return "clipped";
+  return "visible";
+}
+
+function screenSize(force = false): { x: number; y: number; width: number; height: number } {
+  const p = join(cacheDir, "screen.json");
+  if (!force) try {
+    const cached = JSON.parse(readFileSync(p, "utf8"));
+    if (Date.now() - cached.at < 10 * 60_000) return cached.rect;
+  } catch {}
+  const r = (() => {
+    try {
+      return JSON.parse(defaultDriver.call("get_screen_size", {})) as { width: number; height: number };
+    } catch (e) {
+      throw new ComputerUseError(`get_screen_size failed${describeError(e)}`);
+    }
+  })();
+  const rect = { x: 0, y: 0, width: r.width, height: r.height };
+  try {
+    mkdirSync(cacheDir, { recursive: true });
+    writeFileSync(p, JSON.stringify({ at: Date.now(), rect }), { mode: 0o600 });
+  } catch {}
+  return rect;
+}
+
+function rememberTarget(pid: number, wid: number): void {
+  try {
+    mkdirSync(cacheDir, { recursive: true });
+    writeFileSync(join(cacheDir, "target.json"), JSON.stringify({ pid, wid, at: Date.now() }), { mode: 0o600 });
+  } catch {}
+}
+
+function recallTarget(): { pid: number; wid: number } | undefined {
+  try {
+    const d = JSON.parse(readFileSync(join(cacheDir, "target.json"), "utf8"));
+    if (Number.isInteger(d.pid) && d.pid > 0 && Number.isInteger(d.wid) && d.wid > 0) return { pid: d.pid, wid: d.wid };
+  } catch {}
+  return undefined;
+}
+
+// 同名多窗口时只在「使用者看得见」的那些里排名，全在屏幕外的占位窗与 OmniWM 的
+// 1920x30 横条 z 序反而更高，只看 z 会挑错。兜底时才考虑隐藏窗口。
+function pickWindow(spec: string, pool: WindowRecord[], screen: { width: number; height: number }): { win?: WindowRecord; matched: number } {
+  const hash = spec.indexOf("#");
+  const app = (hash >= 0 ? spec.slice(0, hash) : spec).trim().toLowerCase();
+  const title = hash >= 0 ? spec.slice(hash + 1).trim().toLowerCase() : undefined;
+  const matched = pool.filter((w) => (w.app_name ?? "").toLowerCase().includes(app) && (title === undefined || (w.title ?? "").toLowerCase().includes(title)));
+  const onView = (w: WindowRecord) => (viewportState(w.bounds, screen) === "outside" ? 0 : 1);
+  const ranked = [...matched].sort((a, b) => onView(b) - onView(a) || (b.z_index ?? -1) - (a.z_index ?? -1));
+  const seen = ranked.filter((w) => w.is_on_screen === true);
+  return { win: (seen.length ? seen : ranked)[0], matched: matched.length };
+}
+
+type AppRecord = { name?: string; bundle_id?: string; pid?: number; running?: boolean; launch_path?: string };
+
+// 应用名是本地化的：窗口列表里叫「音乐」，安装路径与 bundle id 里才叫 Music。
+// 只有按名字找不到窗口时才走这一步，清单按天缓存，命中路径上不多付驱动往返。
+function resolveApp(query: string): AppRecord | undefined {
+  const path = join(cacheDir, "apps.json");
+  let apps: AppRecord[] | undefined;
+  try {
+    const cached = JSON.parse(readFileSync(path, "utf8"));
+    if (Date.now() - cached.at < 24 * 3600_000) apps = cached.apps;
+  } catch {}
+  if (!apps) {
+    try {
+      apps = (JSON.parse(defaultDriver.call("list_apps", {})) as { apps?: AppRecord[] }).apps ?? [];
+      mkdirSync(cacheDir, { recursive: true });
+      writeFileSync(path, JSON.stringify({ at: Date.now(), apps }), { mode: 0o600 });
+    } catch {
+      return undefined;
+    }
+  }
+  const q = query.trim().toLowerCase();
+  return apps.find((a) => {
+    const file = (a.launch_path ?? "").split("/").pop()?.replace(/\.app$/i, "").toLowerCase() ?? "";
+    return file === q || (a.bundle_id ?? "").toLowerCase().includes(q) || (a.name ?? "").toLowerCase().includes(q);
+  });
+}
+
+type TakenTarget = { pid: number; wid: number; rest: string[]; note?: string };
+
+function takeTarget(cmd: string, args: string[]): TakenTarget {
+  const head = args[0];
+  // 元素 token 与坐标都不是目标，只有带冒号的或非数字的名字才是。
+  const looksLikeSpec = Boolean(head) && !head.startsWith("-") && !/^t\d+$/.test(head) && (head.includes(":") || !/^\d+(\.\d+)?$/.test(head));
+  if (looksLikeSpec) {
+    const colon = /^(\d+):(\d+)$/.exec(head);
+    if (colon) {
+      const pid = Number(colon[1]);
+      const wid = Number(colon[2]);
+      rememberTarget(pid, wid);
+      return { pid, wid, rest: args.slice(1) };
+    }
+    if (head.includes(":")) fail(`'${cmd}' 的目标 '${head}' 格式无效，窗口目标应写成 <pid>:<wid>`);
+    const scan = scanWindows();
+    const screen = screenSize();
+    let found = pickWindow(head, scan.listed, screen);
+    if (!found.win) found = pickWindow(head, scan.all, screen);
+    let localized: string | undefined;
+    if (!found.win) {
+      const app = resolveApp(head);
+      if (!app?.name) fail(`找不到应用 '${head}'\n\n先运行 'computer-use apps' 看装了什么，或运行 'computer-use windows' 直接看窗口`);
+      found = pickWindow(app.name, scan.all, screen);
+      if (!found.win) fail(`'${app.name}' 已安装但没有可操作窗口\n\n先运行 'computer-use open ${head}' 把它拉起来`);
+      localized = `'${head}' 在系统里叫「${app.name}」`;
+    }
+    const win = found.win;
+    if (!win) fail(`找不到应用 '${head}' 的窗口\n\n先运行 'computer-use windows' 看已有窗口，或运行 'computer-use open ${head}' 把它拉起来`);
+    rememberTarget(win.pid, win.window_id);
+    const note = localized ?? (found.matched > 1 ? `${found.matched} 个窗口匹配 '${head}'，已取 ${win.pid}:${win.window_id}；要换窗口请写 '${head}#标题片段'` : undefined);
+    return { pid: win.pid, wid: win.window_id, rest: args.slice(1), note };
+  }
+  const sticky = recallTarget();
+  if (sticky) return { ...sticky, rest: args };
+  fail(`'${cmd}' 没有可用目标：既没给 <pid>:<wid> 或应用名，也没有上一次的目标\n\n先运行 'computer-use windows' 拿 <pid>:<wid>，或运行 'computer-use appshot <应用名>'`);
+}
+
+function describeError(e: unknown): string {
+  const d = e as { stderr?: unknown; stdout?: unknown; message?: string };
+  const m = String(d.stderr || d.stdout || d.message || "").trim();
+  return m ? ` — ${m}` : "";
 }
 
 function strip(args: string[], ...flags: string[]): string[] {
@@ -776,26 +1050,62 @@ function targetOf(args: string[], fromZoom = false): { kind: "element"; token: s
   return { kind: "pixel", x, y, fromZoom };
 }
 
+// 投影在客户端做。驱动侧的 query 会把投影结果当作快照回填，下一次动作的 observe
+// 基线就变成残缺树，原本存在的元素会被误报成新增。这里只影响打印，不动缓存。
+function projectToMatches(elements: AxElement[], pattern: string): AxElement[] {
+  const q = pattern.toLowerCase();
+  const byIndex = new Map<number, AxElement>();
+  for (const e of elements) if (e.element_index != null) byIndex.set(e.element_index, e);
+  const keep = new Set<number>();
+  for (const e of elements) {
+    const text = `${e.role} ${e.label ?? ""} ${e.desc ?? ""} ${e.value ?? ""}`.toLowerCase();
+    if (!text.includes(q)) continue;
+    if (e.element_index == null) continue;
+    keep.add(e.element_index);
+    for (let p = e.parent_index; p != null; p = byIndex.get(p)?.parent_index ?? null) {
+      if (keep.has(p)) break;
+      keep.add(p);
+    }
+  }
+  return elements.filter((e) => e.element_index != null && keep.has(e.element_index));
+}
+
+// 元素行的唯一格式来源：snapshot、appshot 与 find 共用，避免三处各写一遍。
+function elementRow(e: AxElement): string {
+  const f = e.frame;
+  const flags = [e.selected && "sel", e.enabled && "on"].filter(Boolean).join(",");
+  return `t${e.element_index}\t${e.role.replace(/^AX/, "")}\t${(e.label ?? e.value ?? "").replace(/[\t\n]/g, " ").trim()}\t${f ? `ax=(${Math.floor(f.x)},${Math.floor(f.y)})` : "ax=none"}\t${flags}`;
+}
+
+function describeDelivery(d: Delivery): string[] {
+  const { tool, response: resp, setValueReadback } = d;
+  if (setValueReadback) return [`${tool}: effect=confirmed (value_readback verified)`];
+  const ev = resp.evidence?.flatMap((e) => e.kind ?? []).join(",") || "none";
+  const chars = resp.delivered_chars == null || resp.requested_chars == null ? "" : ` chars=${resp.delivered_chars}/${resp.requested_chars}`;
+  const state = resp.effect === "confirmed" ? "confirmed" : resp.effect === "unverifiable" ? "delivered_unverified" : resp.effect === "partial" ? "partial" : resp.refusal ? "refused" : "unknown";
+  return [
+    `${tool}: effect=${resp.effect ?? "unknown"} route=${resp.route ?? resp.path ?? "unknown"} delivery=${resp.delivery?.mode ?? "unknown"} evidence=${ev}${resp.code ? ` code=${resp.code}` : ""}${chars}${resp.retryable == null ? "" : ` retryable=${resp.retryable}`}${resp.retry_from_character == null ? "" : ` retry_from=${resp.retry_from_character}`}`,
+    `state=${state}`,
+  ];
+}
+
 function renderExec(r: ExecutionResult): void {
   if (r.target) {
     console.log(r.target.kind === "element"
       ? `target: snapshot=${r.target.snapshotId} age=${r.target.ageMs}ms ${r.target.token} ${r.target.role} ${r.target.label}`
       : `target: snapshot=${r.target.snapshotId} age=${r.target.ageMs}ms screenshot=${r.target.screenshotWidth ?? "?"}x${r.target.screenshotHeight ?? "?"}`);
   }
-  const { tool, response: resp, setValueReadback } = r.delivery;
-  if (setValueReadback) {
-    console.log("set_value: effect=confirmed (value_readback verified)");
-  } else {
-    const ev = resp.evidence?.flatMap((e) => e.kind ?? []).join(",") || "none";
-    const chars = resp.delivered_chars == null || resp.requested_chars == null ? "" : ` chars=${resp.delivered_chars}/${resp.requested_chars}`;
-    console.log(`${tool}: effect=${resp.effect ?? "unknown"} route=${resp.route ?? resp.path ?? "unknown"} delivery=${resp.delivery?.mode ?? "unknown"} evidence=${ev}${resp.code ? ` code=${resp.code}` : ""}${chars}${resp.retryable == null ? "" : ` retryable=${resp.retryable}`}${resp.retry_from_character == null ? "" : ` retry_from=${resp.retry_from_character}`}`);
-    const state = resp.effect === "confirmed" ? "confirmed" : resp.effect === "unverifiable" ? "delivered_unverified" : resp.effect === "partial" ? "partial" : resp.refusal ? "refused" : "unknown";
-    console.log(`state=${state}`);
-  }
+  // 前置聚焦是独立投递，先于主投递打印，避免调用方以为只有一次事件落到了应用上。
+  if (r.delivery.prefocus) for (const l of describeDelivery(r.delivery.prefocus)) console.log(`prefocus ${l}`);
+  for (const l of describeDelivery(r.delivery)) console.log(l);
   if (r.observation) {
-    const { state, hasBaseline, added, removed, changed } = r.observation;
-    console.log(hasBaseline ? `observe: snapshot=${state.snapshot_id ?? "?"} delta added=${added.length} removed=${removed.length} changed=${changed.length}` : `observe: snapshot=${state.snapshot_id ?? "?"} baseline=none`);
-    for (const l of [...added.map((v) => `  + ${v}`), ...removed.map((v) => `  - ${v}`), ...changed.map((v) => `  ~ ${v}`)].slice(0, 6)) console.log(l);
+    const { state, hasBaseline, added, removed, changed, unavailable } = r.observation;
+    if (unavailable) {
+      console.log(`observe: unavailable (${unavailable})`);
+    } else {
+      console.log(hasBaseline ? `observe: snapshot=${state?.snapshot_id ?? "?"} delta added=${added.length} removed=${removed.length} changed=${changed.length}` : `observe: snapshot=${state?.snapshot_id ?? "?"} baseline=none`);
+      for (const l of [...added.map((v) => `  + ${v}`), ...removed.map((v) => `  - ${v}`), ...changed.map((v) => `  ~ ${v}`)].slice(0, 6)) console.log(l);
+    }
   }
   if (r.verification) {
     const v = r.verification;
@@ -849,66 +1159,109 @@ function dispatch(cmd: string | undefined, args: string[]): void {
     return;
   }
   if (cmd === "open") {
-    const target = args[0];
-    if (!target || target.startsWith("-")) fail("'open' 命令必须指定应用名称或 Bundle ID；可先运行 'computer-use apps'");
-    let raw: { windows?: WindowRecord[] };
-    try {
-      raw = JSON.parse(defaultDriver.call("get_accessibility_tree", {})) as { windows?: WindowRecord[] };
-    } catch (e) {
-      const err = e as { stderr?: unknown; stdout?: unknown; message?: string };
-      const msg = String(err.stderr || err.stdout || err.message || "").trim();
-      fail(`get_accessibility_tree failed${msg ? ` — ${msg}` : ""}`);
+    const target = args.find((a) => !a.startsWith("-"));
+    if (!target) fail("'open' 命令必须指定应用名称或 Bundle ID；可先运行 'computer-use apps'");
+    const scan = scanWindows();
+    const screen = screenSize();
+    const find = (n: string) => pickWindow(n, scan.listed, screen).win ?? pickWindow(n, scan.all, screen).win;
+    let existing = find(target);
+    // 应用名是本地化的，直接匹配失败才去查安装清单换算，命中路径上不付这次往返
+    const app = existing ? undefined : resolveApp(target);
+    if (!existing && app?.name) existing = find(app.name);
+    if (existing) {
+      rememberTarget(existing.pid, existing.window_id);
+      console.log(`已在运行: ${existing.app_name} target=${existing.pid}:${existing.window_id} title="${existing.title ?? ""}"`);
+      return;
     }
-    const exist = raw.windows?.find((w) => w.app_name?.toLowerCase().includes(target.toLowerCase()));
-    if (exist) return console.log(`已在运行: ${exist.app_name} (pid=${exist.pid}, window_id=${exist.window_id})`);
     let resp: { pid: number; name?: string; windows?: WindowRecord[] };
     try {
-      resp = JSON.parse(defaultDriver.call("launch_app", target.includes(".") ? { bundle_id: target } : { name: target })) as { pid: number; name?: string; windows?: WindowRecord[] };
+      resp = JSON.parse(defaultDriver.call("launch_app", app?.bundle_id ? { bundle_id: app.bundle_id } : target.includes(".") ? { bundle_id: target } : { name: target })) as { pid: number; name?: string; windows?: WindowRecord[] };
     } catch (e) {
-      const err = e as { stderr?: unknown; stdout?: unknown; message?: string };
-      const msg = String(err.stderr || err.stdout || err.message || "").trim();
-      fail(`launch_app failed${msg ? ` — ${msg}` : ""}`);
+      throw new ComputerUseError(`launch_app ${target} 失败${describeError(e)}`);
     }
-    let win = resp.windows?.[0];
+    console.log(`已拉起应用: ${resp.name ?? target} pid=${resp.pid}`);
+    let win = resp.windows?.find((w) => (w.bounds?.width ?? 0) >= MIN_WINDOW_EDGE);
     for (let i = 0; !win && i < 10; i++) {
       execFileSync("sleep", ["0.5"]);
-      try {
-        win = (JSON.parse(defaultDriver.call("get_accessibility_tree", {})) as { windows?: WindowRecord[] }).windows?.find((w) => w.pid === resp.pid);
-      } catch {}
+      try { win = scanWindows().all.find((w) => w.pid === resp.pid); } catch {}
     }
-    console.log(`已拉起应用: ${resp.name ?? target} (pid=${resp.pid})`);
-    console.log(win ? `窗口就绪: window_id=${win.window_id}, title="${win.title ?? ""}"` : "窗口正在初始化中；稍后运行 computer-use windows");
+    if (win) {
+      rememberTarget(win.pid, win.window_id);
+      console.log(`窗口就绪: target=${win.pid}:${win.window_id} title="${win.title ?? ""}"`);
+    } else {
+      console.log("窗口正在初始化中；稍后运行 computer-use windows");
+    }
     return;
   }
-  if (cmd === "windows") {
-    console.log("PID\tWINDOW_ID\tAPP\tTITLE");
-    let raw: { windows?: WindowRecord[] };
-    try {
-      raw = JSON.parse(defaultDriver.call("get_accessibility_tree", {})) as { windows?: WindowRecord[] };
-    } catch (e) {
-      const err = e as { stderr?: unknown; stdout?: unknown; message?: string };
-      const msg = String(err.stderr || err.stdout || err.message || "").trim();
-      fail(`get_accessibility_tree failed${msg ? ` — ${msg}` : ""}`);
+  if (cmd === "windows" || cmd === "ls") {
+    const all = args.includes("--all");
+    const q = args.find((a) => !a.startsWith("-"))?.toLowerCase();
+    const scan = scanWindows();
+    const screen = screenSize();
+    console.log(`screen=${screen.width}x${screen.height}  TARGET 列可直接复制到任意子命令`);
+    console.log("TARGET\tZ\tAPP\tTITLE\tBOUNDS\tSTATE");
+    const rows = (all ? scan.all : scan.listed)
+      .filter((w) => !q || `${w.app_name ?? ""} ${w.title ?? ""}`.toLowerCase().includes(q))
+      .sort((a, b) => (b.z_index ?? -1) - (a.z_index ?? -1));
+    for (const w of rows) {
+      const view = viewportState(w.bounds, screen);
+      const b = w.bounds;
+      const flags = [
+        view === "outside" ? "off-viewport" : view === "clipped" ? "clipped" : "",
+        all && w.is_on_screen === false ? "hidden" : "",
+        all && w.on_current_space === false ? "other-space" : "",
+      ].filter(Boolean).join(",");
+      console.log([
+        `${w.pid}:${w.window_id}`,
+        w.z_index ?? "-",
+        w.app_name ?? "",
+        w.title ?? "",
+        b ? `${Math.round(b.x)},${Math.round(b.y)} ${Math.round(b.width)}x${Math.round(b.height)}` : "none",
+        flags || "ok",
+      ].join("\t"));
     }
-    for (const w of raw.windows ?? []) console.log([w.pid, w.window_id, w.app_name, w.title].join("\t"));
+    return;
+  }
+  if (cmd === "screen") {
+    const s = screenSize(args.includes("--refresh"));
+    console.log(`screen=${s.width}x${s.height} origin=${s.x},${s.y}`);
+    return;
+  }
+  if (cmd === "use") {
+    const t = takeTarget("use", args);
+    console.log(`target=${t.pid}:${t.wid}`);
+    return;
+  }
+  if (cmd === "menu") {
+    const t = takeTarget("menu", args);
+    const path = t.rest.filter((a) => !a.startsWith("-"));
+    if (!path.length) fail("'menu' 需要菜单路径，例如: computer-use menu 文件 新建");
+    let raw: string;
+    try {
+      raw = defaultDriver.call("invoke_menu", { pid: t.pid, window_id: t.wid, path });
+    } catch (e) {
+      throw new ComputerUseError(`invoke_menu ${path.join(" > ")} 失败${describeError(e)}`);
+    }
+    console.log(`menu=${path.join(" > ")} ${raw.replace(/\s+/g, " ").trim()}`);
     return;
   }
   if (cmd === "front") {
-    const pid = Number(args[0]);
-    if (!Number.isInteger(pid) || pid <= 0) fail("'front' 必须指定应用进程 PID");
-    renderExec(AutomationSession.open(pid, args[1] ? Number(args[1]) : undefined, { driver: defaultDriver, cacheDir }).execute({ kind: "front" }, { observe: Boolean(args[1]) }));
+    const t = takeTarget(cmd, args);
+    renderExec(AutomationSession.open(t.pid, t.wid, { driver: defaultDriver, cacheDir }).execute({ kind: "front" }));
     return;
   }
 
-  const [pid, wid] = pair(cmd, args);
+  const t = takeTarget(cmd, args);
+  if (t.note) console.log(`note: ${t.note}`);
+  const { pid, wid } = t;
   const s = AutomationSession.open(pid, wid, { driver: defaultDriver, cacheDir });
-  const rest = args.slice(2);
+  const rest = t.rest;
 
   if (["click", "right-click", "double-click", "dblclick"].includes(cmd)) {
     const kind = cmd === "dblclick" ? "double-click" : cmd as "click" | "right-click" | "double-click";
     const fg = rest.includes("--foreground");
     const clean = strip(rest, "--foreground", "--from-zoom");
-    if (!clean.length) fail(`'${kind}' 缺少${kind === "right-click" ? "右击" : kind === "double-click" ? "双击" : "点击"}目标；先运行 'computer-use appshot ${pid} ${wid}'`);
+    if (!clean.length) fail(`'${kind}' 缺少${kind === "right-click" ? "右击" : kind === "double-click" ? "双击" : "点击"}目标\n\n先运行 'computer-use appshot ${pid}:${wid}' 拿元素 token，或直接给 PNG 像素坐标 x y`);
     const tgt = targetOf(clean, rest.includes("--from-zoom"));
     const act: AutomationAction = kind === "click"
       ? { kind, target: tgt, action: tgt.kind === "element" ? clean[1] : undefined, foreground: fg }
@@ -918,35 +1271,57 @@ function dispatch(cmd: string | undefined, args: string[]): void {
     renderExec(s.execute(act, waitOpts(rest)));
     return;
   }
-  if (cmd === "snapshot" || cmd === "appshot") {
+  if (cmd === "snapshot" || cmd === "appshot" || cmd === "find") {
     const sIdx = rest.indexOf("--screenshot");
     const shot = sIdx >= 0 ? rest[sIdx + 1] : undefined;
     if (rest.includes("--screenshot") && !shot) fail("--screenshot 需要保存路径");
     const dIdx = rest.indexOf("--depth");
     const mIdx = rest.indexOf("--max-elements");
     const qIdx = rest.indexOf("--query");
+    const pattern = cmd === "find" ? rest.find((a) => !a.startsWith("-")) : qIdx >= 0 ? rest[qIdx + 1] : undefined;
+    if (cmd === "find" && !pattern) fail("'find' 需要匹配词，例如: computer-use find 播放");
     const state = s.capture({
       depth: dIdx >= 0 ? Number(rest[dIdx + 1]) || undefined : undefined,
       maxElements: mIdx >= 0 ? Number(rest[mIdx + 1]) || undefined : undefined,
-      query: qIdx >= 0 ? rest[qIdx + 1] : undefined,
       screenshotPath: cmd === "appshot" ? shot ?? join(cacheDir, `${pid}-${wid}.png`) : shot,
       full: cmd === "appshot" && rest.includes("--full"),
     });
     if (rest.includes("--json")) return console.log(JSON.stringify(state));
-    if (cmd === "appshot") console.log(`appshot pid=${pid} window=${wid}`);
     const root = state.elements.find((e) => e.role === "AXWindow")?.frame;
-    const vis = rest.includes("--all") || qIdx >= 0 ? state.elements : state.elements.filter((e) => {
-      const f = e.frame;
-      return f && !e.role.startsWith("AXMenu") && (!root || !(f.x + f.w <= root.x || f.x >= root.x + root.w || f.y + f.h <= root.y || f.y >= root.y + root.h));
-    });
-    console.log(`snapshot=${state.snapshot_id ?? "?"} state=${state.elements_complete === false ? "truncated" : "complete"} viewport=${vis.length} returned=${state.returned_element_count ?? state.elements.length} total=${state.total_element_count ?? state.elements.length} target=${state.pid}:${state.window_id}`);
-    if (state._note) console.log(`note=${state._note.replace(/\s+/g, " ").trim()}`);
+    // find、--query 走投影；否则只留视口内元素。两条路径都不改写快照缓存。
+    const vis = pattern
+      ? projectToMatches(state.elements, pattern)
+      : rest.includes("--all")
+        ? state.elements
+        : state.elements.filter((e) => {
+          const f = e.frame;
+          return f && !e.role.startsWith("AXMenu") && (!root || !(f.x + f.w <= root.x || f.x >= root.x + root.w || f.y + f.h <= root.y || f.y >= root.y + root.h));
+        });
+    const screen = screenSize();
+    const rect = state.window_bounds ?? (root ? { x: root.x, y: root.y, width: root.w, height: root.h } : undefined);
+    const view = viewportState(rect, screen);
+    const walked = state.returned_element_count ?? state.elements.length;
+    const total = state.total_element_count ?? state.elements.length;
+    // state= 这个字段在真实窗口上恒为 truncated，恒定的值不携带信息。
+    // 只报真正被遍历预算砍掉的部分，即 walked < total。
+    const flags = [view === "outside" ? "off-viewport" : view === "clipped" ? "clipped" : "", walked < total ? `cut=${total - walked}` : ""].filter(Boolean).join(" ");
+    const head = cmd === "find" ? `find="${pattern}"` : `snapshot=${state.snapshot_id ?? "?"}`;
+    console.log(`${head} target=${pid}:${wid} shown=${vis.length} walked=${walked}/${total}${flags ? ` ${flags}` : ""}`);
     if (state.screenshot_file_path) console.log(`screenshot=${state.screenshot_file_path} size=${state.screenshot_width ?? "?"}x${state.screenshot_height ?? "?"} coordinates=png-pixels`);
-    for (const e of vis.sort((a, b) => (a.frame?.y ?? Infinity) - (b.frame?.y ?? Infinity) || (a.frame?.x ?? Infinity) - (b.frame?.x ?? Infinity))) {
-      const f = e.frame;
-      const flags = [e.selected && "sel", e.enabled && "on"].filter(Boolean).join(",");
-      console.log(`t${e.element_index}\t${e.role.replace(/^AX/, "")}\t${(e.label ?? e.value ?? "").replace(/[\t\n]/g, " ").trim()}\t${f ? `ax=(${Math.floor(f.x)},${Math.floor(f.y)})` : "ax=none"}\t${flags}`);
+    const routes = state.background_input?.routes ?? [];
+    const blocked = routes.filter((r) => r.status !== "available");
+    // 空树或路由受阻时必须说清原因，否则调用方只能靠反复试错才发现动作落不下去。
+    if (!vis.length || blocked.length) {
+      const ax = state.background_input?.exact_window?.status;
+      const detail = routes.map((r) => `${r.route}=${r.status}${r.reason ? `(${r.reason})` : ""}`).join(" ") || "unknown";
+      console.log(`routes: ${ax ? `ax=${ax} ` : ""}${detail}`);
     }
+    if (!vis.length) {
+      console.log("note=该窗口没有可操作元素；改用 'computer-use appshot' 拿截图走像素，或确认窗口是否还在初始化");
+    } else if (view !== "visible" && rect) {
+      console.log(`note=窗口大部分在屏幕外 (x=${Math.round(rect.x)} w=${Math.round(rect.width)} screen=${screen.width})；需要像素坐标时先用 'computer-use move' 挪回屏幕内`);
+    }
+    for (const e of vis.sort((a, b) => (a.frame?.y ?? Infinity) - (b.frame?.y ?? Infinity) || (a.frame?.x ?? Infinity) - (b.frame?.x ?? Infinity))) console.log(elementRow(e));
     return;
   }
   if (cmd === "drag") {

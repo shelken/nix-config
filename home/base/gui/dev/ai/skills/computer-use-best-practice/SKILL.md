@@ -10,10 +10,39 @@ description: 当需要读取 macOS 上任意 App 的界面内容，或对它点�
 命令的参数、标志与输出字段写在脚本自带帮助里：
 
 ```bash
-computer-use --help                # 总览与硬性契约
+computer-use --help                # 总览与后台契约
+computer-use --help target         # 目标寻址的三种写法
 computer-use --help <子命令>        # 单个命令的全部细节
 computer-use --help output         # 动作结果字段语义
 ```
+
+## `computer-use`优化原则(该原则永远不准删除)
+
+- token 高效
+- agent 使用无感(排除使用障碍)
+- 调用方调用简单(深模块)
+- 默认一律后台运行(不打扰用户)
+
+## 目标寻址
+
+所有针对窗口的命令共用同一套写法，任选其一：
+
+| 写法 | 含义 |
+|---|---|
+| `1435:112` | 显式窗口，`windows` 的 TARGET 列可直接复制 |
+| `Music` 或 `Zed#cpa-plugins` | 该应用 z 序最前的可操作窗口 |
+| 省略 | 复用上一次的目标 |
+
+```bash
+computer-use open Music        # 后台拉起并记住目标
+computer-use snapshot          # 目标省略，读刚拉起那个窗口
+computer-use click t23         # 继续省略
+computer-use use 音乐           # 只换目标，不执行动作
+```
+
+裸整数永远被当作动作参数而不是目标，所以 `click 500 235` 只有一个含义：在当前目标上点 PNG 像素 (500,235)。
+
+应用名是本地化的：窗口列表里叫「音乐」，安装路径与 bundle id 里才叫 `Music`。两种写法都能用，脚本自己去安装清单换算。
 
 ## SOP
 
@@ -22,33 +51,37 @@ computer-use --help output         # 动作结果字段语义
 ### 1. 定位窗口
 
 ```bash
-computer-use apps                  # 已装应用与运行状态，「开启中」表示进程在跑
-computer-use open Audirvana        # 未启动则拉起并等待窗口就绪
-computer-use windows               # 拿到 pid 与 window_id
+computer-use apps              # 已装应用与运行状态
+computer-use open Music        # 未启动则后台拉起，并记住目标
+computer-use windows           # TARGET / Z / APP / TITLE / BOUNDS / STATE
 ```
 
-判据：手上有一对可用的 `<pid> <wid>`。
+判据：手上有一个 `TARGET` 或应用名。`STATE` 列直接标出 `clipped` 与 `off-viewport`。
 
-窗口列表里的应用名会被系统本地化，`TextEdit` 显示为「文本编辑」，`Finder` 显示为「访达」。
+`open` 不抢前台，被拉起应用的窗口可能落在屏幕外，这不影响后续 AX 读写。
 
 ### 2. 读取界面
 
 ```bash
-computer-use appshot <pid> <wid>       # AX 树与 PNG 截图一起拿
-computer-use snapshot <pid> <wid>      # 只要 AX 树，省掉截图开销
+computer-use appshot [目标]           # AX 树与 PNG 截图一起拿
+computer-use snapshot [目标]          # 只要 AX 树，省掉截图开销
+computer-use find [目标] <匹配词>      # 只回命中项及其祖先链
 ```
 
 判据：输出里有 `t<idx>` 元素 token，需要像素操作时还要有 PNG 尺寸。
 
-两者都会刷新动作缓存，`t<idx>` 从这里取。
+`shown=` 是本次打印的元素数，`walked=` 是已遍历与总数。`cut=N` 表示遍历预算砍掉了 N 个，这是真的截断；元素成批出现在 `added` 或 `removed` 里时先想想是不是它。
+
+大树先用 `find` 定位再操作。实测音乐播放器的 99 个元素里，`find 歌词` 只回 7 行。
 
 ### 3. 执行动作
 
 ```bash
-computer-use click <pid> <wid> t41
-computer-use type <pid> <wid> t7 "搜索词"
-computer-use key <pid> <wid> t3 return
-computer-use scroll <pid> <wid> t12 down
+computer-use click t41
+computer-use type t7 "搜索词"
+computer-use key t3 return
+computer-use scroll t12 down
+computer-use menu 账户 登录…
 ```
 
 每个动作结束后脚本自动重采一次，打印 `observe` 差分，旧 `t<idx>` 立即失效。
@@ -58,56 +91,73 @@ computer-use scroll <pid> <wid> t12 down
 ### 4. 确认结果
 
 ```bash
-computer-use verify <pid> <wid> Button 播放 selected true
-computer-use click <pid> <wid> t41 --wait t45
+computer-use verify Button 播放 selected true
+computer-use click t41 --wait t45
 ```
 
 判据：`verify` 退出码为 0，或 `--wait` 输出 `verdict=confirmed`。
 
 ## 确认纪律
 
-`effect: unverifiable` 只说明动作投递出去了。选中态不等于执行态：在 Audirvana、Apple Music、访达这类列表里，点击只让该行获得焦点，播放要另发 `double-click`，或在选中后发 `key <pid> <wid> space`。
+`effect: unverifiable` 只说明动作投递出去了。选中态不等于执行态：在 Audirvana、Apple Music、访达这类列表里，点击只让该行获得焦点，播放要另发 `double-click`，或在选中后发 `key space`。
 
-判定播放或运行需要客观证据，下列任一条成立即可：
+判定动作真的生效，下列任一条成立即可：
 
-- 进度条或播放时间在间隔 1 秒的两次 `appshot` 之间持续增加；
-- 播放按钮语义翻转，例如 `Play` 变 `Pause`；
+- `observe` 里出现只有该动作才会造成的元素变化，例如按钮标签翻转；
 - `verify` 返回 `verdict=satisfied`；
-- 应用原生接口确证，例如 `osascript -e 'tell application "Audirvana" to get player state'` 返回 `Playing`。
+- 进度条或播放时间在间隔 1 秒的两次 `appshot` 之间持续增加；
+- 应用原生接口确证，例如 `osascript -e 'tell application "Music" to get player state'` 返回 `Playing`。
+
+实测可用的一招：找那个状态会写进标签的控件。音乐播放器的随机播放按钮，点击后 `observe` 报 `+ Button 随机播放 / - Button 不随机播放`，这种差分就是硬证据。反过来，如果差分内容与动作无关（比如刚启动的应用把界面加载完了），那不是你的动作造成的。
 
 `verify` 的三态各有含义。`satisfied` 是成立，`unsatisfied` 是明确不成立，`unknown` 是驱动无法判定。`unknown` 等于没有证据，按没有证据上报。
 
-`observe` 差分是同一份新状态的读数，可以直接引用。差分为空只说明 AX 树没有反映变化。
+`observe` 差分为空只说明 AX 树没有反映变化。
 
 ## 常用方式
+
+**按应用名一路省略目标**
+
+```bash
+computer-use open Music
+computer-use find 歌词            # 目标沿用上一步
+computer-use click t23
+```
 
 **往输入框写文本**
 
 `type` 带 `t<idx>` 时优先走 Cocoa 原生写入并回报 `value_readback`，无需激活前台。
 
 ```bash
-computer-use type 1435 112 t7 "https://example.com"
-computer-use key 1435 112 t7 return
+computer-use appshot
+computer-use type t7 "https://example.com"
+computer-use key t7 return
 ```
 
 **读小字或精确取点**
 
 ```bash
-computer-use zoom 1435 112 300 200 420 260      # 产出放大 JPEG
-computer-use click 1435 112 60 30 --from-zoom   # 坐标是 zoom 图内像素
+computer-use zoom 1435:112 300 200 420 260      # 产出放大 JPEG
+computer-use click 60 30 --from-zoom            # 坐标是 zoom 图内像素
 ```
 
 **展开元素的上下文菜单**
 
 ```bash
-computer-use right-click 1435 112 t18
+computer-use right-click t18
+```
+
+**按菜单路径直接调用**
+
+```bash
+computer-use menu 账户 登录…
 ```
 
 **等一个异步结果**
 
 ```bash
-computer-use click 1435 112 t41 --wait t45 --timeout 3000
-computer-use click 1435 112 t41 --wait media:playing
+computer-use click t41 --wait t45 --timeout 3000
+computer-use click t41 --wait media:playing
 ```
 
 **在拖动类界面上框选**
@@ -115,16 +165,20 @@ computer-use click 1435 112 t41 --wait media:playing
 四个坐标都取最近一次 `appshot` 的 PNG 像素。
 
 ```bash
-computer-use drag 1435 112 200 300 600 520
+computer-use drag 200 300 600 520
 ```
 
 ## 坑点
 
-### 遍历成本与截断噪声
+### 遍历成本
 
-Audirvana、音乐库、上万文件的访达窗口会让深层遍历等待 20 秒。先用默认浅层快照读全局控件，需要深层自绘列表时改用截图。`--query` 只过滤返回内容，不降低遍历成本。
+默认 `depth=3`、`max-elements=300`。加深或放宽直接变成等待：音乐播放器的窗口在 `--depth 6` 下要遍历 177 个元素，单次调用 8 秒，上千文件的访达窗口更慢。
 
-截断会让 `observe` 产生噪声：越过 `max-elements` 边界的一批元素成批出现在 `added` 或 `removed` 里。实测某终端窗口 `removed=20` 全是越界菜单项。
+`find` 的投影只减少打印量，不减少驱动的遍历量，所以它省 token 不省时间。
+
+应用窗口的 AX 树会带上全局菜单栏，那部分元素多且与窗口本身无关。默认的视口过滤会去掉菜单角色，`find` 与 `--all` 不会。
+
+`cut=N` 表示遍历预算真的砍掉了 N 个元素。被砍掉的那批会在相邻两次采集之间整批进出，`observe` 里看起来像新增或消失，实际什么都没发生。实测某终端窗口 `removed=20` 全是越界菜单项。
 
 ### 两套坐标
 
@@ -132,17 +186,49 @@ Audirvana、音乐库、上万文件的访达窗口会让深层遍历等待 20 �
 
 先 `zoom` 再点，得到的坐标是 zoom 图内的像素，要配 `--from-zoom` 才能直接用。
 
-### 离屏窗口
+### 窗口落在屏幕外
 
-平铺窗口管理器（OmniWM、AeroSpace）会把窗口推到屏幕外，例如 `bounds.x=1919`。
+平铺窗口管理器（OmniWM、AeroSpace）把非焦点窗口推到屏幕外。实测在 1920x1080 单显示器上，Zed 的三个窗口、Helium 与刚拉起的音乐播放器都在 `x=1919`，只有最左一列像素可见。
 
-读取与截图对离屏窗口依然有效。输入投递要求窗口真实可见，驱动会以 `point lies outside window frame; background delivery refused` 拒绝，`click` 与 `scroll` 都失败。
+这事按几何判定，驱动报的 `is_on_screen` 不能用：这些窗口全都报 `true`。脚本按窗口矩形与屏幕矩形实算，`clipped` 表示被裁掉一部分，`off-viewport` 表示整个在屏幕外。
 
-`appshot` 的 `bounds=` 就是判据：`x` 超出屏幕宽度即说明窗口被推到屏外。这种情况要抢焦点、切工作区或移动窗口时，先说明影响并取得许可。
+离屏不影响读取，也不影响 `t<idx>` 元素动作。实测对 `x=1919` 的窗口做元素点击，`observe` 正常回出差分。能不能投递以输出里的 `routes=` 行为准，那是驱动的判定，不要替它推断。
+
+要用像素坐标时先 `computer-use move` 把窗口挪回屏幕内。抢焦点、切工作区或移动窗口这类动作，先说明影响并取得许可。
+
+### 路由诊断
+
+`routes=` 行来自驱动，逐条列出 `accessibility`、`window_pointer`、`pid_keyboard` 三种投递方式此刻是否可用，以及被拒的原因。它是判断动作为什么落不下去的权威来源，只在有路由不可用或者树为空时才打印。
+
+树为空时它给出原因，例如 `ax=ax_unresolved accessibility=refused(off_space_or_ax_unresolved)`。这种情况改用 `appshot` 走像素，或者确认窗口是不是还在初始化。
+
+### find 不污染观察基线
+
+`find` 与 `snapshot --query` 的投影只发生在打印层，快照缓存里仍是完整树。所以 `find` 之后紧接的动作，`observe` 的基线依然完整，投影丢掉的那些元素不会被误报成新增。
+
+这条踩过：把驱动侧的投影结果当作快照存下来之后，一次点击的差分虚报出 73 个新增元素。
+
+### 菜单调用会真实展开菜单
+
+`menu` 的逐层解析会真的把菜单打开。目标应用正被人使用时不要用它探测菜单路径，菜单栏进入追踪状态会吞掉使用者接下来的点击与按键。
+
+想先知道菜单里有什么，用只读的 `find` 就够：菜单项本来就在 AX 树里，`find <应用> <词> --depth 6` 能直接读出标签，例如 `MenuItem 退出登录"shelken"…`。
+
+### 应用名可能多付一次清单往返
+
+按名字找窗口时，如果名字匹配不上（本地化应用名就是这种情况），脚本去读一次安装清单换算，并按天缓存这份清单。命中路径不付这次往返。
+
+按应用名寻址比 `<pid>:<wid>` 多一次 `list_windows` 调用，单次约 2 秒。同一个应用的连续操作写成省略目标的串行命令更省。
 
 ### 前台升级
 
-默认走后台投递，不抢焦点、不切工作区、不移动窗口。后台路径失败且任务必须依赖前台输入时，才用 `front` 或 `--foreground`，并说明影响。
+驱动有两档投递，默认档是后台：`click`、`type`、`key`、`scroll` 都带 `delivery_mode=background`，不抢焦点、不切工作区、不动光标。
+
+决定是否碰屏幕的是寻址方式而不是命令本身。元素目标 `t<idx>` 走 AX 档，后台窗口、隐藏窗口、别的 Space 上的窗口都能用；像素坐标走 CGEvent 档，要求那个点落在屏幕可见范围内。
+
+只有后台路径确认失败，且任务必须依赖前台输入时，才用 `front` 或 `--foreground`，并说明影响。
+
+实测音乐播放器的元素点击全程 `route=accessibility delivery=background`，使用者那一侧没有任何前台变化。
 
 ### 文本控件
 
@@ -160,7 +246,9 @@ Audirvana、音乐库、上万文件的访达窗口会让深层遍历等待 20 �
 
 ### 调用契约
 
-针对窗口的命令必须显式给出 `<pid> <wid>`，脚本不会隐式猜测前台窗口。缺少参数时脚本输出错误原因与查询参数的标准路径。
+目标必须写成 `<pid>:<wid>` 或应用名，或者从上一次沿用。脚本不会隐式猜测前台窗口；无目标可用时直接报错并给出下一步命令。
+
+`windows` 与 `open` 输出的 TARGET 列可以直接复制到任意子命令。
 
 所有子命令都会在内容之后空一行输出 `duration_ms=<毫秒>`，包括等待超时、参数报错与异常退出。`--json` 模式除外。
 
