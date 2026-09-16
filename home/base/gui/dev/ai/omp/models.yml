@@ -4,7 +4,7 @@ providers:
     apiKey: CPA_PI_API_KEY
     api: openai-responses
   commandcode-local:
-    baseUrl: http://127.0.0.1:3050/v1
+    baseUrl: https://commandcode.ooooo.space/v1
     apiKey: COMMANDCODE_API_KEY
     api: openai-completions
     discovery:
@@ -21,6 +21,42 @@ providers:
     # omitReasoningEffort: false 必须显式声明: 同一次查表还会把无关行的 omitReasoningEffort: true 带进来,
     # 该标志优先于 supportsReasoningEffort, 会让 effort 整个从请求里消失 (glm-5.3-flash, kimi-k2.6, minimax-m3 实测)。
     modelOverrides:
+      qwenworkcn/flash:
+        contextWindow: 1000000
+        maxTokens: 128000
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, medium, high, xhigh, max]
+          defaultLevel: high
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      qwenworkcn/pro:
+        contextWindow: 1000000
+        maxTokens: 128000
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, medium, high, xhigh, max]
+          defaultLevel: high
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      qwenworkcn/qwen3.8-max-preview:
+        contextWindow: 1000000
+        maxTokens: 128000
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, medium, high, xhigh, max]
+          defaultLevel: high
+          requiresEffort: true
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
       workbuddy/deepseek-v4.1-flash:
         reasoning: true
         thinking:

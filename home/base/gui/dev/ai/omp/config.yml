@@ -29,7 +29,6 @@ providers:
     - mojeek
     - public
     - perplexity
-  webSearchGeminiModel: gemini-3.8-flash
 modelRoles:
   vision: openai-codex/gpt-5.6-luna:high
   plan: openai-codex/gpt-6-astra:high
@@ -37,7 +36,7 @@ modelRoles:
   tiny: openai-codex/gpt-5.6-luna:high
   review: google-antigravity/gemini-3.8-flash-high:high
   smol: google-antigravity/gemini-3.8-flash-high:high
-  slow: openai-codex/gpt-6-astra:low
+  slow: openai-codex/gpt-5.6-sol:high
   default: commandcode-local/deepseek/deepseek-v4.1-flash:high
   test: cpa/workbuddy/glm-5.3-flash:max
   task: cpa/workbuddy/glm-5.3-flash:max

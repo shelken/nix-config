@@ -13,6 +13,11 @@
       rtk = "latest";
       "pipx:cua-cli" = "latest";
       "github:lycorp-jp/sim-use" = "latest";
+      "github:dmtrKovalenko/fff" = {
+        version = "latest";
+        matching = "fff-mcp";
+        rename_exe = "fff-mcp";
+      };
 
       # agent client
       codex = "latest";
