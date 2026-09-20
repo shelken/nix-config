@@ -101,6 +101,8 @@ computer-use click t41 --wait t45
 
 `effect: unverifiable` 只说明动作投递出去了。选中态不等于执行态：在 Audirvana、Apple Music、访达这类列表里，点击只让该行获得焦点，播放要另发 `double-click`，或在选中后发 `key space`。
 
+`enabled=true` 与 `effect=unverifiable` 都不证明控件可操作，也都不证明它不可操作。驱动对 generic click 没有独立回执（只有列表项的 `AXSelected` 能确认），所以 `effect=unverifiable` 是常态：实测同一个传输按钮点下去报 `unverifiable`，树里却真的从「播放」变成「暂停」。动作到底有没有发生，只能看 `observe` 差分、`verify`、或截图目视；差分为空时脚本会打一行 `hint=`，说明这次投递没有任何回执，并给出 `--foreground` 与像素路径两条升级路线。
+
 判定动作真的生效，下列任一条成立即可：
 
 - `observe` 里出现只有该动作才会造成的元素变化，例如按钮标签翻转；
@@ -160,6 +162,8 @@ computer-use click t41 --wait t45 --timeout 3000
 computer-use click t41 --wait media:playing
 ```
 
+`--wait media:*` 等的是**系统级** now-playing，不是目标窗口那个应用：实测对着文本编辑窗口等 `media:playing`，报回来的是浏览器里正在播的视频。输出行带 `app=<bundle id>`，先核对它是不是你操作的那个应用。`media-control` 缺失或执行失败时命令直接报错退出，不会退化成 `timeout`——那种情况下这次等待根本无法判定。
+
 **在拖动类界面上框选**
 
 四个坐标都取最近一次 `appshot` 的 PNG 像素。
@@ -191,7 +195,11 @@ computer-use drag 200 300 600 520
 
 `appshot` 输出的 `ax=(x,y)` 是 AX 屏幕点，只用于判断元素的相对位置。像素操作必须读同一张 PNG 的坐标：`click`、`right-click`、`double-click`、`drag` 的目标，以及 `zoom` 的四个边界，都取 PNG 像素。
 
+驱动内部的空间并不统一：`click` 系列会把 PNG 坐标按截图压缩率乘回原生像素（`px_frame` 之前先做 `resize_registry` 还原），`zoom` 则直接从**未压缩的原生截图**上裁剪，等于把同一组数字当成原生像素。脚本在 `zoom` 的边界上补了这次换算，`ratio=` 就是当次的换算比：由驱动的 `screenshot_scale`（Retina 为 2）与窗口点数、截图宽度实算，随窗口变化——实测 kitty 2.2832、音乐 1.25、文本编辑 1.3139。不补的话截到的是另一块区域，错位量随窗口宽度与截图压缩率变化。
+
 先 `zoom` 再点，得到的坐标是 zoom 图内的像素，要配 `--from-zoom` 才能直接用。
+
+`zoom` 的输出图**不是**你请求的那块：四周外扩 20%，撞到图片边缘会夹取，加完边距超过 500 像素整张等比缩小。要按图片里的位置回推窗口坐标，读输出行的 `region=` 与 `scale=`（窗口 PNG 坐标 = region 左上角 + 图片坐标 / scale）；这两个字段都已换算回 PNG 空间。
 
 ### 窗口落在屏幕外
 
@@ -240,6 +248,8 @@ computer-use drag 200 300 600 520
 ### 文本控件
 
 原生 `AXTextField` 不支持 `AXPress`，调用会报 `-25206`。`computer-use` 对文本控件自动改为中心像素点击，或直接走 `type` 原生写入。
+
+这条隐式像素路径在窗口离屏时直接拒绝，报出换算后的屏幕点、窗口矩形与可见区：不让一次注定被驱动拒绝、或落到别的控件上的投递看起来像成功。显式写像素坐标时保留投递，但输出会带一行 `note=` 说明落点在可见区之外。
 
 ### 双击
 

@@ -39,6 +39,10 @@ if (tool === "get_window_state") {
     console.error(JSON.stringify({ refusal: { code: "window_id_not_found", message: "window_id no longer exists" } }));
     process.exit(1);
   }
+  if (process.env.MOCK_REFUSAL_STDOUT === "1") {
+    console.log(JSON.stringify({ refusal: { code: "protected_resource_scope_invalid", message: "the output path's existing ancestor is not a directory" }, status: "refused" }));
+    process.exit(0);
+  }
   const pngPath = args.screenshot_out_file ?? flagPath("--screenshot-out-file");
   writeImage(pngPath);
   // 快照序号与状态翻转只跟随采集次数，不受 get_screen_size 之类无关调用影响
@@ -48,11 +52,23 @@ if (tool === "get_window_state") {
   const interactiveRole = process.env.MOCK_TEXT_INPUT === "1" ? "AXTextArea" : "AXButton";
   let elements = [
     { element_index: 0, element_token: sid + ":0", role: "AXWindow", label: "Test", value: null, selected: null, enabled: true, depth: 0, frame: { x: 100, y: 50, w: 800, h: 600 }, parent_index: null },
-    { element_index: 1, element_token: sid + ":1", role: interactiveRole, label: "Play", value: snaps > flipAfter ? "Playing" : null, selected: snaps > flipAfter, enabled: true, depth: 1, frame: { x: 200, y: 150, w: 40, h: 20 }, parent_index: 0 },
+    { element_index: 1, element_token: sid + ":1", role: interactiveRole, label: process.env.MOCK_SHADOW_PLAY === "1" ? "NotPlay" : "Play", value: snaps > flipAfter ? "Playing" : null, selected: snaps > flipAfter, enabled: true, depth: 1, frame: { x: 200, y: 150, w: 40, h: 20 }, parent_index: 0 },
     { element_index: 3, element_token: sid + ":3", role: "AXStaticText", label: "Queue", value: null, selected: null, enabled: true, depth: 1, frame: { x: 200, y: 200, w: 60, h: 18 }, parent_index: 0 }
   ];
   if (process.env.MOCK_DUPLICATE_PLAY === "1") {
     elements.push({ element_index: 2, element_token: sid + ":2", role: "AXButton", label: "Play", value: null, selected: false, enabled: true, depth: 1, frame: { x: 260, y: 150, w: 40, h: 20 }, parent_index: 0 });
+  }
+  // 窗口被平铺窗口管理器推到屏幕外时，元素几何跟着窗口一起平移（现场：音乐窗口只剩 1px 可见）
+  const bounds = process.env.MOCK_OFFSCREEN === "1"
+    ? { x: 1919, y: 40, width: 948, height: 1030 }
+    : process.env.MOCK_WINDOW_BOUNDS ? JSON.parse(process.env.MOCK_WINDOW_BOUNDS) : { x: 100, y: 50, width: 800, height: 600 };
+  if (process.env.MOCK_OFFSCREEN === "1") {
+    const dx = bounds.x - 100, dy = bounds.y - 50;
+    elements = elements.map((el) => ({ ...el, frame: { ...el.frame, x: el.frame.x + dx, y: el.frame.y + dy } }));
+  }
+  // 动作后的那次采集里索引图已被替换：同一个元素换了号，身份（role+label）不变
+  if (process.env.MOCK_SHIFT_INDEX === "1" && snaps > Number(process.env.MOCK_FLIP_AFTER ?? "1")) {
+    elements = elements.map((el) => ({ ...el, element_index: el.element_index + 4, element_token: sid + ":" + (el.element_index + 4) }));
   }
   // 忠实复现驱动的 query 语义：只回命中项加祖先链，其余元素在响应里消失
   if (args.query) {
@@ -72,10 +88,12 @@ if (tool === "get_window_state") {
     returned_element_count: elements.length,
     total_element_count: elements.length,
     elements_complete: false,
-    window_bounds: process.env.MOCK_WINDOW_BOUNDS ? JSON.parse(process.env.MOCK_WINDOW_BOUNDS) : { x: 100, y: 50, width: 800, height: 600 },
+    window_bounds: bounds,
     screenshot_file_path: pngPath,
     screenshot_width: pngPath ? 1200 : undefined,
     screenshot_height: pngPath ? 900 : undefined,
+    screenshot_scale: 2,
+    screenshot_frame_valid: true,
     elements,
     // markdown 是 elements 的超集：驱动只给可操作元素发索引，其余节点只在这里出现。
     tree_markdown: "- [0] AXWindow \\"Test\\"\\n  - [1] " + interactiveRole + " \\"Play\\" actions=[press]\\n  - [3] AXStaticText = \\"Queue\\""
@@ -93,19 +111,23 @@ if (tool === "get_window_state") {
   console.log(JSON.stringify({ width: 1920, height: 1080, scale_factor: 1 }));
 } else if (tool === "zoom") {
   writeImage(flagPath("--screenshot-out-file"));
-  console.log(JSON.stringify({ content: [{ type: "image" }] }));
+  // 忠实复现驱动的裁剪语义：四周各加 20% 边距，加完仍超 500 px 宽时整体等比缩到 500
+  const cw = (args.x2 - args.x1) * 1.4;
+  const ch = (args.y2 - args.y1) * 1.4;
+  const k = cw > 500 ? 500 / cw : 1;
+  console.log(JSON.stringify({ content: [{ type: "image" }], width: Math.round(cw * k), height: Math.round(ch * k), format: "jpeg" }));
 } else if (tool === "verify_state") {
   const status = process.env.MOCK_VERIFY_STATUS ?? "satisfied";
   console.log(JSON.stringify({
     stable: status === "satisfied",
     elapsed_ms: 12,
     samples: 2,
-    predicates: [{ index: 0, status, unknown_reason: status === "unknown" ? "target_missing" : undefined, observed_json: { role: "AXButton", label: "Play" } }]
+    predicates: [{ index: 0, status, unknown_reason: process.env.MOCK_VERIFY_REASON ?? (status === "unknown" ? "target_missing" : undefined), observed_json: { role: "AXButton", label: "Play" } }]
   }));
 } else if (tool === "type_text") {
   console.log(JSON.stringify({ effect: "partial", path: "key_events", code: "type_text_incomplete", delivered_chars: 2, requested_chars: 5, retryable: true, retry_from_character: 2 }));
 } else {
-  console.log(JSON.stringify({ effect: "confirmed", route: "accessibility", delivery: { mode: "background" }, evidence: [{ kind: "value_readback" }] }));
+  console.log(JSON.stringify({ effect: process.env.MOCK_CLICK_EFFECT ?? "confirmed", route: "accessibility", delivery: { mode: "background" }, evidence: [{ kind: "value_readback" }] }));
 }
 `,
   );
@@ -328,6 +350,37 @@ describe("computer-use action protocol", () => {
     expect(calls.some((call) => call.tool === "verify_state")).toBe(false);
   });
 
+  test("explains a multi_match verdict from the driver's substring selector", () => {
+    const { env } = setup();
+    const multi = { ...env, MOCK_VERIFY_STATUS: "unknown", MOCK_VERIFY_REASON: "multi_match" };
+    expect(run(multi, ["snapshot", "42:7"]).code).toBe(0);
+
+    const voted = run(multi, ["verify", "42:7", "Button", "Play", "exists"]);
+
+    expect(voted.code).toBe(2);
+    expect(voted.stdout).toContain("verify: verdict=unknown reason=multi_match");
+    expect(voted.stdout).toContain("note=驱动侧 selector 只有 label_contains");
+
+    // 判定成功时不该出现这条 note
+    expect(run(env, ["snapshot", "42:7"]).code).toBe(0);
+    const ok = run(env, ["verify", "42:7", "Button", "Play", "exists"]);
+    expect(ok.stdout).toContain("verify: verdict=satisfied");
+    expect(ok.stdout).not.toContain("label_contains");
+  });
+
+  test("flags a substring match that is not the label the caller named", () => {
+    const { env } = setup();
+    const shadow = { ...env, MOCK_SHADOW_PLAY: "1" };
+    expect(run(shadow, ["snapshot", "42:7"]).code).toBe(0);
+
+    const verified = run(shadow, ["verify", "42:7", "Button", "Play", "exists"]);
+
+    expect(verified.code).toBe(0);
+    expect(verified.stdout).toContain('matched="NotPlay"');
+    expect(verified.stdout).toContain("exact=false");
+    expect(verified.stdout).toContain("note=label 未精确匹配");
+  });
+
   test("reports partial text delivery with retry details", () => {
     const { env } = setup();
     const action = run(env, ["type", "42:7", "hello"]);
@@ -370,6 +423,33 @@ describe("computer-use action protocol", () => {
     });
   });
 
+  test("refuses to focus a text input by pixels when the window sits off the screen", () => {
+    const { env, log } = setup();
+    const off = { ...env, MOCK_TEXT_INPUT: "1", MOCK_OFFSCREEN: "1" };
+    expect(run(off, ["snapshot", "42:7"]).code).toBe(0);
+
+    const action = run(off, ["click", "42:7", "t1"]);
+
+    expect(action.code).toBe(1);
+    expect(action.stderr).toContain("文本输入控件需要像素点击聚焦");
+    expect(action.stderr).toContain("point lies outside window frame");
+    expect(action.stderr).toContain("computer-use move");
+    expect(callsOf(log).some((call) => call.tool === "click")).toBe(false);
+  });
+
+  test("warns but still delivers an explicit pixel click outside the visible area", () => {
+    const { env, log } = setup();
+    const off = { ...env, MOCK_OFFSCREEN: "1" };
+    expect(run(off, ["appshot", "42:7"]).code).toBe(0);
+
+    const action = run(off, ["click", "42:7", "500", "235"]);
+
+    expect(action.code).toBe(0);
+    expect(action.stdout).toContain("note=像素点 (500,235)");
+    expect(action.stdout).toContain("落在窗口与屏幕的交集之外");
+    expect(callsOf(log).some((call) => call.tool === "click")).toBe(true);
+  });
+
   test("routes right-click to AXShowMenu on a token and to pixels on coordinates", () => {
     const { env, log, dir } = setup();
     expect(run(env, ["snapshot", "42:7", "--screenshot", join(dir, "window.png")]).code).toBe(0);
@@ -410,6 +490,38 @@ describe("computer-use action protocol", () => {
     expect(existsSync(jpg)).toBe(true);
   });
 
+  test("rejects an inverted zoom region instead of blaming the screenshot", () => {
+    const { env, log } = setup();
+    expect(run(env, ["appshot", "42:7"]).code).toBe(0);
+
+    const zoom = run(env, ["zoom", "42:7", "1200", "600", "300", "80"]);
+
+    expect(zoom.code).toBe(1);
+    expect(zoom.stderr).toContain("x2>x1");
+    expect(callsOf(log).some((call) => call.tool === "zoom")).toBe(false);
+  });
+
+  test("reports the region the driver actually captured instead of the requested one", () => {
+    const { env, log } = setup();
+    expect(run(env, ["appshot", "42:7"]).code).toBe(0);
+
+    // 请求 100,120-400,260：驱动四周各加 20%（60,28），图片实际覆盖 40,92-460,288
+    const zoom = run(env, ["zoom", "42:7", "100", "120", "400", "260"]);
+    expect(zoom.code).toBe(0);
+    expect(zoom.stdout).toContain("region=40,92 420x196 scale=1.19");
+    expect(zoom.stdout).toContain("requested=(100,120)-(400,260)");
+    // zoom 是唯一按原生像素收坐标的工具：窗口 800x600 点、截图 1200x900、screenshot_scale 2
+    // ⇒ 换算比 2*800/1200 = 1.3333，下发前必须乘上去，否则截到的是别的位置
+    expect(zoom.stdout).toContain("ratio=1.3333");
+    expect(callsOf(log).find((call) => call.tool === "zoom")?.args).toEqual({ pid: 42, window_id: 7, x1: 133, y1: 160, x2: 533, y2: 347 });
+
+    // ax= 是屏幕点：照抄进 zoom 会落在这张 1200x900 的图之外，必须拒绝而不是交回一张夹到边缘的图
+    const outside = run(env, ["zoom", "42:7", "2222", "878", "2300", "930"]);
+    expect(outside.code).toBe(1);
+    expect(outside.stderr).toContain("必须在截图 PNG 内");
+    expect(callsOf(log).filter((call) => call.tool === "zoom").length).toBe(1);
+  });
+
   test("verifies element state change when --wait t<idx> is passed", () => {
     const { env, log } = setup();
     expect(run(env, ["snapshot", "42:7"]).code).toBe(0);
@@ -426,6 +538,41 @@ describe("computer-use action protocol", () => {
     expect(calls.filter((call) => call.tool === "get_window_state").length).toBeGreaterThanOrEqual(2);
   });
 
+  test("waits on the element's identity when the post-action snapshot renumbered it", () => {
+    const { env } = setup();
+    const shift = { ...env, MOCK_SHIFT_INDEX: "1" };
+    expect(run(shift, ["snapshot", "42:7"]).code).toBe(0);
+
+    // 动作后的采集里 t1 变成 t5：只看索引必然找不到，必须按 role+label 找回同一个元素
+    const action = run(shift, ["click", "42:7", "t1", "--wait", "t1"]);
+
+    expect(action.code).toBe(0);
+    expect(action.stdout).toContain("verify: target=t1 verdict=confirmed");
+  });
+
+  test("refuses a token minted by a snapshot the index map has already replaced", () => {
+    const { env, log } = setup();
+    expect(run(env, ["snapshot", "42:7"]).code).toBe(0);
+    expect(run(env, ["click", "42:7", "t1"]).code).toBe(0);
+
+    // 动作自带一次重采，索引图已被替换：同一个 t1 已经不再指向那个元素
+    const stale = run(env, ["click", "42:7", "t1"]);
+    expect(stale.code).toBe(1);
+    expect(stale.stderr).toContain("来自快照");
+    expect(stale.stderr).toContain("请重新 appshot/find 取 token");
+
+    // 驱动限定形式同理：写明快照的 token 与当前快照不符就是过期
+    const mismatched = run(env, ["click", "42:7", "s00000001:1"]);
+    expect(mismatched.code).toBe(1);
+    expect(mismatched.stderr).toContain("不是当前快照");
+
+    expect(callsOf(log).filter((call) => call.tool === "click").length).toBe(1); // 两次都被拦在投递之前
+
+    // 重新取 token 立刻恢复可用，护栏不制造无谓拒绝
+    expect(run(env, ["snapshot", "42:7"]).code).toBe(0);
+    expect(run(env, ["click", "42:7", "t1"]).code).toBe(0);
+  });
+
   test("verifies media status when --wait media:playing is passed, and ignores media-control when omitted", () => {
     const { env, dir } = setup();
     const mockMedia = join(dir, "mock-media-control.ts");
@@ -435,7 +582,7 @@ describe("computer-use action protocol", () => {
       `#!/usr/bin/env bun
 import { appendFileSync } from "node:fs";
 appendFileSync(${JSON.stringify(mediaLog)}, "called\\n");
-console.log(JSON.stringify({ playing: true, title: "Test Song", artist: "Artist" }));
+console.log(JSON.stringify({ playing: true, title: "Test Song", artist: "Artist", bundleIdentifier: "com.test.player" }));
 `,
     );
     chmodSync(mockMedia, 0o755);
@@ -448,10 +595,32 @@ console.log(JSON.stringify({ playing: true, title: "Test Song", artist: "Artist"
     expect(existsSync(mediaLog)).toBe(false);
 
     // Case 2: explicit --wait media:playing: media-control is executed and verified
+    // 上一次动作已经重采过快照，索引图被替换，同一批 token 必须重新取
+    expect(run(testEnv, ["snapshot", "42:7"]).code).toBe(0);
     const action = run(testEnv, ["click", "42:7", "t1", "--wait", "media:playing"]);
     expect(action.code).toBe(0);
     expect(action.stdout).toContain("verify: target=media:playing verdict=confirmed");
+    // media: 等的是系统级 now-playing，不是目标窗口那个应用，必须报出实际播放器
+    expect(action.stdout).toContain("app=com.test.player");
     expect(readFileSync(mediaLog, "utf8").trim()).toBe("called");
+  });
+
+  test("distinguishes a broken media tool from an unobservable media state", () => {
+    const { env, dir } = setup();
+
+    expect(run(env, ["snapshot", "42:7"]).code).toBe(0);
+    const missing = run({ ...env, MEDIA_CONTROL_BIN: join(dir, "no-such-media-control") }, ["click", "42:7", "t1", "--wait", "media:playing"]);
+    expect(missing.code).toBe(1);
+    expect(missing.stderr).toContain("媒体状态工具未找到");
+    expect(missing.stdout).not.toContain("timeout");
+
+    // 上一次动作已经重采过快照，索引图被替换，同一批 token 必须重新取
+    expect(run(env, ["snapshot", "42:7"]).code).toBe(0);
+    // /bin/false 在 macOS 上不存在，用真实存在但必然失败的可执行文件才能触发「执行失败」这条路
+    const broken = run({ ...env, MEDIA_CONTROL_BIN: "/usr/bin/false" }, ["click", "42:7", "t1", "--wait", "media:playing"]);
+    expect(broken.code).toBe(1);
+    expect(broken.stderr).toContain("媒体状态工具执行失败");
+    expect(broken.stdout).not.toContain("timeout");
   });
 
   test("exits with code 2 when --wait times out without expected change", () => {
@@ -560,6 +729,37 @@ describe("target addressing and read-path cost", () => {
     expect(out.stdout).toContain("t0\tWindow\tTest"); // 祖先链跟着留下
   });
 
+  test("marks find rows as match or ancestor so token extraction is unambiguous", () => {
+    const { env } = setup();
+    const out = run(env, ["find", "42:7", "Play"]);
+
+    expect(out.code).toBe(0);
+    expect(out.stdout).toMatch(/^t1\tButton\tPlay\t.*\tmatch$/m);
+    expect(out.stdout).toMatch(/^t0\tWindow\tTest\t.*\tancestor$/m);
+    // 祖先与命中混在一起时，取第一个 token 会拿到祖先，必须只有一行可当命中
+    expect(out.stdout.match(/^t\d+\t.*\tmatch$/gm)?.length).toBe(1);
+  });
+
+  test("falls back to the sticky target when the first argument is not an addressable app", () => {
+    const { env, log } = setup();
+    expect(run(env, ["snapshot", "Test"]).code).toBe(0);
+
+    // SKILL.md 自己给的例子：Button 是角色名，不是应用名
+    const verified = run(env, ["verify", "Button", "Play", "exists"]);
+    expect(verified.code).toBe(0);
+    expect(callsOf(log).pop()?.tool).toBe("verify_state");
+
+    const found = run(env, ["find", "Play"]);
+    expect(found.code).toBe(0);
+    expect(found.stdout).toContain('find="Play"');
+
+    // 没有粘性目标时必须如实报错，而不是把匹配词吃掉后静默失败
+    const clean = setup();
+    const orphan = run(clean.env, ["find", "Play"]);
+    expect(orphan.code).toBe(1);
+    expect(orphan.stderr).toContain("没有可用目标");
+  });
+
   test("keeps the full snapshot as the baseline after a projected find", () => {
     const { env } = setup();
     const flip = { ...env, MOCK_FLIP_AFTER: "2" };
@@ -584,6 +784,22 @@ describe("target addressing and read-path cost", () => {
     expect(outside.stdout).toContain("computer-use move");
   });
 
+  test("keeps pixel coordinates usable across a tree-only snapshot and invalidates them when the window moves", () => {
+    const { env } = setup();
+    expect(run(env, ["appshot", "42:7"]).code).toBe(0);
+    expect(run(env, ["find", "42:7", "Play"]).code).toBe(0);
+
+    // find 不截图，但它不该把 appshot 留下的像素凭证作废
+    expect(run(env, ["click", "42:7", "500", "235"]).code).toBe(0);
+
+    // 窗口被挪走后 PNG 里的几何已经不对，必须拒绝而不是照旧投递
+    const moved = { ...env, MOCK_WINDOW_BOUNDS: JSON.stringify({ x: 500, y: 300, width: 800, height: 600 }) };
+    expect(run(moved, ["find", "42:7", "Play"]).code).toBe(0);
+    const stale = run(moved, ["click", "42:7", "500", "235"]);
+    expect(stale.code).toBe(1);
+    expect(stale.stderr).toContain("窗口几何已变化");
+  });
+
   test("keeps the action verdict when the window disappears before observation", () => {
     const { env } = setup();
     expect(run(env, ["snapshot", "42:7"]).code).toBe(0);
@@ -593,5 +809,38 @@ describe("target addressing and read-path cost", () => {
     expect(action.code).toBe(0);
     expect(action.stdout).toContain("effect=confirmed");
     expect(action.stdout).toContain("observe: unavailable");
+  });
+
+  test("reports a driver refusal as a refusal instead of a broken tree", () => {
+    const { env } = setup();
+    const denied = run({ ...env, MOCK_REFUSAL_STDOUT: "1" }, ["snapshot", "42:7"]);
+
+    expect(denied.code).toBe(1);
+    expect(denied.stderr).toContain("驱动拒绝 get_window_state：protected_resource_scope_invalid");
+    expect(denied.stderr).toContain("not a directory");
+    expect(denied.stderr).not.toContain("无效 elements");
+  });
+
+  test("hints that an unverifiable action with an unchanged tree proves nothing", () => {
+    const { env } = setup();
+    const silent = { ...env, MOCK_CLICK_EFFECT: "unverifiable", MOCK_FLIP_AFTER: "999" };
+    expect(run(silent, ["snapshot", "42:7"]).code).toBe(0);
+
+    const action = run(silent, ["click", "42:7", "t1"]);
+
+    expect(action.code).toBe(0);
+    expect(action.stdout).toContain("state=delivered_unverified");
+    expect(action.stdout).toContain("hint=动作已投递但 AX 树没有任何变化：本次 click");
+  });
+
+  test("names the delivery tool in the no-receipt hint instead of always blaming click", () => {
+    const { env } = setup();
+    const silent = { ...env, MOCK_CLICK_EFFECT: "unverifiable", MOCK_FLIP_AFTER: "999" };
+    expect(run(silent, ["snapshot", "42:7"]).code).toBe(0);
+
+    const action = run(silent, ["key", "42:7", "t1", "escape"]);
+
+    expect(action.code).toBe(0);
+    expect(action.stdout).toContain("hint=动作已投递但 AX 树没有任何变化：本次 press_key");
   });
 });

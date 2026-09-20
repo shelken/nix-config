@@ -17,6 +17,7 @@ in
   config = mkIf cfg.enable {
     homebrew = {
       brews = [
+        "media-control" # computer-use 控制
       ];
       casks = [
         # "ollama-app"
