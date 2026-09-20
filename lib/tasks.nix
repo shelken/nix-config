@@ -7,18 +7,21 @@
   homeDir,
 }:
 rec {
-  # 补默认值（对应 darwin 层 taskType submodule 的默认语义）
-  # 注意 `//` 顺序：默认值在后，覆盖裸声明缺省字段，保留显式值
+  # 任务字段唯一默认值源：darwin submodule 的 option default 与 home 层
+  # withDefaults 都从这里取，新增字段只改这一处，杜绝两处默认漂移
+  taskDefaults = {
+    user = true;
+    when = [ ];
+    every = null;
+    packages = [ ];
+    secrets = { };
+    island = true;
+  };
+
+  # 补齐 home 层裸声明缺省字段（显式值优先）；darwin 层经 submodule default
+  # 取同一份 taskDefaults，不再各自写字面量
   withDefaults =
-    t:
-    t
-    // {
-      user = t.user or true;
-      when = if builtins.isString (t.when or null) then [ t.when ] else (t.when or [ ]);
-      every = t.every or null;
-      packages = t.packages or [ ];
-      secrets = t.secrets or { };
-    };
+    t: taskDefaults // (if builtins.isString (t.when or null) then t // { when = [ t.when ]; } else t);
 
   # 任务字段白名单（对齐 darwin 层 taskType 选项）
   taskFields = [
@@ -28,6 +31,7 @@ rec {
     "packages"
     "secrets"
     "script"
+    "island"
   ];
 
   # 校验裸声明：拒绝未知字段 + when/every 互斥。home 层不走 submodule，
@@ -203,7 +207,33 @@ rec {
     '';
   };
 
-  # 任务包装脚本：起止时间戳日志 + 失败通知（仅 launchd 触发且非零退出才通知）
+  # 任务灵动岛：gui 域观察者，显示由任务双写出来的实时日志
+  taskIsland = pkgs.writeShellApplication {
+    name = "task-island";
+    runtimeInputs = [ pkgs.coreutils ];
+    text = ''
+      CACHE_DIR="''${XDG_CACHE_HOME:-$HOME/.cache}/task-island"
+      SRC="${../modules/darwin/tasks/task-island.swift}"
+      # 用源码内容哈希做缓存键：nix store 里的文件 mtime 恒为 epoch，-nt 判据永远不成立
+      HASH="$(sha256sum "$SRC" | cut -c1-16)"
+      BIN="$CACHE_DIR/task-island-$HASH"
+
+      if [ ! -x "$BIN" ]; then
+        mkdir -p "$CACHE_DIR"
+        rm -f "$CACHE_DIR"/task-island-*
+        # 编译失败只意味着这次没有灵动岛可看，任务执行不受任何影响
+        if ! swiftc -O -parse-as-library "$SRC" -o "$BIN"; then
+          echo "task-island: swiftc 编译失败，跳过灵动岛显示" >&2
+          exit 0
+        fi
+      fi
+
+      exec "$BIN" "$@"
+    '';
+  };
+
+  # 任务包装脚本：起止记录 + 失败通知。t 必须已经过 withDefaults/checkTask
+  # （darwin 层经 submodule），缺字段直接报错而非静默兜底
   mkPackage =
     name: t:
     let
@@ -215,19 +245,55 @@ rec {
           fi
           ${var}="$(<"${secretPath}")"
           export ${var}
-        '') (t.secrets or { })
+        '') t.secrets
       );
+
+      runnerBin = pkgs.writeShellScript "task-${name}-runner" ''
+        ${secretExports}
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] ===== Task '${name}' Started ====="
+        ${t.script}
+      '';
+
+      canonicalLog =
+        if t.user then "${homeDir}/Library/Logs/task-${name}.log" else "/Library/Logs/task-${name}.log";
+
+      islandDir = "${homeDir}/Library/Logs/task-island";
+
+      executionBody =
+        if t.island then
+          ''
+            # 灵动岛是旁观者：下面两件事都不影响任务执行、输出与退出码。
+            # 双写一份到灵动岛日志（不含 launchd 自身的重定向，避免重复），并由 gui 域的
+            # task-island agent 跟随；标记文件触发 launchd WatchPaths，没有图形会话时不触发。
+            mkdir -p "${islandDir}"
+            : > "${islandDir}/${name}.log"
+            exec > >(tee -a "${islandDir}/${name}.log") 2>&1
+            # 先删再建：WatchPaths 只在目录条目变化时触发，单纯覆盖已有文件不会触发
+            rm -f "${islandDir}/${name}.marker" "${islandDir}/${name}.exit"
+            printf '%s\n%s\n' "$$" "${canonicalLog}" > "${islandDir}/${name}.marker"
+
+            "${runnerBin}"
+          ''
+        else
+          ''
+            "${runnerBin}"
+          '';
     in
     pkgs.writeShellApplication {
       name = "task-${name}";
-      runtimeInputs = t.packages or [ ];
+      runtimeInputs = t.packages;
       text = ''
         __on_exit() {
           local code=$?
           local end_time
           end_time=$(date '+%Y-%m-%d %H:%M:%S')
           echo "[$end_time] ===== Task '${name}' Finished (exit code: $code) ====="
-          ${lib.optionalString (t.user or true) ''
+          # 确定性退出码通道：tee 异步落盘有滞后且 bash 退出后 WatchPaths 观察者
+          # 可能先看到进程死亡，写副档让灵动岛免竞态读取真实退出码
+          if [ -d "${islandDir}" ] && [ -e "${islandDir}/${name}.marker" ]; then
+            printf '%s' "$code" > "${islandDir}/${name}.exit"
+          fi
+          ${lib.optionalString t.user ''
             # 仅 launchd 触发且非零退出才发通知；手动 task run 调试保持静默
             if [ "$code" -ne 0 ] && [ -n "''${XPC_SERVICE_NAME:-}" ]; then
               ${pkgs.terminal-notifier}/bin/terminal-notifier \
@@ -242,20 +308,16 @@ rec {
         }
         trap __on_exit EXIT
 
-        ${secretExports}
-
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] ===== Task '${name}' Started ====="
-
-        ${t.script}
+        ${executionBody}
       '';
     };
 
   # 启用过滤（有调度才生成，无 when/every 的任务声明视为未启用）
-  enabled = lib.filterAttrs (_: t: (t.when or [ ]) != [ ] || t.every != null);
+  enabled = lib.filterAttrs (_: t: t.when != [ ] || t.every != null);
 
   # user 任务（home 层 agent）
-  userTasks = tasks: lib.filterAttrs (_: t: (t.user or true)) (enabled tasks);
+  userTasks = tasks: lib.filterAttrs (_: t: t.user) (enabled tasks);
 
   # root 任务（darwin 层 daemon）
-  rootTasks = tasks: lib.filterAttrs (_: t: !(t.user or true)) (enabled tasks);
+  rootTasks = tasks: lib.filterAttrs (_: t: !t.user) (enabled tasks);
 }

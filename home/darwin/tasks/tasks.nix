@@ -26,24 +26,57 @@ let
   userTasks = tasksLib.userTasks tasks;
 
   taskCli = tasksLib.mkTaskCli;
-in
-{
-  launchd.agents = lib.mapAttrs (
-    name: t:
-    mylib.mkLaunchCommand {
-      name = "task-${name}";
-      commandFile = "${tasksLib.mkPackage name t}/bin/task-${name}";
-      # 后台定时任务用 user domain，不依赖图形会话（gui domain 需登录 Aqua session）
-      domain = "user";
+
+  islandDir = "${config.home.homeDirectory}/Library/Logs/task-island";
+  islandEnabled = lib.any (t: t.island) (lib.attrValues userTasks);
+
+  # 灵动岛进程：必须放 gui 域（只有 Aqua session 的进程能连 WindowServer），
+  # 由任务触碰 marker 经 launchd WatchPaths 按需拉起。没有图形登录会话时该 agent
+  # 根本不存在，任务本身在 user 域照常执行，二者互不影响。
+  islandAgents = lib.optionalAttrs islandEnabled {
+    task-island = mylib.mkLaunchCommand {
+      name = "task-island";
+      domain = "gui";
+      commandFile = "${tasksLib.taskIsland}/bin/task-island";
       config = {
         RunAtLoad = false;
         KeepAlive = false;
-        StandardOutPath = "${config.home.homeDirectory}/Library/Logs/task-${name}.log";
-        StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/task-${name}.log";
+        WatchPaths = [ islandDir ];
+        ProgramArguments = [
+          "${tasksLib.taskIsland}/bin/task-island"
+          "watch"
+          "--dir"
+          islandDir
+        ];
+      };
+    };
+  };
+in
+{
+  launchd.agents =
+    lib.mapAttrs (
+      name: t:
+      mylib.mkLaunchCommand {
+        name = "task-${name}";
+        commandFile = "${tasksLib.mkPackage name t}/bin/task-${name}";
+        # 始终 user domain：任务执行不与图形会话绑定（gui domain 在无图形登录时不运行）
+        domain = "user";
+        config = {
+          RunAtLoad = false;
+          KeepAlive = false;
+          StandardOutPath = "${config.home.homeDirectory}/Library/Logs/task-${name}.log";
+          StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/task-${name}.log";
+        }
+        // (tasksLib.mkTrigger t);
       }
-      // (tasksLib.mkTrigger t);
-    }
-  ) userTasks;
+    ) userTasks
+    // islandAgents;
 
-  home.packages = (lib.mapAttrsToList tasksLib.mkPackage userTasks) ++ [ taskCli ];
+  # WatchPaths 需要目录预先存在
+  home.file."Library/Logs/task-island/.keep".text = "";
+
+  home.packages = (lib.mapAttrsToList tasksLib.mkPackage userTasks) ++ [
+    taskCli
+    tasksLib.taskIsland
+  ];
 }

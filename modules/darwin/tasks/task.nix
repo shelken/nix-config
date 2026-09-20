@@ -33,33 +33,36 @@ let
 
   taskType =
     { config, name, ... }:
+    let
+      d = tasksLib.taskDefaults; # 唯一默认值源（与 home 层 withDefaults 共享）
+    in
     {
       options = {
         when = lib.mkOption {
           type = lib.types.coercedTo lib.types.str (t: [ t ]) (lib.types.listOf lib.types.str);
-          default = [ ];
+          default = d.when;
           description = "日历时间 HH:MM（launchd StartCalendarInterval，睡眠错过唤醒后补跑）";
           example = "3:15";
         };
         every = lib.mkOption {
           type = lib.types.nullOr lib.types.int;
-          default = null;
+          default = d.every;
           description = "间隔秒数（launchd StartInterval），与 when 互斥";
           example = 7200;
         };
         user = lib.mkOption {
           type = lib.types.bool;
-          default = true;
+          default = d.user;
           description = "true: 用户态 home-manager agent；false: root launchd daemon";
         };
         packages = lib.mkOption {
           type = lib.types.listOf lib.types.package;
-          default = [ ];
+          default = d.packages;
           description = "脚本依赖的 CLI 工具包列表，注入执行环境 PATH";
         };
         secrets = lib.mkOption {
           type = lib.types.attrsOf lib.types.str;
-          default = { };
+          default = d.secrets;
           description = "任务需要的环境变量到 sops 解密文件路径的映射，自动在运行时注入环境变量";
           example = lib.literalExpression ''
             { GH_TOKEN = secretPath "github/cli-token"; }
@@ -68,6 +71,11 @@ let
         script = lib.mkOption {
           type = lib.types.lines;
           description = "bash 脚本内容";
+        };
+        island = lib.mkOption {
+          type = lib.types.bool;
+          default = d.island;
+          description = "是否在执行时通过灵动岛展示任务状态（执行中转圈，成功自动收回，失败常驻停留）；root 任务需图形会话在席才有人观看";
         };
         package = lib.mkOption {
           type = lib.types.package;
@@ -82,6 +90,7 @@ let
             packages
             secrets
             script
+            island
             ;
         };
       };

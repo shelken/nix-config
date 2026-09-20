@@ -1,10 +1,9 @@
 { pkgs, secretPath, ... }:
 {
   when = [
-    "0:00"
-    "12:00"
+    "0:04"
+    "12:04"
   ];
-  user = true;
   packages = with pkgs; [
     bun
     git

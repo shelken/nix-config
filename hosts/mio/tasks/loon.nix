@@ -1,5 +1,5 @@
 {
-  every = 7200; # 每 2h
+  every = 86400; # 每 24h
   user = false; # 日志属主 root
   script = ''
     # 保留最新一份 Loon 隧道日志，其余删除
