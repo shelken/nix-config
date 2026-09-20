@@ -21,6 +21,7 @@
     dev.cloud-native.enable = true;
 
     secrets.enable = true;
+    infisical.enable = true; # 试用 Infisical CLI, 与 sops/sec-run 并存
     tools.hammerspoon.enable = false;
     # 与 darwin 侧（hosts/mio/default.nix）同名同值，两棵树互不相见需手动镜像
     tools.autoinputswitch.enable = true;
