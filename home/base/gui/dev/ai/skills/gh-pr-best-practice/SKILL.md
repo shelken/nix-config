@@ -6,6 +6,7 @@ description: 当提交PR时阅读该技能
 ## Rules
 
 - 如果涉及 其他公开(非本人) 仓库, 阅读`gh-open-policy`
+- 阅读`visual-pr`skill, 在`body`中使用合适的方式通俗易懂的展示关键变更内容
 - 提交前必须完整阅读目标仓库的 `CONTRIBUTING.md` 和 `.github/{PULL_REQUEST_TEMPLATE}.md`，按其要求的格式填写 PR title、body、commit message
 - PR title 的 `scope` 必须参考该仓库已合并 PR 的惯例（`gh pr list --state merged` 查看），不要自造
 - **git提交message禁止自行添加 `Co-Authored-By` trailer,也不要自行清除任何 `Co-Authored-By`**
