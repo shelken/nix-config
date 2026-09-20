@@ -7,7 +7,7 @@ show_symlink = true
 # markdown preview
 [[plugin.prepend_previewers]]
 url  = "*.md"
-run  = "piper -- CLICOLOR_FORCE=1 glow -w=$w -s=dark \"$1\""
+run  = "piper -- CLICOLOR_FORCE=1 glow -w=$w -s=\"${GLAMOUR_STYLE:-dark}\" \"$1\""
 
 [preview]
 tab_size = 3
