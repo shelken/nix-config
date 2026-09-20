@@ -12,6 +12,10 @@
       tools.bun = "1.3.14";
       tools.fastfetch = "latest";
       tools.yt-dlp = "latest";
+      tools."github:shelken/proxy" = {
+        version = "latest";
+        matching = "sb-sync";
+      };
 
       # agent tools/client 见 dev/ai/packages.nix，由 dev.ai.enable 控制
     };
