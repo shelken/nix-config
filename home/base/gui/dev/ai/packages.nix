@@ -11,19 +11,21 @@
       herdr = "latest";
       worktrunk = "latest";
       rtk = "latest";
-      "pipx:cua-cli" = "latest";
-      "github:lycorp-jp/sim-use" = "latest";
+      "pipx:cua-cli" = "latest"; # computer-use 控制
+      "github:lycorp-jp/sim-use" = "latest"; # ios 模拟器控制
       "github:dmtrKovalenko/fff" = {
+        # omp 使用
         version = "latest";
         matching = "fff-mcp";
         rename_exe = "fff-mcp";
       };
 
       # agent client
-      codex = "latest";
-      claude-code = "latest";
-      "npm:droid" = "latest";
-      antigravity-cli = "latest";
+      # 需要保留的会定死版本
+      # codex = "latest";
+      # claude-code = "latest";
+      # "npm:droid" = "latest";
+      antigravity-cli = "1.1.24";
       oh-my-pi = "latest";
     };
 

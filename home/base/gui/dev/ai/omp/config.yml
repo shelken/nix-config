@@ -35,11 +35,11 @@ modelRoles:
   commit: openai-codex/gpt-5.6-luna:high
   tiny: openai-codex/gpt-5.6-luna:high
   review: google-antigravity/gemini-3.8-flash-high:high
-  smol: google-antigravity/gemini-3.8-flash-high:high
-  slow: openai-codex/gpt-5.6-sol:high
-  default: commandcode-local/deepseek/deepseek-v4.1-flash:high
-  test: cpa/workbuddy/glm-5.3-flash:max
-  task: cpa/workbuddy/glm-5.3-flash:max
+  smol: commandcode-local/deepseek/deepseek-v4.1-flash:high
+  slow: openai-codex/gpt-6-astra:low
+  test: cpa/workbuddy/deepseek-v4.1-flash:high
+  task: google-antigravity/gemini-3.8-flash:high
+  default: cpa/workbuddy/glm-5.3-flash:max
 cycleOrder:
   - smol
   - task

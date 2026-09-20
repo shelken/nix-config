@@ -46,7 +46,7 @@ in
         ".omp/agent/permissions.yaml" = linkOmp "permissions.yaml";
         # 模型配置: provider 清单 + 自定义模型 (apiKey 为环境变量名, OMP resolveConfigValue 先查 env 后降级字面量)
         ".omp/agent/models.yml" = linkOmp "models.yml";
-        ".omp/agent/mcp.json" = linkOmp "mcp.json";
+        # ".omp/agent/mcp.json" = linkOmp "mcp.json";
       }
       // extensionLinks;
 
