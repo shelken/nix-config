@@ -6,6 +6,7 @@
 {
   every = 86400; # 每 24h 自动同步（订阅刷新+底模自动更新）
   packages = [ pkgs.mise ];
+  user = true;
   script = ''
     if [ "$(id -u)" -eq 0 ]; then
       echo "该任务必须以用户身份运行（凭据在用户目录），请用: task-sb-sync" >&2
