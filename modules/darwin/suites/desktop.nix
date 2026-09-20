@@ -38,7 +38,7 @@ in
       masApps = {
         # Wechat = 836500024;
         # Xnip = 1221250572; # 截图
-        DiskSpeedTest = 425264550; # 硬盘测速
+        # DiskSpeedTest = 425264550; # 硬盘测速
       };
     };
 
