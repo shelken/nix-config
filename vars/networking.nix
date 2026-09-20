@@ -21,8 +21,18 @@ let
     homelab = {
       user = "shelken";
       hosts = {
-        sakamoto-k8s = "192.168.6.80"; # lima-control-plane-ubuntu2404
+        # sakamoto-k8s = "192.168.6.80";
+        sakamoto-k8s = {
+          address = "127.0.0.1";
+          port = 60122;
+          proxyJump = "sakamoto";
+        }; # lima-control-plane-ubuntu2404 socket-net
         homelab-1 = "192.168.6.110"; # pve-qemu-worker-ubuntu2404
+        yuuko-k8s = {
+          address = "127.0.0.1";
+          port = 60123;
+          proxyJump = "yuuko";
+        };
       };
     };
 
@@ -69,13 +79,19 @@ in
   inherit prefixLength hostAddress;
 
   ssh = {
-    extraConfig = lib.concatLines (
-      lib.mapAttrsToList (host: conf: ''
-        Host ${host}
-          HostName ${conf.address}
-          Port ${toString conf.port}
-          User ${conf.user}
-      '') hostAddress
+    extraConfig = lib.concatStringsSep "\n\n" (
+      lib.mapAttrsToList (
+        host: conf:
+        lib.concatLines (
+          [
+            "Host ${host}"
+            "  HostName ${conf.address}"
+            "  Port ${toString conf.port}"
+            "  User ${conf.user}"
+          ]
+          ++ lib.optional (conf ? proxyJump) "  ProxyJump ${conf.proxyJump}"
+        )
+      ) hostAddress
     );
   };
 }
