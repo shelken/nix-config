@@ -18,6 +18,7 @@ in
     homebrew = {
       casks = [
         "loon"
+        "sfm"
       ];
       brews = [
       ];
