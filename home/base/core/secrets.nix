@@ -176,6 +176,7 @@ in
     };
 
     home.packages = [
+      pkgs.gopass
       secRun
       secEnv
     ];
