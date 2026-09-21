@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "keybindings": {},
+  "platforms": {
+    "darwin": {
+      "terminal.expandPane": []
+    },
+    "linux": {},
+    "win32": {}
+  }
+}

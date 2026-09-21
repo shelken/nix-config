@@ -16,12 +16,20 @@ in
 
   config = mkIf cfg.enable {
     homebrew = {
+      taps = [
+        {
+          name = "stablyai/orca";
+          trusted = true;
+        }
+      ];
       brews = [
         "media-control" # computer-use 控制
       ];
       casks = [
         # "ollama-app"
         "lm-studio"
+
+        "stablyai/orca/orca"
 
         "agentsview"
 
