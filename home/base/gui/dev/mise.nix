@@ -16,6 +16,7 @@
         version = "latest";
         matching = "sb-sync";
       };
+      # sb-sync 仍是客户端 encode/keygen 与服务端 server 二进制来源（proxy 仓库发布）
 
       # agent tools/client 见 dev/ai/packages.nix，由 dev.ai.enable 控制
     };
