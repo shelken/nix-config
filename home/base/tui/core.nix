@@ -14,6 +14,7 @@
     pkgs-unstable.rustc
     pkgs-unstable.rust-analyzer
     pkgs-unstable.rustfmt
+    pkgs-unstable.clippy
 
     #-- deploy
     ansible
