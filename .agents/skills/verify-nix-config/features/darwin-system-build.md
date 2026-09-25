@@ -31,5 +31,5 @@ Preconditions:
 
 - `just bd` 会构建系统 derivation，但不会更新 `/run/current-system`
 - 完整系统 diff 会包含 Home、Homebrew、launchd 与其他未提交改动，不能只检查目标包名
-- `nano` 等不同架构 host 可能受当前 nixpkgs 支持范围限制，不能把本机 build 成功外推到其他 host
+- 不同架构 host 可能受当前 nixpkgs 支持范围限制（nano/x86_64-darwin 即因此移除），不能把本机 build 成功外推到其他 host
 - 构建成功不授权 `just sw`
