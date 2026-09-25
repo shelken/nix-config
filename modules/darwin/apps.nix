@@ -149,7 +149,6 @@ in
       "the-unarchiver" # zip,unzip
       "parsec"
       "mac-mouse-fix" # 鼠标滚动
-      "openusage"
 
       # keyborader
       # "karabiner-elements" # 快捷键映射

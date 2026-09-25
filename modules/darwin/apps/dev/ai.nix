@@ -31,6 +31,8 @@ in
 
         "stablyai/orca/orca"
 
+        "openusage"
+
         "agentsview"
 
         "alma"
