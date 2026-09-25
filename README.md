@@ -56,7 +56,7 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-config
 
 # 4. 选择 flake.nix 中定义的机器配置
-# Darwin: mio / sakamoto / yuuko / nano / ling
+# Darwin: mio / sakamoto / yuuko / ling
 # NixOS: pve155 / pve156 / arm-test-1 / work-test
 echo "PROFILE=mio" >> .env
 

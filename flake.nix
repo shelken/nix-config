@@ -148,17 +148,6 @@
             "hosts/mio/home.nix"
           ];
         };
-        nano = mkHost {
-          type = "darwin";
-          system = "x86_64-darwin";
-          darwin-modules = map mylib.relativeToRoot [
-            "modules/darwin"
-            "hosts/nano"
-          ];
-          home-modules = map mylib.relativeToRoot [
-            "home/darwin"
-          ];
-        };
         ling = mkHost {
           type = "darwin";
           system = "aarch64-darwin";
@@ -189,7 +178,6 @@
         "x86_64-linux"
         "aarch64-linux"
         "aarch64-darwin"
-        "x86_64-darwin"
       ];
       forAllSystems = func: (nixpkgs.lib.genAttrs allSystemAbove func);
     in
