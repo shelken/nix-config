@@ -115,6 +115,7 @@
         yuuko = mkHost {
           type = "darwin";
           system = "aarch64-darwin";
+          deploy = true;
           darwin-modules = map mylib.relativeToRoot [
             "modules/darwin"
             "hosts/yuuko"
@@ -127,6 +128,7 @@
         sakamoto = mkHost {
           type = "darwin";
           system = "aarch64-darwin";
+          deploy = true;
           darwin-modules = map mylib.relativeToRoot [
             "modules/darwin"
             "hosts/sakamoto"
@@ -178,6 +180,7 @@
       homeHosts = lib.filterAttrs (_: v: v ? "home-modules") hosts;
 
       colmenaHosts = lib.filterAttrs (_: v: v.colmena or false) hosts;
+      deployHosts = lib.filterAttrs (_: v: v.deploy or false) hosts;
 
       colmenaDefaultSystem =
         if colmenaHosts == { } then
@@ -251,35 +254,58 @@
         )
       ) colmenaHosts;
 
-      checks = forAllSystems (system: {
-        #ref: https://devenv.sh/?q=git-hooks.hooks
-        pre-commit-check = inputs.git-hooks.lib.${system}.run {
-          src = ./.;
-          hooks = {
-            #NOTE 目前不支持配置垂直对其
-            nixfmt = {
-              enable = true;
-              settings.width = 100;
+      # deploy-rs 远程部署：hosts 中标记 `deploy = true`（或 attrset 透传参数）的主机自动生成节点
+      deploy = {
+        nodes = lib.mapAttrs (
+          name: v:
+          mylib.deployNode {
+            deploy-rs = inputs.deploy-rs;
+            inherit name;
+            configuration =
+              if v.type == "darwin" then self.darwinConfigurations.${name} else self.nixosConfigurations.${name};
+            inherit (v) type system;
+            extra = if builtins.isAttrs v.deploy then v.deploy else { };
+          }
+        ) deployHosts;
+      };
+
+      checks = forAllSystems (
+        system:
+        {
+          #ref: https://devenv.sh/?q=git-hooks.hooks
+          pre-commit-check = inputs.git-hooks.lib.${system}.run {
+            src = ./.;
+            hooks = {
+              #NOTE 目前不支持配置垂直对其
+              nixfmt = {
+                enable = true;
+                settings.width = 100;
+              };
+              typos = {
+                enable = true;
+                settings = {
+                  write = true; # Automatically fix typos
+                  configPath = "./.typos.toml"; # relative to the flake root
+                };
+              }; # Source code spell checker
+              prettier = {
+                enable = true;
+                settings = {
+                  write = true; # Automatically format files
+                  configPath = "./.prettierrc.yaml"; # relative to the flake root
+                };
+              }; # 主要用于文档检查
+              # deadnix.enable = true; # detect unused variable bindings in `*.nix`
+              # statix.enable = true; # lints and suggestions for Nix code(auto suggestions)
             };
-            typos = {
-              enable = true;
-              settings = {
-                write = true; # Automatically fix typos
-                configPath = "./.typos.toml"; # relative to the flake root
-              };
-            }; # Source code spell checker
-            prettier = {
-              enable = true;
-              settings = {
-                write = true; # Automatically format files
-                configPath = "./.prettierrc.yaml"; # relative to the flake root
-              };
-            }; # 主要用于文档检查
-            # deadnix.enable = true; # detect unused variable bindings in `*.nix`
-            # statix.enable = true; # lints and suggestions for Nix code(auto suggestions)
           };
-        };
-      });
+          # deploy-rs 部署配置校验（schema/激活脚本检查）；
+          # 只在原生系统启用，跨系统会让 nix flake check 尝试交叉构建
+        }
+        // lib.optionalAttrs (system == "aarch64-darwin") (
+          inputs.deploy-rs.lib.${system}.deployChecks self.deploy
+        )
+      );
 
       # Development Shells
       devShells = forAllSystems (
@@ -294,6 +320,7 @@
               bashInteractive
               # deploy
               colmena
+              deploy-rs
               # Nix-related
               nixfmt
               deadnix
@@ -363,6 +390,9 @@
       url = "github:catppuccin/nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # deploy-rs 远程部署
+    deploy-rs.url = "github:serokell/deploy-rs";
 
     # disko
     disko = {

@@ -45,10 +45,15 @@ build-dry host=profile:
 deploy host mach:
     @nixos-rebuild switch --flake .#{{ host }} --target-host {{ mach }} --use-remote-sudo --verbose
 
-# deploy on macos by colmena
+# colmena 部署 NixOS 主机
 [macos]
-deploy tag mach:
+colmena tag mach:
     @TARGET_HOST={{ mach }} colmena apply -v --build-on-target --on @{{ tag }} --impure
+
+# 远程部署 darwin 主机: just deploy sakamoto [--dry-activate --verbose ...]
+[macos]
+deploy host *args:
+    @deploy .#{{ host }} {{ args }}
 
 # nixos-anywhere 部署
 nixos-anywhere host mach:
