@@ -190,7 +190,7 @@
     },
     "projects-yazi": {
         "cargoLock": null,
-        "date": "2026-07-11",
+        "date": "2026-09-19",
         "extract": null,
         "name": "projects-yazi",
         "passthru": null,
@@ -202,12 +202,12 @@
             "name": null,
             "owner": "MasouShizuka",
             "repo": "projects.yazi",
-            "rev": "22a4006f531b7c8e71704f64e48feed659164104",
-            "sha256": "sha256-J3MM4Fc3+6P84OrC4DWqchSPbEOuzhEeO8rzNYXSZXQ=",
+            "rev": "181ebafba6320244ffd132f0e234b2a523b5ee00",
+            "sha256": "sha256-pe1ygeaKtSRUkWhxpq3VMoVFUmqBbEGbO2dTbio6bcw=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "22a4006f531b7c8e71704f64e48feed659164104"
+        "version": "181ebafba6320244ffd132f0e234b2a523b5ee00"
     },
     "reverse-skill": {
         "cargoLock": null,

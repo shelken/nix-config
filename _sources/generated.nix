@@ -112,15 +112,15 @@
   };
   projects-yazi = {
     pname = "projects-yazi";
-    version = "22a4006f531b7c8e71704f64e48feed659164104";
+    version = "181ebafba6320244ffd132f0e234b2a523b5ee00";
     src = fetchFromGitHub {
       owner = "MasouShizuka";
       repo = "projects.yazi";
-      rev = "22a4006f531b7c8e71704f64e48feed659164104";
+      rev = "181ebafba6320244ffd132f0e234b2a523b5ee00";
       fetchSubmodules = false;
-      sha256 = "sha256-J3MM4Fc3+6P84OrC4DWqchSPbEOuzhEeO8rzNYXSZXQ=";
+      sha256 = "sha256-pe1ygeaKtSRUkWhxpq3VMoVFUmqBbEGbO2dTbio6bcw=";
     };
-    date = "2026-07-11";
+    date = "2026-09-19";
   };
   reverse-skill = {
     pname = "reverse-skill";
