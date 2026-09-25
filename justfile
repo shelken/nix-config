@@ -252,14 +252,14 @@ set-proxy:
 switch host=profile:
     # nixos-rebuild switch --sudo --flake $".#{{ host }}" --show-trace --verbose
     # @nix run nixpkgs#nh -- os switch -H {{ host }} .
-    @nh os switch -H {{ host }} .
+    @nh os switch -H {{ host }} . --show-activation-logs
 
 # 应用配置; target对应当前主机名
 [macos]
 switch *args: rebuild-debug
     # sudo -E ./result/sw/bin/darwin-rebuild switch --flake ".#{{ profile }}" --show-trace --verbose
     # nix run nixpkgs#nh -- darwin switch -H {{ profile }} . -v -- {{ args }}
-    nh darwin switch -H {{ profile }} . -v -- {{ args }}
+    nh darwin switch -H {{ profile }} . -v --show-activation-logs -- {{ args }}
 
 # 仅构建 Home Manager（查看差异，不应用）
 [macos]
