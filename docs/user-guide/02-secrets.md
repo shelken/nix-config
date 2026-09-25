@@ -11,7 +11,7 @@
 ├── sops/secrets/shelken/default.yaml  # sops 密文, sops-nix 渲染的唯一数据源
 ├── env/                               # gopass 条目, 人类交互式使用(如 env/ai/OPENAI_API_KEY)
 ├── rotations/                         # 凭据轮换自动化(沿用旧 secrets.nix 仓库的 bun 工具)
-└── (origin)                           # GitHub shelken/gopass-store, 备份与跨机同步远端
+└── (origin)                           # GitHub shelken/secrets, 备份与跨机同步远端
 ```
 
 - gopass 只索引 `.age` 后缀文件,`sops/` 下的 YAML 对 gopass 完全不可见,两个分区互不干扰
@@ -97,11 +97,10 @@ sec-run --agent=pi --ttl 2h -- pi # 显式续期授权
    git -C ~/.local/share/gopass/stores/root commit -m "absorb legacy sops repo"
    ```
 
-4. 新建远端私有仓库并推送(store 是全新仓库, 直接推上去)
+4. 接上远端 `shelken/secrets`(空私有仓库已建好)并推送 store
 
    ```bash
-   gh repo create shelken/gopass-store --private
-   git -C ~/.local/share/gopass/stores/root remote add origin git@github.com:shelken/gopass-store.git
+   git -C ~/.local/share/gopass/stores/root remote add origin git@github.com:shelken/secrets.git
    git -C ~/.local/share/gopass/stores/root push -u origin main
    git ls-remote origin refs/heads/main   # 验证: 与 store HEAD 一致
    ```
@@ -111,7 +110,7 @@ sec-run --agent=pi --ttl 2h -- pi # 显式续期授权
    ```diff
        secrets = {
    -     url = "git+https://github.com/shelken/secrets.nix.git?shallow=1";
-   +     url = "git+https://github.com/shelken/gopass-store.git?shallow=1";
+   +     url = "git+https://github.com/shelken/secrets.git?shallow=1";
          flake = false;
        };
    ```
@@ -162,7 +161,7 @@ sops $HOME/.local/share/gopass/stores/root/sops/secrets/shelken/default.yaml   #
 # 或者: sops updatekeys <密文文件>
 
 # 3. 新机器 clone + 导入身份
-gopass clone git@github.com:shelken/gopass-store.git
+gopass clone git@github.com:shelken/secrets.git
 gopass age identities add "$(cat ~/.config/sops/age/keys.txt)"
 gopass recipients ack && gopass sync
 gopass show -o env/ai/OPENAI_API_KEY >/dev/null && echo OK   # 验证: 能解密即完成
@@ -170,7 +169,7 @@ gopass show -o env/ai/OPENAI_API_KEY >/dev/null && echo OK   # 验证: 能解密
 
 ## flake input 的两种形态
 
-迁移第 5 步已把 `flake.nix` 的 `secrets` 输入切到新仓库 `git+https://github.com/shelken/gopass-store.git`。另一种形态是直接指本地 store:
+迁移第 5 步已把 `flake.nix` 的 `secrets` 输入切到新仓库 `git+https://github.com/shelken/secrets.git`。另一种形态是直接指本地 store:
 
 ```nix
 secrets = {
