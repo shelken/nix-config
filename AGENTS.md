@@ -33,6 +33,20 @@
 - 使用 `nvfetcher` 管理非 nixpkgs 源
 - 引用外部 `secrets` flake 做秘密管理（通过 sops-nix）
 
+## 配置原则
+
+引入/管理一个新软件的配置时按此顺序决策：
+
+1. 优先 home-manager 现成模块；没有才自己写文件关联
+2. 桌面端 GUI 产品遵循不编译原则，用nix-darwin/nixpkgs安装（brew cask 等）；安装包的方式必须与用户确认
+3. home-manager 没有现成配置时，用 `mkOutOfStoreSymlink` 软链，保证仓库内编辑立即生效
+4. 本地已有配置时，告知用户, 让用户决定如何对待存在的配置
+5. 如果软件会自动生成大量默认配置到配置文件的，优先"读取后合并覆盖"，默认不做全量声明式管理
+
+## Tips
+
+- 执行任何nix操作(eval/build)前确保自己新增或删除的文件被git跟踪
+
 ## Agent skills
 
 ### 问题跟踪器
