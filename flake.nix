@@ -317,7 +317,8 @@
         }
       );
 
-      formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.nixfmt);
+      # nixfmt-tree: treefmt 包装,支持目录参数;裸 nixfmt 传目录已被 Nix 标记 deprecated
+      formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.nixfmt-tree);
     };
 
   inputs = {
