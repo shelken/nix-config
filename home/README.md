@@ -57,5 +57,4 @@
 它同样会导入 `base/` 中的共享配置，并添加 Linux 专属的设置，例如：
 
 - `core.nix`: 导入基础配置。
-- `base/vscode-server/`: vscode-server 配置。
 - `gui/`: Linux 图形界面配置。
