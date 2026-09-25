@@ -4,47 +4,27 @@ disabledProviders:
   - codex
   - opencode
   - gemini
-providers:
-  webSearchOrder:
-    - gemini
-    - exa
-    - brave
-    - anthropic
-    - codex
-    - xai
-    - zai
-    - tinyfish
-    - jina
-    - kagi
-    - tavily
-    - firecrawl
-    - kimi
-    - parallel
-    - synthetic
-    - searxng
-    - startpage
-    - duckduckgo
-    - ecosia
-    - google
-    - mojeek
-    - public
-    - perplexity
 modelRoles:
   vision: openai-codex/gpt-5.6-luna:high
   plan: openai-codex/gpt-6-astra:high
   commit: openai-codex/gpt-5.6-luna:high
   tiny: openai-codex/gpt-5.6-luna:high
-  review: google-antigravity/gemini-3.8-flash-high:high
-  smol: commandcode-local/deepseek/deepseek-v4.1-flash:high
+  review: openai-codex/gpt-6-sol:high
+  smol: google-antigravity/gemini-3.8-flash:high
+  wbds: cpa/workbuddy/deepseek-v4.1-flash:high
+  task: commandcode-local/deepseek/deepseek-v4.1-flash:high
+  default: cpa/workbuddy/glm-5.3-flash:high
   slow: openai-codex/gpt-6-astra:low
-  test: cpa/workbuddy/deepseek-v4.1-flash:high
-  task: google-antigravity/gemini-3.8-flash:high
-  default: cpa/workbuddy/glm-5.3-flash:max
+  web: google/gemini-2.5-flash
+  qwcn: cpa/qwenworkcn/pro:high
+  test: zcode-local/glm-5.3-flash:high
 cycleOrder:
   - smol
   - task
   - default
   - slow
+  - wbds
+  - qwcn
   - test
 symbolPreset: nerd
 composer:
@@ -86,3 +66,33 @@ dev:
   autoqaConsent: granted
 codexResets:
   autoRedeem: "no"
+retry:
+  fallbackChains:
+    web:
+      - web/exa
+      - web/brave
+      - anthropic/claude-haiku-4-5
+      - openai-codex/gpt-5.6-luna
+      - xai/grok-4.5
+      - web/zai
+      - web/tinyfish
+      - web/jina
+      - web/kagi
+      - web/tavily
+      - web/firecrawl
+      - web/kimi
+      - web/parallel
+      - web/synthetic
+      - web/searxng
+      - web/startpage
+      - web/duckduckgo
+      - web/ecosia
+      - web/google
+      - web/mojeek
+      - web/public
+      - web/perplexity
+      - google-antigravity/gemini-2.5-flash
+      - openai-codex/gpt-5.6
+      - openai-codex/gpt-5.5
+      - xai-oauth/grok-4.5
+      - web/ollama

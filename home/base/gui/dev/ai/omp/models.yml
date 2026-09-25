@@ -9,6 +9,13 @@ providers:
     api: openai-completions
     discovery:
       type: openai-models-list
+  # 本地 zcode-api 反代 ({kaiyuan-dir}/zcode-api, docker compose up -d)
+  zcode-local:
+    baseUrl: http://127.0.0.1:8080
+    apiKey: x
+    api: anthropic-messages
+    discovery:
+      type: openai-models-list
   cpa:
     baseUrl: http://192.168.69.60:8317/v1
     apiKey: CPA_PI_API_KEY

@@ -36,9 +36,7 @@ in
     force = true;
   };
   programs.zsh.initContent = shellInit;
-}
-// lib.optionalAttrs (lib.hasSuffix "darwin" system) {
   shelken.backup.app.pi = [
-    "${config.home.homeDirectory}/.pi"
+    "${config.home.homeDirectory}/.pi/agent/sessions"
   ];
 }
