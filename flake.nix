@@ -151,6 +151,7 @@
         ling = mkHost {
           type = "darwin";
           system = "aarch64-darwin";
+          deploy = true;
           darwin-modules = map mylib.relativeToRoot [
             "modules/darwin"
             "hosts/ling"
