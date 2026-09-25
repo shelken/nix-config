@@ -8,7 +8,6 @@ let
   inherit (lib) mkOption types;
 in
 rec {
-  colmenaSystem = import ./colmenaSystem.nix;
   deployNode = import ./deployNode.nix;
   macosSystem = import ./macosSystem.nix;
   nixosSystem = import ./nixosSystem.nix;

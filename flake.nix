@@ -79,7 +79,6 @@
         };
         pve156 = mkHost {
           type = "nixos";
-          colmena = true;
           system = "x86_64-linux";
           nixos-modules = map mylib.relativeToRoot [
             "modules/nixos/server.nix"
@@ -91,7 +90,6 @@
         };
         arm-test-1 = mkHost {
           type = "nixos";
-          colmena = true;
           system = "aarch64-linux";
           nixos-modules = map mylib.relativeToRoot [
             "modules/nixos/desktop.nix"
@@ -168,14 +166,7 @@
       nixosHosts = lib.filterAttrs (_: v: v.type == "nixos") hosts;
       homeHosts = lib.filterAttrs (_: v: v ? "home-modules") hosts;
 
-      colmenaHosts = lib.filterAttrs (_: v: v.colmena or false) hosts;
       deployHosts = lib.filterAttrs (_: v: v.deploy or false) hosts;
-
-      colmenaDefaultSystem =
-        if colmenaHosts == { } then
-          "x86_64-linux"
-        else
-          (builtins.head (map (h: h.system) (lib.attrValues colmenaHosts)));
 
       allSystemAbove = [
         "x86_64-linux"
@@ -218,29 +209,6 @@
           activationPackage = checkedHome.home.activationPackage;
         }
       ) homeHosts;
-
-      colmena = {
-        meta = (
-          let
-            system = colmenaDefaultSystem;
-          in
-          {
-            # colmena's default nixpkgs & specialArgs
-            nixpkgs = import nixpkgs { inherit system; };
-            specialArgs = genSpecialArgs system;
-          }
-        );
-      }
-      // lib.mapAttrs (
-        name: v:
-        mylib.colmenaSystem (
-          v
-          // {
-            tags = [ name ];
-            ssh-user = myvars.username;
-          }
-        )
-      ) colmenaHosts;
 
       # deploy-rs 远程部署：hosts 中标记 `deploy = true`（或 attrset 透传参数）的主机自动生成节点
       deploy = {
@@ -307,7 +275,6 @@
               # fix https://discourse.nixos.org/t/non-interactive-bash-errors-from-flake-nix-mkshell/33310
               bashInteractive
               # deploy
-              colmena
               deploy-rs
               # Nix-related
               nixfmt
