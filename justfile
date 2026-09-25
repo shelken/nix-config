@@ -45,10 +45,18 @@ build-dry host=profile:
 deploy host mach:
     @nixos-rebuild switch --flake .#{{ host }} --target-host {{ mach }} --use-remote-sudo --verbose
 
-# deploy on macos by colmena
+# colmena 部署 NixOS 主机
 [macos]
-deploy tag mach:
+colmena tag mach:
     @TARGET_HOST={{ mach }} colmena apply -v --build-on-target --on @{{ tag }} --impure
+
+# 远程部署 darwin 主机: just deploy sakamoto [--dry-activate --verbose ...]
+# 默认 --skip-checks: deploy-rs 的 check 阶段会对整个 flake 跑 nix flake check,
+# 求值所有主机（含 linux 的 IFD/assertion 问题），与目标节点无关也会失败。
+# schema 校验单独跑: nix build .#checks.aarch64-darwin.deploy-schema
+[macos]
+deploy host *args:
+    @deploy --skip-checks .#{{ host }} {{ args }}
 
 # nixos-anywhere 部署
 nixos-anywhere host mach:

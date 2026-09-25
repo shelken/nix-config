@@ -9,6 +9,7 @@ let
 in
 rec {
   colmenaSystem = import ./colmenaSystem.nix;
+  deployNode = import ./deployNode.nix;
   macosSystem = import ./macosSystem.nix;
   nixosSystem = import ./nixosSystem.nix;
   mkTasksLib = import ./tasks.nix;
