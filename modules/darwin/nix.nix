@@ -29,6 +29,9 @@
     substituters = https://icache.ooooo.space/cache.nixos.org https://icache.ooooo.space/nix-community.cachix.org https://cache.nixos.org https://nix-community.cachix.org https://mirrors.ustc.edu.cn/nix-channels/store https://install.determinate.systems
     extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
     fallback = true
+    # 离线/被墙的 substituter 连接快速失败（部署日志里 USTC 5s 超时即此问题）；
+    # ssh 远程 builder 的连接超时不归此设置管，走 NIX_SSHOPTS。
+    connect-timeout = 3
     builders-use-substitutes = true
     trusted-users = shelken nixos
     # builders = ssh-ng://nix-builder aarch64-linux / 4 1 big-parallel,kvm; ssh://shelken@10.211.55.6 aarch64-linux - 4 1 big-parallel
