@@ -17,39 +17,11 @@ in
 
   # 默认配置：
   # - enable 关闭
-  # - backupPaths / app 为空
   # - calendarInterval 每天两次，时间按 hostname 固定分布
   # - policy 默认值见 ./policy-defaults.nix
+  # enable/app/backupPaths/ignores 声明在 home/base/core/backup-options.nix（全平台共享），
+  # 本文件只声明 kopia 后端自身的选项
   options.shelken.backup = {
-    enable = mylib.mkBoolOpt false "是否开启备份";
-    app = lib.mkOption {
-      type = with lib.types; attrsOf (listOf str);
-      default = { };
-      description = "各 app 模块自己声明的备份路径，key 为 app 名";
-      example = {
-        pi = [ "\${config.home.homeDirectory}/.config/pi" ];
-      };
-    };
-    backupPaths = lib.mkOption {
-      type = with lib.types; listOf str;
-      default = [ ];
-      description = "要备份的路径列表（文件或目录）";
-      example = [
-        ''"''${config.home.homeDirectory}/Documents"''
-        ''"''${config.home.homeDirectory}/Pictures"''
-        ''"''${config.home.homeDirectory}/important-file.txt"''
-      ];
-    };
-    ignores = lib.mkOption {
-      type = with lib.types; listOf str;
-      default = [ ];
-      description = "用户自定义的忽略模式列表，自动与当前机器 user@host 默认策略合并去重（不影响其他 target）";
-      example = [
-        "node_modules"
-        "dist"
-        ".cache"
-      ];
-    };
     calendarInterval = lib.mkOption {
       type = with lib.types; listOf (attrsOf int);
       default =
