@@ -28,6 +28,8 @@ in
   home.shellAliases = {
     zed = "sec-run --agent=zed";
   };
+  # zed 注入白名单, 变量须在 shelken.secrets 的 secretEnvMap 中声明
+  shelken.secrets.agentEnvMap.zed = [ "GITHUB_TOKEN" ];
   programs.zed-editor = {
     enable = true;
     package = null; # homebrew

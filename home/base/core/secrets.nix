@@ -161,15 +161,8 @@ in
     enable = mkBoolOpt false "Whether or not use secrets";
     agentEnvMap = lib.mkOption {
       type = lib.types.attrsOf (lib.types.listOf lib.types.str);
-      default = {
-        pi = [ "GROQ_API_KEY" ];
-        omp = [
-          "GITHUB_TOKEN"
-          "GROQ_API_KEY"
-        ];
-        zed = [ "GITHUB_TOKEN" ];
-      };
-      description = "agent/LLM profile 到允许注入的 secret 环境变量白名单; 变量必须在 secretEnvMap 中声明";
+      default = { };
+      description = "agent/LLM profile 到允许注入的 secret 环境变量白名单; 变量必须在 secretEnvMap 中声明, 由各 agent 组件自行声明分管";
     };
   };
   config = mkIf cfg.enable {

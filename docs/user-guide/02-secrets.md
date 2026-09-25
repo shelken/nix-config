@@ -11,12 +11,12 @@
 ├── sops/secrets/shelken/default.yaml  # sops 密文, sops-nix 渲染的唯一数据源
 ├── env/                               # gopass 条目, 人类交互式使用(如 env/ai/OPENAI_API_KEY)
 ├── rotations/                         # 凭据轮换自动化(沿用旧 secrets.nix 仓库的 bun 工具)
-└── (origin)                           # GitHub shelken/secrets.nix, 备份与跨机同步远端
+└── (origin)                           # GitHub shelken/gopass-store, 备份与跨机同步远端
 ```
 
 - gopass 只索引 `.age` 后缀文件,`sops/` 下的 YAML 对 gopass 完全不可见,两个分区互不干扰
 - 同步由 gopass 现有机制全自动:`core.autopush`(写条目即提交推送)+ `core.autosync`(每 30 分钟拉推)
-- 代码侧组件:`home/base/core/secrets.nix`(sec-run 注入器与 profile 白名单)、`justfile`(secret-edit / secret-push / secrets-doctor)
+- 代码侧组件:`home/base/core/secrets.nix`(sec-run 注入器)、各 agent 组件(`agentEnvMap` profile 白名单)、`justfile`(secret-edit / secrets-doctor)
 
 ## 日常使用
 
@@ -33,8 +33,9 @@ gopass show -o env/ai/OPENAI_API_KEY   # 单值取用(输出到 stdout, 自行�
 ```bash
 just secret-edit                                    # 默认打开 sops/secrets/shelken/default.yaml
 just secret-edit sops/secrets/shelken/<file>.yaml   # 指定其它密文文件
-just secret-push                                    # 提交并 gopass sync(编辑后必须执行)
 ```
+
+编辑保存后自动 `git add` + commit + `gopass sync`(gitfs 的 sync 不提交非 `.age` 文件的变更, 提交动作收敛在此)
 
 新增密文文件后需先 `git add`,否则对构建不可见:`git -C <store> add sops/...`
 
@@ -57,7 +58,7 @@ just secrets-doctor   # 只读: recipients 一致性 / 未提交内容 / remote 
 
 ## agent/LLM 使用
 
-`sec-run` 是唯一注入入口,profile 白名单声明在 `home/base/core/secrets.nix` 的 `shelken.secrets.agentEnvMap`,经 Nix 期固化,运行期零解密操作
+`sec-run` 是唯一注入入口,profile 白名单由各 agent 组件声明在自身的 `shelken.secrets.agentEnvMap.<profile>`(如 `home/base/gui/dev/ai/pi.nix`),经 Nix 期固化,运行期零解密操作
 
 ```bash
 sec-run --list                    # 列出 human 与各 profile 可见变量名(不含值)
@@ -72,7 +73,7 @@ sec-run --agent=pi --ttl 2h -- pi # 显式续期授权
 
 ## 一次性迁移(需自行执行, 按序)
 
-> ⚠️ 本 PR 代码已移除 `sec-run` 对 `~/.specific.zsh` 的加载与 `sec-env` 命令。必须先完成下面第 5 步(值导入),再执行第 7 步 rebuild,否则这些变量会从环境消失
+> ⚠️ 本 PR 代码已移除 `sec-run` 对 `~/.specific.zsh` 的加载与 `sec-env` 命令。必须先完成下面第 6 步(值导入),再执行第 9 步 rebuild,否则这些变量会从环境消失
 
 1. 备份
 
@@ -96,18 +97,28 @@ sec-run --agent=pi --ttl 2h -- pi # 显式续期授权
    git -C ~/.local/share/gopass/stores/root commit -m "absorb legacy sops repo"
    ```
 
-4. 远端复用现有仓库(地址不变): 旧历史留 `legacy` 分支保底,store 历史推上 `main`
+4. 新建远端私有仓库并推送(store 是全新仓库, 直接推上去)
 
    ```bash
-   git -C $HOME/code/MyRepo/nix/secrets.nix push origin main:refs/heads/legacy
-   git -C ~/.local/share/gopass/stores/root remote add origin git@github.com:shelken/secrets.nix.git
-   git -C ~/.local/share/gopass/stores/root push -f origin main
+   gh repo create shelken/gopass-store --private
+   git -C ~/.local/share/gopass/stores/root remote add origin git@github.com:shelken/gopass-store.git
+   git -C ~/.local/share/gopass/stores/root push -u origin main
    git ls-remote origin refs/heads/main   # 验证: 与 store HEAD 一致
    ```
 
-   force-push 后任何机器第一次拉取前先 `gopass sync`
+5. 切换 flake input 到新仓库(改 `flake.nix` 一行)
 
-5. `~/.specific.zsh` 值导入(在 rebuild 之前!)
+   ```diff
+       secrets = {
+   -     url = "git+https://github.com/shelken/secrets.nix.git?shallow=1";
+   +     url = "git+https://github.com/shelken/gopass-store.git?shallow=1";
+         flake = false;
+       };
+   ```
+
+   本地秒级生效仍走 `just hm-dev`(override 直读 store, 不依赖此 url);不切 url 则远端链路拉不到新内容
+
+6. `~/.specific.zsh` 值导入(在 rebuild 之前!)
 
    ```bash
    grep -E '^\s*(export\s+)?[A-Za-z_][A-Za-z0-9_]*=' ~/.specific.zsh \
@@ -115,14 +126,14 @@ sec-run --agent=pi --ttl 2h -- pi # 显式续期授权
    gopass insert env/misc/<KEY>                            # 逐条录入(值不在命令行出现)
    ```
 
-6. gopass 解锁体验(两行配置, 与 1Password 常解锁体验对齐)
+7. gopass 解锁体验(两行配置, 与 1Password 常解锁体验对齐)
 
    ```bash
    gopass config age.agent-timeout 900   # 解锁缓存 15 分钟后自动锁定(当前 0 = 永不过期)
    gopass config age.usekeychain true    # 口令进 macOS Keychain
    ```
 
-7. rebuild 应用本 PR(hm 或 bd),然后验证
+8. rebuild 应用本 PR(hm 或 bd),然后验证
 
    ```bash
    just secrets-doctor       # 三项全 ✅
@@ -133,7 +144,7 @@ sec-run --agent=pi --ttl 2h -- pi # 显式续期授权
 
    此后删除逃生舱:`shred -u ~/.specific.zsh`
 
-8. 收尾: 旧 clone 保留两周无回退需求后删除;`rotations` 里的轮换向导照旧在 store 目录下运行 `just rotate`
+9. 收尾: 旧 clone 保留两周无回退需求后删除;`rotations` 里的轮换向导照旧在 store 目录下运行 `just rotate`
 
 ## 新 Mac onboarding
 
@@ -151,15 +162,15 @@ sops $HOME/.local/share/gopass/stores/root/sops/secrets/shelken/default.yaml   #
 # 或者: sops updatekeys <密文文件>
 
 # 3. 新机器 clone + 导入身份
-gopass clone git@github.com:shelken/secrets.nix.git
+gopass clone git@github.com:shelken/gopass-store.git
 gopass age identities add "$(cat ~/.config/sops/age/keys.txt)"
 gopass recipients ack && gopass sync
 gopass show -o env/ai/OPENAI_API_KEY >/dev/null && echo OK   # 验证: 能解密即完成
 ```
 
-## 可选增强: flake input 切本地路径
+## flake input 的两种形态
 
-当前 `flake.nix` 的 `secrets` 输入仍指 `git+https://github.com/shelken/secrets.nix.git`(地址复用不变)。若想让不带 override 的构建也直接读 store 现状,把输入改为:
+迁移第 5 步已把 `flake.nix` 的 `secrets` 输入切到新仓库 `git+https://github.com/shelken/gopass-store.git`。另一种形态是直接指本地 store:
 
 ```nix
 secrets = {
@@ -173,7 +184,7 @@ secrets = {
 ## 回退
 
 - 代码回退: revert 本 PR;`sec-run`/`sec-env` 恢复原行为
-- 数据回退: store 与旧仓库互相独立,第 1 步的备份 + 旧仓库 `legacy` 分支可完整重建任一侧
+- 数据回退: store 与旧仓库互相独立,第 1 步的备份 + 旧 clone 可完整重建任一侧
 - 链路回退: `LOCAL_SECRETS_DIR=$HOME/code/MyRepo/nix/secrets.nix just hm-dev` 继续用旧 clone
 
 ## 安全边界(诚实声明)

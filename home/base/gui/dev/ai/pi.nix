@@ -23,6 +23,9 @@ in
     pi = "sec-run --agent=pi";
   };
 
+  # pi 注入白名单, 变量须在 shelken.secrets 的 secretEnvMap 中声明
+  shelken.secrets.agentEnvMap.pi = [ "GROQ_API_KEY" ];
+
   # ponytail 扩展配置: 隐藏状态栏显示, 保留规则注入
   # 可编辑：软链到仓库源文件 home/base/gui/dev/ai/ponytail/config.json
   home.file.".config/ponytail/config.json" = {

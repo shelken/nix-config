@@ -288,21 +288,14 @@ hm-dev-build *args:
 hm-dev *args:
     nh home switch -c {{ profile }} . -v --show-activation-logs -- --override-input secrets path:{{ local_secrets_dir }} {{ args }}
 
-# 编辑 sops 密文(sops-nix 消费域); 在 store 根运行以命中 .sops.yaml 规则
+# 编辑 sops 密文并提交同步; gitfs 的 sync 不提交非 .age 文件的变更, 故编辑后在此显式提交
 [macos]
 secret-edit *args:
     #!/usr/bin/env zsh
     cd {{ local_secrets_dir }}
-    exec sops ${*:-sops/secrets/shelken/default.yaml}
-
-# 提交 store 内非 gopass 路径的变更并全量同步(gopass sync = pull + push)
-[macos]
-secret-push *args:
-    #!/usr/bin/env zsh
-    cd {{ local_secrets_dir }}
-    msg="${*:-sec: update secrets}"
+    sops ${*:-sops/secrets/shelken/default.yaml}
     git add -A
-    git commit -m "$msg" || true
+    git commit -m "sec: update secrets" || true
     gopass sync
 
 # 体检 secrets store(只读): recipients 一致性 / 未提交内容 / remote 配置
