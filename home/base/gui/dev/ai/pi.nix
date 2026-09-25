@@ -20,7 +20,7 @@ in
   ];
 
   home.shellAliases = {
-    pi = "sec-run pi";
+    pi = "sec-run --agent=pi";
   };
 
   # ponytail 扩展配置: 隐藏状态栏显示, 保留规则注入

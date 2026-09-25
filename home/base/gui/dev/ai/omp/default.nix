@@ -32,9 +32,9 @@ let
 in
 {
   config = mkIf cfg.enable {
-    # 别名：支持与 pi 并存，使用 sec-run omp
+    # 别名：支持与 pi 并存，经 sec-run 注入 omp 白名单变量
     home.shellAliases = {
-      omp = "sec-run omp";
+      omp = "sec-run --agent=omp";
     };
 
     programs.mise.globalConfig.tools = {

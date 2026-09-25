@@ -6,3 +6,4 @@
 | ------------------------------------ | -------------------------------- |
 | [00-quickstart.md](00-quickstart.md) | 快速上手：常用命令与工作流       |
 | [01-tasks.md](01-tasks.md)           | 声明式定时任务：加一个文件即生效 |
+| [02-secrets.md](02-secrets.md)       | Secrets 管理：gopass store 双分区、sec-run、一次性迁移 |

@@ -26,7 +26,7 @@ in
   catppuccin.zed.enable = false;
   home.file = snippetLinks;
   home.shellAliases = {
-    zed = "sec-run zed";
+    zed = "sec-run --agent=zed";
   };
   programs.zed-editor = {
     enable = true;
