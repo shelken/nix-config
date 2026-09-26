@@ -381,7 +381,10 @@
     };
 
     # deploy-rs 远程部署
-    deploy-rs.url = "github:serokell/deploy-rs";
+    deploy-rs = {
+      url = "github:serokell/deploy-rs";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # disko
     disko = {
