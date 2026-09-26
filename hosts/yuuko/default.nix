@@ -10,6 +10,7 @@ in
     dev.container.enable = true;
 
     homelab.server.enable = true;
+    homelab.omlx.enable = true;
 
     network.fl-clash.enable = true;
 
