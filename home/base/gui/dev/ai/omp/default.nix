@@ -32,10 +32,16 @@ let
 in
 {
   config = mkIf cfg.enable {
-    # 别名：支持与 pi 并存，使用 sec-run omp
+    # 别名：支持与 pi 并存，经 sec-run 注入白名单变量
     home.shellAliases = {
-      omp = "sec-run omp";
+      omp = "sec-run --agent=omp";
     };
+
+    # omp 注入白名单, 变量须在 shelken.secrets 的 secretEnvMap 中声明
+    shelken.secrets.agentEnvMap.omp = [
+      "GITHUB_TOKEN"
+      "GROQ_API_KEY"
+    ];
 
     programs.mise.globalConfig.tools = {
       oh-my-pi = "latest";

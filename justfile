@@ -6,7 +6,8 @@ set dotenv-load := true
 # from .env
 
 profile := "$PROFILE"
-local_secrets_dir := env_var_or_default("LOCAL_SECRETS_DIR", home_dir() + "/code/MyRepo/nix/secrets.nix")
+# 本地 secrets store(gopass root); 迁移前可用 LOCAL_SECRETS_DIR 覆盖回旧 clone
+local_secrets_dir := env_var_or_default("LOCAL_SECRETS_DIR", home_dir() + "/.local/share/gopass/stores/root")
 
 
 alias b := rebuild
@@ -281,6 +282,51 @@ hm-dev-build *args:
 [macos]
 hm-dev *args:
     nh home switch -c {{ profile }} . -v --show-activation-logs -- --override-input secrets path:{{ local_secrets_dir }} {{ args }}
+
+# 编辑 sops 密文并提交同步; gitfs 的 sync 不提交非 .age 文件的变更, 故编辑后在此显式提交
+[macos]
+secret-edit *args:
+    #!/usr/bin/env zsh
+    cd {{ local_secrets_dir }}
+    sops ${*:-sops/secrets/shelken/default.yaml}
+    git add -A
+    git commit -m "sec: update secrets" || true
+    gopass sync
+
+# 体检 secrets store(只读): recipients 一致性 / 未提交内容 / remote 配置
+[macos]
+secrets-doctor:
+    #!/usr/bin/env zsh
+    store="{{ local_secrets_dir }}"
+    if [[ ! -d "$store/.git" ]]; then
+      echo "❌ store 不存在或未初始化: $store"
+      exit 1
+    fi
+    tmp=$(mktemp -d)
+    grep -o 'age1[a-z0-9]*' "$store/.age-recipients" 2>/dev/null | sort -u > "$tmp/age"
+    if [[ -f "$store/.sops.yaml" ]]; then
+      grep -o 'age1[a-z0-9]*' "$store/.sops.yaml" | sort -u > "$tmp/sops"
+      if diff -q "$tmp/age" "$tmp/sops" >/dev/null; then
+        echo "✅ recipients 一致 ($(wc -l < "$tmp/age" | tr -d ' ') 台机器)"
+      else
+        echo "⚠️ .age-recipients 与 .sops.yaml 公钥不一致:"
+        diff "$tmp/age" "$tmp/sops" || true
+      fi
+    else
+      echo "⏳ .sops.yaml 尚未迁入 store(迁移步骤未完成)"
+    fi
+    if [[ -n $(git -C "$store" status --porcelain) ]]; then
+      echo "⚠️ store 有未提交内容:"
+      git -C "$store" status --porcelain
+    else
+      echo "✅ store 工作区干净"
+    fi
+    if git -C "$store" remote get-url origin &>/dev/null; then
+      echo "✅ remote: $(git -C "$store" remote get-url origin)"
+    else
+      echo "⏳ store 未配置 remote(迁移步骤未完成)"
+    fi
+    rm -rf "$tmp"
 
 # 更新整个输入
 up:
