@@ -10,14 +10,17 @@
       settings.activate_aggressive = true;
       # 1.3.13 无 BUN_CONFIG_HTTP_IDLE_TIMEOUT，安装会在半开连接上永久挂起
       tools = {
-        bun = "1.3.14";
+        bun = "1.4.2";
         yt-dlp = "2026.08";
         "github:shelken/proxy" = {
           version = "latest";
           matching = "sb-sync";
         };
-        mr-boxington = "1.18"; # for cargo build, save storage
+        "cargo:mbx" = "1.18"; # for cargo build, save storage
       };
     };
+  };
+  home.shellAliases = {
+    cargo = "mbx";
   };
 }
