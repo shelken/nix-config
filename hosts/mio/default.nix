@@ -27,7 +27,6 @@ in
     dev.dbclient.enable = true;
 
     # tools
-    tools.battery.enable = true;
     tools.cap.enable = false; # 录屏obs
     tools.cherry-studio.enable = false;
     tools.download.enable = true;

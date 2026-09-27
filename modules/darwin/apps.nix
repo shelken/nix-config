@@ -105,10 +105,6 @@ in
         name = "bigwig-club/brew";
         trusted = true;
       } # upic
-      {
-        name = "mhaeuser/mhaeuser";
-        trusted = true;
-      } # battery-toolkit
     ];
 
     brews = [
