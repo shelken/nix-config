@@ -13,6 +13,8 @@ disable-model-invocation: true
 
 ## 迁移前确认
 
+**安装前必须与用户确认执行方式**:方案确认后,还要问清是「仅写配置(只创建/修改 mise.toml 等文件,不执行 `mise install`/`mise run setup`/`pre-commit run`,安装验证由用户手动跑)」还是「连带安装验证(写完配置直接执行安装和端到端验证)」。用户未明确前,默认只写配置、停下等用户确认,不得擅自安装。
+
 迁移前必须读完目标项目的 `flake.nix`,逐项识别它承担的职责。flake.nix 通常做这些事,迁移时逐一找替代:
 
 | flake.nix 职责 | mise 替代 | 说明 |
@@ -37,6 +39,8 @@ disable-model-invocation: true
 mise registry <tool>      # 查可用 backend(aqua/github/asdf/core/pipx 等)
 mise ls-remote <tool>     # 查版本号,选最新稳定版
 ```
+
+**mise 找不到的工具必须先 web 搜索一遍,再下结论**:`mise registry` 查不到 ≠ mise 装不了。用 `web_search` 搜「`<tool> mise plugin`」「`<tool> asdf plugin`」「`<tool> install mise`」等,确认是否真无 backend、有无社区插件或 aqua/github/pipx 等通用 backend 可用;确有多个可选方案时比较后选最稳的。只有搜索也确认没有可用方案的工具,才归入「系统级工具」交给 Homebrew/Home Manager。禁止查一次 registry 为空就直接放弃进 mise。
 
 写入 `mise.toml`,所有工具用具体版本号:
 
@@ -103,14 +107,16 @@ programs.mise = {
 - 逐条核对原 hook 的 `entry`/`files`/`pass_filenames` 等字段,原样保留语义;涉及 `--staged` 等不接收文件名的命令,保持 `pass_filenames: false`。
 ### 6. 清理 nix 残留
 
-删除 flake 文件,清理 git 和 .gitignore。**完成标准:无 flake.nix/flake.lock;原被 gitignore 的生成物(如 `.pre-commit-config.yaml`)移出忽略;`core.hooksPath` 已 unset。**
+删除 flake 文件与 direnv 残留,清理 git 和 .gitignore。**完成标准:无 flake.nix/flake.lock/.envrc/.direnv;原被 gitignore 的生成物(如 `.pre-commit-config.yaml`)移出忽略;`core.hooksPath` 已 unset。**
 
 ```bash
 rm flake.nix flake.lock
+rm .envrc                        # 内容为 use flake 的 direnv 入口,若被 git 跟踪需 git rm --cached
+rm -rf .direnv/                  # direnv 自动生成的缓存目录,连同 .gitignore 里的 .direnv 条目一起清掉
 git config --unset-all core.hooksPath   # git-hooks.nix 残留,不清理会致 pre-commit install 拒绝
 ```
 
-检查 `.gitignore`,把「原 nix 生成物」从忽略列表移除(改手写后要进版本库)。
+检查 `.gitignore`,把「原 nix 生成物」从忽略列表移除(`.direnv`、`.pre-commit-config.yaml` 等,改手写后要进版本库)。
 
 ### 7. 验证
 
@@ -166,5 +172,6 @@ mise trust / mise untrust # 信任/取消信任配置
 
 - **`mise trust`**:首次进入 mise.toml 未信任,所有工具显示 "not installed",需 `mise trust`。
 - **系统级工具不进 mise**:设备通信、GUI 应用、厂商自托管二进制等,mise 的 aqua/github backend 覆盖不到(它们依赖标准分发渠道),plugin 方案往往绕且不稳。判断标准是「是否需要项目级版本锁定」,不需要则交给系统包管理器。
+- **registry 查不到 ≠ 装不了**:判定一个工具进不了 mise 之前,必须先 web 搜索确认过(见 SOP 第 1 步),避免把有社区插件/asdf 插件的工具误判为系统级。
 - **版本号写死**:用具体版本号而非 `latest`,保证可复现;升级时手动改。
 - **pre-commit hook 优先使用标准远端源**:通用 hook 走标准 `repo: https://github.com/...` 远端仓库,由 pre-commit 原生管理隔离环境;严禁为了 `repo: local` 而在 `mise.toml` 塞入 `pipx:pre-commit-hooks` 等伪系统依赖。`language: system` 仅限调用项目自身的核心工具。
