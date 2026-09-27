@@ -1,8 +1,12 @@
 providers:
-  openai:
-    baseUrl: http://192.168.69.60:8317/v1
+  # cpa 端点锚点(openai/cpa 两 provider 共用): 外出 localhost, 回家改回 http://192.168.69.60:8317/v1
+  openai: &cpa-endpoint
+    # baseUrl: http://192.168.69.60:8317/v1
+    baseUrl: http://localhost:8317/v1
     apiKey: CPA_PI_API_KEY
     api: openai-responses
+    discovery:
+      type: openai-models-list
   commandcode-local:
     baseUrl: https://commandcode.ooooo.space/v1
     apiKey: COMMANDCODE_API_KEY
@@ -17,11 +21,7 @@ providers:
     discovery:
       type: openai-models-list
   cpa:
-    baseUrl: http://192.168.69.60:8317/v1
-    apiKey: CPA_PI_API_KEY
-    api: openai-responses
-    discovery:
-      type: openai-models-list
+    <<: *cpa-endpoint
     # 档位权威来源: cpa-plugins/plugins/workbuddy/data/static-config.json
     # 宿主 /v1/models 只回 id/object/created/owned_by, 无能力字段, 发现结果查内置目录会命中
     # 同名无关行 (如 hy3 命中 opencode-go 的 minimal..xhigh), 故在此逐 id 覆盖为上游真实档位。

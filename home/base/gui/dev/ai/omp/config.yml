@@ -12,9 +12,9 @@ modelRoles:
   review: openai-codex/gpt-6-sol:high
   smol: google-antigravity/gemini-3.8-flash:high
   wbds: cpa/workbuddy/deepseek-v4.1-flash:high
-  task: commandcode-local/deepseek/deepseek-v4.1-flash:high
+  task: cpa/workbuddy/glm-5.3-flash:high
   default: cpa/workbuddy/glm-5.3-flash:high
-  slow: openai-codex/gpt-6-astra:low
+  slow: openai-codex/gpt-5.6-sol:high
   web: google/gemini-2.5-flash
   qwcn: cpa/qwenworkcn/pro:high
   test: zcode-local/glm-5.3-flash:high

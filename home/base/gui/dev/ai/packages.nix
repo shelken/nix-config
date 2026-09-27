@@ -20,7 +20,6 @@
       # claude-code = "latest";
       # "npm:droid" = "latest";
       antigravity-cli = "1.1.24";
-      oh-my-pi = "latest";
     };
 
     programs.zsh.initContent = ''

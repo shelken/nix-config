@@ -37,8 +37,9 @@ in
       omp = "sec-run omp";
     };
 
-    programs.mise.globalConfig.tools = {
-      oh-my-pi = "latest";
+    programs.mise.globalConfig.tools.oh-my-pi = {
+      version = "latest";
+      minimum_release_age = "0h";
     };
 
     home.file = {
