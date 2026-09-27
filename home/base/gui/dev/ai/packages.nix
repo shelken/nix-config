@@ -9,16 +9,10 @@
     programs.mise.globalConfig.tools = {
       # agent tools
       herdr = "latest";
-      worktrunk = "latest";
-      rtk = "latest";
-      "pipx:cua-cli" = "latest"; # computer-use 控制
-      "github:lycorp-jp/sim-use" = "latest"; # ios 模拟器控制
-      "github:dmtrKovalenko/fff" = {
-        # omp 使用
-        version = "latest";
-        matching = "fff-mcp";
-        rename_exe = "fff-mcp";
-      };
+      worktrunk = "0.79";
+      rtk = "0.50";
+      "pipx:cua-cli" = "0.1"; # computer-use 控制
+      "github:lycorp-jp/sim-use" = "0.14"; # ios 模拟器控制
 
       # agent client
       # 需要保留的会定死版本

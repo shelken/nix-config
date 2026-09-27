@@ -9,16 +9,15 @@
       # 解决场景:某工具同时在 brew 和 mise 声明时,brew 路径抢先导致 mise 版本锁定失效。
       settings.activate_aggressive = true;
       # 1.3.13 无 BUN_CONFIG_HTTP_IDLE_TIMEOUT，安装会在半开连接上永久挂起
-      tools.bun = "1.3.14";
-      tools.fastfetch = "latest";
-      tools.yt-dlp = "latest";
-      tools."github:shelken/proxy" = {
-        version = "latest";
-        matching = "sb-sync";
+      tools = {
+        bun = "1.3.14";
+        yt-dlp = "2026.08";
+        "github:shelken/proxy" = {
+          version = "latest";
+          matching = "sb-sync";
+        };
+        mr-boxington = "1.18"; # for cargo build, save storage
       };
-      # sb-sync 仍是客户端 encode/keygen 与服务端 server 二进制来源（proxy 仓库发布）
-
-      # agent tools/client 见 dev/ai/packages.nix，由 dev.ai.enable 控制
     };
   };
 }
