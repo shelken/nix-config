@@ -26,7 +26,7 @@
   # 用户级配置~/.config/nix/nix.conf不要配置substituters覆盖
   # 调整这个时先确保这个和lock分离, 先让这个switch,再更新
   environment.etc."nix/nix.custom.conf".text = ''
-    substituters = https://icache.ooooo.space/cache.nixos.org https://icache.ooooo.space/nix-community.cachix.org https://cache.nixos.org https://nix-community.cachix.org https://mirrors.ustc.edu.cn/nix-channels/store https://install.determinate.systems
+    substituters = https://icache.int.ooooo.space/cache.nixos.org https://icache.int.ooooo.space/nix-community.cachix.org https://cache.nixos.org https://nix-community.cachix.org https://mirrors.ustc.edu.cn/nix-channels/store https://install.determinate.systems
     extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
     fallback = true
     # 离线/被墙的 substituter 连接快速失败（部署日志里 USTC 5s 超时即此问题）；
