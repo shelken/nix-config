@@ -18,7 +18,7 @@ Home partial build 让用户通过 `just hm-build` 构建整份机器配置中�
 
 Preconditions:
 
-- `verify.sh doctor` 输出 `doctor=ok`
+- helper 内置 doctor；门禁失败时不执行构建
 - 当前工作树包含待验证变更，新增且需要进入 flake 的配置文件已暂存
 - evidence 目录不与其他 drive 共用
 

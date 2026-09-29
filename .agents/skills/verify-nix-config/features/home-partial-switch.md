@@ -20,18 +20,18 @@ Home partial switch 让用户通过 `just hm` 激活当前机器配置中的 Hom
 Preconditions:
 
 - 任务明确授权修改当前用户 Home 状态
-- `verify.sh doctor` 输出 `doctor=ok`
-- `just hm-build` 已成功，构建差异已审查
+- `verify.sh doctor` 输出 `doctor=ok`，将其 `host` 字段设为 `HOST_ATTR`，后续命令显式使用该主机
+- `just --set profile "$HOST_ATTR" hm-build` 已成功，构建差异已审查
 - 当前没有其他 system/Home switch 正在运行
 - 当 system build diff 移除系统用户包环境时，已先完成对应的 `just sw`
 
 - **创建 proof 目录。** 设置 `EVIDENCE_DIR=${TMPDIR:-/tmp}/verify-nix-config-evidence/<run-id>-home-switch` 并创建目录
 - **记录前态。** 运行 `.agents/skills/verify-nix-config/scripts/verify.sh snapshot "$EVIDENCE_DIR/before-links.txt"`
-- **运行真实入口。** 在 Bash 中执行 `set -o pipefail; just hm 2>&1 | tee "$EVIDENCE_DIR/transcript.log"`，保留 `PIPESTATUS[0]`，要求退出码为 `0`
-- **记录后态。** 运行 `verify.sh snapshot "$EVIDENCE_DIR/after-links.txt"`。`/run/current-system` 与 system profile 行保持不变，Home generation/profile 行按新 activation 更新
+- **运行真实入口。** 在 Bash 中执行 `set -o pipefail; just --set profile "$HOST_ATTR" hm 2>&1 | tee "$EVIDENCE_DIR/transcript.log"`。紧接着保存 `PIPESTATUS[0]` 到退出码证据，要求为 `0`
+- **记录后态。** 运行 `verify.sh snapshot "$EVIDENCE_DIR/after-links.txt"`。系统两条链接保持不变，解析 Home profile/current-home 的最终目标并确认与本次构建结果一致；重复应用同一配置无需产生新路径
 - **确认副作用。** 从变更对应的用户入口验证，例如 `zsh -lic 'whence -a <command>'`、读取 Home 管理文件、查询用户服务。结果写入 `$EVIDENCE_DIR/side-effects.txt`
 - **确认删除。** 对被撤销声明检查目标确实不存在，不能用 PATH 中更早的替代命令掩盖旧文件
-- **确认幂等。** 变更要求防复活时再次运行 `just hm`，重复记录 transcript 与 side effect，system 链接仍不变
+- **确认幂等。** 变更要求防复活时再次运行 `just --set profile "$HOST_ATTR" hm`，另存 transcript 与副作用结果，系统链接仍不变
 
 ## Gotchas
 

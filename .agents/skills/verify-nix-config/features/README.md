@@ -6,16 +6,16 @@
 
 - 从仓库根目录运行命令
 - 当前机器安装 `nix`、`just`、`nh`、`jq`、`git`
-- 使用 `verify.sh doctor` 动态解析当前 Darwin flake attr，不读取 `.env`
+- build helper 内置 doctor，switch 前单独运行；主机选择及门禁见 [Doctor](../SKILL.md#doctor)
 - build 可共享 Nix store，但 proof 目录必须独立
 - switch 修改共享 system/Home 状态，同一时间只允许一个 drive，并要求任务明确授权
 
 ## Driving conventions
 
 - Bash harness 为 `.agents/skills/verify-nix-config/scripts/verify.sh`
-- build 先运行 doctor，再执行仓库公开的 `just` 入口
+- build helper 检查主机后，通过 `just --set profile <host>` 调用公开构建入口
 - 稳定 handle 使用 flake attr、drvPath、profile symlink、生成文件与 CLI 解析结果
-- `VERIFY_HOST=<flake-attr>` 只用于 hostname 无法唯一匹配时
+- `VERIFY_HOST=<flake-attr>` 用于显式指定当前机器对应的输出
 - `VERIFY_EVIDENCE_DIR=<dir>` 用于固定 proof 目录
 - 不使用固定 sleep，命令退出就是短命 CLI 的完成信号
 
@@ -26,7 +26,7 @@
 - switch proof 同时记录 action 和真实副作用，不能只保留 activation 成功日志
 - dry-run 或 build 的安全性通过观察 profile、文件、网络或 Git ref 证明，不依赖命令名称
 - 无法到达的入口记录原命令与未满足前置条件，不能用另一个入口的成功代替
-- cleanup 删除 scratch，保留 evidence
+- 保留 evidence，供后续复查
 
 ## Feature entry contract
 
