@@ -1,5 +1,4 @@
 {
-  lib,
   myvars,
   ...
 }:
@@ -142,7 +141,6 @@
             "zh-Hant-${myvars.region}"
             "en-${myvars.region}"
           ];
-          AppleLocale = "zh_CN@rg=${lib.toLower myvars.region}zzzz";
           AppleFirstWeekday.gregorian = 2;
           AppleICUDateFormatStrings."1" = "y-MM-dd";
 
