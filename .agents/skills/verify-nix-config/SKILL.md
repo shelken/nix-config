@@ -34,6 +34,7 @@ build helper 内置 `doctor`，无需提前重复运行。仅检查前置条件�
 
 - Home 局部构建：读 [`features/home-partial-build.md`](features/home-partial-build.md)，运行 `verify.sh home-build`
 - Darwin 系统构建：读 [`features/darwin-system-build.md`](features/darwin-system-build.md)，运行 `verify.sh darwin-build`
+- Darwin defaults 回读：读 [`features/darwin-defaults-readback.md`](features/darwin-defaults-readback.md)，运行 `verify.sh defaults`，用于证明偏好值确实落到系统存储
 - Home 局部切换：读 [`features/home-partial-switch.md`](features/home-partial-switch.md)，仅在任务明确授权应用用户态配置时运行 `just hm`
 - Darwin 系统切换：读 [`features/darwin-system-switch.md`](features/darwin-system-switch.md)，仅在任务明确授权完整系统 switch 时运行 `just sw`
 

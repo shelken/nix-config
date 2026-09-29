@@ -41,5 +41,6 @@
 
 - [Home partial build](./home-partial-build.md)：构建当前机器的 Home 局部输出，并证明它与系统 Home 同源且不切换 profile
 - [Darwin system build](./darwin-system-build.md)：构建当前机器 Darwin toplevel，并证明 build 没有切换系统或 Home
+- [Darwin defaults readback](./darwin-defaults-readback.md)：回读构建产物中的 defaults 写入，与系统实际存储逐项比对
 - [Home partial switch](./home-partial-switch.md)：经授权应用 Home 局部配置，并从用户入口确认文件、包或服务副作用
 - [Darwin system switch](./darwin-system-switch.md)：经授权切换完整 Darwin system，并确认 system generation 与内嵌 Home 激活结果
