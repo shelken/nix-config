@@ -9,34 +9,15 @@ description: 验证 nix-config 的 Darwin/Home Manager CLI 变更时使用，包
 
 先读 [`features/README.md`](features/README.md)，再按变更影响选择所有对应 feature。一次方便入口的成功不能替代 map 中其他受影响入口
 
-## Launch
-
-这是短命 CLI，没有常驻服务或端口。每次 drive 独立运行，开始前执行：
-
-```bash
-./.agents/skills/verify-nix-config/scripts/verify.sh doctor
-```
-
-输出 `doctor=ok`、flake host、用户名、两个相同的 Home activationPackage drvPath 后，实例才值得继续验证
-
-安全构建入口：
-
-```bash
-./.agents/skills/verify-nix-config/scripts/verify.sh home-build
-./.agents/skills/verify-nix-config/scripts/verify.sh darwin-build
-```
-
-命令退出即完成 teardown。helper 自动删除 scratch，不删除 evidence
-
 ## Doctor
 
-`doctor` 是只读门禁：
+build helper 内置 `doctor`，无需提前重复运行。仅检查前置条件或准备 switch 时单独执行：
 
 ```bash
 ./.agents/skills/verify-nix-config/scripts/verify.sh doctor
 ```
 
-它动态匹配当前系统 hostname 与 `darwinConfigurations` 的 flake attr，不读取 `.env`，并检查：
+它匹配当前 `LocalHostName` 与 `darwinConfigurations` 的 `networking.hostName`，也可用 `VERIFY_HOST=<flake-attr>` 显式选择本机输出。它不读取 `.env`，检查：
 
 - `nix`、`just`、`nh`、`jq`、`git` 可用
 - 当前机器存在 Darwin 与 Home 输出
@@ -45,7 +26,7 @@ description: 验证 nix-config 的 Darwin/Home Manager CLI 变更时使用，包
 - `enableLegacyProfileManagement = true`
 - Home profile 不在系统 `/etc/profiles/per-user` 环境
 
-任何检查失败都停止 drive。flake attr 无法从 hostname 唯一匹配时，显式设置 `VERIFY_HOST=<flake-attr>` 后重跑
+检查失败即停止。找不到 hostname 匹配时，设置 `VERIFY_HOST` 后重跑；build helper 将已检查的主机通过 `just --set profile` 传给构建入口，避免被 `.env` 或环境中的 `PROFILE` 改变目标
 
 ## Drive
 
@@ -71,40 +52,14 @@ ${TMPDIR:-/tmp}/verify-nix-config-evidence/<UTC>-<host>-<feature>-<pid>/
 - `metadata.txt`：feature、host、用户、Git revision、工具版本
 - `working-tree.txt`：运行时工作树状态
 - `doctor.txt`：同源与 profile 门禁
-- `transcript.log`：真实 `just` 命令、stdout、stderr、退出码
+- `transcript.log`：真实 `just` 命令、stdout、stderr
 - `before-links.txt` / `after-links.txt`：system 与 Home profile 链接
-- `summary.json`：命令结果、drvPath、一致性和共享链接是否变化
+- `summary.json`：命令退出码、drvPath 和共享链接是否变化
 
-proof 必须同时包含用户动作和结果状态。build 的安全性通过实际比较 profile 链接证明，不能只相信「build」命令名。switch 还要从第二个用户入口确认副作用，例如重新解析 CLI、读取生成文件或查询服务状态。生产边界没有既有 mock 时不用 mock
+proof 同时包含动作和结果。build 比较 profile 链接前后不变；switch 还需从消费者确认副作用，例如解析 CLI、检查生成文件或查询服务。偏好回读只证明存储层，应用效果需查询消费该偏好的原生 API 或观察实际行为
 
 ## Cleanup
 
-build helper 只创建 scratch 与 evidence：
-
-- scratch 在成功、失败和中断时自动删除
-- evidence 保留，失败也保留 transcript
-- 没有进程可终止，不按进程名 kill
+build helper 保留 evidence，不创建额外临时目录。Nix store 中的构建结果保留供后续验证
 
 switch 修改共享机器状态，无法隔离成并行实例。验证完成后保留已授权的目标状态；回滚属于新的系统变更，只能在明确授权后运行仓库的 `just rollback`
-
-## Helpers
-
-唯一 helper 已设为可执行：
-
-```bash
-# 只读健康门
-./.agents/skills/verify-nix-config/scripts/verify.sh doctor
-
-# 构建并保存完整证据
-./.agents/skills/verify-nix-config/scripts/verify.sh home-build
-./.agents/skills/verify-nix-config/scripts/verify.sh darwin-build
-
-# 为经授权的 switch 保存共享 profile 快照
-./.agents/skills/verify-nix-config/scripts/verify.sh snapshot <output-file>
-
-# hostname 与 flake attr 不同或无法自动匹配时
-VERIFY_HOST=<flake-attr> ./.agents/skills/verify-nix-config/scripts/verify.sh doctor
-
-# 需要固定 proof 目录时
-VERIFY_EVIDENCE_DIR=<dir> ./.agents/skills/verify-nix-config/scripts/verify.sh home-build
-```

@@ -6,7 +6,7 @@ Darwin system switch 让用户通过 `just sw` 构建并激活完整机器配置
 
 - `darwin-switch-authorized` 仅在任务明确授权完整系统变更时运行
 - `darwin-switch-command` 运行仓库公开的 `just sw` 入口
-- `darwin-switch-generation` 更新 current-system 与 system profile 到同一个新 generation
+- `darwin-switch-generation` current-system 与 system profile 指向本次构建结果
 - `darwin-switch-home` 运行系统内嵌 Home activation
 - `darwin-switch-side-effects` 从系统或用户入口确认目标行为
 
@@ -20,17 +20,17 @@ Darwin system switch 让用户通过 `just sw` 构建并激活完整机器配置
 Preconditions:
 
 - 任务明确授权完整 Darwin switch
-- `verify.sh doctor` 输出 `doctor=ok`
-- `verify.sh darwin-build` 成功，完整 diff 已审查且没有无法归因的系统变化
+- `verify.sh doctor` 输出 `doctor=ok`，将其 `host` 字段设为 `HOST_ATTR`，后续命令显式使用该主机
+- `VERIFY_HOST="$HOST_ATTR" ./.agents/skills/verify-nix-config/scripts/verify.sh darwin-build` 成功，完整 diff 已审查且没有无法归因的系统变化
 - 当前没有其他 system/Home switch 正在运行
 - sudo 凭据与交互终端可用
 
 - **创建 proof 目录。** 设置 `EVIDENCE_DIR=${TMPDIR:-/tmp}/verify-nix-config-evidence/<run-id>-darwin-switch` 并创建目录
 - **记录前态。** 运行 `.agents/skills/verify-nix-config/scripts/verify.sh snapshot "$EVIDENCE_DIR/before-links.txt"`
-- **运行真实入口。** 在交互式 Bash 中执行 `set -o pipefail; just sw 2>&1 | tee "$EVIDENCE_DIR/transcript.log"`，保留 `PIPESTATUS[0]`，要求退出码为 `0`
-- **记录后态。** 运行 `verify.sh snapshot "$EVIDENCE_DIR/after-links.txt"`。current-system 与 system profile 指向新的同一 generation，Home profile/current-home 指向本次系统内嵌 Home activation
+- **运行真实入口。** 在交互式 Bash 中执行 `set -o pipefail; just --set profile "$HOST_ATTR" sw 2>&1 | tee "$EVIDENCE_DIR/transcript.log"`。紧接着保存 `PIPESTATUS[0]` 到退出码证据，要求为 `0`
+- **记录后态。** 运行 `verify.sh snapshot "$EVIDENCE_DIR/after-links.txt"`，解析 symlink 的最终目标。current-system 与 system profile 必须指向本次构建结果，Home profile/current-home 必须指向系统内嵌的 Home 结果；重复应用同一配置无需产生新路径
 - **确认副作用。** 通过变更对应的真实入口查询系统设置、launchd 服务、Home 文件或 CLI，输出写入 `$EVIDENCE_DIR/side-effects.txt`
-- **确认同源。** switch 后重跑 `verify.sh doctor`，要求系统 Home 与 `homeConfigurations` drvPath 仍相同
+- **确认同源。** switch 后运行 `VERIFY_HOST="$HOST_ATTR" ./.agents/skills/verify-nix-config/scripts/verify.sh doctor`，要求两个 Home drvPath 相同
 
 ## Gotchas
 

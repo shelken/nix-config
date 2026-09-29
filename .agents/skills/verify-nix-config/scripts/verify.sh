@@ -3,7 +3,6 @@ set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 USER_NAME="$(id -un)"
-SCRATCH=""
 
 fail() {
   printf 'verify-nix-config: %s\n' "$*" >&2
@@ -98,24 +97,16 @@ print_doctor() {
   printf 'enableLegacyProfileManagement=%s\n' "$LEGACY_PROFILE"
 }
 
-cleanup_scratch() {
-  if [ -n "$SCRATCH" ] && [ -e "$SCRATCH" ]; then
-    rm -rf "$SCRATCH"
-  fi
-}
-
 run_build() {
   local feature="$1"
-  local command_label="$2"
-  shift 2
-  local command_status links_unchanged timestamp evidence_dir
+  local recipe="$2"
+  local command_label command_status links_unchanged timestamp evidence_dir
 
   doctor_core
+  command_label="just --set profile $HOST_ATTR $recipe"
   timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
   evidence_dir="${VERIFY_EVIDENCE_DIR:-${TMPDIR:-/tmp}/verify-nix-config-evidence/${timestamp}-${HOST_ATTR}-${feature}-$$}"
   mkdir -p "$evidence_dir"
-  SCRATCH="$(mktemp -d "${TMPDIR:-/tmp}/verify-nix-config-scratch.XXXXXX")"
-  trap cleanup_scratch EXIT INT TERM
 
   print_doctor > "$evidence_dir/doctor.txt"
   snapshot_links > "$evidence_dir/before-links.txt"
@@ -128,13 +119,12 @@ run_build() {
     printf 'nix=%s\n' "$(nix --version)"
     printf 'nh=%s\n' "$(nh --version)"
     printf 'just=%s\n' "$(just --version)"
-    printf 'scratch=%s\n' "$SCRATCH"
   } > "$evidence_dir/metadata.txt"
 
   set +e
   {
     printf '$ %s\n' "$command_label"
-    "$@"
+    just --set profile "$HOST_ATTR" "$recipe"
   } 2>&1 | tee "$evidence_dir/transcript.log"
   command_status=${PIPESTATUS[0]}
   set -e
@@ -166,9 +156,6 @@ run_build() {
       shared_profile_links_unchanged: $links_unchanged
     }' > "$evidence_dir/summary.json"
 
-  cleanup_scratch
-  trap - EXIT INT TERM
-  [ ! -e "$SCRATCH" ] || fail "scratch cleanup failed: $SCRATCH"
   printf 'evidence=%s\n' "$evidence_dir"
 
   [ "$command_status" -eq 0 ] || fail "$command_label exited with $command_status"
@@ -188,11 +175,11 @@ case "${1:-}" in
     ;;
   home-build)
     [ "$#" -eq 1 ] || usage
-    run_build home-partial-build "just hm-build" just hm-build
+    run_build home-partial-build hm-build
     ;;
   darwin-build)
     [ "$#" -eq 1 ] || usage
-    run_build darwin-system-build "just bd" just bd
+    run_build darwin-system-build bd
     ;;
   snapshot)
     [ "$#" -eq 2 ] || usage
