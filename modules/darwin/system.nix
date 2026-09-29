@@ -32,6 +32,10 @@
     Defaults:${myvars.username} env_keep += "SSH_AUTH_SOCK"
   '';
 
+  # 时区由 nix-darwin activation 阶段执行 `systemsetup -settimezone` 落盘到 /etc/localtime，
+  # 无 defaults 映射
+  time.timeZone = myvars.timeZone;
+
   system = {
     # activationScripts are executed every time you boot the system or run `nixos-rebuild` / `darwin-rebuild`.
     activationScripts.postActivation.text = ''
@@ -43,8 +47,6 @@
 
     # ref: https://mynixos.com/nix-darwin/options/system.defaults
     defaults = {
-      menuExtraClock.Show24Hour = true; # show 24 hour clock
-
       # customize dock
       dock = {
         autohide = true; # automatically hide and show the dock
@@ -136,7 +138,7 @@
           AppleHighlightColor = "1.000000 0.749020 0.823529 Pink"; # 高亮色
           AppleIconAppearanceTintColor = "Other";
           AppleICUForce24HourTime = true;
-          AppleICUForce12HourTime = false; # 系统设置之后发现两个并存
+          AppleICUForce12HourTime = false; # 12h 键优先：为 true 时无论 24h 键为何值都走 12h
           AppleIconAppearanceCustomTintColor = "0.475000 0.822795 1.000000 0.845588";
           AppleLanguages = [
             "zh-Hans-${myvars.region}"

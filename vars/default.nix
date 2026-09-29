@@ -4,6 +4,7 @@
   userfullname = "Shelken Pan";
   useremail = "shelken.pxk@gmail.com";
   region = "TW";
+  timeZone = "Asia/Taipei";
   catppuccin = rec {
     flavor = "macchiato";
     accent = "pink";
