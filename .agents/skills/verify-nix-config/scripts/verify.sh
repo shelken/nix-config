@@ -162,8 +162,46 @@ run_build() {
   [ "$links_unchanged" = "true" ] || fail "$command_label changed shared profile links"
 }
 
+run_defaults() {
+  local activate timestamp evidence_dir status
+  local script_dir
+  local -a candidates
+
+  doctor_core
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  evidence_dir="${VERIFY_EVIDENCE_DIR:-${TMPDIR:-/tmp}/verify-nix-config-evidence/${timestamp}-${HOST_ATTR}-darwin-defaults-$$}"
+  mkdir -p "$evidence_dir"
+
+  candidates=(
+    "/run/current-system/activate"
+    "$(nix eval --raw ".#darwinConfigurations.${HOST_ATTR}.config.system.build.toplevel.outPath")/activate"
+  )
+  activate=""
+  for candidate in "${candidates[@]}"; do
+    if [ -f "$candidate" ]; then
+      activate="$candidate"
+      break
+    fi
+  done
+  [ -n "$activate" ] || fail "no generated activate script found for ${HOST_ATTR}"
+
+  printf 'activate=%s\n' "$activate" > "$evidence_dir/metadata.txt"
+  printf 'host=%s\n' "$HOST_ATTR" >> "$evidence_dir/metadata.txt"
+  printf 'user=%s\n' "$USER_NAME" >> "$evidence_dir/metadata.txt"
+
+  set +e
+  python3 "$script_dir/defaults-readback.py" "$activate" \
+    --output "$evidence_dir/defaults-readback.json" 2>&1 | tee "$evidence_dir/transcript.log"
+  status=${PIPESTATUS[0]}
+  set -e
+
+  printf 'evidence=%s\n' "$evidence_dir"
+  [ "$status" -eq 0 ] || fail "defaults readback found drift or unreadable domains"
+}
+
 usage() {
-  printf 'usage: %s {doctor|home-build|darwin-build|snapshot <output-file>}\n' "$0" >&2
+  printf 'usage: %s {doctor|home-build|darwin-build|defaults|snapshot <output-file>}\n' "$0" >&2
   exit 2
 }
 
@@ -187,6 +225,10 @@ case "${1:-}" in
     mkdir -p "$(dirname "$2")"
     snapshot_links > "$2"
     printf 'snapshot=%s\n' "$2"
+    ;;
+  defaults)
+    [ "$#" -eq 1 ] || usage
+    run_defaults
     ;;
   *) usage ;;
 esac
