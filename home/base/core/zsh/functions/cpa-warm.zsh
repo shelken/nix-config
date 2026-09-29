@@ -7,7 +7,7 @@ emulate -L zsh
 unsetopt monitor notify
 
 local apiurl="http://127.0.0.1:8317"
-local model="gpt-5.4-mini(none)"
+local model="gpt-5.6-luna(none)"
 local envkey="PI_CPA_API_KEY"
 local max=1
 local base_input=""
@@ -61,7 +61,7 @@ while [[ $# -gt 0 ]]; do
         echo ""
         echo "默认值:"
         echo "  --apiurl http://127.0.0.1:8317"
-        echo "  --model  gpt-5.4-mini(off)"
+        echo "  --model  gpt-5.6-luna(off)"
         echo "  --envkey PI_CPA_API_KEY"
         echo "  --max    1"
         echo ""

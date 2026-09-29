@@ -871,7 +871,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var demoShort: [(String, Bool)] {
         [
             ("[00:00:01] ===== Task 'pi-ping' Started =====", false),
-            ("pi: model=openai-codex/gpt-5.6-luna thinking=off", false),
+            ("pi: model=openai/gpt-5.6-luna thinking=off", false),
             ("pi: session=offline prompt=\"hi\"", false),
             ("pi: request sent (tokens in=2)", false),
             ("pi: streaming response …", false),
@@ -883,7 +883,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var demoLong: [(String, Bool)] {
         [
             ("[00:00:01] ===== Task 'pi-ping' Started =====", false),
-            ("pi: model=openai-codex/gpt-5.6-luna thinking=off", false),
+            ("pi: model=openai/gpt-5.6-luna thinking=off", false),
             ("pi: session=offline prompt=\"hi\"", false),
             ("pi: tools=disabled skills=disabled extensions=disabled", false),
             ("pi: request sent (tokens in=2)", false),

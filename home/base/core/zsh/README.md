@@ -52,7 +52,7 @@ cpa-warm [--apiurl <url>] [--model <model>] [--envkey <ENV_VAR_NAME>] [--max <n>
 
 # 默认值
 # --apiurl https://example.com
-# --model  gpt-5.4-mini(off)
+# --model  gpt-5.6-luna(off)
 # --envkey PI_CPA_API_KEY
 ```
 

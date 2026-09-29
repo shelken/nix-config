@@ -87,15 +87,7 @@ in
                 chat_completions = false;
               };
             }
-            {
-              name = "gpt-5.4-mini";
-              display_name = "GPT-5.4 Mini";
-              max_tokens = 400000;
-              max_output_tokens = 128000;
-              capabilities = {
-                chat_completions = false;
-              };
-            }
+
             {
               name = "gpt-5.5";
               display_name = "GPT-5.5";
