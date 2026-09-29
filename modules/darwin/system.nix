@@ -135,6 +135,8 @@
           AppleAccentColor = 6; # 粉色
           AppleHighlightColor = "1.000000 0.749020 0.823529 Pink"; # 高亮色
           AppleIconAppearanceTintColor = "Other";
+          AppleICUForce24HourTime = true;
+          AppleICUForce12HourTime = false; # 系统设置之后发现两个并存
           AppleIconAppearanceCustomTintColor = "0.475000 0.822795 1.000000 0.845588";
           AppleLanguages = [
             "zh-Hans-${myvars.region}"
