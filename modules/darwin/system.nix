@@ -35,8 +35,7 @@
   system = {
     # activationScripts are executed every time you boot the system or run `nixos-rebuild` / `darwin-rebuild`.
     activationScripts.postActivation.text = ''
-      # activateSettings -u will reload the settings from the database and apply them to the current session,
-      # so we do not need to logout and login again to make the changes take effect.
+      # 部分设置仍需重启应用或重新登录；此命令不能保证所有偏好立即生效。
       sudo -u ${myvars.username} /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
     '';
 
@@ -54,10 +53,11 @@
         mru-spaces = false;
 
         # customize Hot Corners(触发角, 鼠标移动到屏幕角落时触发的动作) 1为无动作
-        wvous-tl-corner = 1; # top-left - Mission Control
-        wvous-tr-corner = 4; # top-right - Desktop
-        wvous-bl-corner = 11; # bottom-left - Launchpad
-        wvous-br-corner = 1; # bottom-right - Quick Note
+        wvous-tl-corner = 1; # 左上：无操作
+        wvous-tr-corner = 4; # 右上：显示桌面
+        # 11 是旧 Launchpad 编号；新版 Apps 的编号未实测，保留现值。
+        wvous-bl-corner = 11;
+        wvous-br-corner = 1; # 右下：无操作
       };
 
       # customize finder
@@ -68,6 +68,13 @@
         QuitMenuItem = true; # enable quit menu item
         ShowPathbar = true; # show path bar
         ShowStatusBar = true; # show status bar
+        AppleShowAllFiles = true;
+        ShowExternalHardDrivesOnDesktop = true;
+        ShowHardDrivesOnDesktop = true;
+        ShowMountedServersOnDesktop = true;
+        ShowRemovableMediaOnDesktop = true;
+        _FXSortFoldersFirst = true;
+        FXDefaultSearchScope = "SCcf";
       };
 
       # customize trackpad
@@ -88,14 +95,13 @@
         # AppleInterfaceStyle = "Dark"; # dark mode
 
         # AppleKeyboardUIMode = 3; # Mode 3 enables full keyboard control.
-        ApplePressAndHoldEnabled = true; # enable press and hold
-
-        # If you press and hold certain keyboard keys when in a text area, the key’s character begins to repeat.
-        # This is very useful for vim users, they use `hjkl` to move cursor.
-        # sets how long it takes before it starts repeating.
-        InitialKeyRepeat = 15; # normal minimum is 15 (225 ms), maximum is 120 (1800 ms)
-        # sets how fast it repeats once it starts.
-        KeyRepeat = 2; # normal minimum is 2 (30 ms), maximum is 120 (1800 ms)
+        # 支持长按选字的应用会优先显示选字菜单，不保证按住字母连续输入。
+        ApplePressAndHoldEnabled = true;
+        InitialKeyRepeat = 15;
+        KeyRepeat = 2;
+        AppleSpacesSwitchOnActivate = true;
+        AppleShowScrollBars = "WhenScrolling";
+        AppleIconAppearanceTheme = "RegularAutomatic";
 
         NSAutomaticCapitalizationEnabled = false; # disable auto capitalization(自动大写)
         NSAutomaticDashSubstitutionEnabled = false; # disable auto dash substitution(智能破折号替换)
@@ -109,52 +115,42 @@
         AppleShowAllExtensions = true;
       };
 
+      # 使用模块布尔类型，避免自定义域绕过类型检查或重复覆盖。
+      spaces.spans-displays = true;
+      WindowManager = {
+        AppWindowGroupingBehavior = true;
+        EnableStandardClickToShowDesktop = false;
+        HideDesktop = false;
+        StandardHideDesktopIcons = false;
+        StageManagerHideWidgets = false;
+        StandardHideWidgets = false;
+      };
+
       # customize settings that not supported by nix-darwin directly
       # Incomplete list of macOS `defaults` commands :
       #   https://github.com/yannbertrand/macos-defaults
       CustomUserPreferences = {
-        ".GlobalPreferences" = {
-          # automatically switch to a new space when switching to the application
-          AppleSpacesSwitchOnActivate = true;
-
-          AppleShowScrollBars = "WhenScrolling";
-
-          AppleIconAppearanceTheme = "RegularAutomatic";
+        # NSGlobalDomain 与 .GlobalPreferences 指向同一域，集中声明避免分散覆盖。
+        NSGlobalDomain = {
           AppleAccentColor = 6; # 粉色
           AppleHighlightColor = "1.000000 0.749020 0.823529 Pink"; # 高亮色
-          # AppleIconAppearanceTintColor = "Blue";
           AppleIconAppearanceTintColor = "Other";
           AppleIconAppearanceCustomTintColor = "0.475000 0.822795 1.000000 0.845588";
-        };
-        NSGlobalDomain = {
+          AppleLanguages = [
+            "zh-Hans-${myvars.region}"
+            "zh-Hant-${myvars.region}"
+            "en-${myvars.region}"
+          ];
+          AppleFirstWeekday.gregorian = 2;
+          AppleICUDateFormatStrings."1" = "y-MM-dd";
+
           # Add a context menu item for showing the Web Inspector in web views
           WebKitDeveloperExtras = true;
-        };
-        "com.apple.finder" = {
-          AppleShowAllFiles = true;
-          ShowExternalHardDrivesOnDesktop = true;
-          ShowHardDrivesOnDesktop = true;
-          ShowMountedServersOnDesktop = true;
-          ShowRemovableMediaOnDesktop = true;
-          _FXSortFoldersFirst = true;
-          # When performing a search, search the current folder by default
-          FXDefaultSearchScope = "SCcf";
         };
         "com.apple.desktopservices" = {
           # Avoid creating .DS_Store files on network or USB volumes
           DSDontWriteNetworkStores = true;
           DSDontWriteUSBStores = true;
-        };
-        "com.apple.spaces" = {
-          "spans-displays" = 1; # 禁用显示器具有单独空间 1 为禁用 即让一个空间横跨所有显示器（AeroSpace 推荐）；0为启用，系统默认，菜单栏独立
-        };
-        "com.apple.WindowManager" = {
-          AppWindowGroupingBehavior = 1; # 窗口按应用成组
-          EnableStandardClickToShowDesktop = 0; # Click wallpaper to reveal desktop
-          HideDesktop = 0; # Do not hide items on desktop & stage manager
-          StandardHideDesktopIcons = 0; # Show items on desktop
-          StageManagerHideWidgets = 0;
-          StandardHideWidgets = 0;
         };
         # "com.apple.screensaver" = {
         #   # Require password immediately after sleep or screen saver begins
@@ -172,13 +168,8 @@
         "com.apple.ImageCapture".disableHotPlug = true;
         # Stats
         "eu.exelban.Stats" = {
-          # "Battery_state" = 0;
-          # "CPU_state" = 1;
-          LaunchAtLoginNext = 1;
-          "Network_state" = 1;
-          runAtLoginInitialized = 1;
-          # setupProcess = 1;
-          # "update-interval" = "Never";
+          # 登录项由 SMAppService 管理；不写 LaunchAtLoginNext/runAtLoginInitialized 迁移标记。
+          Network_state = true;
         };
         # Helium Browser
         "net.imput.helium" = {
