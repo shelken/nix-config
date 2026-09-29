@@ -3,6 +3,7 @@
   username = "shelken";
   userfullname = "Shelken Pan";
   useremail = "shelken.pxk@gmail.com";
+  region = "TW";
   catppuccin = rec {
     flavor = "macchiato";
     accent = "pink";

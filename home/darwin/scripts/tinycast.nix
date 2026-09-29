@@ -142,9 +142,6 @@ let
     if defaults.data(forKey: "customCommands") != mergedData {
         defaults.set(mergedData, forKey: "customCommands")
     }
-
-    defaults.set(true, forKey: "customCommandsEnabled")
-    defaults.set(true, forKey: "customCommandsShowInLauncher")
   '';
 in
 {
@@ -159,7 +156,8 @@ in
   };
 
   # 激活时同步到 Tinycast，使其在启动器中立即可被搜索调用
-  home.activation.tinycastCustomCommands = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  # 先导入快捷键偏好，再合并命令列表，避免两个激活步骤的写入顺序不明确。
+  home.activation.tinycastCustomCommands = lib.hm.dag.entryAfter [ "setDarwinDefaults" ] ''
     /usr/bin/swift ${syncScript} '${builtins.toJSON managedCommands}'
   '';
 }
