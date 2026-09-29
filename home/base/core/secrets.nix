@@ -12,8 +12,7 @@ let
   cfg = config.shelken.secrets;
 
   secretEnvMap = {
-    GITHUB_TOKEN = "github/cli-token"; # 目前依赖: task
-    GROQ_API_KEY = "groq/api-key";
+    GITHUB_TOKEN = "github/cli-token"; # 目前task依赖
   };
 
   enabledSecrets = lib.unique (lib.attrValues secretEnvMap);
