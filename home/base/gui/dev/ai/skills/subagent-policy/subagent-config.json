@@ -8,12 +8,12 @@
   ],
   "presets": {
     "explore": {
-      "model": "openai-codex/gpt-5.6-luna",
+      "model": "openai/gpt-5.6-luna",
       "thinking": "max",
       "tools": "read,bash,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom"
     },
     "general-purpose": {
-      "model": "openai-codex/gpt-5.6-luna",
+      "model": "openai/gpt-5.6-luna",
       "thinking": "max",
       "tools": "read,bash,edit,write,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom"
     },
