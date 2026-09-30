@@ -1,6 +1,6 @@
 # omp-extensions
 
-OMP Agent 扩展目录（guard.ts 安全防护扩展等），经 Home Manager 部署至 `~/.omp/agent/extensions/`。
+OMP Agent 扩展目录（guard.ts 安全防护扩展、subdir-context.ts 子目录上下文自动注入等），经 Home Manager 部署至 `~/.omp/agent/extensions/`。
 
 ## 约束
 
