@@ -64,7 +64,6 @@ in
 
         #-- misc
         marksman # lsp for markdown
-        markdown-oxide # lsp for markdown
         glow # markdown preview
         taplo # TOML language server / formatter / validator
         yaml-language-server

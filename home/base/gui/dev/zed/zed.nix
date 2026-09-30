@@ -45,6 +45,31 @@ in
       # custom settings, run `zed: open default settings` from the
       # command palette (cmd-shift-p / ctrl-shift-p)
 
+      file_scan_exclusions = [
+        "..."
+        "**/node_modules"
+        "**/target"
+        "**/dist"
+        "**/coverage"
+        "**/.next"
+        "**/.turbo"
+        "**/.venv"
+        "**/__pycache__"
+        "**/.pytest_cache"
+        "**/.mypy_cache"
+        "**/.ruff_cache"
+        "**/.gradle"
+        "**/.direnv"
+        "**/agent/git"
+        "**/agent/npm"
+        "**/agent/sessions"
+        "**/agent/cache"
+        "**/agent/logs"
+        "**/agent/tmp"
+        "**/agent-subagent/sessions"
+        "**/agent-subagent/cache-parent"
+      ];
+
       completions = {
         words_min_length = 2;
       };
@@ -286,6 +311,12 @@ in
       };
 
       lsp = {
+        "nixd" = {
+          settings = {
+            # ponytail: 默认 4 个 worker 各自全量展开 nixpkgs,16G 内存吃不消;补全变慢再调回
+            eval.workers = 1;
+          };
+        };
         "yaml-language-server" = {
           settings = {
             yaml = {
