@@ -62,12 +62,22 @@ in
         pkgs-unstable.cargo # rust package manager
         pkgs-unstable.rustfmt
 
+        #-- java/c
+        pkgs-unstable.jdt-language-server # java language server (nixpkgs 已改名 jdtls -> jdt-language-server)
+        cmake # cmake language server
+
         #-- misc
         marksman # lsp for markdown
         glow # markdown preview
         taplo # TOML language server / formatter / validator
         yaml-language-server
         # sqlfluff # SQL linter
+        selene # lua linter
+        tflint # terraform linter
+        tfsec # terraform security scanner
+        just-lsp # justfile language server
+        isort # python import sorter
+        # debugpy 由 python313.withPackages 提供: ps.debugpy
 
         #FIXME issue: https://github.com/NixOS/nixpkgs/issues/449970
         actionlint # GitHub Actions linter
