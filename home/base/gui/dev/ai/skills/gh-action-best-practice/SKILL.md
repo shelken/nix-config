@@ -1,6 +1,6 @@
 ---
 name: gh-action-best-practice
-description: 当使用github action有关操作时阅读该技能
+description: 当使用github action有关操作时, 编写action/workflow时 阅读该技能
 ---
 
 ## Rules
@@ -13,3 +13,4 @@ description: 当使用github action有关操作时阅读该技能
      -f default_workflow_permissions=read \
      -F can_approve_pull_request_reviews=true
   ```
+- 必须确保所有 action `Annotations` 没有警告; 禁止任何废弃的依赖或者构建组件, 使用稳定支持的版本
