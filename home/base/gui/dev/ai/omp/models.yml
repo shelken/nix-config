@@ -8,7 +8,7 @@ providers:
     discovery:
       type: openai-models-list
   commandcode-local:
-    baseUrl: https://commandcode.ooooo.space/v1
+    baseUrl: https://commandcode.int.ooooo.space/v1
     apiKey: COMMANDCODE_API_KEY
     api: openai-completions
     discovery:
@@ -44,6 +44,7 @@ providers:
         contextWindow: 1000000
         maxTokens: 128000
         reasoning: true
+        input: ["text"]
         thinking:
           mode: effort
           efforts: [low, medium, high, xhigh, max]
@@ -66,6 +67,7 @@ providers:
           omitReasoningEffort: false
       workbuddy/deepseek-v4.1-flash:
         reasoning: true
+        input: ["text", "image"]
         thinking:
           mode: effort
           efforts: [high]
@@ -136,6 +138,7 @@ providers:
           omitReasoningEffort: false
       workbuddy/glm-5.3-flash:
         reasoning: true
+        input: ["text", "image"]
         thinking:
           mode: effort
           efforts: [low, high, max]

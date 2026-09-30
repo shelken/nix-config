@@ -5,26 +5,32 @@ disabledProviders:
   - opencode
   - gemini
 modelRoles:
-  vision: openai-codex/gpt-5.6-luna:high
+  vision: cpa/gpt-5.6-luna:high
   plan: openai-codex/gpt-6-astra:high
-  commit: openai-codex/gpt-5.6-luna:high
-  tiny: openai-codex/gpt-5.6-luna:high
-  review: openai-codex/gpt-6-sol:high
-  smol: google-antigravity/gemini-3.8-flash:high
-  wbds: cpa/workbuddy/deepseek-v4.1-flash:high
-  task: cpa/workbuddy/glm-5.3-flash:high
-  default: cpa/workbuddy/glm-5.3-flash:high
-  slow: openai-codex/gpt-5.6-sol:high
+  slow: openai-codex/gpt-6.1-sol:high
+  commit: google-antigravity/gemini-3.8-flash:medium
+  tiny: google-antigravity/gemini-3.8-flash:medium
+  smol: commandcode-local/deepseek/deepseek-v4.1-flash:high
+  default: zcode-local/glm-5.3-flash:high
+  task: zcode-local/glm-5.3-flash:high
+  reviewer-general: commandcode-local/deepseek/deepseek-v4.1-flash:high
+  reviewer-gemini: google-antigravity/gemini-3.8-flash:high
+  reviewer-ds: commandcode-local/deepseek/deepseek-v4.1-flash:high
+  reviewer-glm: zcode-local/glm-5.3-flash:high
+  test: zcode-local/glm-5.3-flash:high
   web: google/gemini-2.5-flash
   qwcn: cpa/qwenworkcn/pro:high
-  test: zcode-local/glm-5.3-flash:high
+  wbcn: cpa/workbuddy/glm-5.3-flash:high
+  gog: google-antigravity/gemini-3.8-flash:high
+  gpt: openai-codex/gpt-6.1-sol:high
 cycleOrder:
   - smol
   - task
   - default
   - slow
-  - wbds
+  - wbcn
   - qwcn
+  - gog
   - test
 symbolPreset: nerd
 composer:
@@ -50,7 +56,7 @@ statusLine:
     - usage
 task:
   agentModelOverrides:
-    reviewer: "@review"
+    reviewer: "@reviewer-general"
 browser:
   headless: true
   enabled: false
@@ -68,6 +74,11 @@ codexResets:
   autoRedeem: "no"
 retry:
   fallbackChains:
+    commandcode-local/*:
+      - zcode-local/glm-5.3-flash:high
+      - cpa/workbuddy/glm-5.3-flash:high
+      - google-antigravity/gemini-3.8-flash:high
+      - openai-codex/gpt-6.1-sol:high
     web:
       - web/exa
       - web/brave
