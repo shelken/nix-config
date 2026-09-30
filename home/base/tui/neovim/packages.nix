@@ -62,10 +62,6 @@ in
         pkgs-unstable.cargo # rust package manager
         pkgs-unstable.rustfmt
 
-        #-- java/c
-        pkgs-unstable.jdt-language-server # java language server (nixpkgs 已改名 jdtls -> jdt-language-server)
-        cmake # cmake language server
-
         #-- misc
         marksman # lsp for markdown
         glow # markdown preview
