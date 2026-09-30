@@ -14,7 +14,7 @@
         yt-dlp = "2026.08";
         "github:shelken/proxy" = {
           version = "latest";
-          matching = "sb-sync";
+          matching = "sbtools";
           minimum_release_age = "0h";
         };
         "cargo:mbx" = "1.18"; # for cargo build, save storage
