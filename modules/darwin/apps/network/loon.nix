@@ -23,8 +23,12 @@ in
       brews = [
       ];
     };
-    launchd.user.agents.loon = {
-      command = ''"/Applications/Loon.app/Contents/MacOS/Loon"'';
+    # launchd.user.agents.loon = {
+    #   command = ''"/Applications/Loon.app/Contents/MacOS/Loon"'';
+    #   serviceConfig.RunAtLoad = true;
+    # };
+    launchd.user.agents.sfm = {
+      command = ''"/Applications/SFM.app/Contents/MacOS/SFM"'';
       serviceConfig.RunAtLoad = true;
     };
   };
