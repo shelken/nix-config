@@ -15,7 +15,7 @@ rec {
     every = null;
     packages = [ ];
     secrets = { };
-    island = true;
+    island = false;
   };
 
   # 补齐 home 层裸声明缺省字段（显式值优先）；darwin 层经 submodule default

@@ -15,6 +15,7 @@
     GH_TOKEN = secretPath "github/cli-token";
     GITHUB_TOKEN = secretPath "github/cli-token";
   };
+  island = true;
   script = ''
     REPO="$HOME/Code/active/shelken"
     if [ ! -d "$REPO/.git" ]; then
