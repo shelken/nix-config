@@ -43,15 +43,15 @@
   };
   ast-grep-agent-skill = {
     pname = "ast-grep-agent-skill";
-    version = "affe2b9b7c608f4e354d7e83d0583ed35e845650";
+    version = "f2175aff21f20cfb8e2db30c28febeb3a2d42b61";
     src = fetchFromGitHub {
       owner = "ast-grep";
       repo = "agent-skill";
-      rev = "affe2b9b7c608f4e354d7e83d0583ed35e845650";
+      rev = "f2175aff21f20cfb8e2db30c28febeb3a2d42b61";
       fetchSubmodules = false;
-      sha256 = "sha256-UVpQTyo2HE1/mCDkgrIkyD7RidNSjk6VyEwYhAZ/eSA=";
+      sha256 = "sha256-dORqiMdFOUQVEF6wn1IZiTIcslzO+441A0GZP4KNcOQ=";
     };
-    date = "2026-09-09";
+    date = "2026-09-12";
   };
   cursor-plugins = {
     pname = "cursor-plugins";
