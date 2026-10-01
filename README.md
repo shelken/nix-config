@@ -70,7 +70,7 @@ just sw
 
 ## 机器选择
 
-机器对应 flake 输出的名字写在仓库根 `.host-profile`（dotenv 格式），该文件含本机信息，已加入 `.gitignore`，不会进 git。优先级：`just --set profile <host>` > 环境 `PROFILE` > `.host-profile`；都未设置时，构建入口会在调用 Nix 工具前报错。临时换目标可用 `just --set profile <host> <recipe>` 或显式传 host（如 `just b <host>`）
+机器对应 flake 输出的名字写在仓库根 `.host-profile`（dotenv 格式），该文件含本机信息，已加入 `.gitignore`，不会进 git。主机选择沿用现有入口：`just --set profile <host>` > 环境 `PROFILE` > `.host-profile`；临时换目标可用 `just --set profile <host> <recipe>` 或显式传 host（如 `just b <host>`）
 
 `.env` 不再用于机器选择，仅作为秘密文件保留（gitignore + guard 拦截）；`LOCAL_SECRETS_DIR` 可写在 `.host-profile` 或环境变量中，默认 `~/code/MyRepo/nix/secrets.nix`。
 
@@ -78,7 +78,7 @@ just sw
 
 ```bash
 test ! -e .host-profile && grep -E '^(PROFILE|LOCAL_SECRETS_DIR)=' .env > .host-profile
-just --evaluate profile
+just --command sh -c 'printf "%s\n" "$PROFILE"'
 ```
 
 输出预期机器名后，再运行构建入口。主机选择回归检查：`bun test justfile.test.ts`

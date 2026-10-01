@@ -4,9 +4,8 @@ set positional-arguments := true
 set dotenv-load := true
 set dotenv-filename := ".host-profile"
 
-# 机器选择优先级: just --set profile > 环境 PROFILE > .host-profile; .env 仅作秘密文件, just 不再加载
-# 缺失机器选择时在调用 Nix 工具前报错，避免空参数被下一个 shell token 替代
-profile := env_var_or_default("PROFILE", "")
+# 机器选择来自 .host-profile；.env 仅保留秘密，just 不加载
+profile := "$PROFILE"
 local_secrets_dir := env_var_or_default("LOCAL_SECRETS_DIR", home_dir() + "/code/MyRepo/nix/secrets.nix")
 
 
@@ -18,10 +17,6 @@ alias hmb := hm-build
 # 显式帮助
 default:
     @just --list
-
-[private]
-_require-host host:
-    @test -n {{ quote(host) }} || { printf '%s\n' '请在 .host-profile 设置 PROFILE，或显式指定 host / just --set profile' >&2; exit 1; }
 
 aerospace-clean:
     @rm -f $HOME/.config/aerospace/aerospace.toml
@@ -42,8 +37,8 @@ brew-diff:
 
 # 查看本次构建哪些需要编译、哪些直接下载
 [macos]
-build-dry host=profile: (_require-host host)
-    @nix build {{ quote(".#darwinConfigurations." + host + ".system") }} --dry-run
+build-dry host=profile:
+    @nix build ".#darwinConfigurations.{{ host }}.system" --dry-run
 
 # nixos deploy
 [linux]
@@ -207,35 +202,35 @@ qip:
 
 # nixos 重建
 [linux]
-rebuild host=profile: (_require-host host)
+rebuild host=profile:
     # @nix build ".#nixosConfigurations.{{ host }}"
     # @nix run nixpkgs#nh -- os build -H {{ host }} .
-    nh os build -H {{ quote(host) }} .
+    nh os build -H {{ host }} .
 
 # mac 构建; host 对应当前主机名
 [macos]
-rebuild host=profile: (_require-host host)
+rebuild host=profile:
     # @nix build ".#darwinConfigurations.{{ host }}.system" --extra-experimental-features "nix-command flakes"
     #@nix run nixpkgs#nh -- darwin build -H {{ host }} . -- --extra-experimental-features "nix-command flakes"
-    nh darwin build -H {{ quote(host) }} . --extra-experimental-features "nix-command flakes"
+    nh darwin build -H {{ host }} . --extra-experimental-features "nix-command flakes"
 
 # nixos 重建(调试)
 [linux]
-rebuild-debug host=profile: (_require-host host)
+rebuild-debug host=profile:
     # nom build ".#nixosConfigurations.{{ host }}.config.system.build.toplevel" --show-trace --verbose
     # nix run nixpkgs#nh -- os build -H {{ host }} . -v
-    nh os build -H {{ quote(host) }} . -v
+    nh os build -H {{ host }} . -v
 
 # 构建; 调试
 [macos]
-rebuild-debug *args: (_require-host profile)
+rebuild-debug *args:
     # nom build ".#darwinConfigurations.{{ profile }}.system" --extra-experimental-features "nix-command flakes" --show-trace --verbose
     # nix run nixpkgs#nh -- darwin build -H {{ profile }} . -v -- {{ args }}
-    nh darwin build -H {{ quote(profile) }} . -v -- {{ args }}
+    nh darwin build -H {{ profile }} . -v -- {{ args }}
 
 # 交互式源码查看
-repl host=profile: (_require-host host)
-    @nix repl {{ quote(".#darwinConfigurations." + host) }}
+repl host=profile:
+    @nix repl .#darwinConfigurations.{{ host }}
 
 # 回滚配置
 [macos]
@@ -254,38 +249,38 @@ set-proxy:
 
 # nixos 重建
 [linux]
-switch host=profile: (_require-host host)
+switch host=profile:
     # nixos-rebuild switch --sudo --flake $".#{{ host }}" --show-trace --verbose
     # @nix run nixpkgs#nh -- os switch -H {{ host }} .
-    @nh os switch -H {{ quote(host) }} . --show-activation-logs
+    @nh os switch -H {{ host }} . --show-activation-logs
 
 # 应用配置; target对应当前主机名
 [macos]
 switch *args: rebuild-debug
     # sudo -E ./result/sw/bin/darwin-rebuild switch --flake ".#{{ profile }}" --show-trace --verbose
     # nix run nixpkgs#nh -- darwin switch -H {{ profile }} . -v -- {{ args }}
-    nh darwin switch -H {{ quote(profile) }} . -v --show-activation-logs -- {{ args }}
+    nh darwin switch -H {{ profile }} . -v --show-activation-logs -- {{ args }}
 
 # 仅构建 Home Manager（查看差异，不应用）
 [macos]
-hm-build *args: (_require-host profile)
-    nh home build -c {{ quote(profile) }} . -v -- {{ args }}
+hm-build *args:
+    nh home build -c {{ profile }} . -v -- {{ args }}
 
 # 仅应用 Home Manager
 [macos]
-hm *args: (_require-host profile)
+hm *args:
     # nix run nixpkgs#nh -- home switch -c {{ profile }} . -v -- {{ args }}
-    nh home switch -c {{ quote(profile) }} . -v --show-activation-logs -- {{ args }}
+    nh home switch -c {{ profile }} . -v --show-activation-logs -- {{ args }}
 
 # 本地联动调试构建：直接挂载本地 secrets.nix，无需等待 push 到 GitHub 和 upp
 [macos]
-hm-dev-build *args: (_require-host profile)
-    nh home build -c {{ quote(profile) }} . -v -- --override-input secrets {{ quote("path:" + local_secrets_dir) }} {{ args }}
+hm-dev-build *args:
+    nh home build -c {{ profile }} . -v -- --override-input secrets path:{{ local_secrets_dir }} {{ args }}
 
 # 本地联动快速应用：直接挂载本地 secrets.nix 应用配置，秒级生效
 [macos]
-hm-dev *args: (_require-host profile)
-    nh home switch -c {{ quote(profile) }} . -v --show-activation-logs -- --override-input secrets {{ quote("path:" + local_secrets_dir) }} {{ args }}
+hm-dev *args:
+    nh home switch -c {{ profile }} . -v --show-activation-logs -- --override-input secrets path:{{ local_secrets_dir }} {{ args }}
 
 # 更新整个输入
 up:
