@@ -1,6 +1,7 @@
 ---
 name: pi-extension-best-practice
 description: 编写或审查任何 pi 插件的 factory、事件、命令、配置、日志或测试时使用
+disable-model-invocation: true
 ---
 
 # pi 插件最佳实践
