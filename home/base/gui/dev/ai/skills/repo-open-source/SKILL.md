@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 # repo-open-source
 
-把项目从 private 开源为 public。核心矛盾:开源要暴露全部 git 历史,而历史里往往混着个人配置、临时文档、过时结构。直接改 public 等于把这些全公开。本流程用「双仓 + history rewrite」解决:private 仓存完整历史作只读归档,公开仓用 `git filter-repo` 抹除指定路径后开源。
+把项目从 private 开源为 public 前，需要检查完整 Git 历史中的个人配置、临时文档和过时结构。默认采用「双仓 + history rewrite」：private 仓作为完整历史的只读归档，公开仓用 `git filter-repo` 清除指定路径后再开源。
 
 ## 前置确认
 
@@ -16,6 +16,11 @@ disable-model-invocation: true
 1. **private 仓是否仅作归档查看**。若是,双仓方案无同步负担,推荐;若 private 还要继续开发,双仓会分叉,改用单仓 rewrite。
 2. **作者邮箱是否算隐私**。若邮箱公开,rewrite 只需清文件;若要隐藏邮箱,需额外 `--mailmap`。
 3. **子项目/第三方目录去留**。如 `sub-dir/` 这类子项目、`.agents/skills/` 第三方 skill,逐一确认保留还是移除,不要擅自决定。
+
+## 工具
+
+- `git filter-repo`:nix-profile 装的,`git filter-repo --version` 验证。比 `git filter-branch` 快且安全
+- `gh`:建仓、改可见性、查远程分支
 
 ## SOP
 
@@ -186,16 +191,11 @@ git branch | sed 's/^[* +]*//' | grep -vE '^(main|<worktree分支>)$' | xargs -I
 # 清理 filter-repo 拉取的 archive 远程跟踪引用(可选,留着便于查阅归档)
 ```
 
-## 工具
-
-- `git filter-repo`:nix-profile 装的,`git filter-repo --version` 验证。比 `git filter-branch` 快且安全。
-- `gh`:建仓、改可见性、查远程分支。
-
 ## 踩坑
 
-- **`--invert-paths` 不能漏**:`--paths-from-file` 默认是「保留」这些路径。漏写 `--invert-paths` 会变成只留清单里的文件,删光整个项目。副本实验能挡住这个错误。
-- **grep 验证误报**:`git log --name-only | grep "config.py"` 会匹配到 `src/.../config.py`,误以为没清干净。验证用精确前缀 `grep -E "^${path}"`,且清单里的根级路径先确认历史中真存在。
-- **squash merge 分支显示未合并**:走 squash merge 的功能分支,`--is-ancestor` 判断「未合并」,但内容已进 main。看 commit message 的 PR 编号或分支 tree 是否旧状态来判断,这类分支可安全删。
-- **filter-repo 移除 origin**:这是它的设计行为(防止误推回原仓)。rewrite 后需手动 `git remote add origin` 重连。
-- **worktree 分支删不掉**:`git branch -D` 报错因为分支被 worktree checkout。先 `git worktree prune`(目录已失效时)或 `git worktree remove`(目录还在时),再删分支。
-- **子目录同名文件**:`flake.nix` 在根级和 `sub-dir/flake.nix` 是两个路径。清单写 `flake.nix` 是根级精确匹配,不会误清子目录。若要清子目录的,单独写 `sub-dir/flake.nix`。
+- **`--invert-paths` 不能漏**:`--paths-from-file` 默认是「保留」这些路径。漏写 `--invert-paths` 会变成只留清单里的文件,删光整个项目。副本实验能挡住这个错误
+- **grep 验证误报**:`git log --name-only | grep "config.py"` 会匹配到 `src/.../config.py`,误以为没清干净。验证用精确前缀 `grep -E "^${path}"`,且清单里的根级路径先确认历史中真存在
+- **squash merge 分支显示未合并**:走 squash merge 的功能分支,`--is-ancestor` 判断「未合并」,但内容已进 main。看 commit message 的 PR 编号或分支 tree 是否旧状态来判断,这类分支可安全删
+- **filter-repo 移除 origin**:这是它的设计行为(防止误推回原仓)。rewrite 后需手动 `git remote add origin` 重连
+- **worktree 分支删不掉**:`git branch -D` 报错因为分支被 worktree checkout。先 `git worktree prune`(目录已失效时)或 `git worktree remove`(目录还在时),再删分支
+- **子目录同名文件**:`flake.nix` 在根级和 `sub-dir/flake.nix` 是两个路径。清单写 `flake.nix` 是根级精确匹配,不会误清子目录。若要清子目录的,单独写 `sub-dir/flake.nix`

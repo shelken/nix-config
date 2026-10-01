@@ -11,9 +11,9 @@ disable-model-invocation: true
 
 This skill automates the full release workflow for a single-package GitHub repository,
 from analysis through changelog authoring and PR creation. It relies exclusively on
-`gh` (GitHub CLI) and `git` no other tools needed.
+`gh` (GitHub CLI) and `git`; no other tools are needed.
 
-Steps 1 - 4 are **read-only reconnaissance** nothing is written to the repo until
+Steps 1 - 4 prepare the repository and analyse changes. Release changes begin in
 Step 5, once the version number is confirmed.
 
 ## When to Use This Skill
@@ -156,16 +156,15 @@ git diff "$($prevSha)..HEAD" -- $publicPath `
 
 Read the full diff output. For each changed file, identify:
 
-1. **Removed symbols** - functions, classes, methods, constants, exported names that
-   existed before and are now gone. ? Strong signal for MAJOR.
-2. **Changed signatures** - functions that exist in both versions but with different
-   parameters, return types, or thrown errors. ? Strong signal for MAJOR.
-3. **New exported symbols** - public functions, classes, constants that didn't exist
-   before. ? Signal for MINOR.
-4. **Internal-only changes** - modifications that don't touch any public interface
-   (private helpers, unexported functions, algorithm internals). ? PATCH.
-5. **Bug fixes** - corrections to logic that was provably wrong (e.g. off-by-one,
-   null check, wrong condition), without changing the public API. ? PATCH.
+1. **Removed symbols**: public functions, classes, methods, constants, or exported
+   names that existed before and are now gone. Strong signal for MAJOR.
+2. **Changed signatures**: functions with changed parameters, return types, or
+   thrown errors. Strong signal for MAJOR.
+3. **New exported symbols**: public functions, classes, or constants. Signal for MINOR.
+4. **Internal-only changes**: private helpers, unexported functions, or algorithm
+   internals that do not change a public interface. PATCH.
+5. **Bug fixes**: corrections to provably wrong logic without a public API change.
+   PATCH.
 
 If the diff is very large (thousands of lines), first run the stat summary to
 prioritise which files to read in full:
@@ -196,12 +195,12 @@ See `references/commit-classification.md` for mapping message patterns to change
 
 #### 3c - Reconcile the two signals
 
-When signals agree ? use that classification with confidence.
+When signals agree, use that classification with confidence.
 
-When signals conflict ? **prefer the code diff**. Examples:
-- Commit says `fix: typo` but the diff shows a removed public method ? treat as MAJOR.
-- Commit says `feat: new API` but the diff only touches private internals ? treat as PATCH.
-- Commit says `chore: refactor` but the diff adds new exported symbols ? treat as MINOR.
+When signals conflict, **prefer the code diff**. Examples:
+- Commit says `fix: typo` but the diff shows a removed public method: treat as MAJOR.
+- Commit says `feat: new API` but the diff only touches private internals: treat as PATCH.
+- Commit says `chore: refactor` but the diff adds new exported symbols: treat as MINOR.
 
 Document any conflicts you notice - flag them to the user during the changelog review
 in Step 6.
@@ -286,12 +285,12 @@ Rules:
   Good: *"Added `WithTimeout` option to HTTP client constructor."*
   Bad: *"feat: add timeout cfg param"*
 - Map findings to sections:
-  - New exported symbol ? Added
-  - Breaking removal ? Removed
-  - Breaking change to existing API ? Changed (flag it as breaking)
-  - Bug/logic fix, perf ? Fixed
-  - Security fix ? Security
-  - Internal refactor, docs, chore, test ? omit unless user-visible
+  - New exported symbol: Added
+  - Breaking removal: Removed
+  - Breaking change to existing API: Changed (flag it as breaking)
+  - Bug/logic fix or perf improvement: Fixed
+  - Security fix: Security
+  - Internal refactor, docs, chore, or test: omit unless user-visible
 - If a commit message revealed intent that the code diff alone wouldn't convey
   (e.g. a security fix disguised as a one-line change), include that context in
   the changelog entry.
@@ -321,16 +320,12 @@ Confirm the push succeeded before moving on.
 
 ### Step 8 - Open a Pull Request
 
-**?? IMPORTANT:** Always use `--body-file` to pass PR body text, never `--body` with inline text.
+**IMPORTANT:** Always use `--body-file` to pass PR body text, never `--body` with inline text.
 Inline escape sequences like `\n` are not interpreted as newlines by PowerShell and will appear
 as literal text in the PR. Using a file ensures proper markdown formatting.
 
-```bash
-gh pr create \
-  --base main \
-  --head release/vX.Y.Z \
-  --title "Release vX.Y.Z" \
-  --body "$(cat <<'EOF'
+````bash
+cat > release_pr_body.md <<'EOF'
 ## Release vX.Y.Z
 
 This PR prepares the **vX.Y.Z** release.
@@ -344,15 +339,20 @@ This PR prepares the **vX.Y.Z** release.
 - [ ] CI passing
 
 After merging, create the tag on the merge commit:
-\`\`\`
+```
 git tag vX.Y.Z <merge-commit-sha>
 git push origin vX.Y.Z
-\`\`\`
-EOF
-)"
 ```
+EOF
 
-```PowerShell
+gh pr create \
+  --base main \
+  --head release/vX.Y.Z \
+  --title "Release vX.Y.Z" \
+  --body-file release_pr_body.md
+````
+
+```````PowerShell
 # Create PR body using here-string (preserves actual newlines, not escape sequences)
 $prBody = @"
 ## Release vX.Y.Z
@@ -377,7 +377,7 @@ git push origin vX.Y.Z
 # Write to file and use --body-file (do NOT use inline --body with escape sequences)
 $prBody | Out-File -FilePath release_pr_body.md -Encoding utf8 -NoNewline
 gh pr create --base main --head release/vX.Y.Z --title "Release vX.Y.Z" --body-file release_pr_body.md
-```
+```````
 
 Paste the changelog section into the PR body's "What's included" block (or leave placeholder for manual review).
 
@@ -388,7 +388,7 @@ Paste the changelog section into the PR body's "What's included" block (or leave
 
 Tell the user:
 
-> **Release PR is open! ??**
+> **Release PR is open**
 >
 > New version: **vX.Y.Z**
 >
