@@ -1,8 +1,8 @@
 { ... }:
 {
   # macOS 27 appstored ArcadeResetPO 死循环防护 (issue #82)
-  # 每 10 分钟巡检一次(耗时 ~30ms)，仅在时间落入过去(触发死循环条件)时介入
-  every = 600;
+  # 每小时巡检，仅在时间落入过去(触发死循环条件)时介入
+  every = 3600;
   script = ''
     # 仅在 ArcadePayoutResetDate 落入过去(逾期触发死循环)时介入顶到 7 天后并重启 agent:
     # 正常未来时间保持 no-op，避免健康状态下被误触发
