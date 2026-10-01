@@ -150,10 +150,7 @@ in
   targets.darwin.defaults."com.tinycast.app" = tinycastDefaults;
 
   # 软链接脚本目录至 ~/.config/tinycast/scripts，便于调试
-  xdg.configFile."tinycast/scripts" = {
-    force = true;
-    source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nix-config/home/darwin/scripts/tinycast";
-  };
+  xdg.configFile."tinycast/scripts" = mylib.mkConfigFile config "home/darwin/scripts/tinycast";
 
   # 激活时同步到 Tinycast，使其在启动器中立即可被搜索调用
   # 先导入快捷键偏好，再合并命令列表，避免两个激活步骤的写入顺序不明确。

@@ -9,7 +9,6 @@ let
   inherit (mylib) mkBoolOpt;
   cfg = config.shelken.wm.omniwm;
 
-  omniwmTomlPath = "${config.home.homeDirectory}/nix-config/home/darwin/wm/omniwm/settings.toml";
 in
 {
   options.shelken.wm.omniwm = {
@@ -24,10 +23,7 @@ in
     };
 
     xdg.configFile = {
-      "omniwm/settings.toml" = {
-        source = config.lib.file.mkOutOfStoreSymlink omniwmTomlPath;
-        force = true;
-      };
+      "omniwm/settings.toml" = mylib.mkConfigFile config "home/darwin/wm/omniwm/settings.toml";
     };
   };
 }

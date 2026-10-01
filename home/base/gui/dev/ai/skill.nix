@@ -2,14 +2,13 @@
   config,
   lib,
   pkgs,
+  mylib,
   sources,
   ...
 }:
 let
   inherit (lib) mkIf mkOption types;
   cfg = config.shelken.dev.ai;
-
-  skillsSourcePath = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/skills";
 
   flattenSkillName = lib.replaceStrings [ "/" ] [ "--" ];
 
@@ -229,7 +228,7 @@ let
   localTopLevelSkillDirs = builtins.attrNames (lib.filterAttrs isLocalGroupedSkill localSkillEntries);
 
   mkLocalSkillSource =
-    relativePath: config.lib.file.mkOutOfStoreSymlink "${skillsSourcePath}/${relativePath}";
+    relativePath: mylib.mkConfigLink config "home/base/gui/dev/ai/skills/${relativePath}";
 
   localGroupedSkillSources = builtins.listToAttrs (
     map (name: {

@@ -36,18 +36,6 @@
     # networkmanagerapplet # provide GUI app: nm-connection-editor
   ];
 
-  # xdg.configFile =
-  #   let
-  #     mkSymlink = config.lib.file.mkOutOfStoreSymlink;
-  #     confPath = "${config.home.homeDirectory}/nix-config/home/linux/gui/base/desktop/conf";
-  #   in
-  #   {
-  #     "mako".source = mkSymlink "${confPath}/mako";
-  #     "waybar".source = mkSymlink "${confPath}/waybar";
-  #     "wlogout".source = mkSymlink "${confPath}/wlogout";
-  #     "hypr/hypridle.conf".source = mkSymlink "${confPath}/hypridle.conf";
-  #   };
-
   # status bar
   # programs.waybar = {
   #   enable = true;

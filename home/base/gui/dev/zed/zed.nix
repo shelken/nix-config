@@ -2,12 +2,12 @@
   config,
   lib,
   pkgs,
+  mylib,
   myvars,
   ...
 }:
 let
   themeName = myvars.catppuccin.displayName;
-  snippetsSourcePath = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/zed/snippets";
   snippetFiles = builtins.attrNames (
     lib.filterAttrs (name: type: type == "regular" && lib.strings.hasSuffix ".json" name) (
       builtins.readDir ./snippets
@@ -16,10 +16,7 @@ let
   snippetLinks = lib.listToAttrs (
     map (name: {
       name = ".config/zed/snippets/${name}";
-      value = {
-        source = config.lib.file.mkOutOfStoreSymlink "${snippetsSourcePath}/${name}";
-        force = true;
-      };
+      value = mylib.mkConfigFile config "home/base/gui/dev/zed/snippets/${name}";
     }) snippetFiles
   );
 in
