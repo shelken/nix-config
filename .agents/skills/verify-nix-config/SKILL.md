@@ -17,7 +17,7 @@ build helper 内置 `doctor`，无需提前重复运行。仅检查前置条件�
 ./.agents/skills/verify-nix-config/scripts/verify.sh doctor
 ```
 
-它匹配当前 `LocalHostName` 与 `darwinConfigurations` 的 `networking.hostName`，也可用 `VERIFY_HOST=<flake-attr>` 显式选择本机输出。它不读取 `.env`，检查：
+它匹配当前 `LocalHostName` 与 `darwinConfigurations` 的 `networking.hostName`，也可用 `VERIFY_HOST=<flake-attr>` 显式选择本机输出。它不读取 `.host-profile`，检查：
 
 - `nix`、`just`、`nh`、`jq`、`git` 可用
 - 当前机器存在 Darwin 与 Home 输出
@@ -26,7 +26,7 @@ build helper 内置 `doctor`，无需提前重复运行。仅检查前置条件�
 - `enableLegacyProfileManagement = true`
 - Home profile 不在系统 `/etc/profiles/per-user` 环境
 
-检查失败即停止。找不到 hostname 匹配时，设置 `VERIFY_HOST` 后重跑；build helper 将已检查的主机通过 `just --set profile` 传给构建入口，避免被 `.env` 或环境中的 `PROFILE` 改变目标
+检查失败即停止。找不到 hostname 匹配时，设置 `VERIFY_HOST` 后重跑；build helper 将已检查的主机通过 `just --set profile` 传给构建入口，避免被 `.host-profile` 或环境中的 `PROFILE` 改变目标
 
 ## Drive
 

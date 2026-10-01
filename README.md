@@ -55,18 +55,33 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 # 3. clone repo
 git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-config
 
-# 4. 选择 flake.nix 中定义的机器配置
+# 4. 选择 flake.nix 中定义的机器配置，写入 .host-profile（dotenv 格式，已 gitignore，不进 git）
 # Darwin: mio / sakamoto / yuuko / ling
 # NixOS: pve155 / pve156 / arm-test-1 / work-test
-echo "PROFILE=mio" >> .env
+echo "PROFILE=mio" > .host-profile
 
 # 5. 首次应用：此时不能假设 just/nh/home-manager 已存在
 # note: sudo launchctl stop systems.determinate.nix-daemon && sudo launchctl start systems.determinate.nix-daemon
-sudo nix run nix-darwin/master#darwin-rebuild -- switch --flake .#$PROFILE
+sudo nix run nix-darwin/master#darwin-rebuild -- switch --flake .#mio
 
 # 6. 日常应用：打开新 shell 后执行
 just sw
 ```
+
+## 机器选择
+
+机器对应 flake 输出的名字写在仓库根 `.host-profile`（dotenv 格式），该文件含本机信息，已加入 `.gitignore`，不会进 git。优先级：`just --set profile <host>` > 环境 `PROFILE` > `.host-profile`；都未设置时，构建入口会在调用 Nix 工具前报错。临时换目标可用 `just --set profile <host> <recipe>` 或显式传 host（如 `just b <host>`）
+
+`.env` 不再用于机器选择，仅作为秘密文件保留（gitignore + guard 拦截）；`LOCAL_SECRETS_DIR` 可写在 `.host-profile` 或环境变量中，默认 `~/code/MyRepo/nix/secrets.nix`。
+
+从旧 `.env` 迁移时，只复制非机密的 `PROFILE` 和 `LOCAL_SECRETS_DIR`，保留原秘密文件；已有 `.host-profile` 时手动合并，避免覆盖本机配置：
+
+```bash
+test ! -e .host-profile && grep -E '^(PROFILE|LOCAL_SECRETS_DIR)=' .env > .host-profile
+just --evaluate profile
+```
+
+输出预期机器名后，再运行构建入口。主机选择回归检查：`bun test justfile.test.ts`
 
 ## 日常命令
 
