@@ -1,18 +1,21 @@
 providers:
   # cpa 端点锚点(openai/cpa 两 provider 共用): 外出 localhost, 回家改回 http://192.168.69.60:8317/v1
   openai: &cpa-endpoint
-    # baseUrl: http://192.168.69.60:8317/v1
-    baseUrl: http://localhost:8317/v1
+    baseUrl: http://192.168.69.60:8317/v1
+    # baseUrl: http://localhost:8317/v1
     apiKey: CPA_PI_API_KEY
     api: openai-responses
     discovery:
       type: openai-models-list
+      timeoutMs: 2000
   commandcode-local:
     baseUrl: https://commandcode.int.ooooo.space/v1
     apiKey: COMMANDCODE_API_KEY
     api: openai-completions
     discovery:
       type: openai-models-list
+      # 端点仅内网可达, 外出时默认 10s 超时会阻塞启动与 Ctrl+P; 压到 2s
+      timeoutMs: 2000
   # 本地 zcode-api 反代 ({kaiyuan-dir}/zcode-api, docker compose up -d)
   zcode-local:
     baseUrl: http://127.0.0.1:8080
@@ -20,6 +23,7 @@ providers:
     api: anthropic-messages
     discovery:
       type: openai-models-list
+      timeoutMs: 2000
   cpa:
     <<: *cpa-endpoint
     # 档位权威来源: cpa-plugins/plugins/workbuddy/data/static-config.json
