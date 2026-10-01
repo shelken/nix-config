@@ -1,18 +1,16 @@
 { ... }:
 {
   # macOS 27 appstored ArcadeResetPO 死循环防护 (issue #82)
-  when = [
-    "0:10"
-    "12:10"
-  ];
+  # 每 10 分钟巡检一次(耗时 ~30ms)，仅在时间落入过去(触发死循环条件)时介入
+  every = 600;
   script = ''
-    # 距 ArcadePayoutResetDate 不足 24h(或已过期)时顶到 7 天后并重启 agent:
-    # 远期日期会被 appstoreagent 判 invalid 重算, 近未来日期有效且永不到期
+    # 仅在 ArcadePayoutResetDate 落入过去(逾期触发死循环)时介入顶到 7 天后并重启 agent:
+    # 正常未来时间保持 no-op，避免健康状态下被误触发
     d="$(defaults read com.apple.appstored ArcadePayoutResetDate 2>/dev/null)" || exit 0
     ts="$(date -j -f '%Y-%m-%d %H:%M:%S %z' "$d" +%s 2>/dev/null)" || exit 0
     now="$(date +%s)"
-    if [ $(( ts - now )) -lt 86400 ]; then
-      defaults write com.apple.appstored ArcadePayoutResetDate -date "$(date -v+7d -u +%Y-%m-%dT%H:%M:%SZ)"
+    if [ "$ts" -le "$now" ]; then
+      defaults write com.apple.appstored ArcadePayoutResetDate -date "$(date -v+7d -u +%Y-%m-%dT%H:%M:%SZ)" || exit 1
       killall appstoreagent 2>/dev/null || true
     fi
   '';
