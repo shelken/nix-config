@@ -82,7 +82,7 @@ in
         prettier # common code formatter
         lazygit
       ]
-      ++ lib.optional stdenv.isDarwin pngpaste
+      ++ lib.optional stdenv.hostPlatform.isDarwin pngpaste
       ++ [
         chafa # for alpha.nvim
 
@@ -107,7 +107,7 @@ in
         shfmt
       ]
     )
-    ++ lib.optionals (!stdenv.isDarwin) [
+    ++ lib.optionals (!stdenv.hostPlatform.isDarwin) [
       gcc
       clang-tools
     ];
