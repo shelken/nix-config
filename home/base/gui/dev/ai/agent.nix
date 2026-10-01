@@ -1,13 +1,12 @@
 {
   config,
   lib,
+  mylib,
   ...
 }:
 let
   inherit (lib) mkIf mkOption types;
   cfg = config.shelken.dev.ai;
-
-  agentsSourcePath = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/_agents.md";
 
   # CLI tools and their agents file configurations
   # Format: { targetPath = "relative/path"; fileName = "FILENAME.md"; }
@@ -62,10 +61,7 @@ let
   agentsLinks = builtins.listToAttrs (
     map (target: {
       name = "${target.targetPath}/${target.fileName}";
-      value = {
-        source = config.lib.file.mkOutOfStoreSymlink agentsSourcePath;
-        force = true;
-      };
+      value = mylib.mkConfigFile config "home/base/gui/dev/ai/_agents.md";
     }) (if cfg.agentsTargets == [ ] then defaultAgentsTargets else cfg.agentsTargets)
   );
 in

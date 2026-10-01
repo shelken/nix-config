@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  mylib,
   system,
   ...
 }:
@@ -9,13 +10,8 @@ let
   inherit (lib) mkIf;
   cfg = config.shelken.dev.ai;
 
-  ompDir = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/omp";
-
   # 软链仓库内文件，仓库中直接编辑即生效
-  linkOmp = rel: {
-    source = config.lib.file.mkOutOfStoreSymlink "${ompDir}/${rel}";
-    force = true;
-  };
+  linkOmp = rel: mylib.mkConfigFile config "home/base/gui/dev/ai/omp/${rel}";
 
   # 扩展目录内除 *.test.ts 外的 .ts 逐个软链；目录内还含测试与 AGENTS.md，不能整目录软链
   extensionFiles = builtins.attrNames (
@@ -61,7 +57,7 @@ in
       plugins="$HOME/.omp/plugins"
       mkdir -p "$plugins"
       rm -f "$plugins/package.json"
-      cp -f ${lib.escapeShellArg "${ompDir}/plugins/package.json"} "$plugins/package.json"
+      cp -f ${./plugins/package.json} "$plugins/package.json"
       rm -rf "$plugins/node_modules" "$plugins/omp-plugins.lock.json"
       BUN="${pkgs.bun}/bin/bun"
       if command -v bun >/dev/null 2>&1; then

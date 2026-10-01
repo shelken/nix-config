@@ -19,7 +19,6 @@ let
   writeShellBin =
     name: pkgs.writeShellScriptBin "as-${name}" (builtins.readFile ./aerospace/scripts/${name}.sh);
 
-  aerospaceTomlPath = "${config.home.homeDirectory}/nix-config/home/darwin/wm/aerospace/aerospace.toml";
 in
 {
   options.shelken.wm.aerospace = {
@@ -29,10 +28,7 @@ in
   config = mkIf cfg.enable {
     home.packages = map writeShellBin scripts;
     xdg.configFile = {
-      "aerospace/aerospace.toml" = {
-        source = config.lib.file.mkOutOfStoreSymlink aerospaceTomlPath;
-        force = true;
-      };
+      "aerospace/aerospace.toml" = mylib.mkConfigFile config "home/darwin/wm/aerospace/aerospace.toml";
     };
   };
 }

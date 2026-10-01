@@ -1,12 +1,10 @@
 {
   config,
+  mylib,
   pkgs,
   sources,
   ...
 }:
-let
-  yaziCfgDir = "${config.home.homeDirectory}/nix-config/home/base/core/yazi";
-in
 {
   programs.yazi = {
     enable = true;
@@ -34,21 +32,9 @@ in
   ];
 
   xdg.configFile = {
-    "yazi/yazi.toml" = {
-      source = config.lib.file.mkOutOfStoreSymlink "${yaziCfgDir}/yazi.toml";
-      force = true;
-    };
-    "yazi/keymap.toml" = {
-      source = config.lib.file.mkOutOfStoreSymlink "${yaziCfgDir}/keymap.toml";
-      force = true;
-    };
-    "yazi/vfs.toml" = {
-      source = config.lib.file.mkOutOfStoreSymlink "${yaziCfgDir}/vfs.toml";
-      force = true;
-    };
-    "yazi/init.lua" = {
-      source = config.lib.file.mkOutOfStoreSymlink "${yaziCfgDir}/init.lua";
-      force = true;
-    };
+    "yazi/yazi.toml" = mylib.mkConfigFile config "home/base/core/yazi/yazi.toml";
+    "yazi/keymap.toml" = mylib.mkConfigFile config "home/base/core/yazi/keymap.toml";
+    "yazi/vfs.toml" = mylib.mkConfigFile config "home/base/core/yazi/vfs.toml";
+    "yazi/init.lua" = mylib.mkConfigFile config "home/base/core/yazi/init.lua";
   };
 }

@@ -2,6 +2,7 @@
   lib,
   config,
   pkgs,
+  mylib,
   ...
 }:
 let
@@ -23,9 +24,6 @@ let
     exec ${pkgs.bun}/bin/bunx @llamaindex/liteparse "$@"
   '';
 
-  # 软链到工作树源码：改脚本即时生效，无需 rebuild。
-  # 路径用字符串拼接而不是 ${./…} 插值，插值会把文件复制进 store。
-  skillsDir = "${config.home.homeDirectory}/nix-config/home/base/gui/dev/ai/skills";
 in
 {
   config = lib.mkIf config.shelken.dev.ai.enable {
@@ -36,14 +34,10 @@ in
     };
 
     # computer-use / spawn-subagent 与 skills 同源，软链到工作树源码即时生效
-    home.file.".local/bin/computer-use" = {
-      source = config.lib.file.mkOutOfStoreSymlink "${skillsDir}/computer-use-best-practice/scripts/computer-use.ts";
-      force = true;
-    };
-    home.file.".local/bin/spawn-subagent" = {
-      source = config.lib.file.mkOutOfStoreSymlink "${skillsDir}/subagent-policy/spawn-subagent";
-      force = true;
-    };
+    home.file.".local/bin/computer-use" =
+      mylib.mkConfigFile config "home/base/gui/dev/ai/skills/computer-use-best-practice/scripts/computer-use.ts";
+    home.file.".local/bin/spawn-subagent" =
+      mylib.mkConfigFile config "home/base/gui/dev/ai/skills/subagent-policy/spawn-subagent";
 
     home.packages = [
       ctx7

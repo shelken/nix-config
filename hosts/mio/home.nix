@@ -4,6 +4,8 @@
   #   inherit (myvars.networking.ssh) extraConfig;
   # };
   shelken = {
+    dotfiles.liveEdit = true;
+
     backup = {
       enable = true;
       backupPaths = [
