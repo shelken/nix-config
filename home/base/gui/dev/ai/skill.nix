@@ -43,15 +43,10 @@ let
       frontmatter.install-anti-slop.disable-model-invocation = true;
     };
 
-    ast-grep-agent-skill = {
-      root = sources.ast-grep-agent-skill.src;
-      skills.ast-grep = "ast-grep/skills/ast-grep";
-    };
-
-    ai-coding-principles = {
-      root = sources.ai-coding-principles.src;
-      skills.ai-coding-discipline = "ai-coding-discipline";
-    };
+    # ast-grep-agent-skill = {
+    #   root = sources.ast-grep-agent-skill.src;
+    #   skills.ast-grep = "ast-grep/skills/ast-grep";
+    # };
 
     humanlayer-skills = {
       root = sources.humanlayer-skills.src;
