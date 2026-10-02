@@ -56,7 +56,7 @@ let
     humanlayer-skills = {
       root = sources.humanlayer-skills.src;
       skills.show-me = "plugins/show-me/skills/show-me";
-      skills.visual-pr = "plugins/visual-pr/skills/visual-pr";
+      # skills.visual-pr = "plugins/visual-pr/skills/visual-pr";
     };
 
     llamaparse-agent-skills = {
@@ -88,6 +88,8 @@ let
         domain-modeling = "skills/engineering/domain-modeling";
         ask-matt = "skills/engineering/ask-matt";
         triage = "skills/engineering/triage";
+        retro = "skills/engineering/retro";
+        pr = "skills/engineering/pr";
       };
     };
 

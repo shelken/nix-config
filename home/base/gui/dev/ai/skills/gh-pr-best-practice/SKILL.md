@@ -5,8 +5,8 @@ description: 当提交PR时阅读该技能
 
 ## Rules
 
-- 如果涉及 其他公开(非本人) 仓库, 阅读`gh-open-policy`
-- 阅读`visual-pr`skill, 在`body`中使用合适的方式通俗易懂的展示关键变更内容
+- 如果涉及 其他公开(非本人) 仓库, 阅读`gh-open-policy`skill
+- 阅读`pr`skill, 在`body`中使用合适的方式通俗易懂的展示关键变更内容
 - 如果提交内容包含用户界面相关的变更, 在PR中提交1~3张的1920x1080的有效验证截图(使用gh上传,禁止放进任何commit); 浏览器类型阅读`browser-best-practice`skill; 桌面类应用阅读`computer-use-best-practice`skill
 - 提交PR前必须确认目录的default是谁,避免提交到错误的repo
 - 提交前必须完整阅读目标仓库的 `CONTRIBUTING.md` 和 `.github/{PULL_REQUEST_TEMPLATE}.md`，按其要求的格式填写 PR title、body、commit message
