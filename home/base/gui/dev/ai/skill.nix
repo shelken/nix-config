@@ -68,6 +68,7 @@ let
       root = sources.mattpocock-skills.src;
       skills = {
         improve-codebase-architecture = "skills/engineering/improve-codebase-architecture";
+        codebase-design = "skills/engineering/codebase-design";
         diagnosing-bugs = "skills/engineering/diagnosing-bugs";
         grill-me = "skills/productivity/grill-me";
         grill-with-docs = "skills/engineering/grill-with-docs";
