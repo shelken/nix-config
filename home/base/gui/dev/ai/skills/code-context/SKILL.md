@@ -2,6 +2,7 @@
 name: code-context
 description:
   使用于用户说「查官方API」「找真实示例」「新的文档」「最新api」「ctx7」;使用于需要任何库的当前最新文档，读取此 skill
+disable-model-invocation: true
 ---
 
 ## Command Setup
