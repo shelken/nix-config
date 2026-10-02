@@ -6,18 +6,6 @@
   dockerTools,
 }:
 {
-  ai-coding-principles = {
-    pname = "ai-coding-principles";
-    version = "27db986fd2790ad1a1818a7f1b2c5d91b3843b8e";
-    src = fetchFromGitHub {
-      owner = "shelken";
-      repo = "ai-coding-principles";
-      rev = "27db986fd2790ad1a1818a7f1b2c5d91b3843b8e";
-      fetchSubmodules = false;
-      sha256 = "sha256-fkaO77jOmg9q3jEZe64SWgNWb2PUX9C1KvRDg4H+w8Y=";
-    };
-    date = "2026-03-26";
-  };
   andrej-karpathy-skills = {
     pname = "andrej-karpathy-skills";
     version = "2c606141936f1eeef17fa3043a72095b4765b9c2";
@@ -41,29 +29,17 @@
       sha256 = "sha256-K+nxeaH2h33Ixjn5HbFTw2n2d+s12SpKbVP90tkyj9A=";
     };
   };
-  ast-grep-agent-skill = {
-    pname = "ast-grep-agent-skill";
-    version = "affe2b9b7c608f4e354d7e83d0583ed35e845650";
-    src = fetchFromGitHub {
-      owner = "ast-grep";
-      repo = "agent-skill";
-      rev = "affe2b9b7c608f4e354d7e83d0583ed35e845650";
-      fetchSubmodules = false;
-      sha256 = "sha256-UVpQTyo2HE1/mCDkgrIkyD7RidNSjk6VyEwYhAZ/eSA=";
-    };
-    date = "2026-09-09";
-  };
   cursor-plugins = {
     pname = "cursor-plugins";
-    version = "adf3218ca2f5b9971eedc07a76bef22df7701539";
+    version = "7022c81efb48d8b5eb15498ce6043a3bd74b694c";
     src = fetchFromGitHub {
       owner = "cursor";
       repo = "plugins";
-      rev = "adf3218ca2f5b9971eedc07a76bef22df7701539";
+      rev = "7022c81efb48d8b5eb15498ce6043a3bd74b694c";
       fetchSubmodules = false;
-      sha256 = "sha256-mQ6+lYLBYkmdOOsXXGR0wxPcHj35dLdb5sMaR/CvQ58=";
+      sha256 = "sha256-W63zwDWjt0GYLHM5LcyEAjjN6Px36qaS6QiHqjwdxHs=";
     };
-    date = "2026-09-28";
+    date = "2026-10-02";
   };
   humanlayer-skills = {
     pname = "humanlayer-skills";
@@ -113,15 +89,15 @@
   };
   projects-yazi = {
     pname = "projects-yazi";
-    version = "22a4006f531b7c8e71704f64e48feed659164104";
+    version = "181ebafba6320244ffd132f0e234b2a523b5ee00";
     src = fetchFromGitHub {
       owner = "MasouShizuka";
       repo = "projects.yazi";
-      rev = "22a4006f531b7c8e71704f64e48feed659164104";
+      rev = "181ebafba6320244ffd132f0e234b2a523b5ee00";
       fetchSubmodules = false;
-      sha256 = "sha256-J3MM4Fc3+6P84OrC4DWqchSPbEOuzhEeO8rzNYXSZXQ=";
+      sha256 = "sha256-pe1ygeaKtSRUkWhxpq3VMoVFUmqBbEGbO2dTbio6bcw=";
     };
-    date = "2026-07-11";
+    date = "2026-09-19";
   };
   reverse-skill = {
     pname = "reverse-skill";
@@ -136,15 +112,15 @@
   };
   yazi-plugins = {
     pname = "yazi-plugins";
-    version = "4dc7f1b6458c2578f4494f10d468c68c1082214f";
+    version = "6229767f7fef39a2a78f5cee9122cc4dfb43f327";
     src = fetchFromGitHub {
       owner = "yazi-rs";
       repo = "plugins";
-      rev = "4dc7f1b6458c2578f4494f10d468c68c1082214f";
+      rev = "6229767f7fef39a2a78f5cee9122cc4dfb43f327";
       fetchSubmodules = false;
-      sha256 = "sha256-BSAOkL4H4LVMbTRFv4kzGGRpLgtKkfNTEsDH2EQ219Q=";
+      sha256 = "sha256-/BNGoWziHIZ9i+RoTWGq/q3ZowNCyHGBOWiz8v2/vOE=";
     };
-    date = "2026-09-02";
+    date = "2026-10-02";
   };
   zjstatus = {
     pname = "zjstatus";

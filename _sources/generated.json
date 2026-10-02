@@ -1,25 +1,4 @@
 {
-    "ai-coding-principles": {
-        "cargoLock": null,
-        "date": "2026-03-26",
-        "extract": null,
-        "name": "ai-coding-principles",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "shelken",
-            "repo": "ai-coding-principles",
-            "rev": "27db986fd2790ad1a1818a7f1b2c5d91b3843b8e",
-            "sha256": "sha256-fkaO77jOmg9q3jEZe64SWgNWb2PUX9C1KvRDg4H+w8Y=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "27db986fd2790ad1a1818a7f1b2c5d91b3843b8e"
-    },
     "andrej-karpathy-skills": {
         "cargoLock": null,
         "date": "2026-04-20",
@@ -62,30 +41,9 @@
         },
         "version": "v0.1.2"
     },
-    "ast-grep-agent-skill": {
-        "cargoLock": null,
-        "date": "2026-09-09",
-        "extract": null,
-        "name": "ast-grep-agent-skill",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "ast-grep",
-            "repo": "agent-skill",
-            "rev": "affe2b9b7c608f4e354d7e83d0583ed35e845650",
-            "sha256": "sha256-UVpQTyo2HE1/mCDkgrIkyD7RidNSjk6VyEwYhAZ/eSA=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "affe2b9b7c608f4e354d7e83d0583ed35e845650"
-    },
     "cursor-plugins": {
         "cargoLock": null,
-        "date": "2026-09-28",
+        "date": "2026-10-02",
         "extract": null,
         "name": "cursor-plugins",
         "passthru": null,
@@ -97,12 +55,12 @@
             "name": null,
             "owner": "cursor",
             "repo": "plugins",
-            "rev": "adf3218ca2f5b9971eedc07a76bef22df7701539",
-            "sha256": "sha256-mQ6+lYLBYkmdOOsXXGR0wxPcHj35dLdb5sMaR/CvQ58=",
+            "rev": "7022c81efb48d8b5eb15498ce6043a3bd74b694c",
+            "sha256": "sha256-W63zwDWjt0GYLHM5LcyEAjjN6Px36qaS6QiHqjwdxHs=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "adf3218ca2f5b9971eedc07a76bef22df7701539"
+        "version": "7022c81efb48d8b5eb15498ce6043a3bd74b694c"
     },
     "humanlayer-skills": {
         "cargoLock": null,
@@ -190,7 +148,7 @@
     },
     "projects-yazi": {
         "cargoLock": null,
-        "date": "2026-07-11",
+        "date": "2026-09-19",
         "extract": null,
         "name": "projects-yazi",
         "passthru": null,
@@ -202,12 +160,12 @@
             "name": null,
             "owner": "MasouShizuka",
             "repo": "projects.yazi",
-            "rev": "22a4006f531b7c8e71704f64e48feed659164104",
-            "sha256": "sha256-J3MM4Fc3+6P84OrC4DWqchSPbEOuzhEeO8rzNYXSZXQ=",
+            "rev": "181ebafba6320244ffd132f0e234b2a523b5ee00",
+            "sha256": "sha256-pe1ygeaKtSRUkWhxpq3VMoVFUmqBbEGbO2dTbio6bcw=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "22a4006f531b7c8e71704f64e48feed659164104"
+        "version": "181ebafba6320244ffd132f0e234b2a523b5ee00"
     },
     "reverse-skill": {
         "cargoLock": null,
@@ -232,7 +190,7 @@
     },
     "yazi-plugins": {
         "cargoLock": null,
-        "date": "2026-09-02",
+        "date": "2026-10-02",
         "extract": null,
         "name": "yazi-plugins",
         "passthru": null,
@@ -244,12 +202,12 @@
             "name": null,
             "owner": "yazi-rs",
             "repo": "plugins",
-            "rev": "4dc7f1b6458c2578f4494f10d468c68c1082214f",
-            "sha256": "sha256-BSAOkL4H4LVMbTRFv4kzGGRpLgtKkfNTEsDH2EQ219Q=",
+            "rev": "6229767f7fef39a2a78f5cee9122cc4dfb43f327",
+            "sha256": "sha256-/BNGoWziHIZ9i+RoTWGq/q3ZowNCyHGBOWiz8v2/vOE=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "4dc7f1b6458c2578f4494f10d468c68c1082214f"
+        "version": "6229767f7fef39a2a78f5cee9122cc4dfb43f327"
     },
     "zjstatus": {
         "cargoLock": null,
