@@ -9,44 +9,6 @@ description: 管理项目长期知识。recall 召回历史决策、capture 沉�
 
 把历史对话当作证据源，把项目文件当作唯一长期事实源。检索、验证和路由由本 Skill 协调；跨 Session 读写统一走本机 `project-memory` CLI。具体产物遵循项目约定或对应专用 Skill。
 
-## 调用约定
-
-CLI 源码在本机开发树，不走 npm/GitHub；首次安装见 [INSTALL.md](INSTALL.md)。定 `$PM_DIR` 后一律 `bun run --cwd "$PM_DIR" pm -- <cmd>`（已 link 到 PATH 可用 `project-memory <cmd>`）：
-
-```sh
-PM_DIR="${HOME}/Code/active/project-memory"
-test -d "$PM_DIR" || { echo "bad PM_DIR: $PM_DIR — 见 INSTALL.md" >&2; exit 1; }
-test -f "$PM_DIR/package.json" || { echo "bad PM_DIR contents: $PM_DIR" >&2; exit 1; }
-bun run --cwd "$PM_DIR" pm -- status   # 默认 text；程序用 status --format json
-```
-
-任何跨 Session 内容只能通过本机 CLI 读取。**禁止**直接读 Session JSONL，也禁止在业务项目 cwd 下拼相对路径脚本。各命令完整 flag 见 `<cmd> --help`。
-
-## 核心原则
-
-- 当用户单纯调用该技能时, 没有任何其他指示时, 默认检查本轮对话有哪些值得沉淀的经验,教训;如果有,向用户反馈是否记录哪些文档(agents/skill/尸检报告...等等)
-- Session 只提供候选证据，不能直接成为项目事实
-- 正式知识必须结合当前代码、Git、测试、运行结果或有效文档验证
-- 能通过代码、类型、schema、测试、lint、CI 或脚本保证的约束，优先做成可执行约束
-- 写入前先检查现有实现、规则、作用域和重复内容，优先更新、移动或删除原内容
-- Session 路径、Entry ID 和对话片段只出现在运行报告中，不写入 Git
-- 不建立独立的项目事实库；本地索引和审阅状态只是可丢弃辅助状态，不是项目事实源
-
-### AGENTS.md
-
-写作格式与约束读取 `doc-agent-file`（SSOT）。直接修改 `AGENTS.md` 永远只能提醒与建议。
-
-### Skill
-
-- 必须是项目强相关
-- 写 skill 前先读取 `writing-great-skills`，缺失时提醒且不做记录
-- 只记录可复用流程，不记录单次错误；踩坑点只有当以后会重复且重要才记录
-- 语言精简凝练，模仿当前项目已有 skill 风格
-
-### Postmortem
-
-写尸检前先读取 `postmortem`，缺失时提醒且不做记录。小修小补不记录；重点记录重大错误、重复错误、高影响事故。用户未主动要求时，只有影响范围明显较大时才建议记录。
-
 ## 模式选择
 
 | 模式 | 用途 | 默认写入权限 |
@@ -63,6 +25,44 @@ bun run --cwd "$PM_DIR" pm -- status   # 默认 text；程序用 status --format
 - 用户明确要求沉淀时，执行 `capture`
 - 用户提到以前的讨论、重复故障、历史设计理由或要求搜索对话时，执行 `recall`
 - `mine` 和 `audit` 不在普通任务结束时自动运行；需用户要求或明确审计意图
+
+## 调用约定
+
+CLI 源码在本机开发树，不走 npm/GitHub；首次安装见 [INSTALL.md](INSTALL.md)。定 `$PM_DIR` 后一律 `bun run --cwd "$PM_DIR" pm -- <cmd>`（已 link 到 PATH 可用 `project-memory <cmd>`）：
+
+```sh
+PM_DIR="${HOME}/Code/active/project-memory"
+test -d "$PM_DIR" || { echo "bad PM_DIR: $PM_DIR — 见 INSTALL.md" >&2; exit 1; }
+test -f "$PM_DIR/package.json" || { echo "bad PM_DIR contents: $PM_DIR" >&2; exit 1; }
+bun run --cwd "$PM_DIR" pm -- status   # 默认 text；程序用 status --format json
+```
+
+任何跨 Session 内容只能通过本机 CLI 读取。**禁止**直接读 Session JSONL，也禁止在业务项目 cwd 下拼相对路径脚本。各命令完整 flag 见 `<cmd> --help`。
+
+## 核心原则
+
+- 用户仅调用本技能、没有额外指示时，检查本轮对话中值得沉淀的经验与教训；有候选时，向用户反馈建议记录到哪些文档，如 AGENTS、Skill 或尸检报告
+- Session 只提供候选证据，不能直接成为项目事实
+- 正式知识必须结合当前代码、Git、测试、运行结果或有效文档验证
+- 能通过代码、类型、schema、测试、lint、CI 或脚本保证的约束，优先做成可执行约束
+- 写入前先检查现有实现、规则、作用域和重复内容，优先更新、移动或删除原内容
+- Session 路径、Entry ID 和对话片段只出现在运行报告中，不写入 Git
+- 不建立独立的项目事实库；本地索引和审阅状态只是可丢弃辅助状态，不是项目事实源
+
+### AGENTS.md
+
+写作格式与约束读取 `doc-agent-file`（SSOT）；仅提供 AGENTS.md 修改建议，不直接编辑
+
+### Skill
+
+- 必须是项目强相关
+- 写 skill 前先读取 `writing-great-skills`，缺失时提醒且不做记录
+- 只记录可复用流程，不记录单次错误；踩坑点只有当以后会重复且重要才记录
+- 语言精简凝练，模仿当前项目已有 skill 风格
+
+### Postmortem
+
+写尸检前先读取 `postmortem`，缺失时提醒且不做记录。小修小补不记录；重点记录重大错误、重复错误、高影响事故。用户未主动要求时，只有影响范围明显较大时才建议记录。
 
 ## 候选知识准入
 

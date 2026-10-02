@@ -3,14 +3,21 @@ name: gh-action-best-practice
 description: 当使用github action有关操作时, 编写action/workflow时 阅读该技能
 ---
 
-## Rules
+## 运行状态与失败定位
 
-- 观察action进度时, 禁止任何超长时间的等待, 必须先预估执行时间, 设定合理超时时间, 在超时之后立刻检查日志详情; 禁止长超时时间; fail-fast
-- 使用 临时命令或者脚本时 用`轮询机制`进行探测状态, 也就是在探测到目标状态或确定检测到失败状态后返回结果;
-- action中 PR 创建失败, 使用gh开启repo的权限
+- 观察 Action 进度时，先预估执行时间并设置合理的短超时；超时后立即检查日志，避免长时间等待，保持 fail-fast
+- 临时命令或脚本使用轮询探测状态，达到目标状态或确定失败后立即返回结果
+
+## 工作流权限
+
+- Action 中创建 PR 失败时，使用 `gh` 开启仓库对应权限
+
   ```bash
   gh api -X PUT repos/:owner/:repo/actions/permissions/workflow \
      -f default_workflow_permissions=read \
      -F can_approve_pull_request_reviews=true
   ```
-- 必须确保所有 action `Annotations` 没有警告; 禁止任何废弃的依赖或者构建组件, 使用稳定支持的版本
+
+## 依赖与检查结果
+
+- 确保所有 Action 的 Annotations 无警告；依赖和构建组件使用稳定、受支持的版本，不使用已废弃组件
