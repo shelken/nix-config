@@ -12,7 +12,7 @@
  * 8. 零外部 npm 依赖，完全兼容 Bun 与 Node 原生环境。
  */
 
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, readlinkSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 
@@ -30,6 +30,8 @@ export type Policy = {
   default_reason?: string;
   commands: Rule[];
   paths: Rule[];
+  /** 确切路径只读授权：只影响读取，写入与执行一律不放行 */
+  allow_read_paths: Rule[];
 };
 
 /** 判别联合类型：确保不同工具输入参数在类型系统层级完全收窄 */
@@ -61,6 +63,7 @@ export type ParsedLayer = {
   default_reason?: string;
   commandOps: LayerOp[];
   pathOps: LayerOp[];
+  allowReadOps: LayerOp[];
   errors: string[];
 };
 
@@ -139,6 +142,8 @@ export const BUILTIN_COMMANDS: Rule[] = [
   // --- 破坏性文件系统递归删除 ---
   { value: "rm -rf /", reason: "禁止根目录递归强制删除", source: "builtin" },
   { value: "rm -rf ~", reason: "禁止家目录递归强制删除", source: "builtin" },
+  { value: "rm -rf .", reason: "禁止当前目录递归强制删除", source: "builtin" },
+  { value: "rm -rf ..", reason: "禁止上级目录递归强制删除", source: "builtin" },
   { value: "rm -rf *", reason: "禁止全量通配递归强制删除", source: "builtin" },
   { value: "rm -rf ./*", reason: "禁止全量通配递归强制删除", source: "builtin" },
   { value: "rm -rf .*", reason: "禁止全量通配递归强制删除", source: "builtin" },
@@ -207,8 +212,27 @@ export const BUILTIN_PATHS: Rule[] = [
 // ============================================================================
 
 type ShellToken =
-  | { kind: "word"; value: string }
-  | { kind: "op"; value: string };
+  | { kind: "word"; value: string; activeGlob: boolean; dynamic: boolean }
+  | { kind: "op"; value: string }
+  /** 活跃命令替换（$() 或反引号）捕获到的内嵌脚本 */
+  | { kind: "sub"; value: string }
+  /** heredoc 正文；quoted 仅表示不做替换展开，正文仍可能被解释器当作程序；owner 是所属命令首 token 下标 */
+  | { kind: "heredoc"; value: string; quoted: boolean; owner: number };
+
+/** 命令中的单个词：记录通配是否生效、取值是否可静态确定、是否为重定向目标 */
+export type ShellWord = {
+  value: string;
+  glob: boolean;
+  dynamic: boolean;
+  target: "in" | "out" | null;
+};
+
+/** 单条简单命令；pipeNext 表示同管道的下游还有命令 */
+export type ShellCmd = {
+  words: ShellWord[];
+  pipeNext: boolean;
+  startToken: number;
+};
 
 const CONTROL_OPS: Record<string, true> = {
   "|": true,
@@ -221,9 +245,154 @@ const CONTROL_OPS: Record<string, true> = {
   ")": true,
 };
 
+/** 扫描 $() 的平衡括号正文（感知引号与转义），返回正文与结束括号下标 */
+function scanCommandSub(
+  input: string,
+  openParen: number,
+): { body: string; end: number } {
+  let depth = 1;
+  let i = openParen + 1;
+  while (i < input.length) {
+    const c = input[i];
+    if (c === "\\") {
+      i += 2;
+      continue;
+    }
+    if (c === "'") {
+      const close = input.indexOf("'", i + 1);
+      i = close === -1 ? input.length : close + 1;
+      continue;
+    }
+    if (c === '"' || c === "`") {
+      const quote = c;
+      i++;
+      while (i < input.length && input[i] !== quote) {
+        if (input[i] === "\\") i++;
+        i++;
+      }
+      i++;
+      continue;
+    }
+    if (c === "(") {
+      depth++;
+      i++;
+      continue;
+    }
+    if (c === ")") {
+      depth--;
+      if (depth === 0) return { body: input.slice(openParen + 1, i), end: i };
+    }
+    i++;
+  }
+  return { body: input.slice(openParen + 1), end: input.length };
+}
+
+function scanBacktick(
+  input: string,
+  start: number,
+): { body: string; end: number } {
+  let i = start + 1;
+  while (i < input.length) {
+    if (input[i] === "\\" && i + 1 < input.length) {
+      i += 2;
+      continue;
+    }
+    if (input[i] === "`") return { body: input.slice(start + 1, i), end: i };
+    i++;
+  }
+  return { body: input.slice(start + 1), end: input.length };
+}
+
+/** 解析 heredoc 分隔符；分隔符带引用时正文仅跳过替换展开，不代表正文是数据 */
+function heredocDelimiter(
+  input: string,
+  start: number,
+): { delim: string; quoted: boolean; end: number } {
+  let i = start;
+  while (i < input.length && (input[i] === " " || input[i] === "\t")) i++;
+  let delim = "";
+  let quoted = false;
+  while (i < input.length && !" \t\n|;&<>".includes(input[i])) {
+    const c = input[i];
+    if (c === "'" || c === '"') {
+      const close = input.indexOf(c, i + 1);
+      const stop = close === -1 ? input.length : close;
+      delim += input.slice(i + 1, stop);
+      quoted = true;
+      i = stop + 1;
+      continue;
+    }
+    if (c === "\\") {
+      delim += input[i + 1] ?? "";
+      quoted = true;
+      i += 2;
+      continue;
+    }
+    delim += c;
+    i++;
+  }
+  return { delim, quoted, end: i };
+}
+
+/** 消费 heredoc 正文直到分隔符行；<<- 允许分隔符前有制表符 */
+function heredocBody(
+  input: string,
+  start: number,
+  delim: string,
+  dash: boolean,
+): { body: string; end: number } {
+  let i = start;
+  const lines: string[] = [];
+  for (;;) {
+    const nl = input.indexOf("\n", i);
+    const stop = nl === -1 ? input.length : nl;
+    const line = input.slice(i, stop);
+    if ((dash ? line.replace(/^\t+/, "") : line) === delim) {
+      return {
+        body: lines.join("\n"),
+        end: nl === -1 ? input.length : nl + 1,
+      };
+    }
+    lines.push(line);
+    if (nl === -1) return { body: lines.join("\n"), end: input.length };
+    i = nl + 1;
+  }
+}
+
+/** 未引用的 [ 是否构成可展开字符类；未闭合或空区间按字面量处理 */
+function hasGlobClass(input: string, start: number): boolean {
+  const close = input.indexOf("]", start + 1);
+  if (close === -1) return false;
+  const inner = input.slice(start + 1, close);
+  return inner !== "" && inner !== "!" && !/[\s|;&<>()]/.test(inner);
+}
+
 export function tokenizeShell(input: string): ShellToken[] {
   const tokens: ShellToken[] = [];
   let i = 0;
+  let cmdStart = 0;
+  let pending: Array<{
+    delim: string;
+    quoted: boolean;
+    dash: boolean;
+    owner: number;
+  }> = [];
+
+  // heredoc 正文在行尾换行之后才出现，必须在此处消费，避免被当成命令或路径
+  const flushHeredocs = () => {
+    for (const h of pending) {
+      const consumed = heredocBody(input, i, h.delim, h.dash);
+      tokens.push({
+        kind: "heredoc",
+        value: consumed.body,
+        quoted: h.quoted,
+        owner: h.owner,
+      });
+      i = consumed.end;
+    }
+    pending = [];
+  };
+
   while (i < input.length) {
     const ch = input[i];
     if (ch === " " || ch === "\t" || ch === "\r") {
@@ -233,19 +402,46 @@ export function tokenizeShell(input: string): ShellToken[] {
     if (ch === "\n") {
       tokens.push({ kind: "op", value: "\n" });
       i++;
+      flushHeredocs();
+      cmdStart = tokens.length;
       continue;
     }
     if (input.startsWith("||", i) || input.startsWith("&&", i)) {
       tokens.push({ kind: "op", value: input.slice(i, i + 2) });
       i += 2;
+      cmdStart = tokens.length;
       continue;
     }
     if (ch === "|" || ch === ";" || ch === "&" || ch === "(" || ch === ")") {
       tokens.push({ kind: "op", value: ch });
       i++;
+      cmdStart = tokens.length;
       continue;
     }
-    const redir = input.slice(i).match(/^(\d*)(>>|<<|<|>)/);
+    // 文件描述符复制（2>&1 等）整体消费，其中的 & 不是命令分隔符
+    const fdDup = input.slice(i).match(/^\d*>&(?:\d|-)/);
+    if (fdDup) {
+      tokens.push({ kind: "op", value: fdDup[0] });
+      i += fdDup[0].length;
+      continue;
+    }
+    const heredocOp = input.slice(i).match(/^(\d*)(<<-|<<|<<<)/);
+    if (heredocOp) {
+      tokens.push({ kind: "op", value: heredocOp[0] });
+      i += heredocOp[0].length;
+      if (heredocOp[2] !== "<<<") {
+        const delim = heredocDelimiter(input, i);
+        pending.push({
+          delim: delim.delim,
+          quoted: delim.quoted,
+          dash: heredocOp[2] === "<<-",
+          owner: cmdStart,
+        });
+        i = delim.end;
+      }
+      continue;
+    }
+    const redir = input.slice(i).match(/^(\d*)(>>|<|>)/);
     if (redir) {
       tokens.push({ kind: "op", value: redir[0] });
       i += redir[0].length;
@@ -253,6 +449,8 @@ export function tokenizeShell(input: string): ShellToken[] {
     }
 
     let word = "";
+    let activeGlob = false;
+    let dynamic = false;
     while (i < input.length) {
       const c = input[i];
       if (
@@ -272,6 +470,21 @@ export function tokenizeShell(input: string): ShellToken[] {
       }
       if (input.startsWith("||", i) || input.startsWith("&&", i)) break;
 
+      // 命令替换在单引号之外始终会执行，包括双引号内
+      if (c === "$" && input[i + 1] === "(") {
+        const sub = scanCommandSub(input, i + 1);
+        if (sub.body.trim() !== "") tokens.push({ kind: "sub", value: sub.body });
+        dynamic = true;
+        i = sub.end + 1;
+        continue;
+      }
+      if (c === "`") {
+        const sub = scanBacktick(input, i);
+        if (sub.body.trim() !== "") tokens.push({ kind: "sub", value: sub.body });
+        dynamic = true;
+        i = sub.end + 1;
+        continue;
+      }
       if (c === "'") {
         i++;
         while (i < input.length && input[i] !== "'") word += input[i++];
@@ -281,12 +494,33 @@ export function tokenizeShell(input: string): ShellToken[] {
       if (c === '"') {
         i++;
         while (i < input.length && input[i] !== '"') {
-          if (input[i] === "\\" && i + 1 < input.length) {
+          const d = input[i];
+          if (d === "\\" && i + 1 < input.length) {
             word += input[i + 1];
             i += 2;
             continue;
           }
-          word += input[i++];
+          if (d === "$" && input[i + 1] === "(") {
+            const sub = scanCommandSub(input, i + 1);
+            if (sub.body.trim() !== "") {
+              tokens.push({ kind: "sub", value: sub.body });
+            }
+            dynamic = true;
+            i = sub.end + 1;
+            continue;
+          }
+          if (d === "`") {
+            const sub = scanBacktick(input, i);
+            if (sub.body.trim() !== "") {
+              tokens.push({ kind: "sub", value: sub.body });
+            }
+            dynamic = true;
+            i = sub.end + 1;
+            continue;
+          }
+          if (d === "$") dynamic = true;
+          word += d;
+          i++;
         }
         if (i < input.length) i++;
         continue;
@@ -296,37 +530,80 @@ export function tokenizeShell(input: string): ShellToken[] {
         i += 2;
         continue;
       }
+      if (c === "$") dynamic = true;
+      if (c === "*" || c === "?") activeGlob = true;
+      if (c === "[" && hasGlobClass(input, i)) activeGlob = true;
       word += c;
       i++;
     }
-    tokens.push({ kind: "word", value: word });
+    tokens.push({ kind: "word", value: word, activeGlob, dynamic });
   }
+  flushHeredocs();
   return tokens;
 }
 
 /**
- * 将 Token 拆分为独立命令的 argv 列表。
+ * 将 Token 拆分为独立命令。
  * 注意：重定向操作符（如 <, >, >>）后的文件名必须保留在当前 argv 中，
  * 保证路径匹配引擎能捕获 `cat < .env` 等重定向注入操作。
+ * startToken 指向命令段首个 token（含前置重定向），与 heredoc token 的
+ * owner 对齐；否则 `2>/tmp/err bash <<EOF` 的正文会因找不到所属命令被当
+ * 成无害数据。<< 分隔符与 2>&1 的操作数已被词法层整体消费，其后没有目标词。
  */
-export function simpleCommandArgvs(tokens: ShellToken[]): string[][] {
-  const out: string[][] = [];
-  let current: string[] = [];
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i];
-    if (t.kind === "op") {
-      if (CONTROL_OPS[t.value]) {
-        if (current.length > 0) out.push(current);
-        current = [];
-        continue;
-      }
-      // 重定向操作符：跳过操作符自身，后随的目标文件作为路径 token 进入 current argv
+export function commandNodes(tokens: ShellToken[]): ShellCmd[] {
+  const out: ShellCmd[] = [];
+  let words: ShellWord[] = [];
+  let startToken = 0;
+  let pendingStart: number | null = null;
+  let pendingTarget: "in" | "out" | null = null;
+
+  const flush = (pipeNext: boolean) => {
+    if (words.length > 0) out.push({ words, pipeNext, startToken });
+    words = [];
+    pendingStart = null;
+    pendingTarget = null;
+  };
+
+  for (let idx = 0; idx < tokens.length; idx++) {
+    const t = tokens[idx];
+    if (t.kind === "word") {
+      if (words.length === 0) startToken = pendingStart ?? idx;
+      words.push({
+        value: t.value,
+        glob: t.activeGlob,
+        dynamic: t.dynamic,
+        target: pendingTarget,
+      });
+      pendingTarget = null;
       continue;
     }
-    current.push(t.value);
+    if (t.kind !== "op") {
+      // 命令替换 sub token 属于当前命令段的 token 范围，同样计入起点
+      if (t.kind === "sub" && words.length === 0 && pendingStart === null) {
+        pendingStart = idx;
+      }
+      continue;
+    }
+    if (t.value === "|") {
+      flush(true);
+      continue;
+    }
+    if (CONTROL_OPS[t.value]) {
+      flush(false);
+      continue;
+    }
+    if (words.length === 0 && pendingStart === null) pendingStart = idx;
+    if (t.value === "<<" || t.value === "<<-" || /^\d*>&/.test(t.value)) {
+      continue;
+    }
+    pendingTarget = t.value.includes(">") ? "out" : "in";
   }
-  if (current.length > 0) out.push(current);
+  flush(false);
   return out;
+}
+
+export function simpleCommandArgvs(tokens: ShellToken[]): string[][] {
+  return commandNodes(tokens).map((c) => c.words.map((w) => w.value));
 }
 
 function stripLeadingAssignments(words: string[]): string[] {
@@ -440,7 +717,8 @@ export function stripWrappers(words: string[]): string[] {
       continue;
     }
 
-    if (FLAG_WRAPPERS[head]) {
+    // 严格等于真：避免继承属性（constructor 等）被当成受信任包装器
+    if (FLAG_WRAPPERS[head] === true) {
       let j = 1;
       while (j < w.length && w[j].startsWith("-")) j++;
       w = stripLeadingAssignments(w.slice(j));
@@ -513,7 +791,18 @@ function isUnconstrainedEnvDump(argv: string[]): boolean {
   return false;
 }
 
-function argvStartsWith(argv: string[], patternWords: string[]): boolean {
+function stripWrapperWords(words: ShellWord[]): ShellWord[] {
+  const kept = stripWrappers(words.map((w) => w.value)).length;
+  return kept === words.length ? words : words.slice(words.length - kept);
+}
+
+/** 重定向目标不是命令操作数；剥离包装器前缀后返回剩余词 */
+function operandWords(words: ShellWord[]): ShellWord[] {
+  return stripWrapperWords(words.filter((w) => w.target === null));
+}
+
+function argvStartsWith(words: ShellWord[], patternWords: string[]): boolean {
+  const argv = words.map((w) => w.value);
   const normArgv = normalizeRmArgv(argv);
   if (normArgv.length === 0) return false;
 
@@ -531,16 +820,17 @@ function argvStartsWith(argv: string[], patternWords: string[]): boolean {
   }
 
   // rm -rf 通配类规则（如 "rm -rf *"、"rm -rf ./*"、"rm -rf /*"）：
-  // 只有当真实删除目标中含有 shell 通配符（* ? [）时才命中，
-  // 避免把「定向删除具体路径/文件」（如 rm -rf /tmp/x）误判为全量通配清空。
+  // 只有真实删除目标含有未引用的通配符或动态展开时才命中，
+  // 避免把「定向删除字面文件名」（如 rm -rf './build/[draft]'）误判为全量清空。
   const isRmForceGlobPattern =
     head === "rm" &&
     normArgv[1] === "-rf" &&
     patternWords[1] === "-rf" &&
     patternWords.slice(2).some((w) => /[*?\[]/.test(w));
   if (isRmForceGlobPattern) {
-    const targets = normArgv.slice(2).filter((t) => !t.startsWith("-"));
-    return targets.some((t) => /[*?\[]/.test(t));
+    return words
+      .slice(2)
+      .some((w) => !w.value.startsWith("-") && (w.glob || w.dynamic));
   }
 
   if (normArgv.length < patternWords.length) return false;
@@ -566,43 +856,264 @@ function argvStartsWith(argv: string[], patternWords: string[]): boolean {
   return true;
 }
 
-export function commandMatchesPattern(
-  command: string,
-  pattern: string,
-): boolean {
-  // 结构性检测：curl/wget 未落盘直接管道交付 Shell / 解释器执行即命中，
-  // 必须在下方通配正则分支之前判定，否则含 * 与 | 的规则会提前 return 使其失效
-  if (
-    pattern.includes("curl") ||
-    pattern.includes("wget")
-  ) {
+/** Git 全局选项；其中带独立取值的选项需要连同后一个词一起跳过 */
+const GIT_GLOBAL_VALUE_OPTIONS: Record<string, true> = {
+  "-C": true,
+  "-c": true,
+  "--git-dir": true,
+  "--work-tree": true,
+  "--namespace": true,
+  "--config-env": true,
+  "--super-prefix": true,
+};
+
+/** 交互式选取与预览不会整体写入暂存区 */
+function isGitAddPreviewFlag(arg: string): boolean {
+  if (arg.startsWith("--")) {
+    return arg === "--patch" || arg === "--interactive" || arg === "--dry-run";
+  }
+  return /^-[a-zA-Z]*[pin]/.test(arg);
+}
+
+/** 解析 pathspec 前缀 magic；短形式 :! 与 :^ 等价 exclude，":" 与 ":/" 指向全树 */
+function gitPathspecMagic(p: string): {
+  exclude: boolean;
+  literal: boolean;
+  rest: string;
+} {
+  if (!p.startsWith(":")) return { exclude: false, literal: false, rest: p };
+  if (p[1] === "!" || p[1] === "^") {
+    return { exclude: true, literal: false, rest: p.slice(2) };
+  }
+  if (p[1] === "/") {
+    return { exclude: false, literal: false, rest: p.slice(2) };
+  }
+  if (p[1] === "(") {
+    const close = p.indexOf(")", 2);
+    if (close !== -1) {
+      const magics = p.slice(2, close).split(",");
+      return {
+        exclude: magics.includes("exclude"),
+        literal: magics.includes("literal"),
+        rest: p.slice(close + 1),
+      };
+    }
+  }
+  return { exclude: false, literal: false, rest: p.slice(1) };
+}
+
+/** git add 是否属于「没有明确文件范围」的暂存；排除项不算正向选择 */
+function gitAddIsFullScope(words: ShellWord[]): boolean {
+  const stripped = operandWords(words);
+  if (stripped.length < 2 || basenames(stripped[0].value) !== "git") {
+    return false;
+  }
+  let i = 1;
+  while (i < stripped.length && stripped[i].value.startsWith("-")) {
+    i += GIT_GLOBAL_VALUE_OPTIONS[stripped[i].value] === true ? 2 : 1;
+  }
+  if (stripped[i]?.value !== "add") return false;
+
+  const pathspecs: ShellWord[] = [];
+  let afterSeparator = false;
+  let preview = false;
+  let indirect = false;
+  for (let j = i + 1; j < stripped.length; j++) {
+    const w = stripped[j];
+    // 重定向目标不是 pathspec，`git add -A >/tmp/x` 不能冒充明确范围
+    if (w.target !== null) continue;
+    const arg = w.value;
+    if (afterSeparator) {
+      pathspecs.push(w);
+      continue;
+    }
+    if (arg === "--") {
+      afterSeparator = true;
+      continue;
+    }
+    if (arg.startsWith("-")) {
+      if (
+        arg === "--pathspec-from-file" ||
+        arg.startsWith("--pathspec-from-file=")
+      ) {
+        // 间接 pathspec 收集完 preview 再判定，两种参数先后都要生效
+        indirect = true;
+        continue;
+      }
+      if (isGitAddPreviewFlag(arg)) preview = true;
+      continue;
+    }
+    pathspecs.push(w);
+  }
+  // 交互选取与预览不会整体写入暂存区，且优先于 indirect 判定
+  if (preview) return false;
+  if (indirect) return true;
+
+  let hasPositive = false;
+  for (const w of pathspecs) {
+    const { exclude, literal, rest } = gitPathspecMagic(w.value);
+    if (exclude) continue;
+    hasPositive = true;
+    // 动态取值无法静态确认范围
+    if (w.dynamic || w.glob) return true;
     if (
-      /\b(curl|wget)\b[^|;&]*\|[^|;&]*\b(bash|ash|zsh|dash|sh|python\d*|node|bun|perl|ruby)\b/i.test(
-        command,
-      )
+      rest === "" ||
+      rest === "." ||
+      rest === ".." ||
+      rest === "./" ||
+      rest === "../"
     ) {
       return true;
     }
+    // literal magic 中的通配符是文件名的字面部分，仍算确切文件
+    if (!literal && /[*?[\]]/.test(rest)) return true;
   }
-  if (pattern.includes("*") && /[|;&\n]/.test(pattern)) {
-    return new RegExp(globToRegExpSource(pattern), "i").test(command);
-  }
-  const argvs = simpleCommandArgvs(tokenizeShell(command));
-  const patternWords = patternWordsOf(pattern);
-  if (!patternWords) {
-    if (pattern.includes("*")) {
-      return new RegExp(globToRegExpSource(pattern)).test(command);
+  return !hasPositive;
+}
+
+const DOWNLOADERS: Record<string, true> = { curl: true, wget: true };
+
+const STDIN_SHELLS: Record<string, true> = {
+  sh: true,
+  bash: true,
+  zsh: true,
+  dash: true,
+  ash: true,
+  ksh: true,
+};
+
+const STDIN_SCRIPTS: Record<string, true> = {
+  node: true,
+  bun: true,
+  deno: true,
+  perl: true,
+  ruby: true,
+  php: true,
+  lua: true,
+  luajit: true,
+};
+
+/** Python 字段访问只支持下标与 .get("字面量") */
+const PY_FIELD = String.raw`(?:\s*\[\s*(?:"(?:[^"\\\r\n]|\\[^\r\n])*"|'(?:[^'\\\r\n]|\\[^\r\n])*'|-?\d+)\s*\]|\s*\.\s*get\s*\(\s*"(?:[^"\\\r\n]|\\[^\r\n])*"\s*\))*`;
+
+/** 仅放行固定的「读取 stdin JSON 并打印字段」脚本，其余 python -c 一律保守拦截 */
+const SAFE_JSON_SCRIPT = new RegExp(
+  String.raw`^\s*import\s+(?:json\s*,\s*sys|sys\s*,\s*json)\s*;\s*print\s*\(\s*json\s*\.\s*(?:load\s*\(\s*sys\s*\.\s*stdin\s*\)|loads\s*\(\s*sys\s*\.\s*stdin\s*\.\s*read\s*\(\s*\)\s*\))${PY_FIELD}\s*\)\s*;?\s*$`,
+);
+
+/** 显式 stdin 路径操作数：与管道下载组合时等于把下载体当程序 */
+const STDIN_PATHS: Record<string, true> = {
+  "/dev/stdin": true,
+  "/dev/fd/0": true,
+  "/proc/self/fd/0": true,
+};
+
+function interpreterExecutesStdin(words: ShellWord[]): boolean {
+  const args = operandWords(words);
+  const argv = args.map((w) => w.value);
+  if (argv.length === 0) return false;
+  const head = basenames(argv[0]).toLowerCase();
+  const python = /^python(?:\d+(?:\.\d+)*)?$/.test(head);
+  const shell = STDIN_SHELLS[head] === true;
+  const script = STDIN_SCRIPTS[head] === true;
+  if (!python && !shell && !script) return false;
+  // 动态参数可能改变代码或 stdin 操作数，不能按字面量放行
+  if (args.some((w) => w.dynamic)) return true;
+  const rest = argv.slice(1);
+  const operands = rest.filter((a) => !a.startsWith("-"));
+  if (operands.some((a) => STDIN_PATHS[a] === true)) return true;
+  if (python) {
+    const codeIdx = rest.findIndex(
+      (a) => a === "-c" || /^-[a-zA-Z]*c[a-zA-Z]*$/.test(a),
+    );
+    if (codeIdx !== -1) {
+      return (
+        codeIdx + 1 >= rest.length || !SAFE_JSON_SCRIPT.test(rest[codeIdx + 1])
+      );
     }
-    return false;
+    return operands.length === 0;
   }
-  for (const argv of argvs) {
-    if (argvStartsWith(stripWrappers(argv), patternWords)) return true;
+  if (shell) {
+    // -c 的代码能读取管道体，不能把它当作脚本文件名
+    return (
+      rest.some((a) => /^-[a-zA-Z]*[sc][a-zA-Z]*$/.test(a)) ||
+      operands.length === 0
+    );
+  }
+  if (script) {
+    // perl/ruby/php 的 -e/-r 内联代码可以读取管道体
+    return (
+      operands.length === 0 ||
+      rest.some((a) => /^-[a-zA-Z]*[er][a-zA-Z]*$/.test(a))
+    );
   }
   return false;
 }
 
-/** 提取嵌套在 shell wrapper（如 sh -c, bash -lc, eval, 反引号, $()）中的内嵌脚本 */
-function embeddedScripts(argvs: string[][], rawCommand?: string): string[] {
+function downloadPipeExecutes(nodes: ShellCmd[]): boolean {
+  let downloader = false;
+  let piped = false;
+  for (const node of nodes) {
+    if (!piped) downloader = false;
+    const argv = operandWords(node.words).map((w) => w.value);
+    if (argv.length > 0) {
+      if (!downloader) {
+        downloader = DOWNLOADERS[basenames(argv[0]).toLowerCase()] === true;
+      } else if (interpreterExecutesStdin(node.words)) {
+        return true;
+      }
+    }
+    piped = node.pipeNext;
+  }
+  return false;
+}
+
+function isDownloadRulePattern(pattern: string): boolean {
+  return (
+    (pattern.startsWith("curl ") || pattern.startsWith("wget ")) &&
+    BUILTIN_COMMANDS.some((rule) => rule.value === pattern)
+  );
+}
+
+function matchCommandNodes(
+  nodes: ShellCmd[],
+  tokens: ShellToken[],
+  pattern: string,
+): boolean {
+  if (isDownloadRulePattern(pattern)) return downloadPipeExecutes(nodes);
+  const patternWords = patternWordsOf(pattern);
+  if (!patternWords) {
+    // 含控制符的自定义规则：对去引用后的命令文本做通配匹配，heredoc 正文不参与
+    if (!pattern.includes("*")) return false;
+    const text = tokens
+      .filter((t) => t.kind !== "heredoc")
+      .map((t) => t.value)
+      .join(" ");
+    return new RegExp(globToRegExpSource(pattern), "i").test(text);
+  }
+  if (
+    patternWords.length === 3 &&
+    patternWords[0] === "git" &&
+    patternWords[1] === "add" &&
+    (patternWords[2] === "-A" || patternWords[2] === ".")
+  ) {
+    return nodes.some((c) => gitAddIsFullScope(c.words));
+  }
+  return nodes.some((c) =>
+    argvStartsWith(stripWrapperWords(c.words), patternWords),
+  );
+}
+
+export function commandMatchesPattern(
+  command: string,
+  pattern: string,
+): boolean {
+  const tokens = tokenizeShell(command);
+  return matchCommandNodes(commandNodes(tokens), tokens, pattern);
+}
+
+/** 提取嵌套在 shell wrapper（如 sh -c, bash -lc, eval）中的内嵌脚本；命令替换由词法层产出 sub token */
+function embeddedScripts(argvs: string[][]): string[] {
   const scripts: string[] = [];
   const shells = new Set(["sh", "bash", "dash", "zsh", "ash"]);
   for (const argv of argvs) {
@@ -624,21 +1135,6 @@ function embeddedScripts(argvs: string[][], rawCommand?: string): string[] {
         scripts.push(stripped.slice(i).join(" "));
         break;
       }
-    }
-  }
-
-  // 递归扫描提取反引号及 $() 内部的命令替换
-  if (rawCommand) {
-    const backtickRe = /`([^`]+)`/g;
-    let bm: RegExpExecArray | null;
-    while ((bm = backtickRe.exec(rawCommand)) !== null) {
-      if (bm[1]?.trim()) scripts.push(bm[1].trim());
-    }
-
-    const dollarParenRe = /\$\(([^)]+)\)/g;
-    let dm: RegExpExecArray | null;
-    while ((dm = dollarParenRe.exec(rawCommand)) !== null) {
-      if (dm[1]?.trim()) scripts.push(dm[1].trim());
     }
   }
 
@@ -746,35 +1242,242 @@ export function pathRuleMatchesFull(
     ? new RegExp(`^${globToRegExpSource(R)}$`)
     : undefined;
   if (re ? re.test(C) : C === R) return true;
-
   const realC = resolveReal(C);
   if (realC !== C && (re ? re.test(realC) : realC === R)) return true;
-  if (!re) {
+  if (re) {
+    // 通配部分不能 realpath，先解析固定目录前缀
+    const prefix = path.dirname(R.slice(0, R.indexOf("*")));
+    const realPrefix = resolveReal(prefix);
+    if (realPrefix !== prefix) {
+      const realRe = new RegExp(
+        `^${globToRegExpSource(realPrefix + R.slice(prefix.length))}$`,
+      );
+      if (realRe.test(C) || realRe.test(realC)) return true;
+    }
+  } else {
     const realR = resolveReal(R);
     if (realR !== R && (C === realR || realC === realR)) return true;
   }
   return false;
 }
 
-function pathMatchesCommandArgv(
-  argvs: string[][],
-  ruleValue: string,
+const METADATA_PROBE_HEADS: Record<string, true> = {
+  stat: true,
+  test: true,
+  "[": true,
+  "[[": true,
+};
+
+const LITERAL_ECHO_HEADS: Record<string, true> = {
+  echo: true,
+  printf: true,
+};
+
+/** 只读授权只支持最直接的读取命令 */
+const READ_ONLY_HEADS: Record<string, true> = {
+  cat: true,
+  head: true,
+  tail: true,
+  grep: true,
+};
+
+function isMissingPathError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "ENOENT"
+  );
+}
+
+function protectedLinkTarget(
+  candidate: string,
+  policy: Policy,
   cwd: string,
   home: string,
 ): boolean {
-  for (const argv of argvs) {
-    for (const token of argv) {
-      if (token.startsWith("-")) continue;
-      if (
-        token.includes("/") ||
-        token === ".env" ||
-        token.startsWith(".env.")
-      ) {
-        if (pathRuleMatchesFull(token, ruleValue, cwd, home)) return true;
+  const hits = (p: string, origin: string) =>
+    policy.paths.some((rule) => {
+      const R = absoluteForm(rule.value, cwd, home);
+      // 共享目录链接只改变路径写法，不扩大原有的确切授权
+      if (R === origin || R.startsWith(origin + path.sep)) return false;
+      return pathRuleMatchesFull(p, rule.value, cwd, home);
+    });
+  const seen = new Set<string>();
+  const original = path.resolve(candidate);
+  const parts = original.split(path.sep);
+  let resolved = "";
+  let prefixEnd = 0;
+  let linkOrigin = "";
+  for (let i = 1; i < parts.length; i++) {
+    prefixEnd += parts[i].length + path.sep.length;
+    let cur =
+      resolved === "" ? path.sep + parts[i] : resolved + path.sep + parts[i];
+    for (;;) {
+      // link 环无法确认最终落点，保守按受保护处理
+      if (seen.has(cur)) return true;
+      let target: string | undefined;
+      try {
+        if (lstatSync(cur).isSymbolicLink()) {
+          target = path.resolve(path.dirname(cur), readlinkSync(cur));
+        }
+      } catch (error) {
+        // 路径到此不存在，更深的组件也无法构成链接
+        if (isMissingPathError(error)) break;
+        return true;
       }
+      if (target === undefined) break;
+      seen.add(cur);
+      linkOrigin = original.slice(0, prefixEnd);
+      if (hits(target, linkOrigin)) return true;
+      cur = target;
     }
+    resolved = cur;
+    if (linkOrigin && hits(resolved, linkOrigin)) return true;
   }
   return false;
+}
+
+/** 确切路径只读授权：只认精确路径；链接展开后落到被禁目标的条目按受禁处理 */
+function isReadAllowed(
+  candidate: string,
+  policy: Policy,
+  cwd: string,
+  home: string,
+): boolean {
+  if (policy.allow_read_paths.length === 0) return false;
+  const C = normPath(candidate, cwd, home);
+  const realC = resolveReal(C);
+  for (const rule of policy.allow_read_paths) {
+    // 相对条目只接受构建期展开出的绝对形态，避免换目录后同名文件被当作已授权
+    if (!path.isAbsolute(rule.value) && !stillHasHomeToken(rule.value)) continue;
+    const A = absoluteForm(rule.value, cwd, home);
+    if (C !== A && realC !== A) continue;
+    try {
+      if (!lstatSync(A).isFile()) continue;
+    } catch (error) {
+      if (!isMissingPathError(error)) continue;
+    }
+    if (protectedLinkTarget(A, policy, cwd, home)) continue;
+    if (C !== A && protectedLinkTarget(C, policy, cwd, home)) continue;
+    return true;
+  }
+  return false;
+}
+
+/** 只读授权只适用于单条直接读取命令：无管道、无重定向、无 wrapper、无动态展开 */
+function isPureReadCommand(cmd: ShellCmd, soleCommand: boolean): boolean {
+  if (!soleCommand || cmd.pipeNext) return false;
+  if (cmd.words.some((w) => w.target !== null || w.dynamic)) return false;
+  const argv = cmd.words.map((w) => w.value);
+  return argv.length > 0 && READ_ONLY_HEADS[basenames(argv[0])] === true;
+}
+
+/** 命中机密路径的词是否可豁免：受限元数据探测、字面回显或显式只读授权 */
+function bashHitExemptable(
+  cmd: ShellCmd,
+  wordIdx: number,
+  policy: Policy,
+  cwd: string,
+  home: string,
+  allowReadExempt: boolean,
+  soleCommand: boolean,
+): boolean {
+  const word = cmd.words[wordIdx];
+  // 写入机密路径、按通配枚举秘密目录一律拦截
+  if (word.target !== null || word.glob) return false;
+  // 管道下游可能把该值当作读取参数
+  if (cmd.pipeNext) return false;
+
+  const argv = cmd.words.map((w) => w.value);
+  const stripped = stripWrappers(argv);
+  const head = stripped.length > 0 ? basenames(stripped[0]) : "";
+
+  // 受限元数据查询不读取内容
+  if (METADATA_PROBE_HEADS[head] === true) return true;
+  if (head === "git" && stripped[1] === "check-ignore") return true;
+  if (head === "ls") {
+    // 只有真实存在的单个普通文件才算元数据查询，目录枚举照旧拦截
+    try {
+      const operands = stripped.slice(1).filter((a) => !a.startsWith("-"));
+      return (
+        operands.length === 1 &&
+        lstatSync(normPath(operands[0], cwd, home)).isFile()
+      );
+    } catch {
+      return false;
+    }
+  }
+  // echo/printf 的字面路径是回显；其中的命令替换已由 sub token 单独检查
+  if (LITERAL_ECHO_HEADS[head] === true) return true;
+
+  return (
+    allowReadExempt &&
+    isReadAllowed(word.value, policy, cwd, home) &&
+    isPureReadCommand(cmd, soleCommand)
+  );
+}
+
+function hasBlockingPathHit(
+  nodes: ShellCmd[],
+  ruleValue: string,
+  policy: Policy,
+  cwd: string,
+  home: string,
+  allowReadExempt: boolean,
+): boolean {
+  const soleCommand = nodes.length === 1;
+  return nodes.some((cmd) =>
+    cmd.words.some((word, idx) => {
+      const token = word.value;
+      if (token.startsWith("-")) return false;
+      if (
+        !(
+          token.includes("/") ||
+          token === ".env" ||
+          token.startsWith(".env.")
+        )
+      ) {
+        return false;
+      }
+      if (!pathRuleMatchesFull(token, ruleValue, cwd, home)) return false;
+      return !bashHitExemptable(
+        cmd,
+        idx,
+        policy,
+        cwd,
+        home,
+        allowReadExempt,
+        soleCommand,
+      );
+    }),
+  );
+}
+
+/** 扫描自由文本中的命令替换；无引用 heredoc 正文会在展开阶段执行其中的替换 */
+function scanSubsInText(text: string): string[] {
+  const out: string[] = [];
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] === "\\") {
+      i += 2;
+      continue;
+    }
+    if (text[i] === "$" && text[i + 1] === "(") {
+      const sub = scanCommandSub(text, i + 1);
+      if (sub.body.trim() !== "") out.push(sub.body);
+      i = sub.end + 1;
+      continue;
+    }
+    if (text[i] === "`") {
+      const sub = scanBacktick(text, i);
+      if (sub.body.trim() !== "") out.push(sub.body);
+      i = sub.end + 1;
+      continue;
+    }
+    i++;
+  }
+  return out;
 }
 
 function oneLineBody(text: string): string {
@@ -840,12 +1543,19 @@ export function extractEditPaths(input: string): string[] {
 // 防护评估主引擎 (Guard Evaluation Engine)
 // ============================================================================
 
-export function evaluateGuard(input: GuardInput, policy: Policy): GuardResult {
+export function evaluateGuard(
+  input: GuardInput,
+  policy: Policy,
+  allowReadExempt = true,
+): GuardResult {
   if (input.tool === "bash") {
     const command = expandHomeInText(input.command, input.home);
-    const argvs = simpleCommandArgvs(tokenizeShell(command));
+    const tokens = tokenizeShell(command);
+    const nodes = commandNodes(tokens);
+    const argvs = nodes.map((c) => c.words.map((w) => w.value));
+
     for (const rule of policy.commands) {
-      if (commandMatchesPattern(command, rule.value)) {
+      if (matchCommandNodes(nodes, tokens, rule.value)) {
         return {
           block: true,
           reason: resolveBlockReason(rule, "command", policy.default_reason),
@@ -854,11 +1564,13 @@ export function evaluateGuard(input: GuardInput, policy: Policy): GuardResult {
     }
     for (const rule of policy.paths) {
       if (
-        pathMatchesCommandArgv(
-          argvs,
+        hasBlockingPathHit(
+          nodes,
           rule.value,
+          policy,
           input.cwd,
           input.home,
+          allowReadExempt,
         )
       ) {
         return {
@@ -867,12 +1579,45 @@ export function evaluateGuard(input: GuardInput, policy: Policy): GuardResult {
         };
       }
     }
-    for (const script of embeddedScripts(argvs, command)) {
+
+    // 嵌套脚本不再享有只读授权，避免借外层包装扩大授权范围
+    const nested = (script: string): GuardResult | undefined => {
       const inner = evaluateGuard(
         { tool: "bash", command: script, cwd: input.cwd, home: input.home },
         policy,
+        false,
       );
-      if (inner.block) return inner;
+      return inner.block ? inner : undefined;
+    };
+
+    for (const t of tokens) {
+      if (t.kind === "sub") {
+        const blocked = nested(t.value);
+        if (blocked) return blocked;
+      }
+      if (t.kind === "heredoc") {
+        let owner: ShellCmd | undefined;
+        for (const cmd of nodes) {
+          if (cmd.startToken <= t.owner) owner = cmd;
+        }
+        const consumed =
+          owner !== undefined && interpreterExecutesStdin(owner.words);
+        // 解释器把正文当脚本执行；无引用的正文无论消费者是谁都会展开其中的替换
+        const body = consumed
+          ? t.value
+          : t.quoted
+            ? ""
+            : scanSubsInText(t.value).join("\n");
+        if (body !== "") {
+          const blocked = nested(body);
+          if (blocked) return blocked;
+        }
+      }
+    }
+
+    for (const script of embeddedScripts(argvs)) {
+      const blocked = nested(script);
+      if (blocked) return blocked;
     }
     return { block: false };
   }
@@ -912,6 +1657,9 @@ export function evaluateGuard(input: GuardInput, policy: Policy): GuardResult {
     return { block: false };
   }
 
+  const readOnlyTool =
+    input.tool === "read" || input.tool === "grep" || input.tool === "glob";
+
   for (const rawCandidate of candidateList) {
     const pathValue = expandHomeInText(rawCandidate, input.home);
     const candidateVariants = [pathValue];
@@ -922,14 +1670,20 @@ export function evaluateGuard(input: GuardInput, policy: Policy): GuardResult {
 
     for (const variant of candidateVariants) {
       for (const rule of policy.paths) {
-        if (
-          pathRuleMatchesFull(variant, rule.value, input.cwd, input.home)
-        ) {
-          return {
-            block: true,
-            reason: resolveBlockReason(rule, "path", policy.default_reason),
-          };
+        if (!pathRuleMatchesFull(variant, rule.value, input.cwd, input.home)) {
+          continue;
         }
+        // 选择器（:50-200、:raw 等）剥离后判定授权，确切授权路径才命中
+        if (
+          readOnlyTool &&
+          isReadAllowed(stripOmpSelector(variant), policy, input.cwd, input.home)
+        ) {
+          continue;
+        }
+        return {
+          block: true,
+          reason: resolveBlockReason(rule, "path", policy.default_reason),
+        };
       }
     }
   }
@@ -1003,6 +1757,7 @@ type FallbackYamlDoc = {
   default_reason?: string;
   deny_commands: Array<string | Record<string, string>>;
   deny_paths: Array<string | Record<string, string>>;
+  allow_read_paths: Array<string | Record<string, string>>;
 };
 
 /** 纯正则轻量级 fallback 解析器（仅在宿主环境完全无 YAML 解析器时启用） */
@@ -1010,9 +1765,11 @@ export function parseSimpleYamlFallback(source: string): FallbackYamlDoc {
   const result: FallbackYamlDoc = {
     deny_commands: [],
     deny_paths: [],
+    allow_read_paths: [],
   };
   const lines = source.split(/\r?\n/);
-  let currentKey: "deny_commands" | "deny_paths" | null = null;
+  let currentKey: "deny_commands" | "deny_paths" | "allow_read_paths" | null =
+    null;
   let currentItem: Record<string, string> | null = null;
 
   for (let line of lines) {
@@ -1037,6 +1794,12 @@ export function parseSimpleYamlFallback(source: string): FallbackYamlDoc {
 
     if (trimmed.startsWith("deny_paths:")) {
       currentKey = "deny_paths";
+      currentItem = null;
+      continue;
+    }
+
+    if (trimmed.startsWith("allow_read_paths:")) {
+      currentKey = "allow_read_paths";
       currentItem = null;
       continue;
     }
@@ -1102,7 +1865,7 @@ export function parseLayerYaml(source: string): ParseLayerResult {
   if (doc == null) {
     return {
       ok: true,
-      layer: { commandOps: [], pathOps: [], errors: [] },
+      layer: { commandOps: [], pathOps: [], allowReadOps: [], errors: [] },
     };
   }
 
@@ -1113,11 +1876,25 @@ export function parseLayerYaml(source: string): ParseLayerResult {
   const root = doc as Record<string, unknown>;
   const commands = parseListOps(root.deny_commands, "pattern");
   const paths = parseListOps(root.deny_paths, "path");
+  const allowRead = parseListOps(root.allow_read_paths, "path");
+
+  // 只读授权必须逐个文件指定；通配条目报配置错误并丢弃，防止批量放行
+  const allowReadOps: LayerOp[] = [];
+  for (const op of allowRead.ops) {
+    if (op.type === "add" && /[*?\[]/.test(op.value)) {
+      allowRead.errors.push(
+        `allow_read_paths 仅支持确切路径，不支持通配: ${op.value}`,
+      );
+      continue;
+    }
+    allowReadOps.push(op);
+  }
 
   const layer: ParsedLayer = {
     commandOps: commands.ops,
     pathOps: paths.ops,
-    errors: [...commands.errors, ...paths.errors],
+    allowReadOps,
+    errors: [...commands.errors, ...paths.errors, ...allowRead.errors],
   };
 
   const dr = root.default_reason;
@@ -1202,6 +1979,7 @@ export function buildPolicy(input: {
   };
   let commands = materializeRules(BUILTIN_COMMANDS, "command", ctx);
   let paths = materializeRules(BUILTIN_PATHS, "path", ctx);
+  let allowReadPaths: Rule[] = [];
   let default_reason: string | undefined;
 
   const layers: Array<{ name: string; source: string | null | undefined }> = [
@@ -1227,12 +2005,18 @@ export function buildPolicy(input: {
     }
     commands = applyOps(commands, parsed.layer.commandOps, "command", ctx);
     paths = applyOps(paths, parsed.layer.pathOps, "path", ctx);
+    allowReadPaths = applyOps(
+      allowReadPaths,
+      parsed.layer.allowReadOps,
+      "path",
+      ctx,
+    );
   }
 
   const policy: Policy =
     default_reason === undefined
-      ? { commands, paths }
-      : { default_reason, commands, paths };
+      ? { commands, paths, allow_read_paths: allowReadPaths }
+      : { default_reason, commands, paths, allow_read_paths: allowReadPaths };
 
   return { policy, errors };
 }

@@ -58,11 +58,12 @@ git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-con
 # 4. 选择 flake.nix 中定义的机器配置
 # Darwin: mio / sakamoto / yuuko / ling
 # NixOS: pve155 / pve156 / arm-test-1 / work-test
-echo "PROFILE=mio" >> .env
+PROFILE=mio
+printf 'PROFILE=%s\n' "$PROFILE" > .host-profile
 
-# 5. 首次应用：此时不能假设 just/nh/home-manager 已存在
+# 5. 首次应用
 # note: sudo launchctl stop systems.determinate.nix-daemon && sudo launchctl start systems.determinate.nix-daemon
-sudo nix run nix-darwin/master#darwin-rebuild -- switch --flake .#$PROFILE
+sudo nix run nix-darwin/master#darwin-rebuild -- switch --flake ".#$PROFILE"
 
 # 6. 日常应用：打开新 shell 后执行
 just sw

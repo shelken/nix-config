@@ -4,6 +4,8 @@
 
 default_reason: "BLOCKED BY USER (GLOBAL)"
 
+allow_read_paths: []
+
 deny_commands:
   - pattern: "git add -A"
     reason: "请显式指定文件"

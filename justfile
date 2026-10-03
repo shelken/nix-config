@@ -2,8 +2,7 @@
 
 set positional-arguments := true
 set dotenv-load := true
-
-# from .env
+set dotenv-filename := ".host-profile"
 
 profile := "$PROFILE"
 local_secrets_dir := env_var_or_default("LOCAL_SECRETS_DIR", home_dir() + "/code/MyRepo/nix/secrets.nix")

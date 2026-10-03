@@ -3,6 +3,7 @@ result
 result/
 .direnv/
 .env
+.host-profile
 .pre-commit-config.yaml
 .idea
 __pycache__
