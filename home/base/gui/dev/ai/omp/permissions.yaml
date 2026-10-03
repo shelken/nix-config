@@ -4,7 +4,6 @@
 
 default_reason: "BLOCKED BY USER (GLOBAL)"
 
-# 只读豁免必须逐个授权确切文件；默认不开放 SSH 配置或环境模板
 allow_read_paths: []
 
 deny_commands:
