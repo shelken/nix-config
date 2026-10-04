@@ -15,14 +15,14 @@
 - `overlays/`: nixpkgs overlays
 - `_sources/`: nvfetcher 生成的非 nixpkgs 源
 - `secrets/`: 外部 secrets flake（通过 sops-nix）
-- `.env`: 当前机器对应 flake 中定义的名字
+- `.host-profile`: 当前机器对应 flake 中定义的名字
 
 ## 基本约束
 
 - 中文注释，中文文档
 - commit 前先add然后运行一次 pre-commit
 - 优先使用 Conventional Commits 格式提交，标题 **英文**，内容 **中文**
-- 修改配置后，只有本机情况(检查.env对应的PROFILE), 才使用 `just bd`(nix-darwin范围验证) / `just hm-build`(home-manager 范围验证) 等命令进行验证; 其他机器的情况仅使用轻量化的命令进行校验
+- 修改配置后，只有本机情况(检查 .host-profile 对应的 PROFILE), 才使用 `just bd`(nix-darwin范围验证) / `just hm-build`(home-manager 范围验证) 等命令进行验证; 其他机器的情况仅使用轻量化的命令进行校验
 - 除非用户允许否则不使用 `just sw`(nix-darwin范围变更) / `just hm`(home-manager 范围变更)
 - 一般使用 `nh search` 搜索 nixpkgs 中的包
 - 项目级 skill 必须放在项目根目录 `.agents/skills/` 下，不要放到 `home/` 等用户环境配置目录
