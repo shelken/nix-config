@@ -61,7 +61,7 @@ while [[ $# -gt 0 ]]; do
         echo ""
         echo "默认值:"
         echo "  --apiurl http://127.0.0.1:8317"
-        echo "  --model  gpt-5.6-luna(off)"
+        echo "  --model  gpt-5.6-luna(none)"
         echo "  --envkey PI_CPA_API_KEY"
         echo "  --max    1"
         echo ""

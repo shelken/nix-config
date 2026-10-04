@@ -5,7 +5,7 @@
 
 ## 特定配置
 
-在 `$HOME/.specific.zsh` 可以自定义 zsh 的一些配置
+`$HOME/.specific.zsh` 只在 `sec-run` 运行目标命令时按需 source，主终端默认不加载。用 `sec-env add|del|list` 维护其中的变量。
 
 ## functions 函数列表
 
@@ -51,8 +51,8 @@ down_gh_files <github-url>
 cpa-warm [--apiurl <url>] [--model <model>] [--envkey <ENV_VAR_NAME>] [--max <n>] [--input <text>]
 
 # 默认值
-# --apiurl https://example.com
-# --model  gpt-5.6-luna(off)
+# --apiurl http://127.0.0.1:8317
+# --model  gpt-5.6-luna(none)
 # --envkey PI_CPA_API_KEY
 ```
 
