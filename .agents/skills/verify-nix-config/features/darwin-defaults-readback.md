@@ -25,7 +25,7 @@ Preconditions:
 - **运行真实入口。** 执行 `VERIFY_HOST=<host> ./.agents/skills/verify-nix-config/scripts/verify.sh defaults`。退出码为 `0`，`transcript.log` 末行给出各项计数
 - **读取结果。** `defaults-readback.json` 的 `summary.counts` 与 `entries` 记录每项的 `expected`、`actual` 与 `status`
 - **区分状态。** `mismatch` 是值不符，`missing` 是声明的键在存储中不存在，`type_differs` 是值相等但类型不同；前两者为失败，`type_differs` 需消费端确认
-- **确认只读。** 回读只调用 `defaults export` 与 `defaults read`，不写入偏好，也不改变 profile 链接
+- **确认只读。** 回读只调用 `defaults export`，不写入偏好，也不改变 profile 链接
 
 ## Gotchas
 
