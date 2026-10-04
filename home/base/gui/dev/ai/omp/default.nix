@@ -56,14 +56,9 @@ in
     home.activation.installOmpPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       plugins="$HOME/.omp/plugins"
       mkdir -p "$plugins"
-      rm -f "$plugins/package.json"
+      rm -rf "$plugins/node_modules" "$plugins/bun.lock" "$plugins/omp-plugins.lock.json"
       cp -f ${./plugins/package.json} "$plugins/package.json"
-      rm -rf "$plugins/node_modules" "$plugins/omp-plugins.lock.json"
-      BUN="${pkgs.bun}/bin/bun"
-      if command -v bun >/dev/null 2>&1; then
-        BUN="$(command -v bun)"
-      fi
-      (cd "$plugins" && "$BUN" install --silent)
+      ${pkgs.bun}/bin/bun install --cwd "$plugins" --silent
     '';
 
     shelken.backup.app.omp = [
