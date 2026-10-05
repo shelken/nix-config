@@ -55,7 +55,7 @@
 
 ### 领域文档
 
-采用单一上下文：根目录 `CONTEXT.md` 记录共享领域知识，架构决策记录放在 `docs/adr/`。详见 `docs/agents/domain.md`。
+采用单一上下文：根目录 `GLOSSARY.md` 记录共享领域知识，架构决策记录放在 `docs/adr/`。详见 `docs/agents/domain.md`。
 
 ### 声明式定时任务
 
