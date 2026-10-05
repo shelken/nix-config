@@ -28,7 +28,7 @@
 
 ### 工具使用规范
 
-- 修改文件必须使用 `edit` 精确定位替换, 禁止使用 `write` 整文件覆盖; `write` 仅用于创建新文件
+- 文件存在时优先使用 EDIT tool 而不是 WRITE tool
 - 编辑文件永远使用edit tool, 不准使用cat命令
 - 使用`read`读取文件时, 应该指定offset, 否则太长会被压缩
 
