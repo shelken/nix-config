@@ -57,10 +57,11 @@ in
       githubToken="$(${pkgs.gh}/bin/gh auth token)"
       plugins="$HOME/.omp/plugins"
       mkdir -p "$plugins"
-      rm -rf "$plugins/node_modules" "$plugins/bun.lock" "$plugins/omp-plugins.lock.json"
+      rm -rf "$plugins/node_modules" "$plugins/bun.lock" "$plugins/omp-plugins.lock.json" "$plugins/.bun-cache"
       cp -f ${./plugins/package.json} "$plugins/package.json"
-      # Bun 的私有 GitHub Git 下载需要显式 token，不复用 gh credential helper。
-      PATH="${pkgs.git}/bin:$PATH" GITHUB_TOKEN="$githubToken" \
+      # Bun 对 #main 分支依赖的解析结果会命中多层内部缓存（上游缺陷 #11548，1.4.2 未修复），
+      # 给本次安装一个一次性缓存目录强制全新解析，全局 ~/.bun/install/cache 原样保留
+      PATH="${pkgs.git}/bin:$PATH" GITHUB_TOKEN="$githubToken" BUN_INSTALL_CACHE_DIR="$plugins/.bun-cache" \
         ${pkgs.bun}/bin/bun install --cwd "$plugins" --silent
       unset githubToken
     '';
