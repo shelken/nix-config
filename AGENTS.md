@@ -1,62 +1,25 @@
-# AGENTS.md
+# nix-config
 
-基于 Nix Flakes 的多平台配置仓库，管理 macOS (nix-darwin) 和 Linux (NixOS) 的系统与 Home Manager 配置。
+基于 Nix Flakes 的多平台配置仓库，管理 macOS (nix-darwin) 和 Linux (NixOS) 的系统与 Home Manager 配置
 
-## 目录结构
+## 布局
 
-- `flake.nix`: Flake 入口
-- `modules/base`: 跨平台共享配置
-- `modules/darwin`: macOS (nix-darwin) 特有配置
-- `modules/nixos`: Linux (NixOS) 特有配置
+- `modules/{base,darwin,nixos}`: 跨平台共享、macOS、Linux 配置
 - `home/`: Home Manager 配置，按平台 (`darwin`/`linux`) 划分
-- `hosts/<hostname>/default.nix`: 机器配置
+- `hosts/<hostname>/default.nix`: 机器配置，`.host-profile` 记录当前机器对应 flake 中的名字
 - `vars/`: 全局变量（用户名、邮箱等）
-- `lib/`: 自定义函数（`mylib.scanPaths`, `mylib.relativeToRoot` 等）
-- `overlays/`: nixpkgs overlays
-- `_sources/`: nvfetcher 生成的非 nixpkgs 源
-- `secrets/`: 外部 secrets flake（通过 sops-nix）
-- `.host-profile`: 当前机器对应 flake 中定义的名字
+- `lib/`: 自定义函数（`mylib.scanPaths`、`mylib.relativeToRoot` 等）
+- `_sources/`: nvfetcher 管理的非 nixpkgs 源
+- `secrets/`: 引用外部 secrets flake，通过 sops-nix 做秘密管理
 
-## 基本约束
+## 约束
 
-- 中文注释，中文文档
-- commit 前先add然后运行一次 pre-commit
-- 优先使用 Conventional Commits 格式提交，标题 **英文**，内容 **中文**
-- 修改配置后，只有本机情况(检查 .host-profile 对应的 PROFILE), 才使用 `just bd`(nix-darwin范围验证) / `just hm-build`(home-manager 范围验证) 等命令进行验证; 其他机器的情况仅使用轻量化的命令进行校验
-- 除非用户允许否则不使用 `just sw`(nix-darwin范围变更) / `just hm`(home-manager 范围变更)
-- 一般使用 `nh search` 搜索 nixpkgs 中的包
-- 项目级 skill 必须放在项目根目录 `.agents/skills/` 下，不要放到 `home/` 等用户环境配置目录
-- 更多常用命令在 `justfile`，用 `just` 查看可用快捷命令
+日常编码、提交与验证规范见 `CODING_STANDARDS.md`
 
-## 软件源与秘密
-
-- 使用 `nvfetcher` 管理非 nixpkgs 源
-- 引用外部 `secrets` flake 做秘密管理（通过 sops-nix）
-
-## 配置原则
-
-引入/管理一个新软件的配置时按此顺序决策：
-
-1. 优先 home-manager 现成模块；没有才自己写文件关联
-2. 桌面端 GUI 产品遵循不编译原则，用nix-darwin/nixpkgs安装（brew cask 等）；安装包的方式必须与用户确认
-3. home-manager 没有现成配置时，使用 `mylib.mkConfigFile / mylib.mkConfigLink`；开发机开启 `shelken.dotfiles.liveEdit` 即可即时生效，远程部署机自动使用纯 Nix Store 路径保证自包含与原子回滚
-4. 本地已有配置时，告知用户, 让用户决定如何对待存在的配置
-5. 如果软件会自动生成大量默认配置到配置文件的，优先"读取后合并覆盖"，默认不做全量声明式管理
-
-## Tips
-
-- 执行任何nix操作(eval/build)前确保自己新增或删除的文件被git跟踪
-
-## Agent skills
-
-### 问题跟踪器
-
-问题、规格与 Wayfinder 路线地图使用 GitHub Issues 管理。详见 `docs/agents/issue-tracker.md`。
-
-### 领域文档
-
-采用单一上下文：根目录 `GLOSSARY.md` 记录共享领域知识，架构决策记录放在 `docs/adr/`。详见 `docs/agents/domain.md`。
-
-### 声明式定时任务
-
-创建、修改或测试机器特定定时任务时使用 `.agents/skills/create-task/`。
+- 未经用户允许，不使用 `just sw`（nix-darwin 范围变更）与 `just hm`（home-manager 范围变更）
+- 安装包的方式必须与用户确认
+- 执行任何 nix 操作（eval/build）前，确保自己新增或删除的文件已被 git 跟踪
+- 新增或调整软件配置前，先读 `docs/agents/software-config.md`
+- 问题、规格与 Wayfinder 路线地图使用 GitHub Issues 管理，详见 `docs/agents/issue-tracker.md`
+- 根目录 `GLOSSARY.md` 记录共享领域知识，架构决策记录放在 `docs/adr/`，详见 `docs/agents/domain.md`
+- 创建、修改或测试机器特定定时任务时使用 `.agents/skills/create-task/`
