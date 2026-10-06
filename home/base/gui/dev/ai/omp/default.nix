@@ -53,12 +53,16 @@ in
     # 插件目录以仓库清单为准：每次激活重放清单并重装，手装插件随之消失。
     # 清单用普通副本而非软链，否则 omp plugin install 会写穿到仓库文件；
     # bun install 不会移除多余包，所以 node_modules 直接删掉重建。
-    home.activation.installOmpPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    home.activation.installOmpPlugins = lib.hm.dag.entryAfter [ "writeBoundary" "sops-nix" ] ''
+      githubToken="$(${pkgs.gh}/bin/gh auth token)"
       plugins="$HOME/.omp/plugins"
       mkdir -p "$plugins"
       rm -rf "$plugins/node_modules" "$plugins/bun.lock" "$plugins/omp-plugins.lock.json"
       cp -f ${./plugins/package.json} "$plugins/package.json"
-      ${pkgs.bun}/bin/bun install --cwd "$plugins" --silent
+      # Bun 的私有 GitHub Git 下载需要显式 token，不复用 gh credential helper。
+      PATH="${pkgs.git}/bin:$PATH" GITHUB_TOKEN="$githubToken" \
+        ${pkgs.bun}/bin/bun install --cwd "$plugins" --silent
+      unset githubToken
     '';
 
     shelken.backup.app.omp = [
