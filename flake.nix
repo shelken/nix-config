@@ -34,20 +34,17 @@
       mylib = import ./lib { inherit lib secrets myvars; };
 
       genSpecialArgs =
-        system:
+        nixpkgsInput: system:
         let
-          pkgs = import (if lib.hasSuffix "darwin" system then inputs.nixpkgs-darwin else inputs.nixpkgs) {
+          pkgs = import nixpkgsInput {
             inherit system;
             config.allowUnfree = true;
           };
         in
         inputs
         // {
-          pkgs-unstable = import inputs.nixpkgs-unstable {
-            inherit system; # refer the `system` parameter form outer scope recursively
-            # To use chrome, we need to allow the installation of non-free software
-            config.allowUnfree = true;
-          };
+          # 主输入即 unstable channel；HM 模块沿用 pkgs-unstable 变量名，与 pkgs 同源
+          pkgs-unstable = pkgs;
 
           sources = pkgs.callPackage ./_sources/generated.nix { };
 
@@ -306,13 +303,13 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
-    # darwin
-    #nixpkgs-darwin.url = "github:nixos/nixpkgs/nixpkgs-25.11-darwin";
+    # 与 nixpkgs 同分支却独立锁定，只会漂移出第二份源码树；收敛为别名
+    nixpkgs-unstable.follows = "nixpkgs";
+    # darwin 走 nixpkgs-unstable 分支：发布不等 NixOS 测试套件，
+    # darwin 修复不被 NixOS 测试失败阻塞；nix-darwin 官方示例同款
     nixpkgs-darwin.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     nix-darwin = {
       url = "github:nix-darwin/nix-darwin";
-      # inputs.nixpkgs.follows = "nixpkgs";
       inputs.nixpkgs.follows = "nixpkgs-darwin";
     };
 
@@ -349,7 +346,10 @@
     };
 
     # deploy-rs 远程部署
-    deploy-rs.url = "github:serokell/deploy-rs";
+    deploy-rs = {
+      url = "github:serokell/deploy-rs";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # disko
     disko = {
@@ -363,7 +363,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    niri.url = "github:sodiboo/niri-flake";
+    niri = {
+      url = "github:sodiboo/niri-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # generate iso/qcow2/docker/... image from nixos configuration
     nixos-generators = {
