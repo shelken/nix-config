@@ -10,7 +10,7 @@
 }:
 let
   inherit (inputs) nixpkgs home-manager nixos-generators;
-  specialArgs = genSpecialArgs system;
+  specialArgs = genSpecialArgs nixpkgs system;
 in
 nixpkgs.lib.nixosSystem {
   inherit system specialArgs;
