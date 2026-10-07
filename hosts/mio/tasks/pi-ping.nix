@@ -1,6 +1,6 @@
 { pkgs, ... }:
 {
-  when = "0:00";
+  every = 18000; # 5h
   packages = [ pkgs.nodejs ];
   script = ''
     # 每日零点自动执行 pi ping 测试
