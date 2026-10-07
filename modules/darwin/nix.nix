@@ -1,4 +1,8 @@
-{ ... }:
+{
+  lib,
+  nixpkgs-darwin,
+  ...
+}:
 {
   ###################################################################################
   #
@@ -37,6 +41,29 @@
     # builders = ssh-ng://nix-builder aarch64-linux / 4 1 big-parallel,kvm; ssh://shelken@10.211.55.6 aarch64-linux - 4 1 big-parallel
     # extra-platforms = aarch64-linux
   '';
+
+  # `nix.enable = false`（Determinate）时 nix-darwin 不接管 registry，
+  # 直接写 /etc/nix/registry.json，让 `nix run nixpkgs#...` 解析到本 flake
+  # 锁定的 nixpkgs-darwin（源已在 store，不重新拉取全局 registry 和另一份 nixpkgs）。
+  environment.etc."nix/registry.json".text = builtins.toJSON {
+    version = 2;
+    flakes = [
+      {
+        from = {
+          type = "indirect";
+          id = "nixpkgs";
+        };
+        to = {
+          type = "path";
+          path = toString nixpkgs-darwin;
+        }
+        // lib.filterAttrs (
+          n: _: n == "lastModified" || n == "rev" || n == "revCount" || n == "narHash"
+        ) nixpkgs-darwin;
+        exact = true;
+      }
+    ];
+  };
 
   system.stateVersion = 5;
 }
