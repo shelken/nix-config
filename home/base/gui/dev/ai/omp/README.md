@@ -3,13 +3,12 @@
 - `/export`: 在web页面查看完整的上下文信息
 - `/hub`: 查看subagent活动状态,深入查看子代理的运行上下文
 
-## Guard 权限
+## 安全沙箱 (cco)
 
-只读豁免写在权限文件中：全局 `~/.omp/agent/permissions.yaml`，当前项目用 `.omp/permissions.yaml`
+已弃用应用层 guard，采用 OS 原生内核沙箱（macOS Seatbelt / Linux bubblewrap）：
 
-```yaml
-allow_read_paths:
-  - path: "~/.ssh/config"
-```
-
-配置修改后开启新会话生效；授权仅用于读取
+- `somp`: 以内核沙箱安全模式启动 OMP（`sec-run cco --safe omp`）
+- **默认最小权限**：仅当前项目目录可读写；家目录（`~/.ssh`, `~/.aws`, 私钥等敏感信息）默认全盘禁止读取；系统全盘禁止写入
+- **显式开放**：
+  - 显式只读路径：`cco --allow-readonly <path> omp`
+  - 显式读写路径：`cco --add-dir <path>:rw omp`

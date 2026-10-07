@@ -1,0 +1,21 @@
+diff --git a/sandbox b/sandbox
+index e914e38..27d517b 100755
+--- a/sandbox
++++ b/sandbox
+@@ -547,11 +547,11 @@ run_macos() {
+ 		# Optional safe mode: deny reads under $HOME by default, re-allow below
+ 		if [[ "$safe_mode" == true ]]; then
+ 			printf '(deny file-read* (subpath "%s"))\n' "$(policy_quote "$HOME")"
+-			# Allow stat/lstat on all paths under $HOME (but not content reads).
+-			# Tools like Node.js call realpathSync which needs lstat on arbitrary
+-			# paths, not just CWD ancestors. Content reads (file-read-data) and
+-			# xattr reads (file-read-xattr) remain denied.
+-			printf '(allow file-read-metadata (subpath "%s"))\n' "$(policy_quote "$HOME")"
++			local anc="$PWD_ABS"
++			while [[ "$anc" != "/" && "$anc" != "." ]]; do
++				printf '(allow file-read-metadata (literal "%s"))\n' "$(policy_quote "$anc")"
++				anc="$(dirname "$anc")"
++			done
+ 		fi
+ 
+ 		# Deny paths explicitly (BEFORE any allows that might be under them)
