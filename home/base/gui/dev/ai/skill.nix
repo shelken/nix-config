@@ -77,6 +77,7 @@ let
         loop-me = "skills/in-progress/loop-me";
         code-review = "skills/engineering/code-review";
         implement = "skills/engineering/implement";
+        implement-spec = "skills/engineering/implement-spec";
         setup-matt-pocock-skills = "skills/engineering/setup-matt-pocock-skills";
         wayfinder = "skills/engineering/wayfinder";
         research = "skills/engineering/research";
