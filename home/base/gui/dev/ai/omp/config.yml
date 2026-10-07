@@ -7,21 +7,24 @@ disabledProviders:
 modelRoles:
   vision: cpa/gpt-5.6-luna:high
   plan: openai-codex/gpt-6-astra:high
-  slow: openai-codex/gpt-6.1-sol:high
   commit: google-antigravity/gemini-3.8-flash:medium
   tiny: google-antigravity/gemini-3.8-flash:medium
-  smol: commandcode-local/deepseek/deepseek-v4.1-flash:high
+  smol: zcode-local/glm-5.3-flash:high
   default: zcode-local/glm-5.3-flash:high
   task: zcode-local/glm-5.3-flash:high
   reviewer-general: commandcode-local/deepseek/deepseek-v4.1-flash:high
   reviewer-gemini: google-antigravity/gemini-3.8-flash:high
   reviewer-ds: commandcode-local/deepseek/deepseek-v4.1-flash:high
   reviewer-glm: zcode-local/glm-5.3-flash:high
+  reviewer-gpt: openai-codex/gpt-5.6-sol:high
   web: google/gemini-2.5-flash
   qwcn: cpa/qwenworkcn/pro:high
   wbcn: cpa/workbuddy/glm-5.3-flash:high
   gog: google-antigravity/gemini-3.8-flash:high
+  zed: zed/anthropic/claude-sonnet-5-5:high
   gpt: openai-codex/gpt-6.1-sol:high
+  cmdc: commandcode-local/deepseek/deepseek-v4.1-flash:high
+  slow: openai-codex/gpt-6-astra:high
   test: cpa/grok-4.7:high
 cycleOrder:
   - smol
@@ -31,6 +34,8 @@ cycleOrder:
   - wbcn
   - qwcn
   - gog
+  - zed
+  - cmdc
   - test
 symbolPreset: nerd
 composer:
@@ -56,7 +61,7 @@ statusLine:
     - usage
 task:
   agentModelOverrides:
-    reviewer: "@reviewer-general"
+    reviewer: "@reviewer-gpt"
 browser:
   headless: true
   enabled: false
@@ -107,3 +112,10 @@ retry:
       - openai-codex/gpt-5.5
       - xai-oauth/grok-4.5
       - web/ollama
+compaction:
+  methodOrder:
+    - shake
+    - snapcompact
+    - handoff
+    - soft
+    - remote
