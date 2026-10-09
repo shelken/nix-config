@@ -31,15 +31,15 @@
   };
   cursor-plugins = {
     pname = "cursor-plugins";
-    version = "7022c81efb48d8b5eb15498ce6043a3bd74b694c";
+    version = "ccb5507cec1546dc88135c1139c811e6c59115ba";
     src = fetchFromGitHub {
       owner = "cursor";
       repo = "plugins";
-      rev = "7022c81efb48d8b5eb15498ce6043a3bd74b694c";
+      rev = "ccb5507cec1546dc88135c1139c811e6c59115ba";
       fetchSubmodules = false;
-      sha256 = "sha256-W63zwDWjt0GYLHM5LcyEAjjN6Px36qaS6QiHqjwdxHs=";
+      sha256 = "sha256-2znGxDWUZ8lO6g2gC/l0iRmRKjEnVZrk4TkEX9JAIjY=";
     };
-    date = "2026-10-02";
+    date = "2026-10-07";
   };
   humanlayer-skills = {
     pname = "humanlayer-skills";
