@@ -23,6 +23,11 @@ fetch.github = "forrestchang/andrej-karpathy-skills"
 src.github_tag = "dmmulroy/anti-slop"
 fetch.github   = "dmmulroy/anti-slop"
 
+[diagram-design]
+src.git      = "https://github.com/cathrynlavery/diagram-design"
+src.branch   = "main"
+fetch.github = "cathrynlavery/diagram-design"
+
 [humanlayer-skills]
 src.git      = "https://github.com/humanlayer/skills"
 src.branch   = "main"
