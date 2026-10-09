@@ -62,6 +62,27 @@
         },
         "version": "ccb5507cec1546dc88135c1139c811e6c59115ba"
     },
+    "diagram-design": {
+        "cargoLock": null,
+        "date": "2026-10-09",
+        "extract": null,
+        "name": "diagram-design",
+        "passthru": null,
+        "pinned": false,
+        "src": {
+            "deepClone": false,
+            "fetchSubmodules": false,
+            "leaveDotGit": false,
+            "name": null,
+            "owner": "cathrynlavery",
+            "repo": "diagram-design",
+            "rev": "cdfdc9686cd7465da70b68b036581833b503810c",
+            "sha256": "sha256-sIRMfRbZ2uj4MDLOLDzufM9wg4CtQi3sGtIfhLAJry8=",
+            "sparseCheckout": [],
+            "type": "github"
+        },
+        "version": "cdfdc9686cd7465da70b68b036581833b503810c"
+    },
     "humanlayer-skills": {
         "cargoLock": null,
         "date": "2026-10-08",

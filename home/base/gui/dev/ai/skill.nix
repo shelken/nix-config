@@ -48,9 +48,17 @@ let
     #   skills.ast-grep = "ast-grep/skills/ast-grep";
     # };
 
+    diagram-design = {
+      root = sources.diagram-design.src;
+      skills.diagram-design = "skills/diagram-design";
+    };
+
     humanlayer-skills = {
       root = sources.humanlayer-skills.src;
-      skills.show-me = "plugins/show-me/skills/show-me";
+      skills = {
+        design-control-loop = "plugins/design-control-loop/skills/design-control-loop";
+        show-me = "plugins/show-me/skills/show-me";
+      };
       # skills.visual-pr = "plugins/visual-pr/skills/visual-pr";
     };
 
