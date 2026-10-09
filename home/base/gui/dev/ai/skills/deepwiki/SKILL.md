@@ -8,16 +8,16 @@ description: >
 
 # deepwiki
 
-Query any public GitHub repo's docs from the terminal via DeepWiki. Assumes Node.js is installed.
+Query any public GitHub repo's docs from the terminal via DeepWiki. The `deepwiki` CLI is pre-installed via nix.
 
 ## Commands
 
 | Command | Usage | Description |
 |---------|-------|-------------|
-| `toc`   | `bunx @seflless/deepwiki toc <owner/repo>` | Table of contents |
-| `wiki`  | `bunx @seflless/deepwiki wiki <owner/repo>` | Full wiki content |
-| `ask`   | `bunx @seflless/deepwiki ask <owner/repo> "<question>"` | AI-powered Q&A |
-| `ask`   | `bunx @seflless/deepwiki ask <repo1> <repo2> "<question>"` | Multi-repo Q&A (max 10) |
+| `toc`   | `deepwiki toc <owner/repo>` | Table of contents |
+| `wiki`  | `deepwiki wiki <owner/repo>` | Full wiki content |
+| `ask`   | `deepwiki ask <owner/repo> "<question>"` | AI-powered Q&A |
+| `ask`   | `deepwiki ask <repo1> <repo2> "<question>"` | Multi-repo Q&A (max 10) |
 
 ## Flags
 
@@ -31,16 +31,16 @@ Query any public GitHub repo's docs from the terminal via DeepWiki. Assumes Node
 
 ```bash
 # Understand a library's structure
-bunx @seflless/deepwiki toc facebook/react
+deepwiki toc facebook/react
 
 # Get full docs for reference
-bunx @seflless/deepwiki wiki oven-sh/bun --json > bun-docs.json
+deepwiki wiki oven-sh/bun --json > bun-docs.json
 
 # Ask a specific question
-bunx @seflless/deepwiki ask anthropics/claude-code "How does the tool permission system work?"
+deepwiki ask anthropics/claude-code "How does the tool permission system work?"
 
 # Cross-project question
-bunx @seflless/deepwiki ask facebook/react vercel/next.js "How do server components work across these projects?"
+deepwiki ask facebook/react vercel/next.js "How do server components work across these projects?"
 ```
 
 ## Tips

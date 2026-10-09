@@ -20,6 +20,10 @@ let
   #   exec ${pkgs.uv}/bin/uvx --from ${sources.twitter-cli.src} twitter "$@"
   # '';
 
+  deepwiki = pkgs.writeShellScriptBin "deepwiki" ''
+    exec ${pkgs.bun}/bin/bunx @seflless/deepwiki "$@"
+  '';
+
   lit = pkgs.writeShellScriptBin "lit" ''
     exec ${pkgs.bun}/bin/bunx @llamaindex/liteparse "$@"
   '';
@@ -41,10 +45,12 @@ in
 
     home.packages = [
       ctx7
+      deepwiki
+      lit
+      pkgs.agent-browser
       pkgs.ast-grep
       # bil
       # twitter
-      lit
       pkgs.imagemagick
     ];
   };

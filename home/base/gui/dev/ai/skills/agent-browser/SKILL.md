@@ -6,7 +6,9 @@ allowed-tools: Bash(bunx agent-browser:*), Bash(agent-browser:*)
 
 # Browser Automation with agent-browser
 
-The CLI uses Chrome/Chromium via CDP directly. Install/run (in order of preference) via:
+The CLI uses Chrome/Chromium via CDP directly.
+
+**Before any install/bunx/npx step: first check whether `agent-browser` already exists** (`command -v agent-browser`). If it exists, use it directly; only if missing, install/run in order of preference:
 - `bunx agent-browser`
 - `npx agent-browser`
 - `npm i -g agent-browser` 
