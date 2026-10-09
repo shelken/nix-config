@@ -9,23 +9,23 @@ modelRoles:
   plan: openai-codex/gpt-6-astra:high
   commit: google-antigravity/gemini-3.8-flash:medium
   tiny: google-antigravity/gemini-3.8-flash:medium
-  smol: zcode-local/glm-5.3-flash:high
-  default: zcode-local/glm-5.3-flash:high
-  task: zcode-local/glm-5.3-flash:high
-  reviewer-general: commandcode-local/deepseek/deepseek-v4.1-flash:high
+  smol: cpa/workbuddy/glm-5.3-flash:high
+  default: commandcode-local/deepseek/deepseek-v4.1-flash:high
+  task: cpa/workbuddy/glm-5.3-flash:high
+  reviewer-general: ccommandcode-local/deepseek/deepseek-v4.1-flash:high
   reviewer-gemini: google-antigravity/gemini-3.8-flash:high
-  reviewer-ds: commandcode-local/deepseek/deepseek-v4.1-flash:high
-  reviewer-glm: zcode-local/glm-5.3-flash:high
-  reviewer-gpt: openai-codex/gpt-5.6-sol:high
+  reviewer-ds: ccommandcode-local/deepseek/deepseek-v4.1-flash:high
+  reviewer-glm: cpa/workbuddy/glm-5.3-flash:high
+  reviewer-gpt: openai-codex/gpt-6.1-sol:xhigh
   web: google/gemini-2.5-flash
   qwcn: cpa/qwenworkcn/pro:high
   wbcn: cpa/workbuddy/glm-5.3-flash:high
   gog: google-antigravity/gemini-3.8-flash:high
   zed: zed/anthropic/claude-sonnet-5-5:high
   gpt: openai-codex/gpt-6.1-sol:high
-  cmdc: commandcode-local/deepseek/deepseek-v4.1-flash:high
-  slow: openai-codex/gpt-6-astra:high
-  test: cpa/grok-4.7:high
+  cmdc: ccommandcode-local/deepseek/deepseek-v4.1-flash:high
+  slow: trae/glm-5.3:high
+  test: commandcode-local/claude-haiku-5-5:high
 cycleOrder:
   - smol
   - task
@@ -61,7 +61,7 @@ statusLine:
     - usage
 task:
   agentModelOverrides:
-    reviewer: "@reviewer-gpt"
+    reviewer: "@reviewer-ds"
 browser:
   headless: true
   enabled: false
@@ -79,11 +79,18 @@ codexResets:
   autoRedeem: "no"
 retry:
   fallbackChains:
+    cpa/workbuddy/glm-5.3-flash:
+      - zcode-local/glm-5.3-flash:high
+      - commandcode-local/deepseek/deepseek-v4.1-flash:high
+      - google-antigravity/gemini-3.8-flash:high
+    zcode-local/*:
+      - cpa/workbuddy/glm-5.3-flash:high
+      - commandcode-local/deepseek/deepseek-v4.1-flash:high
+      - google-antigravity/gemini-3.8-flash:high
     commandcode-local/*:
       - zcode-local/glm-5.3-flash:high
       - cpa/workbuddy/glm-5.3-flash:high
       - google-antigravity/gemini-3.8-flash:high
-      - openai-codex/gpt-6.1-sol:high
     web:
       - web/exa
       - web/brave
