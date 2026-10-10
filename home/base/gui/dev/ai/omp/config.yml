@@ -12,9 +12,9 @@ modelRoles:
   smol: cpa/workbuddy/glm-5.3-flash:high
   default: commandcode-local/deepseek/deepseek-v4.1-flash:high
   task: cpa/workbuddy/glm-5.3-flash:high
-  reviewer-general: ccommandcode-local/deepseek/deepseek-v4.1-flash:high
+  reviewer-general: commandcode-local/deepseek/deepseek-v4.1-flash:high
   reviewer-gemini: google-antigravity/gemini-3.8-flash:high
-  reviewer-ds: ccommandcode-local/deepseek/deepseek-v4.1-flash:high
+  reviewer-ds: commandcode-local/deepseek/deepseek-v4.1-flash:high
   reviewer-glm: cpa/workbuddy/glm-5.3-flash:high
   reviewer-gpt: openai-codex/gpt-6.1-sol:xhigh
   web: google/gemini-2.5-flash
@@ -23,7 +23,7 @@ modelRoles:
   gog: google-antigravity/gemini-3.8-flash:high
   zed: zed/anthropic/claude-sonnet-5-5:high
   gpt: openai-codex/gpt-6.1-sol:high
-  cmdc: ccommandcode-local/deepseek/deepseek-v4.1-flash:high
+  cmdc: commandcode-local/deepseek/deepseek-v4.1-flash:high
   slow: trae/glm-5.3:high
   test: commandcode-local/claude-haiku-5-5:high
 cycleOrder:
@@ -80,16 +80,16 @@ codexResets:
 retry:
   fallbackChains:
     cpa/workbuddy/glm-5.3-flash:
-      - zcode-local/glm-5.3-flash:high
       - commandcode-local/deepseek/deepseek-v4.1-flash:high
+      - zcode-local/glm-5.3-flash:high
       - google-antigravity/gemini-3.8-flash:high
     zcode-local/*:
       - cpa/workbuddy/glm-5.3-flash:high
       - commandcode-local/deepseek/deepseek-v4.1-flash:high
       - google-antigravity/gemini-3.8-flash:high
     commandcode-local/*:
-      - zcode-local/glm-5.3-flash:high
       - cpa/workbuddy/glm-5.3-flash:high
+      - zcode-local/glm-5.3-flash:high
       - google-antigravity/gemini-3.8-flash:high
     web:
       - web/exa

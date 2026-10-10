@@ -21,8 +21,6 @@ deny_commands:
     # reason: "不准使用nix run"
   # - pattern: "nix shell"
     # reason: "不准使用nix shell"
-  - pattern: "bunx"
-    reason: "不准使用bunx;并且禁止直接运行任何未安装命令,必须经过用户允许"
   - pattern: "pip3 install"
     reason: "不准使用pip,不准直接安装任何包在全局,使用uv并且经过用户允许"
   - pattern: "pip install"
