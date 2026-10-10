@@ -1,0 +1,6 @@
+{
+  "interceptors": {
+    "github": true
+  },
+  "provider": "exa"
+}

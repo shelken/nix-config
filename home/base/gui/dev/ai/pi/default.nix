@@ -92,6 +92,7 @@ in
     ".pi/agent/extensions/trae/config.json" = linkPiConfig "trae.json";
     ".pi/agent/extensions/subdir-context.ts" =
       mylib.mkConfigFile config "home/base/gui/dev/ai/omp/extensions/subdir-context.ts";
+    ".config/rpiv-web-tools/config.json" = linkPiConfig "rpiv-web-tools.json";
   };
 
   programs.zsh.initContent = shellInit;
