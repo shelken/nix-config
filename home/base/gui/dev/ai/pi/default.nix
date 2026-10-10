@@ -7,6 +7,7 @@
 }:
 let
   linkPi = rel: mylib.mkConfigFile config "home/base/gui/dev/ai/pi/${rel}";
+  linkPiConfig = rel: mylib.mkConfigFile config "home/base/gui/dev/ai/pi/configs/${rel}";
   jsonFormat = pkgs.formats.json { };
   readYaml =
     file:
@@ -82,6 +83,13 @@ in
       mylib.mkConfigFile config "home/base/gui/dev/ai/omp/permissions.yaml";
     ".config/ponytail/config.json" =
       mylib.mkConfigFile config "home/base/gui/dev/ai/ponytail/config.json";
+
+    ".pi/agent/caveman.json" = linkPiConfig "caveman.json";
+    ".pi/agent/context-prune/settings.json" = linkPiConfig "context-prune.json";
+    ".pi/agent/extensions/pi-recap.json" = linkPiConfig "pi-recap.json";
+    ".pi/agent/extensions/pi-rename.json" = linkPiConfig "pi-rename.json";
+    ".pi/agent/extensions/pi-vision-handoff.json" = linkPiConfig "pi-vision-handoff.json";
+    ".pi/agent/extensions/trae/config.json" = linkPiConfig "trae.json";
   };
 
   programs.zsh.initContent = shellInit;
