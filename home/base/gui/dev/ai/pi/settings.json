@@ -66,6 +66,13 @@
     },
     "git:github.com/shelken/pi-zed-provider",
     "git:github.com/shelken/pi-trae-provider",
+    {
+      "extensions": [
+        "-./src/features/google-search.ts",
+        "-./src/features/generate-image.ts"
+      ],
+      "source": "git:github.com/Rahularya01/pi-antigravity"
+    },
     "-npm:pi-observational-memory",
     "-/Users/shelken/Code/active/pi-balance",
     "-npm:@tifan/pi-handoff"
