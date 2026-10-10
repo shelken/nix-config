@@ -1,0 +1,111 @@
+{
+  "coAuthor": {
+    "email": "hakase@ooooo.space"
+  },
+  "defaultThinkingLevel": "high",
+  "enabledModels": [
+    "commandcode-local/claude-haiku-5-5:high",
+    "commandcode-local/deepseek/deepseek-v4.1-flash:high",
+    "cpa/gpt-5.6-luna:high",
+    "cpa/gpt-6-luna:high",
+    "cpa/qwenworkcn/pro:high",
+    "cpa/workbuddy/deepseek-v4.1-flash:high",
+    "cpa/workbuddy/glm-5.2:high",
+    "cpa/workbuddy/glm-5.3-flash:high",
+    "cpa/workbuddy/hy3:high",
+    "antigravity/gemini-3.8-flash:high",
+    "openai/gpt-6-astra:high",
+    "openai/gpt-6.1-sol:high",
+    "trae/glm-5.3:high",
+    "zcode-local/glm-5.3-flash:high",
+    "zed/anthropic/claude-sonnet-5-5:high"
+  ],
+  "extensions": [],
+  "fullscreenScrollbar": "auto",
+  "hideThinkingBlock": false,
+  "lastChangelogVersion": "1.1.0",
+  "npmCommand": [
+    "bun"
+  ],
+  "observational-memory": {
+    "compactAfterTokens": 250000,
+    "compactAfterTokensMode": "calibrated",
+    "model": {
+      "id": "workbuddy/hy3",
+      "provider": "cpa",
+      "thinking": "high"
+    }
+  },
+  "packages": [
+    "npm:pi-execution-time",
+    "git:github.com/otahontas/pi-coding-agent-catppuccin",
+    "npm:pi-powerline-footer",
+    "npm:pi-jingle",
+    "npm:pi-token-speed",
+    "npm:@tifan/pi-preferred-thinking",
+    "npm:@tifan/pi-recap",
+    "npm:@tifan/pi-titlebar-spinner",
+    "npm:@tifan/pi-rename",
+    "npm:pi-vision-handoff",
+    "npm:pi-rewind",
+    "git:github.com/shelken/pi-context-prune",
+    "git:github.com/shelken/pi-extensions",
+    "npm:@juicesharp/rpiv-todo",
+    "npm:pi-caveman",
+    "npm:@ff-labs/pi-fff",
+    "npm:pi-intercom",
+    "npm:@juicesharp/rpiv-web-tools",
+    {
+      "skills": [
+        "-skills/ponytail-debt/SKILL.md",
+        "-skills/ponytail-gain/SKILL.md",
+        "-skills/ponytail-help/SKILL.md",
+        "-skills/ponytail-audit/SKILL.md"
+      ],
+      "source": "git:github.com/DietrichGebert/ponytail"
+    },
+    "git:github.com/shelken/pi-zed-provider",
+    "git:github.com/shelken/pi-trae-provider",
+    {
+      "extensions": [
+        "-./src/features/google-search.ts",
+        "-./src/features/generate-image.ts"
+      ],
+      "source": "git:github.com/Rahularya01/pi-antigravity"
+    },
+    "-npm:pi-observational-memory",
+    "-/Users/shelken/Code/active/pi-balance",
+    "-npm:@tifan/pi-handoff"
+  ],
+  "powerline": {
+    "customItems": [
+      {
+        "excludeFromExtensionStatuses": true,
+        "id": "thinking-steps",
+        "statusKey": "thinking-steps"
+      }
+    ],
+    "disabledSegments": [
+      "custom:thinking-steps"
+    ],
+    "fixedEditor": true,
+    "preset": "default",
+    "welcome": false
+  },
+  "powerlineShortcuts": {
+    "cutEditor": null,
+    "jumpChatBottom": null,
+    "jumpNextLlmMessage": null,
+    "jumpNextUserMessage": null,
+    "jumpPreviousLlmMessage": null,
+    "jumpPreviousUserMessage": null
+  },
+  "quietStartup": false,
+  "terminal": {
+    "clearOnShrink": false,
+    "showTerminalProgress": true
+  },
+  "theme": "catppuccin-macchiato",
+  "transport": "auto",
+  "tuiMode": "fullscreen"
+}

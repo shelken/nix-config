@@ -71,10 +71,15 @@ export default function subdirContext(pi: ExtensionAPI): void {
 	}
 
 	// 用户级 native agent 目录（PI_CODING_AGENT_DIR 可重定位），其中的 AGENTS.md 宿主已注入
-	const agentDir = resolvePath(
-		process.env.PI_CODING_AGENT_DIR ?? path.join(os.homedir(), ".omp", "agent"),
-		process.cwd(),
-	);
+	const agentDirs = [
+		process.env.PI_CODING_AGENT_DIR,
+		process.env.OMP_CODING_AGENT_DIR,
+		process.env.OMP_AGENT_DIR,
+		path.join(os.homedir(), ".pi", "agent"),
+		path.join(os.homedir(), ".omp", "agent"),
+	]
+		.filter((d): d is string => Boolean(d))
+		.map((d) => resolvePath(d, process.cwd()));
 
 	function getAgentsFileFromDir(dir: string): string {
 		for (const filename of AGENTS_FILENAMES) {
@@ -103,7 +108,7 @@ export default function subdirContext(pi: ExtensionAPI): void {
 			// 以及用户级 native agent 目录下的 AGENTS.md
 			// 已知缺口：<cwd>/.claude/CLAUDE.md、<cwd>/.gemini/GEMINI.md 等「仅 cwd 配置目录」
 			// 的上下文文件同样由宿主加载，读这些目录下的文件时仍会重复注入一次
-			const hostLoaded = isInsideRoot(dir, currentCwd) || isInsideRoot(agentDir, candidate);
+			const hostLoaded = isInsideRoot(dir, currentCwd) || agentDirs.some((d) => isInsideRoot(d, candidate));
 			if (candidate && !hostLoaded) agentsFiles.push(candidate);
 
 			if (dir === rootDir) break;

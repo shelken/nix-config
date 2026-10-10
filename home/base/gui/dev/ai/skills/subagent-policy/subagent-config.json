@@ -18,13 +18,13 @@
       "tools": "read,bash,edit,write,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom"
     },
     "reviewer": {
-      "model": "openai-codex/gpt-5.6-sol",
-      "thinking": "medium",
+      "model": "openai/gpt-5.6-sol",
+      "thinking": "xhigh",
       "tools": "read,bash,grep,find,ls,ffgrep,fffind,intercom"
     },
     "general-purpose-review": {
-      "model": "openai-codex/gpt-5.6-sol",
-      "thinking": "medium",
+      "model": "openai/gpt-5.6-sol",
+      "thinking": "high",
       "tools": "read,bash,edit,write,grep,find,ls,ffgrep,fffind,intercom"
     }
   }

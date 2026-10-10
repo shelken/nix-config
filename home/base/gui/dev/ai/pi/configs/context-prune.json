@@ -1,0 +1,11 @@
+{
+  "batchingMode": "agent-message",
+  "enabled": true,
+  "flushConcurrency": 4,
+  "minRawCharsToSummarize": 800,
+  "pruneOn": "agentic-auto",
+  "remindUnprunedCount": true,
+  "showPruneStatusLine": false,
+  "summarizerModel": "cpa/gpt-6-luna",
+  "summarizerThinking": "high"
+}
