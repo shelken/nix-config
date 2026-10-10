@@ -1,6 +1,7 @@
 ---
 name: browser-best-practice
 description: 当需要控制浏览器时阅读该技能
+disable-model-invocation: true
 ---
 
 ## 工具选择
@@ -17,5 +18,5 @@ description: 当需要控制浏览器时阅读该技能
 
 ## 截图与产物
 
-- 截图用 `screenshot --filename <路径>`，位置参数是元素选择器；高清验收图先 `resize 1920 1080`，再加 `--full-page --hires`
+- 截图用 `playwright-cli screenshot --filename <路径>`，位置参数是元素选择器；高清验收图先 `resize 1920 1080`，再加 `--full-page --hires`
 - 必须使用 `PLAYWRIGHT_MCP_OUTPUT_DIR=/tmp/playwright-cli-{name}` 指定输出目录，否则产物会落在当前目录；结束后自行清理 `.playwright-cli` 目录
