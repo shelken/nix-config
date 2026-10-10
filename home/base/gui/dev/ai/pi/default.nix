@@ -90,6 +90,8 @@ in
     ".pi/agent/extensions/pi-rename.json" = linkPiConfig "pi-rename.json";
     ".pi/agent/extensions/pi-vision-handoff.json" = linkPiConfig "pi-vision-handoff.json";
     ".pi/agent/extensions/trae/config.json" = linkPiConfig "trae.json";
+    ".pi/agent/extensions/subdir-context.ts" =
+      mylib.mkConfigFile config "home/base/gui/dev/ai/omp/extensions/subdir-context.ts";
   };
 
   programs.zsh.initContent = shellInit;

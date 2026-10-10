@@ -54,7 +54,6 @@
     "npm:pi-caveman",
     "npm:@ff-labs/pi-fff",
     "npm:pi-intercom",
-    "npm:pi-subdir-context",
     "npm:@juicesharp/rpiv-web-tools",
     {
       "skills": [
