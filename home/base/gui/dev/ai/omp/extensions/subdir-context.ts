@@ -73,6 +73,8 @@ export default function subdirContext(pi: ExtensionAPI): void {
 	// 用户级 native agent 目录（PI_CODING_AGENT_DIR 可重定位），其中的 AGENTS.md 宿主已注入
 	const agentDirs = [
 		process.env.PI_CODING_AGENT_DIR,
+		process.env.OMP_CODING_AGENT_DIR,
+		process.env.OMP_AGENT_DIR,
 		path.join(os.homedir(), ".pi", "agent"),
 		path.join(os.homedir(), ".omp", "agent"),
 	]
