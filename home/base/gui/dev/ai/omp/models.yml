@@ -43,6 +43,7 @@ providers:
           supportsReasoningEffort: true
           omitReasoningEffort: false
       qwenworkcn/pro:
+        name: GLM-5.2
         contextWindow: 1000000
         maxTokens: 128000
         reasoning: true
@@ -84,36 +85,6 @@ providers:
           mode: effort
           efforts: [high, xhigh]
           defaultLevel: high
-          requiresEffort: true
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
-      workbuddy/deepseek-v4-pro:
-        reasoning: true
-        thinking:
-          mode: effort
-          efforts: [high, xhigh]
-          defaultLevel: high
-          requiresEffort: true
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
-      workbuddy/glm-5.0-turbo:
-        reasoning: true
-        thinking:
-          mode: effort
-          efforts: [medium]
-          defaultLevel: medium
-          requiresEffort: true
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
-      workbuddy/glm-5.1:
-        reasoning: true
-        thinking:
-          mode: effort
-          efforts: [medium]
-          defaultLevel: medium
           requiresEffort: true
         compat:
           supportsReasoningEffort: true
@@ -181,71 +152,11 @@ providers:
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false
-      workbuddy/hy3-x:
-        reasoning: true
-        thinking:
-          mode: effort
-          efforts: [low, high]
-          defaultLevel: high
-          requiresEffort: true
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
       workbuddy/hy4-preview:
         reasoning: true
         thinking:
           mode: effort
           efforts: [high]
-          defaultLevel: high
-          requiresEffort: true
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
-      workbuddy/hy4-preview-f:
-        reasoning: true
-        thinking:
-          mode: effort
-          efforts: [high]
-          defaultLevel: high
-          requiresEffort: true
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
-      workbuddy/kimi-k2.5:
-        reasoning: true
-        thinking:
-          mode: effort
-          efforts: [medium]
-          defaultLevel: medium
-          requiresEffort: true
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
-      workbuddy/kimi-k2.6:
-        reasoning: true
-        thinking:
-          mode: effort
-          efforts: [medium]
-          defaultLevel: medium
-          requiresEffort: true
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
-      workbuddy/kimi-k2.7:
-        reasoning: true
-        thinking:
-          mode: effort
-          efforts: [medium]
-          defaultLevel: medium
-          requiresEffort: true
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
-      workbuddy/kimi-k2.8-preview:
-        reasoning: true
-        thinking:
-          mode: effort
-          efforts: [low, high, max]
           defaultLevel: high
           requiresEffort: true
         compat:
@@ -305,39 +216,3 @@ providers:
           efforts:
             - medium
             - high
-  omlx:
-    baseUrl: http://localhost:8900/v1
-    api: openai-completions
-    apiKey: OMLX_API_KEY
-    models:
-      - id: LFM2.5-8B-A1B-MLX-4bit
-        name: LFM2.5 8B A1B MLX 4bit
-        input:
-          - text
-        reasoning: false
-        contextWindow: 100000
-        maxTokens: 8192
-      - id: Qwen3.5-2B-6bit
-        name: Qwen3.5 2B
-        input:
-          - text
-          - image
-        reasoning: false
-        contextWindow: 100000
-        maxTokens: 4096
-      - id: Qwen3.5-4B-MLX-4bit
-        name: Qwen3.5 4B 4bit
-        input:
-          - text
-          - image
-        reasoning: true
-        contextWindow: 100000
-        maxTokens: 8192
-      - id: Qwen3.5-4B-MLX-8bit
-        name: Qwen3.5 4B 8bit
-        input:
-          - text
-          - image
-        reasoning: true
-        contextWindow: 100000
-        maxTokens: 8192

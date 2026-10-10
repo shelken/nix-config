@@ -11,7 +11,7 @@ modelRoles:
   tiny: google-antigravity/gemini-3.8-flash:medium
   smol: cpa/workbuddy/glm-5.3-flash:high
   default: commandcode-local/deepseek/deepseek-v4.1-flash:high
-  task: cpa/workbuddy/glm-5.3-flash:high
+  task: commandcode-local/deepseek/deepseek-v4.1-flash:high
   reviewer-general: commandcode-local/deepseek/deepseek-v4.1-flash:high
   reviewer-gemini: google-antigravity/gemini-3.8-flash:high
   reviewer-ds: commandcode-local/deepseek/deepseek-v4.1-flash:high
@@ -61,7 +61,7 @@ statusLine:
     - usage
 task:
   agentModelOverrides:
-    reviewer: "@reviewer-ds"
+    reviewer: "@reviewer-gemini"
 browser:
   headless: true
   enabled: false
