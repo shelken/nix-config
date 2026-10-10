@@ -3,6 +3,7 @@
     "email": "hakase@ooooo.space"
   },
   "defaultThinkingLevel": "high",
+  "defaultTools": ["+codemode"],
   "enabledModels": [
     "commandcode-local/claude-haiku-5-5:high",
     "commandcode-local/deepseek/deepseek-v4.1-flash:high",
@@ -47,7 +48,6 @@
     "npm:@tifan/pi-titlebar-spinner",
     "npm:@tifan/pi-rename",
     "npm:pi-vision-handoff",
-    "npm:pi-rewind",
     "git:github.com/shelken/pi-context-prune",
     "git:github.com/shelken/pi-extensions",
     "npm:@juicesharp/rpiv-todo",
@@ -73,6 +73,7 @@
       ],
       "source": "git:github.com/Rahularya01/pi-antigravity"
     },
+    "-npm:pi-rewind",
     "-npm:pi-observational-memory",
     "-/Users/shelken/Code/active/pi-balance",
     "-npm:@tifan/pi-handoff"
@@ -107,5 +108,7 @@
   },
   "theme": "catppuccin-macchiato",
   "transport": "auto",
-  "tuiMode": "fullscreen"
+  "tuiMode": "fullscreen",
+  "defaultProvider": "antigravity",
+  "defaultModel": "gemini-3.8-flash"
 }
