@@ -212,7 +212,13 @@ export const BUILTIN_PATHS: Rule[] = [
 // ============================================================================
 
 type ShellToken =
-  | { kind: "word"; value: string; activeGlob: boolean; dynamic: boolean }
+  | {
+      kind: "word";
+      value: string;
+      activeGlob: boolean;
+      dynamic: boolean;
+      subs: string[];
+    }
   | { kind: "op"; value: string }
   /** 活跃命令替换（$() 或反引号）捕获到的内嵌脚本 */
   | { kind: "sub"; value: string }
@@ -224,6 +230,8 @@ export type ShellWord = {
   value: string;
   glob: boolean;
   dynamic: boolean;
+  /** 词内命令替换与进程替换的脚本正文 */
+  subs: string[];
   target: "in" | "out" | null;
 };
 
@@ -243,6 +251,22 @@ const CONTROL_OPS: Record<string, true> = {
   "\n": true,
   "(": true,
   ")": true,
+};
+
+/** 出现在命令位置时只起语法作用，其后紧跟的才是被执行的命令 */
+const RESERVED_WORDS: Record<string, true> = {
+  "{": true,
+  "}": true,
+  "!": true,
+  if: true,
+  then: true,
+  else: true,
+  elif: true,
+  fi: true,
+  while: true,
+  until: true,
+  do: true,
+  done: true,
 };
 
 /** 扫描 $() 的平衡括号正文（感知引号与转义），返回正文与结束括号下标 */
@@ -359,6 +383,44 @@ function heredocBody(
   }
 }
 
+/** 解码 $'...' 的 ANSI-C 引用；返回正文与结束引号之后的下标 */
+function ansiCQuote(
+  input: string,
+  start: number,
+): { text: string; end: number } {
+  const simple: Record<string, string> = {
+    n: "\n",
+    t: "\t",
+    r: "\r",
+    a: "\x07",
+    b: "\b",
+    e: "\x1b",
+    E: "\x1b",
+    f: "\f",
+    v: "\v",
+  };
+  let text = "";
+  let i = start;
+  while (i < input.length && input[i] !== "'") {
+    if (input[i] !== "\\" || i + 1 >= input.length) {
+      text += input[i++];
+      continue;
+    }
+    const rest = input.slice(i + 1);
+    const code = rest.match(/^(?:x([0-9a-fA-F]{1,2})|([0-7]{1,3}))/);
+    if (code) {
+      text += String.fromCharCode(
+        code[1] !== undefined ? parseInt(code[1], 16) : parseInt(code[2], 8),
+      );
+      i += 1 + code[0].length;
+      continue;
+    }
+    text += simple[rest[0]] ?? rest[0];
+    i += 2;
+  }
+  return { text, end: i < input.length ? i + 1 : i };
+}
+
 /** 未引用的 [ 是否构成可展开字符类；未闭合或空区间按字面量处理 */
 function hasGlobClass(input: string, start: number): boolean {
   const close = input.indexOf("]", start + 1);
@@ -418,6 +480,25 @@ export function tokenizeShell(input: string): ShellToken[] {
       cmdStart = tokens.length;
       continue;
     }
+    // 注释到行尾为止，其中的文字不会被执行
+    if (ch === "#") {
+      while (i < input.length && input[i] !== "\n") i++;
+      continue;
+    }
+    // 进程替换 <(cmd) / >(cmd)：正文会被执行，外层命令拿到的是一个文件路径
+    if ((ch === "<" || ch === ">") && input[i + 1] === "(") {
+      const sub = scanCommandSub(input, i + 1);
+      if (sub.body.trim() !== "") tokens.push({ kind: "sub", value: sub.body });
+      tokens.push({
+        kind: "word",
+        value: "/dev/fd/63",
+        activeGlob: false,
+        dynamic: true,
+        subs: [sub.body],
+      });
+      i = sub.end + 1;
+      continue;
+    }
     // 文件描述符复制（2>&1 等）整体消费，其中的 & 不是命令分隔符
     const fdDup = input.slice(i).match(/^\d*>&(?:\d|-)/);
     if (fdDup) {
@@ -451,6 +532,14 @@ export function tokenizeShell(input: string): ShellToken[] {
     let word = "";
     let activeGlob = false;
     let dynamic = false;
+    const subs: string[] = [];
+    const takeSub = (body: string) => {
+      if (body.trim() !== "") {
+        tokens.push({ kind: "sub", value: body });
+        subs.push(body);
+      }
+      dynamic = true;
+    };
     while (i < input.length) {
       const c = input[i];
       if (
@@ -473,16 +562,20 @@ export function tokenizeShell(input: string): ShellToken[] {
       // 命令替换在单引号之外始终会执行，包括双引号内
       if (c === "$" && input[i + 1] === "(") {
         const sub = scanCommandSub(input, i + 1);
-        if (sub.body.trim() !== "") tokens.push({ kind: "sub", value: sub.body });
-        dynamic = true;
+        takeSub(sub.body);
         i = sub.end + 1;
         continue;
       }
       if (c === "`") {
         const sub = scanBacktick(input, i);
-        if (sub.body.trim() !== "") tokens.push({ kind: "sub", value: sub.body });
-        dynamic = true;
+        takeSub(sub.body);
         i = sub.end + 1;
+        continue;
+      }
+      if (c === "$" && input[i + 1] === "'") {
+        const quoted = ansiCQuote(input, i + 2);
+        word += quoted.text;
+        i = quoted.end;
         continue;
       }
       if (c === "'") {
@@ -502,19 +595,13 @@ export function tokenizeShell(input: string): ShellToken[] {
           }
           if (d === "$" && input[i + 1] === "(") {
             const sub = scanCommandSub(input, i + 1);
-            if (sub.body.trim() !== "") {
-              tokens.push({ kind: "sub", value: sub.body });
-            }
-            dynamic = true;
+            takeSub(sub.body);
             i = sub.end + 1;
             continue;
           }
           if (d === "`") {
             const sub = scanBacktick(input, i);
-            if (sub.body.trim() !== "") {
-              tokens.push({ kind: "sub", value: sub.body });
-            }
-            dynamic = true;
+            takeSub(sub.body);
             i = sub.end + 1;
             continue;
           }
@@ -536,7 +623,7 @@ export function tokenizeShell(input: string): ShellToken[] {
       word += c;
       i++;
     }
-    tokens.push({ kind: "word", value: word, activeGlob, dynamic });
+    tokens.push({ kind: "word", value: word, activeGlob, dynamic, subs });
   }
   flushHeredocs();
   return tokens;
@@ -567,11 +654,17 @@ export function commandNodes(tokens: ShellToken[]): ShellCmd[] {
   for (let idx = 0; idx < tokens.length; idx++) {
     const t = tokens[idx];
     if (t.kind === "word") {
+      if (words.length === 0 && RESERVED_WORDS[t.value] === true) {
+        // 复合命令的保留字不是命令名，其后的词才是真正的命令头
+        if (pendingStart === null) pendingStart = idx;
+        continue;
+      }
       if (words.length === 0) startToken = pendingStart ?? idx;
       words.push({
         value: t.value,
         glob: t.activeGlob,
         dynamic: t.dynamic,
+        subs: t.subs,
         target: pendingTarget,
       });
       pendingTarget = null;
@@ -625,6 +718,58 @@ const FLAG_WRAPPERS: Record<string, true> = {
   time: true,
 };
 
+/** 包装器自身带独立取值的旗标；漏掉会把取值误当成被包装的命令 */
+const WRAPPER_VALUE_FLAGS: Record<string, Record<string, true>> = {
+  sudo: {
+    "-u": true,
+    "-g": true,
+    "-p": true,
+    "-C": true,
+    "-D": true,
+    "-R": true,
+    "-T": true,
+    "-U": true,
+    "-h": true,
+    "-r": true,
+    "-t": true,
+    "-c": true,
+    "--user": true,
+    "--group": true,
+    "--prompt": true,
+    "--chdir": true,
+    "--role": true,
+    "--type": true,
+    "--host": true,
+    "--close-from": true,
+  },
+  doas: { "-u": true, "-C": true },
+  timeout: {
+    "-k": true,
+    "-s": true,
+    "--kill-after": true,
+    "--signal": true,
+  },
+  exec: { "-a": true },
+  stdbuf: { "-i": true, "-o": true, "-e": true },
+  ionice: { "-c": true, "-n": true, "-p": true, "-P": true, "-u": true },
+  watch: { "-n": true, "-d": true, "--interval": true },
+  xargs: {
+    "-I": true,
+    "-n": true,
+    "-P": true,
+    "-s": true,
+    "-L": true,
+    "-E": true,
+    "-a": true,
+    "-d": true,
+    "-J": true,
+  },
+  time: { "-f": true, "-o": true },
+};
+
+const takesValue = (head: string, flag: string): boolean =>
+  WRAPPER_VALUE_FLAGS[head]?.[flag] === true;
+
 export function basenames(word: string): string {
   if (word === "/" || word === "." || word === "..") return word;
   const slash = word.lastIndexOf("/");
@@ -669,14 +814,7 @@ export function stripWrappers(words: string[]): string[] {
           j++;
           break;
         }
-        if (
-          f === "-u" ||
-          f === "-g" ||
-          f === "-p" ||
-          f === "--user" ||
-          f === "--group" ||
-          f === "--prompt"
-        ) {
+        if (takesValue(head, f)) {
           j += 2;
         } else {
           j++;
@@ -690,12 +828,7 @@ export function stripWrappers(words: string[]): string[] {
       let j = 1;
       while (j < w.length && w[j].startsWith("-")) {
         const f = w[j];
-        if (
-          f === "-k" ||
-          f === "--kill-after" ||
-          f === "-s" ||
-          f === "--signal"
-        ) {
+        if (takesValue("timeout", f)) {
           j += 2;
         } else {
           j++;
@@ -720,7 +853,9 @@ export function stripWrappers(words: string[]): string[] {
     // 严格等于真：避免继承属性（constructor 等）被当成受信任包装器
     if (FLAG_WRAPPERS[head] === true) {
       let j = 1;
-      while (j < w.length && w[j].startsWith("-")) j++;
+      while (j < w.length && w[j].startsWith("-")) {
+        j += takesValue(head, w[j]) ? 2 : 1;
+      }
       w = stripLeadingAssignments(w.slice(j));
       continue;
     }
@@ -737,30 +872,33 @@ function normalizeRmArgv(argv: string[]): string[] {
 
   let hasR = false;
   let hasF = false;
-  const rest: string[] = [];
+  const operands: string[] = [];
+  let afterDashes = false;
 
   for (let i = 1; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--recursive") {
+    if (afterDashes) {
+      operands.push(arg);
+    } else if (arg === "--") {
+      afterDashes = true;
+    } else if (arg === "--recursive") {
       hasR = true;
     } else if (arg === "--force") {
       hasF = true;
-    } else if (arg.startsWith("-") && !arg.startsWith("--") && arg.length > 1) {
-      let otherFlags = "";
-      for (let j = 1; j < arg.length; j++) {
-        const ch = arg[j];
+    } else if (arg.startsWith("--")) {
+      // --no-preserve-root、--verbose 等不改变删除目标
+    } else if (arg.startsWith("-") && arg.length > 1) {
+      for (const ch of arg.slice(1)) {
         if (ch === "r" || ch === "R") hasR = true;
         else if (ch === "f") hasF = true;
-        else otherFlags += ch;
       }
-      if (otherFlags) rest.push(`-${otherFlags}`);
     } else {
-      rest.push(arg);
+      operands.push(arg);
     }
   }
 
   if (hasR && hasF) {
-    return [argv[0], "-rf", ...rest];
+    return [argv[0], "-rf", ...operands];
   }
   return argv;
 }
@@ -833,6 +971,24 @@ function argvStartsWith(words: ShellWord[], patternWords: string[]): boolean {
       .some((w) => !w.value.startsWith("-") && (w.glob || w.dynamic));
   }
 
+  // rm -rf <目标>：任一操作数命中即可，目标前后的旗标与其它操作数不能规避
+  if (
+    head === "rm" &&
+    normArgv[1] === "-rf" &&
+    patternWords.length === 3 &&
+    patternWords[1] === "-rf" &&
+    !patternWords[2].includes("*")
+  ) {
+    const target = patternWords[2];
+    return normArgv
+      .slice(2)
+      .some(
+        (o) =>
+          o === target ||
+          (o.startsWith(target) && /^[*?[\]]*$/.test(o.slice(target.length))),
+      );
+  }
+
   if (normArgv.length < patternWords.length) return false;
   for (let i = 0; i < patternWords.length; i++) {
     const a = normArgv[i];
@@ -867,12 +1023,17 @@ const GIT_GLOBAL_VALUE_OPTIONS: Record<string, true> = {
   "--super-prefix": true,
 };
 
-/** 交互式选取与预览不会整体写入暂存区 */
+/** 交互式选取、编辑与预览不会整体写入暂存区 */
 function isGitAddPreviewFlag(arg: string): boolean {
   if (arg.startsWith("--")) {
-    return arg === "--patch" || arg === "--interactive" || arg === "--dry-run";
+    return (
+      arg === "--patch" ||
+      arg === "--interactive" ||
+      arg === "--edit" ||
+      arg === "--dry-run"
+    );
   }
-  return /^-[a-zA-Z]*[pin]/.test(arg);
+  return /^-[a-zA-Z]*[pine]/.test(arg);
 }
 
 /** 解析 pathspec 前缀 magic；短形式 :! 与 :^ 等价 exclude，":" 与 ":/" 指向全树 */
@@ -902,8 +1063,17 @@ function gitPathspecMagic(p: string): {
   return { exclude: false, literal: false, rest: p.slice(1) };
 }
 
+/** pathspec 解析后是否覆盖整个工作目录（含其上级目录） */
+function pathspecCoversCwd(rest: string, cwd: string): boolean {
+  const rel = path.relative(path.resolve(cwd, rest), cwd);
+  return (
+    rel === "" ||
+    (rel !== ".." && !rel.startsWith(".." + path.sep) && !path.isAbsolute(rel))
+  );
+}
+
 /** git add 是否属于「没有明确文件范围」的暂存；排除项不算正向选择 */
-function gitAddIsFullScope(words: ShellWord[]): boolean {
+function gitAddIsFullScope(words: ShellWord[], cwd?: string): boolean {
   const stripped = operandWords(words);
   if (stripped.length < 2 || basenames(stripped[0].value) !== "git") {
     return false;
@@ -961,7 +1131,8 @@ function gitAddIsFullScope(words: ShellWord[]): boolean {
       rest === "." ||
       rest === ".." ||
       rest === "./" ||
-      rest === "../"
+      rest === "../" ||
+      (cwd !== undefined && pathspecCoversCwd(rest, cwd))
     ) {
       return true;
     }
@@ -980,21 +1151,32 @@ const STDIN_SHELLS: Record<string, true> = {
   dash: true,
   ash: true,
   ksh: true,
+  fish: true,
+  csh: true,
+  tcsh: true,
+  source: true,
+  ".": true,
 };
 
 const STDIN_SCRIPTS: Record<string, true> = {
   node: true,
   bun: true,
   deno: true,
+  tsx: true,
+  "ts-node": true,
   perl: true,
   ruby: true,
   php: true,
   lua: true,
   luajit: true,
+  osascript: true,
+  rscript: true,
 };
 
+const PY_STR = String.raw`(?:"(?:[^"\\\r\n]|\\[^\r\n])*"|'(?:[^'\\\r\n]|\\[^\r\n])*')`;
+
 /** Python 字段访问只支持下标与 .get("字面量") */
-const PY_FIELD = String.raw`(?:\s*\[\s*(?:"(?:[^"\\\r\n]|\\[^\r\n])*"|'(?:[^'\\\r\n]|\\[^\r\n])*'|-?\d+)\s*\]|\s*\.\s*get\s*\(\s*"(?:[^"\\\r\n]|\\[^\r\n])*"\s*\))*`;
+const PY_FIELD = String.raw`(?:\s*\[\s*(?:${PY_STR}|-?\d+)\s*\]|\s*\.\s*get\s*\(\s*${PY_STR}\s*\))*`;
 
 /** 仅放行固定的「读取 stdin JSON 并打印字段」脚本，其余 python -c 一律保守拦截 */
 const SAFE_JSON_SCRIPT = new RegExp(
@@ -1008,20 +1190,55 @@ const STDIN_PATHS: Record<string, true> = {
   "/proc/self/fd/0": true,
 };
 
+type InterpreterKind = "python" | "shell" | "script";
+
+function interpreterKind(head: string): InterpreterKind | null {
+  if (/^python(?:\d+(?:\.\d+)*)?$/.test(head)) return "python";
+  if (STDIN_SHELLS[head] === true) return "shell";
+  if (STDIN_SCRIPTS[head] === true) return "script";
+  return null;
+}
+
+/** 带独立取值的解释器旗标：其取值不是脚本操作数 */
+const VALUE_FLAGS: Record<string, true> = {
+  "-W": true,
+  "-X": true,
+  "-o": true,
+  "+o": true,
+  "-O": true,
+  "+O": true,
+  "--rcfile": true,
+  "--init-file": true,
+};
+
+/** 切出脚本操作数；dash 表示首个操作数之前出现了独立的 `-`（脚本取自 stdin） */
+function scanOperands(rest: string[]): { operands: string[]; dash: boolean } {
+  const operands: string[] = [];
+  let dash = false;
+  for (let k = 0; k < rest.length; k++) {
+    const a = rest[k];
+    if (VALUE_FLAGS[a] === true) k++;
+    else if (a === "-") dash = dash || operands.length === 0;
+    else if (!a.startsWith("-")) operands.push(a);
+  }
+  return { operands, dash };
+}
+
 function interpreterExecutesStdin(words: ShellWord[]): boolean {
   const args = operandWords(words);
   const argv = args.map((w) => w.value);
   if (argv.length === 0) return false;
   const head = basenames(argv[0]).toLowerCase();
-  const python = /^python(?:\d+(?:\.\d+)*)?$/.test(head);
-  const shell = STDIN_SHELLS[head] === true;
-  const script = STDIN_SCRIPTS[head] === true;
-  if (!python && !shell && !script) return false;
+  const kind = interpreterKind(head);
+  if (kind === null) return false;
+  const python = kind === "python";
+  const shell = kind === "shell";
+  const script = kind === "script";
   // 动态参数可能改变代码或 stdin 操作数，不能按字面量放行
   if (args.some((w) => w.dynamic)) return true;
   const rest = argv.slice(1);
-  const operands = rest.filter((a) => !a.startsWith("-"));
-  if (operands.some((a) => STDIN_PATHS[a] === true)) return true;
+  const { operands, dash } = scanOperands(rest);
+  if (dash || operands.some((a) => STDIN_PATHS[a] === true)) return true;
   if (python) {
     const codeIdx = rest.findIndex(
       (a) => a === "-c" || /^-[a-zA-Z]*c[a-zA-Z]*$/.test(a),
@@ -1048,6 +1265,33 @@ function interpreterExecutesStdin(words: ShellWord[]): boolean {
     );
   }
   return false;
+}
+
+/** 脚本正文里是否有下载器调用 */
+function fetchesRemote(script: string): boolean {
+  return commandNodes(tokenizeShell(script)).some((node) => {
+    const argv = operandWords(node.words);
+    return (
+      argv.length > 0 &&
+      DOWNLOADERS[basenames(argv[0].value).toLowerCase()] === true
+    );
+  });
+}
+
+/** 下载结果经 $()、<()、<<<、< <() 等非管道通道成为被执行的代码 */
+function remoteCodeExecuted(words: ShellWord[]): boolean {
+  const args = operandWords(words);
+  if (args.length === 0) return false;
+  const head = basenames(args[0].value).toLowerCase();
+  const evaluator = head === "eval" || head === "source" || head === ".";
+  if (!evaluator && interpreterKind(head) === null) return false;
+  const remote = (w: ShellWord) => w.subs.some(fetchesRemote);
+  // 重定向到 stdin 的下载结果等同于管道
+  if (words.some((w) => w.target === "in" && remote(w))) return true;
+  const code = evaluator
+    ? args.slice(1)
+    : args.slice(1).filter((w) => !w.value.startsWith("-")).slice(0, 1);
+  return code.some(remote);
 }
 
 function downloadPipeExecutes(nodes: ShellCmd[]): boolean {
@@ -1079,8 +1323,14 @@ function matchCommandNodes(
   nodes: ShellCmd[],
   tokens: ShellToken[],
   pattern: string,
+  cwd?: string,
 ): boolean {
-  if (isDownloadRulePattern(pattern)) return downloadPipeExecutes(nodes);
+  if (isDownloadRulePattern(pattern)) {
+    return (
+      downloadPipeExecutes(nodes) ||
+      nodes.some((c) => remoteCodeExecuted(c.words))
+    );
+  }
   const patternWords = patternWordsOf(pattern);
   if (!patternWords) {
     // 含控制符的自定义规则：对去引用后的命令文本做通配匹配，heredoc 正文不参与
@@ -1097,7 +1347,7 @@ function matchCommandNodes(
     patternWords[1] === "add" &&
     (patternWords[2] === "-A" || patternWords[2] === ".")
   ) {
-    return nodes.some((c) => gitAddIsFullScope(c.words));
+    return nodes.some((c) => gitAddIsFullScope(c.words, cwd));
   }
   return nodes.some((c) =>
     argvStartsWith(stripWrapperWords(c.words), patternWords),
@@ -1115,7 +1365,7 @@ export function commandMatchesPattern(
 /** 提取嵌套在 shell wrapper（如 sh -c, bash -lc, eval）中的内嵌脚本；命令替换由词法层产出 sub token */
 function embeddedScripts(argvs: string[][]): string[] {
   const scripts: string[] = [];
-  const shells = new Set(["sh", "bash", "dash", "zsh", "ash"]);
+  const shells = new Set(["sh", "bash", "dash", "zsh", "ash", "ksh", "fish"]);
   for (const argv of argvs) {
     const stripped = stripWrappers(argv);
     if (stripped.length === 0) continue;
@@ -1238,12 +1488,15 @@ export function pathRuleMatchesFull(
 ): boolean {
   const C = normPath(candidate, cwd, home);
   const R = absoluteForm(ruleValue, cwd, home);
+  const caseInsensitive = process.platform === "darwin";
   const re = R.includes("*")
-    ? new RegExp(`^${globToRegExpSource(R)}$`)
+    ? new RegExp(`^${globToRegExpSource(R)}$`, caseInsensitive ? "i" : undefined)
     : undefined;
-  if (re ? re.test(C) : C === R) return true;
+  const samePath = (a: string, b: string) =>
+    re ? re.test(a) : a === b || (caseInsensitive && a.toLowerCase() === b.toLowerCase());
+  if (samePath(C, R)) return true;
   const realC = resolveReal(C);
-  if (realC !== C && (re ? re.test(realC) : realC === R)) return true;
+  if (realC !== C && samePath(realC, R)) return true;
   if (re) {
     // 通配部分不能 realpath，先解析固定目录前缀
     const prefix = path.dirname(R.slice(0, R.indexOf("*")));
@@ -1251,6 +1504,7 @@ export function pathRuleMatchesFull(
     if (realPrefix !== prefix) {
       const realRe = new RegExp(
         `^${globToRegExpSource(realPrefix + R.slice(prefix.length))}$`,
+        caseInsensitive ? "i" : undefined,
       );
       if (realRe.test(C) || realRe.test(realC)) return true;
     }
@@ -1434,8 +1688,8 @@ function hasBlockingPathHit(
       if (
         !(
           token.includes("/") ||
-          token === ".env" ||
-          token.startsWith(".env.")
+          // macOS 默认大小写不敏感，.ENV 与 .env 是同一个文件
+          /^\.env(?:\..*)?$/i.test(token)
         )
       ) {
         return false;
@@ -1543,19 +1797,29 @@ export function extractEditPaths(input: string): string[] {
 // 防护评估主引擎 (Guard Evaluation Engine)
 // ============================================================================
 
+/** 嵌套脚本（$()、sh -c、heredoc 正文）的最大解析层数，超出按拦截处理 */
+const MAX_NEST_DEPTH = 24;
+
 export function evaluateGuard(
   input: GuardInput,
   policy: Policy,
   allowReadExempt = true,
+  depth = 0,
 ): GuardResult {
   if (input.tool === "bash") {
+    if (depth > MAX_NEST_DEPTH) {
+      return {
+        block: true,
+        reason: "! FORBIDDEN COMMAND\nreason: 命令嵌套层级过深，无法安全审计",
+      };
+    }
     const command = expandHomeInText(input.command, input.home);
     const tokens = tokenizeShell(command);
     const nodes = commandNodes(tokens);
     const argvs = nodes.map((c) => c.words.map((w) => w.value));
 
     for (const rule of policy.commands) {
-      if (matchCommandNodes(nodes, tokens, rule.value)) {
+      if (matchCommandNodes(nodes, tokens, rule.value, input.cwd)) {
         return {
           block: true,
           reason: resolveBlockReason(rule, "command", policy.default_reason),
@@ -1586,6 +1850,7 @@ export function evaluateGuard(
         { tool: "bash", command: script, cwd: input.cwd, home: input.home },
         policy,
         false,
+        depth + 1,
       );
       return inner.block ? inner : undefined;
     };
@@ -1982,12 +2247,16 @@ export function buildPolicy(input: {
   let allowReadPaths: Rule[] = [];
   let default_reason: string | undefined;
 
-  const layers: Array<{ name: string; source: string | null | undefined }> = [
-    { name: "全局配置", source: input.globalSource },
-    { name: "项目配置", source: input.projectSource },
+  const layers: Array<{
+    name: string;
+    source: string | null | undefined;
+    project: boolean;
+  }> = [
+    { name: "全局配置", source: input.globalSource, project: false },
+    { name: "项目配置", source: input.projectSource, project: true },
   ];
 
-  for (const { name, source } of layers) {
+  for (const { name, source, project } of layers) {
     if (source == null) continue;
 
     const parsed = parseLayerYaml(source);
@@ -2005,12 +2274,29 @@ export function buildPolicy(input: {
     }
     commands = applyOps(commands, parsed.layer.commandOps, "command", ctx);
     paths = applyOps(paths, parsed.layer.pathOps, "path", ctx);
-    allowReadPaths = applyOps(
-      allowReadPaths,
-      parsed.layer.allowReadOps,
-      "path",
-      ctx,
-    );
+    // 项目配置来自被审查的仓库，只能授权项目目录内的文件，不能放行家目录凭据
+    const allowReadOps = project
+      ? parsed.layer.allowReadOps.filter((op) => {
+          if (op.type === "remove") return true;
+          const rel = path.relative(
+            ctx.cwd,
+            absoluteForm(op.value, ctx.cwd, ctx.home),
+          );
+          if (
+            rel !== "" &&
+            rel !== ".." &&
+            !rel.startsWith(".." + path.sep) &&
+            !path.isAbsolute(rel)
+          ) {
+            return true;
+          }
+          errors.push(
+            `${name}: allow_read_paths 仅允许项目目录内的路径: ${op.value}`,
+          );
+          return false;
+        })
+      : parsed.layer.allowReadOps;
+    allowReadPaths = applyOps(allowReadPaths, allowReadOps, "path", ctx);
   }
 
   const policy: Policy =
