@@ -20,6 +20,10 @@
       # claude-code = "latest";
       # "npm:droid" = "latest";
       antigravity-cli = "1.1.24";
+      codex = "0.160.1";
+
+      # agent vm
+      microsandbox = "0.7.7";
     };
 
     programs.zsh.initContent = ''
