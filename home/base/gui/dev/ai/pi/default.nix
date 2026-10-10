@@ -60,7 +60,6 @@ let
   shellInit = ''
     export POWERLINE_NERD_FONTS=1
     export FFF_ENABLE_HOME_SCAN=0
-    export ANTIGRAVITY_NO_EXTRA_TOOLS=1
   '';
 in
 {
