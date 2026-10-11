@@ -64,6 +64,7 @@ skills:
     - ponytail-audit
 dev:
   autoqaConsent: granted
+  autoqa: false
 codexResets:
   autoRedeem: "no"
 retry:
