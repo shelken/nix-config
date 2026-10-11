@@ -24,7 +24,7 @@ modelRoles:
   zed: zed/anthropic/claude-sonnet-5-5:high
   gpt: openai-codex/gpt-6.1-sol:high
   cmdc: commandcode-local/deepseek/deepseek-v4.1-flash:high
-  slow: trae/glm-5.3:high
+  slow: openai-codex/gpt-6.1-sol:xhigh
   test: commandcode-local/claude-haiku-5-5:high
 cycleOrder:
   - smol
@@ -62,6 +62,8 @@ statusLine:
 task:
   agentModelOverrides:
     reviewer: "@reviewer-gemini"
+  disabledAgents:
+    []
 browser:
   headless: true
   enabled: false

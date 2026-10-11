@@ -2,6 +2,7 @@
   "name": "omp-plugins",
   "private": true,
   "dependencies": {
+    "@ff-labs/pi-fff": "npm:@ff-labs/pi-fff@0.11.0",
     "@dietrichgebert/ponytail": "npm:@dietrichgebert/ponytail@4.10.0",
     "@shelken/pi-co-authored-by": "npm:@shelken/pi-co-authored-by@0.2.15",
     "@shelken/pi-context-prune": "git+ssh://git@github.com/shelken/pi-context-prune.git#main",
