@@ -11,7 +11,7 @@ description: 当需要设计 UI/UX 时 默认的用户偏好, 涉及`主题`,`�
 
 ### 相关文件
 
-- [调色板](./referencs/catppuccin-palette.md)
+- [调色板](./references/catppuccin-palette.md)
 
 ### 适用场景
 
