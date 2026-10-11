@@ -25,7 +25,7 @@ modelRoles:
   gpt: openai-codex/gpt-6.1-sol:high
   cmdc: commandcode-local/deepseek/deepseek-v4.1-flash:high
   slow: openai-codex/gpt-6.1-sol:xhigh
-  test: commandcode-local/claude-haiku-5-5:high
+  test: mp/trae-cn/glm-5.3:high
 cycleOrder:
   - smol
   - task

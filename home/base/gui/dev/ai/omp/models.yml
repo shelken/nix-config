@@ -6,6 +6,14 @@ providers:
     discovery:
       type: openai-models-list
       timeoutMs: 3000
+  # 不要使用magpie name
+  mp:
+    baseUrl: http://127.0.0.1:3425/v1
+    api: openai-responses
+    apiKey: magpie
+    discovery:
+      type: openai-models-list
+      timeoutMs: 3000
   # 本地 zcode-api 反代 ({kaiyuan-dir}/zcode-api, docker compose up -d)
   zcode-local:
     baseUrl: http://127.0.0.1:8080

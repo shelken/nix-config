@@ -30,7 +30,7 @@
 
 - 需要 GitHub 操作时，优先使用 `gh` 命令
 - 如果项目没有特别说明，项目优先使用 `mise` 管理系统中 **缺失的工具/cli**；`npm` 依赖优先使用 `bun` 管理；`python` 依赖优先使用 `uv` 管理; 所有依赖和安装包应该优先留在项目内，不污染系统全局环境
-- 工具（如果存在）优先级：ffgrep(tool) > rg(bash) > grep(bash)；fffind(tool) > find(bash)
+- 工具（如果存在）优先级：ffgrep(tool)==`xd://ffgrep` > Grep(tool) > rg(bash) > grep(bash)；fffind(tool)==`xd://fffind` > Glob(tool)==find(tool) > find(bash)
 - TODO 仅在任务有规划有计划 或者 任务很大 或 用户要求 时使用
 
 ## 常用目录
