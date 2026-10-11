@@ -6,7 +6,7 @@ disabledProviders:
   - gemini
 modelRoles:
   vision: cpa/gpt-5.6-luna:high
-  plan: openai-codex/gpt-6-astra:high
+  plan: mp/codex/:xhigh
   commit: google-antigravity/gemini-3.8-flash:medium
   tiny: google-antigravity/gemini-3.8-flash:medium
   smol: cpa/workbuddy/glm-5.3-flash:high
@@ -16,27 +16,14 @@ modelRoles:
   reviewer-gemini: google-antigravity/gemini-3.8-flash:high
   reviewer-ds: commandcode-local/deepseek/deepseek-v4.1-flash:high
   reviewer-glm: cpa/workbuddy/glm-5.3-flash:high
-  reviewer-gpt: openai-codex/gpt-6.1-sol:xhigh
+  reviewer-gpt: mp/codex/gpt-6.1-sol:xhigh
   web: google/gemini-2.5-flash
-  qwcn: cpa/qwenworkcn/pro:high
-  wbcn: cpa/workbuddy/glm-5.3-flash:high
-  gog: google-antigravity/gemini-3.8-flash:high
-  zed: zed/anthropic/claude-sonnet-5-5:high
-  gpt: openai-codex/gpt-6.1-sol:high
-  cmdc: commandcode-local/deepseek/deepseek-v4.1-flash:high
-  slow: openai-codex/gpt-6.1-sol:xhigh
-  test: mp/trae-cn/glm-5.3:high
+  slow: mp/codex/gpt-6.1-sol:xhigh
 cycleOrder:
   - smol
   - task
   - default
   - slow
-  - wbcn
-  - qwcn
-  - gog
-  - zed
-  - cmdc
-  - test
 symbolPreset: nerd
 composer:
   shape: band
@@ -97,7 +84,7 @@ retry:
       - web/exa
       - web/brave
       - anthropic/claude-haiku-4-5
-      - openai-codex/gpt-5.6-luna
+      - openai-codex/gpt-6-luna
       - xai/grok-4.5
       - web/zai
       - web/tinyfish
@@ -117,8 +104,6 @@ retry:
       - web/public
       - web/perplexity
       - google-antigravity/gemini-2.5-flash
-      - openai-codex/gpt-5.6
-      - openai-codex/gpt-5.5
       - xai-oauth/grok-4.5
       - web/ollama
 compaction:

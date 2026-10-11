@@ -8,22 +8,22 @@
   ],
   "presets": {
     "explore": {
-      "model": "openai/gpt-5.6-luna",
+      "model": "mp/codex/gpt-6-luna",
       "thinking": "max",
       "tools": "read,bash,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom"
     },
     "general-purpose": {
-      "model": "openai/gpt-5.6-luna",
+      "model": "mp/codex/gpt-6-luna",
       "thinking": "max",
       "tools": "read,bash,edit,write,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom"
     },
     "reviewer": {
-      "model": "openai/gpt-5.6-sol",
+      "model": "mp/codex/gpt-6.1-sol",
       "thinking": "xhigh",
       "tools": "read,bash,grep,find,ls,ffgrep,fffind,intercom"
     },
     "general-purpose-review": {
-      "model": "openai/gpt-5.6-sol",
+      "model": "mp/codex/gpt-6.1-sol",
       "thinking": "high",
       "tools": "read,bash,edit,write,grep,find,ls,ffgrep,fffind,intercom"
     }
