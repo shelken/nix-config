@@ -39,8 +39,8 @@ in
           },
           "caching": {
             "cacheDirectory": "${config.xdg.cacheHome}/kopia/main",
-            "maxCacheSize": 5242880000,
-            "maxMetadataCacheSize": 5242880000,
+            "maxCacheSize": 1073741824,
+            "maxMetadataCacheSize": 1073741824,
             "maxListCacheDuration": 30
            },
           "hostname": "${hostname}",
