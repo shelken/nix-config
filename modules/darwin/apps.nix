@@ -141,7 +141,8 @@ in
 
       # Misc
       "stats" # beautiful system status monitor in menu bar
-      "pearcleaner" # pearcleaner
+      # "pearcleaner" # pearcleaner
+      "appcleaner"
       "the-unarchiver" # zip,unzip
       "parsec"
       "mac-mouse-fix" # 鼠标滚动
