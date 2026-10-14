@@ -114,3 +114,11 @@ compaction:
     - handoff
     - soft
     - remote
+grep:
+  enabled: false
+glob:
+  enabled: false
+tools:
+  xdevInlineDevices:
+    - context_prune
+  xdevDocs: builtins
