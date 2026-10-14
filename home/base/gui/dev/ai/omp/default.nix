@@ -26,6 +26,8 @@ let
   );
 in
 {
+  imports = [ ./agents ];
+
   config = mkIf cfg.enable {
     # 别名：支持与 pi 并存，使用 sec-run omp
     home.shellAliases = {

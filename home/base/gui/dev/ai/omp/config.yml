@@ -4,6 +4,14 @@ disabledProviders:
   - codex
   - opencode
   - gemini
+memory:
+  backend: mnemopi
+mnemopi:
+  scoping: per-project-tagged
+  llmMode: mem
+  embeddingModel: gemini-embedding-2
+  embeddingApiUrl: https://generativelanguage.googleapis.com/v1beta
+  embeddingApiKey: ${OMP_EMBEDDING_API_KEY}
 modelRoles:
   glm-flash: mp/qoder-cn/gfmodel:high
   glm-max: cpa/qwenworkcn/pro:high
@@ -17,6 +25,7 @@ modelRoles:
   vision: cpa/gpt-6-luna:xhigh
   commit: cpa/workbuddy/hy3:high
   tiny: cpa/workbuddy/hy3:high
+  mem: google-antigravity/gemini-3.8-flash:medium
   web: google/gemini-2.5-flash
   gog: google-antigravity/gemini-3.8-flash:high
   plan: "@reviewer-gpt"
@@ -59,6 +68,11 @@ statusLine:
 task:
   agentModelOverrides:
     reviewer: "@reviewer-gemini"
+    reviewer-general: "@reviewer-general"
+    reviewer-gemini: "@reviewer-gemini"
+    reviewer-ds: "@reviewer-ds"
+    reviewer-glm: "@reviewer-glm"
+    reviewer-gpt: "@reviewer-gpt"
   disabledAgents:
     []
 browser:
@@ -83,6 +97,8 @@ retry:
       - google-antigravity/gemini-3.8-flash:medium
     "tiny":
       - google-antigravity/gemini-3.8-flash:medium
+    "mem":
+      - cpa/workbuddy/hy3:high
     "glm-flash":
       - mp/qoder-cn/gfmodel:high
       - mp/trae-cn/glm-5.3-flashx-max:high
