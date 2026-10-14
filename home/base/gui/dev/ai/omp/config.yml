@@ -5,25 +5,35 @@ disabledProviders:
   - opencode
   - gemini
 modelRoles:
-  vision: cpa/gpt-5.6-luna:high
-  plan: mp/codex/:xhigh
-  commit: google-antigravity/gemini-3.8-flash:medium
-  tiny: google-antigravity/gemini-3.8-flash:medium
-  smol: cpa/workbuddy/glm-5.3-flash:high
-  default: commandcode-local/deepseek/deepseek-v4.1-flash:high
-  task: commandcode-local/deepseek/deepseek-v4.1-flash:high
-  reviewer-general: commandcode-local/deepseek/deepseek-v4.1-flash:high
+  glm-flash: mp/qoder-cn/gfmodel:high
+  glm-max: cpa/qwenworkcn/pro:high
+  dsf: mp/qoder-cn/dfmodel:high
+  qwen-flash: cpa/qwenworkcn/flash:high
+  reviewer-general: "@dsf"
   reviewer-gemini: google-antigravity/gemini-3.8-flash:high
-  reviewer-ds: commandcode-local/deepseek/deepseek-v4.1-flash:high
+  reviewer-ds: "@dsf"
   reviewer-glm: cpa/workbuddy/glm-5.3-flash:high
   reviewer-gpt: mp/codex/gpt-6.1-sol:xhigh
+  vision: cpa/gpt-6-luna:xhigh
+  commit: cpa/workbuddy/hy3:high
+  tiny: cpa/workbuddy/hy3:high
   web: google/gemini-2.5-flash
+  gog: google-antigravity/gemini-3.8-flash:high
+  plan: "@reviewer-gpt"
+  smol: "@glm-flash"
+  default: "@dsf"
+  task: "@dsf"
   slow: mp/codex/gpt-6.1-sol:xhigh
 cycleOrder:
   - smol
   - task
   - default
   - slow
+  - gog
+  - glm-flash
+  - glm-max
+  - dsf
+  - qwen-flash
 symbolPreset: nerd
 composer:
   shape: band
@@ -69,18 +79,29 @@ codexResets:
   autoRedeem: "no"
 retry:
   fallbackChains:
-    cpa/workbuddy/glm-5.3-flash:
-      - commandcode-local/deepseek/deepseek-v4.1-flash:high
-      - zcode-local/glm-5.3-flash:high
-      - google-antigravity/gemini-3.8-flash:high
-    zcode-local/*:
+    "commit":
+      - google-antigravity/gemini-3.8-flash:medium
+    "tiny":
+      - google-antigravity/gemini-3.8-flash:medium
+    "glm-flash":
+      - mp/qoder-cn/gfmodel:high
+      - mp/trae-cn/glm-5.3-flashx-max:high
+      - mp/trae-cn/glm-5.3-flash-max:high
       - cpa/workbuddy/glm-5.3-flash:high
-      - commandcode-local/deepseek/deepseek-v4.1-flash:high
-      - google-antigravity/gemini-3.8-flash:high
-    commandcode-local/*:
-      - cpa/workbuddy/glm-5.3-flash:high
+      - mp/workbuddy/glm-5.3-flash:high
       - zcode-local/glm-5.3-flash:high
-      - google-antigravity/gemini-3.8-flash:high
+    "glm-max":
+      - cpa/qwenworkcn/pro:high
+      - mp/qoder-cn/gmodel:high
+      - cpa/workbuddy/glm-5.3:high
+      - mp/trae-cn/glm-5.3-max
+      - mp/workbuddy/glm-5.3:high
+    "dsf":
+      - mp/qoder-cn/dfmodel:high
+      - cpa/workbuddy/deepseek-v4.1-flash:high
+    "qwen-flash":
+      - mp/trae-cn/qwen3.8-flash-max
+      - cpa/qwenworkcn/flash:high
     web:
       - web/exa
       - web/brave

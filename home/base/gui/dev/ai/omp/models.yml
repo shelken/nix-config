@@ -14,6 +14,188 @@ providers:
     discovery:
       type: openai-models-list
       timeoutMs: 3000
+    # >>> mp-modelOverrides:auto-sync >>>
+    modelOverrides:
+      workbuddy/hy3:
+        name: "Hy3"
+        maxTokens: 64000
+        reasoning: true
+        input: ["text", "image"]
+        thinking:
+          mode: effort
+          efforts: [low, high]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/hy4-preview:
+        name: "Hy4 preview"
+        reasoning: true
+        input: ["text", "image"]
+        thinking:
+          mode: effort
+          efforts: [high]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      workbuddy/deepseek-v4.1-flash:
+        name: "Deepseek-V4.1-Flash"
+        maxTokens: 128000
+        reasoning: true
+      workbuddy/glm-5.3:
+        name: "GLM-5.3"
+        maxTokens: 64000
+        reasoning: true
+        input: ["text", "image"]
+      workbuddy/kimi-k3-1:
+        name: "Kimi-K3"
+        maxTokens: 32000
+        reasoning: true
+        input: ["text", "image"]
+        thinking:
+          mode: effort
+          efforts: [low, high, xhigh]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      qoder-cn/qfmodel:
+        name: "Qwen3.8-Flash"
+        reasoning: true
+        input: ["text", "image"]
+        thinking:
+          mode: effort
+          efforts: [low, medium, xhigh]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      qoder-cn/dfmodel:
+        name: "DeepSeek-Flash"
+        reasoning: true
+        input: ["text", "image"]
+        thinking:
+          mode: effort
+          efforts: [low, high, max]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      qoder-cn/gm51model:
+        name: "GLM-5.2"
+        reasoning: true
+        input: ["text", "image"]
+        thinking:
+          mode: effort
+          efforts: [high, max]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      qoder-cn/gmodel:
+        name: "GLM-5.3"
+        reasoning: true
+        input: ["text", "image"]
+        thinking:
+          mode: effort
+          efforts: [low, high, max]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      qoder-cn/gfmodel:
+        name: "GLM-5.3-Flash"
+        reasoning: true
+        input: ["text", "image"]
+        thinking:
+          mode: effort
+          efforts: [high, max]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      antigravity/gemini-3.8-flash:
+        name: "Gemini 3.8 Flash"
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, medium, high]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      antigravity/claude-opus-4-6-thinking:
+        name: "Claude Opus 4.6 (Thinking)"
+        maxTokens: 64000
+      antigravity/claude-sonnet-4-6:
+        name: "Claude Sonnet 4.6 (Thinking)"
+        maxTokens: 64000
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, medium, high, max]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      trae-cn/Doubao-Seed-2.1-Pro:
+        name: "Seed-2.1-Pro-0915"
+        maxTokens: 32000
+        reasoning: true
+        input: ["text"]
+      trae-cn/Doubao-Seed-2.1-Pro-max:
+        name: "Seed-2.1-Pro-0915 (Max)"
+        maxTokens: 64000
+        reasoning: true
+        input: ["text"]
+      trae-cn/glm-5.3-flashx-max:
+        name: "GLM-5.3-FlashX (Max)"
+        maxTokens: 64000
+        reasoning: true
+        input: ["text"]
+      trae-cn/glm-5.3-flash-max:
+        name: "GLM-5.3-Flash (Max)"
+        maxTokens: 64000
+        reasoning: true
+        input: ["text"]
+      trae-cn/glm-5.3-max:
+        name: "GLM-5.3 (Max)"
+        maxTokens: 64000
+        reasoning: true
+      trae-cn/glm-5.2-max:
+        name: "GLM-5.2 (Max)"
+        maxTokens: 64000
+        reasoning: true
+      trae-cn/deepseek-v4.1-flash-max:
+        name: "DeepSeek-V4.1-Flash (Max)"
+        maxTokens: 64000
+        reasoning: true
+        input: ["text"]
+      trae-cn/minimax-m3-max:
+        name: "MiniMax-M3 (Max)"
+        maxTokens: 64000
+        reasoning: true
+        input: ["text"]
+      trae-cn/qwen3.8-flash-max:
+        name: "Qwen3.8-Flash (Max)"
+        maxTokens: 64000
+        reasoning: true
+        input: ["text"]
+      trae-cn/kimi-k3-auto-max:
+        name: "Kimi-K3 (Max)"
+        maxTokens: 64000
+        reasoning: true
+      opencode-zen-free/step-5-preview-free:
+        name: "Step 5 Preview Free"
+        maxTokens: 65536
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, medium, high]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      opencode-zen-free/space-bunny-free:
+        name: "Space Bunny Free"
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, medium, high, xhigh, max]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+    # <<< mp-modelOverrides:auto-sync <<<
   # 本地 zcode-api 反代 ({kaiyuan-dir}/zcode-api, docker compose up -d)
   zcode-local:
     baseUrl: http://127.0.0.1:8080
@@ -32,11 +214,20 @@ providers:
       type: openai-models-list
       timeoutMs: 3000
     # <<: *cpa-endpoint
-    # 档位权威来源: cpa-plugins/plugins/workbuddy/data/static-config.json
-    # 宿主 /v1/models 只回 id/object/created/owned_by, 无能力字段, 发现结果查内置目录会命中
-    # 同名无关行 (如 hy3 命中 opencode-go 的 minimal..xhigh), 故在此逐 id 覆盖为上游真实档位。
-    # omitReasoningEffort: false 必须显式声明: 同一次查表还会把无关行的 omitReasoningEffort: true 带进来,
-    # 该标志优先于 supportsReasoningEffort, 会让 effort 整个从请求里消失 (glm-5.3-flash, kimi-k2.6, minimax-m3 实测)。
+    # === 覆盖原则与参数必要性说明 ===
+    # 1. 覆盖原则: 仅对 omp 无法映射、或映射错误 (如丢失思考、档位错误/与上游对不上) 的常用模型做覆盖; 不常用/不值得的模型不列入, 保持精简。
+    # 2. compat.supportsReasoningEffort: true & compat.omitReasoningEffort: false (必须成对出现):
+    #    - 原因: 宿主 /v1/models 仅返回 id/object, 无能力字段; omp 发现后查内置 catalog 盲目碰撞同名行,
+    #      会继承到无关第三方平台的 omitReasoningEffort: true 或 supportsReasoningEffort: false。
+    #    - 源码行为: 若 omitReasoningEffort=true 或 supportsReasoningEffort=false, omp 会在 wire 序列化时直接把 reasoning.effort 抹除,
+    #      只发 { summary: "auto" }, 导致上游根本收不到 effort (glm-5.3-flash, kimi-k2.6, minimax-m3 实测)。故必须显式钉死。
+    # 3. thinking.requiresEffort: true (仅对纯思考 onlyReasoning: true 模型必须):
+    #    - 原因: 对应 omp 客户端的 Mandatory-reasoning 保护机制 (stream.ts normalizeMandatoryReasoningOptions)。
+    #      当上游模型是强制思考模型 (无非思考模式) 时, 若用户客户端手滑关闭思考或未带档位, omp 会自动保底 clamp 到默认/最低档位, 防止上游 400 报错。
+    #    - 注意: 混合模型 (如 deepseek-v4-flash 本身支持关思考) 绝对不要加此参数, 否则会剥夺用户关闭思考的自由 (被强行拉回 high)。
+    # 4. compat.reasoningEffortMap (按需配置):
+    #    - 原因: 当 omp 内部规范档位名与上游实际接收枚举不一致时使用 (例如 kimi-k3-1 上游是 xhigh, omp catalog 默认翻译成 max 导致 400, 需钉回 xhigh: xhigh)。
+    # 档位权威来源: 各插件 data/static-config.json
     modelOverrides:
       qwenworkcn/flash:
         contextWindow: 1000000
@@ -55,7 +246,6 @@ providers:
         contextWindow: 1000000
         maxTokens: 128000
         reasoning: true
-        input: ["text"]
         thinking:
           mode: effort
           efforts: [low, medium, high, xhigh, max]
@@ -93,7 +283,6 @@ providers:
           mode: effort
           efforts: [high, xhigh]
           defaultLevel: high
-          requiresEffort: true
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false
@@ -128,28 +317,6 @@ providers:
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false
-      workbuddy/glm-5v-turbo:
-        reasoning: true
-        thinking:
-          mode: effort
-          efforts: [medium]
-          defaultLevel: medium
-          requiresEffort: true
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
-      workbuddy/hunyuan-2.0-instruct:
-        reasoning: true
-        thinking:
-          mode: effort
-          efforts: [medium]
-          defaultLevel: medium
-          requiresEffort: true
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
-      workbuddy/hunyuan-chat:
-        reasoning: false
       workbuddy/hy3:
         reasoning: true
         thinking:

@@ -3,7 +3,6 @@
   lib,
   pkgs,
   mylib,
-  system,
   ...
 }:
 let
@@ -54,6 +53,8 @@ in
 
     # 插件目录以仓库清单为准：每次激活重放清单并重装，手装插件随之消失。
     # 清单用普通副本而非软链，否则 omp plugin install 会写穿到仓库文件；
+    # 但 store 里的源文件是只读的，cp 在目标不存在时会连权限一起继承（444），
+    # 导致 bun install 报 EACCES，故复制后必须显式补可写位。
     # bun install 不会移除多余包，所以 node_modules 直接删掉重建。
     home.activation.installOmpPlugins = lib.hm.dag.entryAfter [ "writeBoundary" "sops-nix" ] ''
       githubToken="$(${pkgs.gh}/bin/gh auth token)"
@@ -61,6 +62,7 @@ in
       mkdir -p "$plugins"
       rm -rf "$plugins/node_modules" "$plugins/bun.lock" "$plugins/omp-plugins.lock.json" "$plugins/.bun-cache"
       cp -f ${./plugins/package.json} "$plugins/package.json"
+      chmod u+w "$plugins/package.json"
       # Bun 对 #main 分支依赖的解析结果会命中多层内部缓存（上游缺陷 #11548，1.4.2 未修复），
       # 给本次安装一个一次性缓存目录强制全新解析，全局 ~/.bun/install/cache 原样保留
       PATH="${pkgs.git}/bin:$PATH" GITHUB_TOKEN="$githubToken" BUN_INSTALL_CACHE_DIR="$plugins/.bun-cache" \

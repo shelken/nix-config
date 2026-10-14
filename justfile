@@ -298,6 +298,10 @@ wez-test:
     @rm -f $HOME/.config/wezterm/wezterm.lua
     @ln -s {{ justfile_directory() }}/home/apps/wezterm/wezterm.lua $HOME/.config/wezterm/wezterm.lua
 
+
+# 同步 magpie 模型能力差集到 omp models.yml
+mp-sync:
+    @{{ justfile_directory() }}/home/base/gui/dev/ai/omp/sync-mp-models.sh
 # 清除历史；默认`3d`; 三天前
 [linux]
 wipe duration="3d":
