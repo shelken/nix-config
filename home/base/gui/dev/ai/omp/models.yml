@@ -271,8 +271,8 @@ providers:
         input: ["text", "image"]
         thinking:
           mode: effort
-          efforts: [high]
-          defaultLevel: high
+          efforts: [high, xhigh, max]
+          defaultLevel: max
           requiresEffort: true
         compat:
           supportsReasoningEffort: true
@@ -282,7 +282,7 @@ providers:
         thinking:
           mode: effort
           efforts: [high, xhigh]
-          defaultLevel: high
+          defaultLevel: xhigh
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false

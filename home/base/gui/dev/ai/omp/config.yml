@@ -8,24 +8,21 @@ memory:
   backend: mnemopi
 mnemopi:
   scoping: per-project-tagged
-  llmMode: mem
   embeddingModel: gemini-embedding-2
   embeddingApiUrl: https://generativelanguage.googleapis.com/v1beta
-  embeddingApiKey: ${OMP_EMBEDDING_API_KEY}
 modelRoles:
   glm-flash: mp/qoder-cn/gfmodel:high
   glm-max: cpa/qwenworkcn/pro:high
   dsf: mp/qoder-cn/dfmodel:high
-  qwen-flash: cpa/qwenworkcn/flash:high
   reviewer-general: "@dsf"
   reviewer-gemini: google-antigravity/gemini-3.8-flash:high
   reviewer-ds: "@dsf"
-  reviewer-glm: cpa/workbuddy/glm-5.3-flash:high
+  reviewer-glm: cpa/workbuddy/glm-5.3-flash:max
   reviewer-gpt: mp/codex/gpt-6.1-sol:xhigh
-  vision: cpa/gpt-6-luna:xhigh
+  vision: cpa/gpt-5.6-luna:high
   commit: cpa/workbuddy/hy3:high
   tiny: cpa/workbuddy/hy3:high
-  mem: google-antigravity/gemini-3.8-flash:medium
+  memory: google-antigravity/gemini-3.8-flash:medium
   web: google/gemini-2.5-flash
   gog: google-antigravity/gemini-3.8-flash:high
   plan: "@reviewer-gpt"
@@ -42,7 +39,6 @@ cycleOrder:
   - glm-flash
   - glm-max
   - dsf
-  - qwen-flash
 symbolPreset: nerd
 composer:
   shape: band
@@ -73,8 +69,7 @@ task:
     reviewer-ds: "@reviewer-ds"
     reviewer-glm: "@reviewer-glm"
     reviewer-gpt: "@reviewer-gpt"
-  disabledAgents:
-    []
+  disabledAgents: []
 browser:
   headless: true
   enabled: false
@@ -93,36 +88,37 @@ codexResets:
   autoRedeem: "no"
 retry:
   fallbackChains:
-    "commit":
+    # context-prune
+    "cpa/workbuddy/hy3":
+      - cpa/gpt-5.6-luna:high
       - google-antigravity/gemini-3.8-flash:medium
-    "tiny":
-      - google-antigravity/gemini-3.8-flash:medium
-    "mem":
+    "cpa/gpt-5.6-luna":
       - cpa/workbuddy/hy3:high
-    "glm-flash":
+      - google-antigravity/gemini-3.8-flash:medium
+    commit:
+      - google-antigravity/gemini-3.8-flash:medium
+    tiny:
+      - google-antigravity/gemini-3.8-flash:medium
+    memory:
+      - cpa/workbuddy/hy3:high
+    glm-flash:
       - mp/qoder-cn/gfmodel:high
-      - mp/trae-cn/glm-5.3-flashx-max:high
-      - mp/trae-cn/glm-5.3-flash-max:high
-      - cpa/workbuddy/glm-5.3-flash:high
-      - mp/workbuddy/glm-5.3-flash:high
+      - cpa/workbuddy/glm-5.3-flash:max
+      - mp/workbuddy/glm-5.3-flash:max
       - zcode-local/glm-5.3-flash:high
-    "glm-max":
+    glm-max:
       - cpa/qwenworkcn/pro:high
       - mp/qoder-cn/gmodel:high
       - cpa/workbuddy/glm-5.3:high
-      - mp/trae-cn/glm-5.3-max
       - mp/workbuddy/glm-5.3:high
-    "dsf":
+    dsf:
       - mp/qoder-cn/dfmodel:high
-      - cpa/workbuddy/deepseek-v4.1-flash:high
-    "qwen-flash":
-      - mp/trae-cn/qwen3.8-flash-max
-      - cpa/qwenworkcn/flash:high
+      - cpa/workbuddy/deepseek-v4.1-flash:max
     web:
       - web/exa
       - web/brave
       - anthropic/claude-haiku-4-5
-      - openai-codex/gpt-6-luna
+      - openai-codex/gpt-5.6-luna
       - xai/grok-4.5
       - web/zai
       - web/tinyfish
@@ -145,12 +141,7 @@ retry:
       - xai-oauth/grok-4.5
       - web/ollama
 compaction:
-  methodOrder:
-    - shake
-    - snapcompact
-    - handoff
-    - soft
-    - remote
+  enabled: false
 grep:
   enabled: false
 glob:

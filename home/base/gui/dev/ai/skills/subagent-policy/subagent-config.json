@@ -8,12 +8,12 @@
   ],
   "presets": {
     "explore": {
-      "model": "mp/codex/gpt-6-luna",
-      "thinking": "max",
+      "model": "mp/codex/gpt-5.6-luna",
+      "thinking": "high",
       "tools": "read,bash,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom"
     },
     "general-purpose": {
-      "model": "mp/codex/gpt-6-luna",
+      "model": "mp/codex/gpt-5.6-luna",
       "thinking": "max",
       "tools": "read,bash,edit,write,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom"
     },

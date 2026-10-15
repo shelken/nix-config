@@ -6,6 +6,6 @@
   "pruneOn": "agentic-auto",
   "remindUnprunedCount": true,
   "showPruneStatusLine": false,
-  "summarizerModel": "cpa/gpt-6-luna",
+  "summarizerModel": "cpa/gpt-5.6-luna",
   "summarizerThinking": "high"
 }

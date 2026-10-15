@@ -52,7 +52,7 @@ cpa-warm [--apiurl <url>] [--model <model>] [--envkey <ENV_VAR_NAME>] [--max <n>
 
 # 默认值
 # --apiurl http://127.0.0.1:8317
-# --model  gpt-5.6-luna(none)
+# --model  gpt-6-luna(none)
 # --envkey PI_CPA_API_KEY
 ```
 

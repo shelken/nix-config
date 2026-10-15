@@ -73,100 +73,6 @@ in
       completions = {
         words_min_length = 2;
       };
-
-      language_models = {
-        # anthropic = {
-        #   api_url = "https://cpa.ooooo.space";
-        # };
-
-        openai = {
-          api_url = "https://cpa.ooooo.space/v1";
-          available_models = [
-            {
-              name = "gpt-5.2";
-              display_name = "GPT-5.2";
-              max_tokens = 400000;
-              max_output_tokens = 128000;
-              reasoning_effort = "high";
-              capabilities = {
-                chat_completions = false;
-              };
-            }
-            {
-              name = "gpt-5.3-codex";
-              display_name = "GPT-5.3 Codex";
-              max_tokens = 400000;
-              max_output_tokens = 128000;
-              reasoning_effort = "high";
-              capabilities = {
-                chat_completions = false;
-              };
-            }
-            {
-              name = "gpt-5.4";
-              display_name = "GPT-5.4";
-              max_tokens = 400000;
-              max_output_tokens = 128000;
-              reasoning_effort = "high";
-              capabilities = {
-                chat_completions = false;
-              };
-            }
-
-            {
-              name = "gpt-5.5";
-              display_name = "GPT-5.5";
-              max_tokens = 400000;
-              max_output_tokens = 128000;
-              reasoning_effort = "high";
-              capabilities = {
-                chat_completions = false;
-              };
-            }
-          ];
-        };
-
-        openai_compatible = {
-          # "kimi-code" = {
-          #   api_url = "https://api.kimi.com/coding/v1";
-          #   available_models = [
-          #     {
-          #       name = "kimi-for-coding";
-          #       max_tokens = 262144;
-          #       max_output_tokens = 32768;
-          #       max_completion_tokens = 262144;
-          #       capabilities = {
-          #         tools = true;
-          #         images = true;
-          #         parallel_tool_calls = true;
-          #         prompt_cache_key = true;
-          #         chat_completions = true;
-          #       };
-          #     }
-          #   ];
-          # };
-
-          "OpenCode Zen" = {
-            api_url = "https://opencode.ai/zen/v1";
-            available_models = [
-              {
-                name = "minimax-m2.5-free";
-                max_tokens = 204800;
-                max_output_tokens = 32000;
-                max_completion_tokens = 204800;
-                capabilities = {
-                  tools = true;
-                  images = false;
-                  parallel_tool_calls = false;
-                  prompt_cache_key = false;
-                  chat_completions = true;
-                };
-              }
-            ];
-          };
-        };
-      };
-
       agent = {
         play_sound_when_agent_done = "always";
 
@@ -189,7 +95,7 @@ in
 
       git_panel = {
         tree_view = true;
-        sort_by_path = false;
+        sort_by = "path";
       };
 
       icon_theme = {

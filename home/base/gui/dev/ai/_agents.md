@@ -30,7 +30,7 @@
 
 - 需要 GitHub 操作时，优先使用 `gh` 命令
 - 如果项目没有特别说明，项目优先使用 `mise` 管理系统中 **缺失的工具/cli**；`npm` 依赖优先使用 `bun` 管理；`python` 依赖优先使用 `uv` 管理; 所有依赖和安装包应该优先留在项目内，不污染系统全局环境
-- `ffgrep/fffind` 默认workspace级别范围,项目外时使用绝对路径
+- grep(tool)/find(tool) 在任何时候优先于在bash中执行任何grep/rg/find命令,grep(tool)支持任意路径; `ffgrep/fffind` 默认workspace级别范围,项目外时使用绝对路径
 - TODO 仅在任务有规划有计划 或者 任务很大 或 用户要求 时使用
 
 ## 常用目录
@@ -45,6 +45,7 @@
 - 接手任何一个项目时，先检查项目下的尸检报告`ls postmortems`;记住标题就行，后续遇到相关`难解的问题`就往回查看;结束一个`阶段/大型的/长时间`的任务之后，如果有值得记下的`坑/难题`，阅读`postmortems`skill后，然后记下来并提交
 - 修改 `AGENTS.md` 前必须获得用户明确授权；获得授权后可以编辑
 - 项目的架构决策通常放入`{project-dir}/docs/adr/`中, 具体格式阅读`domain-modeling`skill
+- 任何时候, 任何ADR必须加上对应日期, 遇到冲突时越新的获胜
 
 ## 交付物
 
