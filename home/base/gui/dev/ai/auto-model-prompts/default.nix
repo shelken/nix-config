@@ -16,8 +16,10 @@ let
     "cn-model" = "cn-model";
     "deepseek-v4-flash" = "deepseek-flash";
     "deepseek-v4.1-flash" = "deepseek-flash";
+    "dfmodel" = "deepseek-flash";
     "gemini-*" = "gemini-*";
     "glm-*" = "glm-*";
+    "gfmodel" = "glm-*";
     "gpt-5.5" = "gpt-5.5";
     "gpt-5.6-*" = "gpt-5.6-*";
     "gpt-6-*" = "gpt-5.6-*";
