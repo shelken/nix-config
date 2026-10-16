@@ -57,6 +57,7 @@ statusLine:
     - git
     - pr
     - context_pct
+    - token_rate
     - cost
   rightSegments:
     - session_name
