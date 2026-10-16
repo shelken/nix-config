@@ -11,7 +11,7 @@ in
   config = lib.mkIf config.shelken.dev.ai.enable {
     home.file = {
       ".config/ponytail/config.json".source = jsonFormat.generate "ponytail-config.json" {
-        defaultMode = "full";
+        defaultMode = "off";
         hideStatus = true;
         quietStartup = true;
       };
