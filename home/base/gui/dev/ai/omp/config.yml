@@ -40,6 +40,9 @@ cycleOrder:
   - glm-max
   - dsf
 symbolPreset: nerd
+display:
+  showTokenUsage: true
+  showTurnTime: true
 composer:
   shape: band
 theme:
