@@ -49,6 +49,7 @@ theme:
   dark: dark-catppuccin
 setupVersion: 2
 statusLine:
+  showHookStatus: false
   compactThinkingLevel: false
   preset: custom
   leftSegments:
@@ -59,7 +60,7 @@ statusLine:
     - path
     - git
     - pr
-    - context_pct
+    - status
     - token_rate
     - cost
   rightSegments:
