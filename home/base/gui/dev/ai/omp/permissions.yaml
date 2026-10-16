@@ -25,6 +25,8 @@ deny_commands:
     reason: "不准使用pip,不准直接安装任何包在全局,使用uv并且经过用户允许"
   - pattern: "pip install"
     reason: "不准使用pip,不准直接安装任何包在全局,使用uv并且经过用户允许"
+  - pattern: "gh auth token"
+    reason: "你他妈有病吗"
 
 
 deny_paths:

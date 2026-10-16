@@ -5,36 +5,38 @@ disabledProviders:
   - opencode
   - gemini
 memory:
-  backend: mnemopi
+  backend: off
 mnemopi:
   scoping: per-project-tagged
   embeddingModel: gemini-embedding-2
   embeddingApiUrl: https://generativelanguage.googleapis.com/v1beta
 modelRoles:
-  glm-flash: mp/qoder-cn/gfmodel:high
-  glm-max: cpa/qwenworkcn/pro:high
-  dsf: mp/qoder-cn/dfmodel:high
+  glm-flash: cpa/workbuddy/glm-5.3-flash:max
+  glm-max: cpa/workbuddy/glm-5.3:high
+  dsf: cpa/workbuddy/deepseek-v4.1-flash:max
+  gpt: mp/codex/gpt-6.1-sol:high
   reviewer-general: "@dsf"
   reviewer-gemini: google-antigravity/gemini-3.8-flash:high
-  reviewer-ds: "@dsf"
-  reviewer-glm: cpa/workbuddy/glm-5.3-flash:max
-  reviewer-gpt: mp/codex/gpt-6.1-sol:xhigh
+  reviewer-ds: "@dsf:max"
+  reviewer-glm: "@glm-flash"
+  reviewer-gpt: "@gpt:xhigh"
   vision: cpa/gpt-5.6-luna:high
   commit: cpa/workbuddy/hy3:high
   tiny: cpa/workbuddy/hy3:high
-  memory: google-antigravity/gemini-3.8-flash:medium
+  memory: cpa/gpt-5.6-luna:high
   web: google/gemini-2.5-flash
   gog: google-antigravity/gemini-3.8-flash:high
   plan: "@reviewer-gpt"
   smol: "@glm-flash"
+  scout: "@gpt:high"
   default: "@dsf"
   task: "@dsf"
-  slow: mp/codex/gpt-6.1-sol:xhigh
+  slow: "@gpt:high"
 cycleOrder:
   - smol
   - task
   - default
-  - slow
+  - gpt
   - gog
   - glm-flash
   - glm-max
@@ -52,6 +54,7 @@ statusLine:
   showHookStatus: false
   compactThinkingLevel: false
   preset: custom
+  transparent: true
   leftSegments:
     - pi
     - model
@@ -62,7 +65,6 @@ statusLine:
     - pr
     - status
     - token_rate
-    - cost
   rightSegments:
     - session_name
     - usage
@@ -74,6 +76,7 @@ task:
     reviewer-ds: "@reviewer-ds"
     reviewer-glm: "@reviewer-glm"
     reviewer-gpt: "@reviewer-gpt"
+    scout: "@scout"
   disabledAgents: []
 browser:
   headless: true
@@ -93,6 +96,9 @@ codexResets:
   autoRedeem: "no"
 retry:
   fallbackChains:
+    scout:
+      - cpa/workbuddy/glm-5.3:max
+      - google-antigravity/gemini-3.8-flash:high
     # context-prune
     "cpa/workbuddy/hy3":
       - cpa/gpt-5.6-luna:high
@@ -107,18 +113,14 @@ retry:
     memory:
       - cpa/workbuddy/hy3:high
     glm-flash:
-      - mp/qoder-cn/gfmodel:high
       - cpa/workbuddy/glm-5.3-flash:max
-      - mp/workbuddy/glm-5.3-flash:max
       - zcode-local/glm-5.3-flash:high
     glm-max:
-      - cpa/qwenworkcn/pro:high
-      - mp/qoder-cn/gmodel:high
       - cpa/workbuddy/glm-5.3:high
-      - mp/workbuddy/glm-5.3:high
+      - cpa/workbuddy/glm-5.2:medium
+      - mp/qoder-cn/gmodel:high
     dsf:
-      - mp/qoder-cn/dfmodel:high
-      - cpa/workbuddy/deepseek-v4.1-flash:max
+      - cpa/workbuddy/deepseek-v4.1-flash:high
     web:
       - web/exa
       - web/brave

@@ -1,4 +1,5 @@
 {
+  "app.model.select": "alt+p",
   "app.message.followUp": ["super+shift+enter"],
   "app.message.dequeue": ["ctrl+shift+q"]
 }
