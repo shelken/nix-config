@@ -87,6 +87,7 @@ in
 
     ".pi/agent/caveman.json" = linkPiConfig "caveman.json";
     ".pi/agent/context-prune/settings.json" = linkPiConfig "context-prune.json";
+    ".pi/agent/themes/catppuccin-macchiato.json" = linkPi "themes/catppuccin-macchiato.json";
     ".pi/agent/extensions/pi-recap.json" = linkPiConfig "pi-recap.json";
     ".pi/agent/extensions/pi-rename.json" = linkPiConfig "pi-rename.json";
     ".pi/agent/extensions/pi-vision-handoff.json" = linkPiConfig "pi-vision-handoff.json";

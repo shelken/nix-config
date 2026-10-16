@@ -39,7 +39,6 @@
   },
   "packages": [
     "npm:pi-execution-time",
-    "git:github.com/otahontas/pi-coding-agent-catppuccin",
     "npm:pi-powerline-footer",
     "npm:pi-jingle",
     "npm:pi-token-speed",
