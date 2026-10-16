@@ -9,6 +9,8 @@
     "@shelken/simple-plannotator": "npm:@shelken/simple-plannotator@0.1.6",
     "@shelken/pi-auto-model-prompts": "npm:@shelken/pi-auto-model-prompts@0.3.1",
     "pi-trae-provider": "git+ssh://git@github.com/shelken/pi-trae-provider.git#main",
-    "pi-zed-provider": "git+ssh://git@github.com/shelken/pi-zed-provider.git#main"
+    "pi-zed-provider": "git+ssh://git@github.com/shelken/pi-zed-provider.git#main",
+    "pi-commandcode-provider": "npm:pi-commandcode-provider",
+    "@shelken/pi-sounds": "npm:@shelken/pi-sounds@0.1.0"
   }
 }

@@ -40,7 +40,6 @@
   "packages": [
     "npm:pi-execution-time",
     "npm:pi-powerline-footer",
-    "npm:pi-jingle",
     "npm:pi-token-speed",
     "npm:@tifan/pi-preferred-thinking",
     "npm:@tifan/pi-recap",
