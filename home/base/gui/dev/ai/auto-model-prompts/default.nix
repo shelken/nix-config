@@ -14,15 +14,14 @@ let
   # matcher -> 仓库内源文件；matcher 由 pi-auto-model-prompts 按模型 ID 匹配，别名共用一个源
   matchers = {
     "cn-model" = "cn-model";
-    "deepseek-v4-flash" = "deepseek-flash";
-    "deepseek-v4.1-flash" = "deepseek-flash";
+    "deepseek-v4*" = "deepseek-flash";
     "dfmodel" = "deepseek-flash";
     "gemini-*" = "gemini-*";
     "glm-*" = "glm-*";
     "gfmodel" = "glm-*";
     "gpt-5.5" = "gpt-5.5";
     "gpt-5.6-*" = "gpt-5.6-*";
-    "gpt-6-*" = "gpt-5.6-*";
+    "gpt-6*" = "gpt-5.6-*";
     "grok*" = "grok*";
     "mimo*" = "cn-model";
     "qwen*" = "cn-model";
