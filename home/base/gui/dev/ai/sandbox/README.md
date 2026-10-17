@@ -2,6 +2,10 @@
 
 Home Manager 安装 `sb-default` 和 `omp-sb` 两个系统命令。VM 规格使用 [原生 msb YAML](./sb-default.yaml)，命令入口与 Linux 工具集中在 [wrapper.nix](./wrapper.nix)
 
+## 启用
+
+sandbox 不是 AI 配置的默认组成，由 `shelken.dev.ai.sandbox.enable` 单独控制，默认关闭。开启后除安装两个命令外，还会引入 Linux 平台的 agent 工具闭包（实测闭包 1.46 GiB）与 `microsandbox` CLI；关闭时这些都不进入系统。当前只有 `hosts/mio` 显式开启
+
 ## 首次准备
 
 宿主需要已有 `msb` 和 `sec-run`。应用本仓库的 Home Manager 配置后，为 VM 创建独占 ext4 磁盘；下面的建卷命令只执行一次，不能省略 `--kind disk`；运行入口会拒绝用目录卷存放数据库

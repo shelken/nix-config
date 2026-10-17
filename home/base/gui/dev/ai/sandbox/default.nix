@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  mylib,
   pkgs,
   llm-agents,
   extendModules,
@@ -60,7 +61,12 @@ let
   };
 in
 {
-  config = lib.mkIf config.shelken.dev.ai.enable {
+  options.shelken.dev.ai.sandbox.enable =
+    mylib.mkBoolOpt false "Whether to install the agent sandbox.";
+
+  config = lib.mkIf (config.shelken.dev.ai.enable && config.shelken.dev.ai.sandbox.enable) {
+    programs.mise.globalConfig.tools.microsandbox = "0.7.7";
+
     home.sessionVariables = {
       MSB_HOME = msbHome;
       MSB_CONFIG_PATH = "${msbConfig}";

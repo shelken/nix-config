@@ -14,6 +14,7 @@
     };
 
     dev.ai.enable = true;
+    dev.ai.sandbox.enable = true;
     # dev.ai.claudePreset = "cpa-codex";
     # dev.ai.claudePreset = "cpa-gemini";
     # dev.ai.claudePreset = "cpa-gemini-claude";
