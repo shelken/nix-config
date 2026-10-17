@@ -283,7 +283,7 @@ rec {
     if config.shelken.dotfiles.liveEdit or false then
       config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nix-config/${relPath}"
     else
-      relativeToRoot relPath;
+      "${relativeToRoot "."}/${relPath}";
 
   # 生成标准 Home Manager 文件配置项：{ source = mkConfigLink config relPath; force = true; }
   mkConfigFile = config: relPath: {
