@@ -9,15 +9,7 @@ let
   linkPi = rel: mylib.mkConfigFile config "home/base/gui/dev/ai/pi/${rel}";
   linkPiConfig = rel: mylib.mkConfigFile config "home/base/gui/dev/ai/pi/configs/${rel}";
   jsonFormat = pkgs.formats.json { };
-  readYaml =
-    file:
-    builtins.fromJSON (
-      builtins.readFile (
-        pkgs.runCommand "converted-models.json" { } ''
-          ${pkgs.yj}/bin/yj < ${file} > $out
-        ''
-      )
-    );
+  readYaml = mylib.readYaml pkgs;
 
   sharedModels = readYaml ../omp/models.yml;
   piModels = readYaml ./models.yml;
