@@ -1,7 +1,3 @@
-# sb-default 机器的 microsandbox 原生配置文件
-# 直接由 msb 消费: msb create --conf machines/default.yaml
-# ${HOME} 由 msb 加载时根据宿主环境自动替换
-
 image: "ubuntu"
 cpus: 4
 memory: "8G"
@@ -11,14 +7,13 @@ mounts:
   - "${HOME}/Code:/workspace"
   - named: sb-default-omp
     target: /data
-  # ADR 0007: 纯配置集单次整树只读挂载（含转换后模型与插件清单，零数据库防冲突）
-  - "${HOME}/.omp/sandbox-config:/data/agent:ro,follow-root-symlinks,stat-virt=relaxed"
-  - "${HOME}/.agents:/root/.agents:ro,follow-root-symlinks,stat-virt=relaxed"
-  - "${HOME}/nix-config:${HOME}/nix-config:ro"
+  - "${HOME}/.config/sandbox:/run/sandbox-config:ro,stat-virt=relaxed"
+  - "${HOME}/nix-config:${HOME}/nix-config"
   - "/nix/store:/nix/store:ro,stat-virt=relaxed"
 
 patches:
-  - symlink: { target: "/data", link: "/root/.omp" }
+  - symlink: { target: "/run/sandbox-config/current/.omp", link: "/root/.omp" }
+  - symlink: { target: "/run/sandbox-config/current/.agents", link: "/root/.agents" }
 
 network:
   policy: "public"

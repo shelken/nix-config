@@ -1,114 +1,123 @@
-# sb CLI: 一个机器一个 wrapper, 管理单个常驻沙箱 VM
-# 多 agent 进程 = 多次 sb exec / sb ssh 接入同一个 VM
-#
-# 机器定义完全采用原生 msb YAML (machines/<name>.yaml)，Nix 不动态渲染配置。
-# Nix 仅用于声明依赖的 Linux 工具链 store 路径，并通过 entrypoint 提供给沙箱。
 {
-  pkgs, # native (aarch64-darwin)
+  pkgs,
   linuxPkgs,
-  name,
-  machine,
-  # agent CLI 来自 llm-agents.nix 上游 (aarch64-linux, 缓存替换), ADR 0003;
-  # 仅用于拼 entrypoint PATH, 本体走宿主 /nix/store 挂载
   omp,
+  gitConfig,
+  msbConfig,
+  msbHome,
+  name,
+  conf,
 }:
 let
-  lib = pkgs.lib;
-
-  tools = (if builtins.isFunction machine.tools then machine.tools linuxPkgs else machine.tools) ++ [
+  tools = with linuxPkgs; [
+    bashInteractive
+    coreutils
+    ripgrep
+    fd
+    git
+    gh
+    jq
+    curl
+    mise
+    bun
     omp
   ];
 
-  # VM 内入口: 设置 nix 工具 PATH 与证书再 exec
-  # 纯文本文件, 无需可执行位; 遵循 issue 1607 定稿约束: 不用 msb --env (会干扰 secret 机制)
   entrypoint = pkgs.writeText "sb-entrypoint" ''
-    export PATH="${lib.makeBinPath tools}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    export PATH="${pkgs.lib.makeBinPath tools}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     export GIT_SSL_CAINFO="$SSL_CERT_FILE"
-
-    # XDG 状态与数据库分流：SQLite 数据库、会话天然写入持久卷，配置目录保持只读
+    export GIT_CONFIG_GLOBAL="${gitConfig}"
     export XDG_DATA_HOME=/data/xdg/data
     export XDG_STATE_HOME=/data/xdg/state
     export XDG_CACHE_HOME=/data/xdg/cache
+    # Linux stat 对 ext4 使用 ext2/ext3 的类型名；拒绝目录卷承载数据库
+    if [[ "$(stat -f -c %T /data)" != ext2/ext3 ]]; then
+      echo '/data 必须使用 disk 命名卷，请按 README 创建 --kind disk 的状态卷' >&2
+      exit 1
+    fi
     mkdir -p "$XDG_DATA_HOME/omp" "$XDG_STATE_HOME/omp" "$XDG_CACHE_HOME/omp"
-
-    exec "''$@"
+    exec "$@"
   '';
 
-  conf = machine.conf;
-  sbName = "sb-${name}";
-  entrypointGuest = "/nix/store/${baseNameOf entrypoint}";
-in
-pkgs.writeShellScriptBin "sb-${name}" ''
-    # msb 由 mise 在宿主机管理 (0.7.7+), wrapper 继承环境 PATH
+  sb = pkgs.writeShellScriptBin name ''
     set -euo pipefail
-
-    SB_NAME="${sbName}"
-    CONF="${conf}"
-    ENTRYPOINT="${entrypointGuest}"
+    export MSB_CONFIG_PATH="${msbConfig}"
+    export MSB_HOME="${msbHome}"
 
     usage() {
-      cat <<EOF
-  Usage: sb-${name} <command> [args...]
-
-  管理常驻 agent 沙箱 $SB_NAME (多 agent 共享, 每次 exec/ssh 即一个接入)
-
-  Commands:
-    up                 创建(如不存在)并启动 VM
-    exec [-t] <cmd> ...  在 VM 内以 nix 工具 PATH 执行命令 (-t 分配 PTY, TUI 用)
-    shell              交互 shell
-    ssh                底层 SSH 运维通道
-    serve              暴露 SSH server 127.0.0.1:2222 (前台), 首次需 msb ssh authorize:
-                       msb ssh authorize --file ~/.ssh/id_ed25519.pub
-                       ssh -p 2222 root@127.0.0.1
-    status             查看状态
-    down               停止 (磁盘保留)
-    rm                 销毁 VM
-  EOF
+      cat <<'EOF'
+    用法:
+      ${name} up                       创建或启动 VM，自动经 sec-run 取得凭据
+      ${name} exec [-t] [-w DIR] CMD…  在 VM 中运行命令
+      ${name} shell                    进入交互 shell
+      ${name} status                   查看状态
+      ${name} inspect                  查看 JSON 规格与挂载
+      ${name} volume …                 原生命名卷管理
+      ${name} down                     停止 VM
+      ${name} rm                       删除 VM，保留命名卷
+    EOF
       exit "''${1:-0}"
     }
 
-    cmd_up() {
-      if msb inspect "$SB_NAME" &>/dev/null; then
-        if msb status "$SB_NAME" 2>/dev/null | grep -q "running"; then
-          echo "$SB_NAME already running."
-        else
-          msb start "$SB_NAME"
-          echo "$SB_NAME started."
-        fi
-      else
-        msb create --name "$SB_NAME" --conf "$CONF"
-        echo "$SB_NAME created and booted."
-      fi
-    }
-    # -t 透传给 msb exec (TUI 需要 PTY), 其余参数原样执行
-    cmd_exec() {
-      local tty_args=()
-      if [ "''${1:-}" = "-t" ]; then tty_args=(-t); shift; fi
-      exec msb exec "$SB_NAME" "''${tty_args[@]}" -- bash "$ENTRYPOINT" "$@"
-    }
-
-    cmd_shell() {
-      exec msb exec "$SB_NAME" -t -- bash "$ENTRYPOINT" bash
-    }
-
-    [ $# -lt 1 ] && usage 1
-    command="$1"; shift
-
+    [[ $# -gt 0 ]] || usage
+    command="$1"
+    shift
     case "$command" in
-      up) cmd_up ;;
-      exec)
-        [ $# -lt 1 ] && { echo "Usage: sb-${name} exec <cmd> [args...]" >&2; exit 1; }
-        cmd_exec "$@"
+      up)
+        if state=$(msb inspect ${name} --format json 2>/dev/null); then
+          if ! ${pkgs.jq}/bin/jq -e '.status == "Running"' <<< "$state" >/dev/null; then
+            sec-run msb start ${name}
+          fi
+        else
+          sec-run msb create --name ${name} --conf ${conf}
+        fi
+        exit 0
         ;;
-      shell) cmd_shell ;;
-      ssh)
-        exec msb ssh "$SB_NAME" "''$@"
-        ;;
-      serve) exec msb ssh serve "$SB_NAME" "$@" ;;
-      status) exec msb status "$SB_NAME" "$@" ;;
-      down) exec msb stop "$SB_NAME" "$@" ;;
-      rm) msb stop "$SB_NAME" 2>/dev/null || true; exec msb rm "$SB_NAME" "$@" ;;
-      -h|--help|help) usage 0 ;;
-      *) echo "Unknown command: $command" >&2; usage 1 ;;
+      exec) ;;
+      shell) set -- -t bash "$@" ;;
+      status) exec msb status ${name} "$@" ;;
+      inspect) exec msb inspect ${name} --format json ;;
+      volume) exec msb volume "$@" ;;
+      down) exec msb stop ${name} "$@" ;;
+      rm) exec msb rm --force ${name} "$@" ;;
+      -h|--help|help) usage ;;
+      *) usage 1 ;;
     esac
-''
+
+    terminal=(--stream)
+    workdir=()
+    while getopts ':tw:' option; do
+      case "$option" in
+        t) terminal=(-t) ;;
+        w) workdir=(-w "$OPTARG") ;;
+        *) usage 1 ;;
+      esac
+    done
+    shift "$((OPTIND - 1))"
+    [[ $# -gt 0 ]] || usage 1
+    exec msb exec ${name} "''${terminal[@]}" "''${workdir[@]}" -- bash ${entrypoint} "$@"
+  '';
+
+  ompSb = pkgs.writeShellScriptBin "omp-sb" ''
+    set -euo pipefail
+    ${sb}/bin/${name} up >&2
+    cwd=$(${sb}/bin/${name} inspect | ${pkgs.jq}/bin/jq -er --arg cwd "$(pwd -P)" '
+      .active_config.mounts
+      | map(select(.type == "Bind")
+          | select(.host as $host | $cwd == $host or ($cwd | startswith($host + "/"))))
+      | max_by(.host | length)
+      | if . == null then error("当前目录未共享给 ${name}: \($cwd)")
+        else . as $mount | $mount.guest + ($cwd | ltrimstr($mount.host)) end
+    ')
+    terminal=()
+    if [[ -t 0 && -t 1 ]]; then terminal=(-t); fi
+    exec ${sb}/bin/${name} exec "''${terminal[@]}" -w "$cwd" omp "$@"
+  '';
+in
+pkgs.symlinkJoin {
+  inherit name;
+  paths = [
+    sb
+    ompSb
+  ];
+}

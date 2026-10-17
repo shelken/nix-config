@@ -1,90 +1,66 @@
 # Agent Sandbox
 
-通过 Home Manager 提供 `sb-default`，在常驻 Linux VM 中运行 OMP。机器规格使用 [msb 原生 YAML](./sb-default.yaml)，Linux 工具和 OMP 由 [machine.nix](./machine.nix) 与 [wrapper.nix](./wrapper.nix) 提供
+Home Manager 安装 `sb-default` 和 `omp-sb` 两个系统命令。VM 规格使用 [原生 msb YAML](./sb-default.yaml)，命令入口与 Linux 工具集中在 [wrapper.nix](./wrapper.nix)
 
-## 首次使用
+## 首次准备
 
-先在宿主应用本仓库的 Home Manager 配置，取得 `sb-default` 命令。构建不会代替激活
-
-为 YAML 引用的命名卷创建独占磁盘。此命令只在该卷尚不存在时执行，`disk` 卷使用 ext4；msb 的默认 `dir` 卷不适合这里的数据库
+宿主需要已有 `msb` 和 `sec-run`。应用本仓库的 Home Manager 配置后，为 VM 创建独占 ext4 磁盘；下面的建卷命令只执行一次，不能省略 `--kind disk`；运行入口会拒绝用目录卷存放数据库
 
 ```bash
-msb volume create sb-default-omp --kind disk --size 8G
-sec-run sb-default up
+sb-default volume create sb-default-omp --kind disk --size 8G
+sb-default up
 ```
 
-`sec-run` 必须用于启动 VM，让 msb 在启动时取得 YAML 声明的凭据并建立原生 secret proxy。VM 已运行时，`up` 不会重建其代理；需要刷新凭据时，先停止，再经 `sec-run` 启动
+`up` 在创建或启动 VM 时自动经 `sec-run` 建立 msb 原生 secret proxy；已运行时直接复用。Git 身份沿用现有 Home Manager 设置，GitHub 凭据助手由 sandbox 声明；GitHub 的 `git@github.com:` remote 在 guest 内转为 HTTPS，不需要手动登录或初始化 Git
+
+OMP 插件由应用管理，使用 `sb-default exec omp plugin install <source>` 安装，来源参考 [OMP 插件清单](../omp/plugins/package.json)。sandbox 不安装、更新或修复插件，也不挂载宿主插件目录
+
+## 日常运行
+
+在项目目录执行即可，VM 停止时自动启动，OMP 在对应的 guest 目录运行
 
 ```bash
-sb-default down
-sec-run sb-default up
+cd ~/Code/你的项目
+omp-sb
+omp-sb --model=mp/qoder-cn/gmodel
+omp-sb -p --mode=json '使用 bash 执行 pwd，回复实际输出'
 ```
 
-GitHub CLI 使用原生方式配置 Git HTTPS 凭据助手。此操作写入 guest 自己的 Git 配置
+`omp-sb` 从运行中 VM 的挂载信息解析当前目录，交互终端自动分配 PTY，OMP 参数原样转发。当前目录必须已被 YAML 共享；未共享时明确报错，不会悄悄换到其他项目
+
+查看配置中的模型与原始入口：
 
 ```bash
-sb-default exec gh auth setup-git --hostname github.com
+sb-default exec omp models --json
+sb-default exec -t omp
+sb-default exec -w /workspace bash -c 'pwd'
 ```
 
-OMP 插件由应用自身管理，使用 `sb-default exec omp plugin install <source>` 安装，来源参考 [OMP 插件清单](../omp/plugins/package.json)。`up`、`exec` 和 Home Manager 配置发布都不会为 guest 安装、更新或修复插件；宿主插件目录也不会挂入 guest
-
-## 运行 OMP
-
-查看可选模型，再选择当前网络可达的模型。模型配置来自 nix-config，guest 的本机回环地址由 sandbox 适配为宿主地址
-
-```bash
-sb-default exec omp --list-models
-sb-default exec -t omp --model=mp/qoder-cn/gmodel
-```
-
-非交互运行同样经过完整入口，下面的提示要求 OMP 实际执行工具
-
-```bash
-sb-default exec omp -p --model=mp/qoder-cn/gmodel '使用 bash 执行 uname -s，回复实际输出'
-```
-
-这些示例中的模型必须在当前配置中存在且服务可达。CLI 启动成功与模型请求成功分别验证，某个 provider 超时不会由 sandbox 自动切换模型
+模型服务须在当前网络可达，并支持所选模型。模型列表不代表凭据套餐允许使用全部模型
 
 ## 生命周期
 
 | 命令 | 行为 |
 |---|---|
-| `sb-default up` | 首次创建并启动 VM，已有 VM 则确保启动；需要凭据时使用 `sec-run sb-default up` |
-| `sb-default exec <cmd> ...` | 带 Linux 工具 PATH、原生代理证书和 XDG 目录运行命令 |
-| `sb-default exec -t omp` | 分配 PTY 运行 OMP TUI |
-| `sb-default shell` | 进入使用相同入口的交互 shell |
-| `sb-default status` | 查看 VM 状态 |
-| `sb-default down` | 停止 VM，保留磁盘与命名卷 |
-| `sb-default rm` | 删除 VM，保留命名卷；不会应用日常配置更新 |
+| `sb-default up` | 创建或启动，已运行则复用 |
+| `sb-default exec [-t] [-w DIR] CMD…` | 注入工具环境后执行，非交互输出流式传递 |
+| `sb-default shell` | 进入交互 shell |
+| `sb-default status` | 查看状态 |
+| `sb-default down` | 停止，保留 VM 和命名卷 |
+| `sb-default rm` | 使用 msb 原生强制删除 VM，保留命名卷 |
 
-其余命令见 `sb-default --help`
+刷新启动凭据时执行 `down`、`up`。调整 CPU、挂载、网络等 VM 规格后，删除并重建 VM；日常 OMP 配置更新不执行 `rm`
 
-## 配置与状态
+## 配置、工作区与状态
 
-| Guest 路径 | 来源与用途 |
-|---|---|
-| `/workspace` | 宿主 `~/Code`，读写工作目录 |
-| `/nix/store` | 宿主 store，只读提供 Linux 工具；guest 不使用 apt 安装系统包 |
-| `/root/.omp/agent` | sandbox 从现有 Home Manager 文件声明收集的只读 OMP 配置，不包含宿主数据库或 session |
-| `/root/.agents` | 宿主共享的只读 skills 与模型提示词 |
-| `/data/xdg/data/omp` | guest 自己的数据库、session 和应用数据 |
-| `/data/xdg/state/omp` | guest 自己的 XDG 状态 |
-| `/data/xdg/cache/omp` | guest 自己的缓存 |
+宿主 `~/Code` 映射到 `/workspace`，`~/nix-config` 按同一路径提供读写访问，供代码编辑及 Git 工作树公共目录使用。其他目录需在 YAML 中显式声明
 
-`/data` 使用这台 VM 独占的 ext4 命名卷。不得让其他 VM 同时挂载该卷写入数据库，也不得改为共享宿主 OMP 状态目录
+OMP 配置位于只读 `/root/.omp/agent`，skills 与提示词位于只读 `/root/.agents`。sandbox 从已有 `home.file` 声明取得纯 store 配置，通过宿主 `~/.config/sandbox/current` 发布；guest 不跟随宿主 live-edit 软链。模型地址适配集中在 [default.nix](./default.nix)，其他 AI 模块不维护 sandbox 清单，宿主保持现有 live-edit 行为
 
-## 更新配置
+Home Manager 只管理 `~/.config/sandbox/current` 一个发布链接，配置内容留在 Nix store。VM 挂载其真实父目录，更新链接后同一 VM 中新启动的 OMP 可以读取新配置；运行中的 OMP 是否热重载取决于应用能力
 
-配置定义和模型地址适配集中在 [sandbox 模块](./default.nix)。模块消费已有 `home.file` 声明，其他 AI 配置模块不维护 sandbox 文件清单
+数据库、session、插件及其他 XDG 数据位于 `/data/xdg/data/omp`；状态与缓存分别位于 `/data/xdg/state/omp`、`/data/xdg/cache/omp`。`/data` 使用 VM 独占 ext4 卷，不与宿主或其他 VM 共写数据库
 
-Home Manager 以 `recursive = true` 发布纯配置目录。宿主挂载根保持为真实目录，配置更新时替换其下的文件链接，供同一 VM 继续读取。日常配置更新不使用 `sb-default rm`
+msb 运行数据保存在 `~/Data/sandboxes/msb`，镜像缓存位于 `~/.cache/microsandbox`。两个命令显式读取 Nix store 中的原生配置，不依赖 `~/.microsandbox/config.json`。入口同时设置原生 `MSB_HOME`，TLS 证书保存在数据根的 `tls` 子目录。Home Manager 提供相同的 `MSB_HOME`、`MSB_CONFIG_PATH`，新开终端后直接使用原生 `msb` 也读取相同配置
 
-文件可见与进程重读分别处理。下一次启动 OMP 会重新读取配置；已运行的 OMP 是否能热重载，取决于对应设置和 OMP 自身能力。需要重新启动 OMP 时先正常退出，再接回同一 VM，数据库和 session 仍保留
-
-机器资源、挂载规则、网络白名单与 secret 目标的变更属于 VM 规格变更，不等同于日常 OMP 配置更新
-
-## 网络与凭据
-
-网络与 secret 授权以 [sb-default.yaml](./sb-default.yaml) 为准。msb 原生 secret proxy 按声明的目标处理凭据，不共享宿主 SSH 私钥
-
-宿主服务在 guest 中使用 `host.microsandbox.internal`。入口保留 msb 注入的 CA 环境，并让 Git 使用同一证书包；不要通过关闭 TLS 校验排查凭据问题
+`/nix/store` 只读提供 Linux 工具，guest 不使用 apt 安装系统包。网络与 secret 目标以 YAML 为准；入口保留 msb 代理 CA 并供 Git 使用，不共享宿主 SSH 私钥
