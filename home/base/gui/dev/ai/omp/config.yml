@@ -11,13 +11,13 @@ mnemopi:
   embeddingModel: gemini-embedding-2
   embeddingApiUrl: https://generativelanguage.googleapis.com/v1beta
 modelRoles:
-  glm-flash: cpa/workbuddy/glm-5.3-flash:max
-  glm-max: cpa/workbuddy/glm-5.3:high
-  dsf: cpa/workbuddy/deepseek-v4.1-flash:max
+  glm-flash: mp/workbuddy/glm-5.3-flash:max
+  glm-max: mp/workbuddy/glm-5.3:high
+  dsf: mp/workbuddy-ai/deepseek-v4.1-flash-sg:high
   gpt: mp/codex/gpt-6.1-sol:high
   reviewer-general: "@dsf"
   reviewer-gemini: google-antigravity/gemini-3.8-flash:high
-  reviewer-ds: "@dsf:max"
+  reviewer-ds: "@dsf:high"
   reviewer-glm: "@glm-flash"
   reviewer-gpt: "@gpt:xhigh"
   vision: cpa/gpt-5.6-luna:high
@@ -121,6 +121,7 @@ retry:
       - mp/qoder-cn/gmodel:high
     dsf:
       - cpa/workbuddy/deepseek-v4.1-flash:high
+      - mp/workbuddy-ai/deepseek-v4.1-flash:high
     web:
       - web/exa
       - web/brave

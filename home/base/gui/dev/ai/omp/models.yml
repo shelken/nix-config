@@ -16,46 +16,6 @@ providers:
       timeoutMs: 3000
     # >>> mp-modelOverrides:auto-sync >>>
     modelOverrides:
-      group/auto-hy3:
-        name: "Hy3"
-        reasoning: true
-        input: ["text", "image"]
-        thinking:
-          mode: effort
-          efforts: [low, high]
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
-      group/auto-deepseek-v4-1-flash:
-        name: "Deepseek-V4.1-Flash"
-        reasoning: true
-        input: ["text", "image"]
-        thinking:
-          mode: effort
-          efforts: [low, high, max]
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
-      group/auto-glm-5-3-flash:
-        name: "GLM-5.3-Flash"
-        reasoning: true
-        input: ["text", "image"]
-        thinking:
-          mode: effort
-          efforts: [low, high, max]
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
-      group/auto-step-5-preview:
-        name: "Step-5-Preview"
-        reasoning: true
-        input: ["text", "image"]
-        thinking:
-          mode: effort
-          efforts: [low, medium, high]
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
       qoder-cn/qfmodel:
         name: "Qwen3.8-Flash"
         reasoning: true
@@ -126,20 +86,6 @@ providers:
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false
-      workbuddy/glm-5.3:
-        name: "GLM-5.3"
-        reasoning: true
-        input: ["text", "image"]
-      workbuddy/kimi-k3-1:
-        name: "Kimi-K3"
-        reasoning: true
-        input: ["text", "image"]
-        thinking:
-          mode: effort
-          efforts: [low, high, xhigh]
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
       workbuddy/step-5-preview:
         name: "Step-5-Preview"
         reasoning: true
@@ -149,6 +95,10 @@ providers:
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false
+      workbuddy/glm-5.3:
+        name: "GLM-5.3"
+        reasoning: true
+        input: ["text", "image"]
       workbuddy/glm-5.2:
         name: "GLM-5.2"
         reasoning: true
@@ -159,12 +109,13 @@ providers:
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false
-      workbuddy-ai/step-5-preview:
-        name: "Step-5-Preview"
+      workbuddy/kimi-k3-1:
+        name: "Kimi-K3"
         reasoning: true
+        input: ["text", "image"]
         thinking:
           mode: effort
-          efforts: [low, medium, high]
+          efforts: [low, high, xhigh]
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false
@@ -178,9 +129,25 @@ providers:
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false
+      workbuddy-ai/step-5-preview:
+        name: "Step-5-Preview"
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, medium, high]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
       workbuddy-ai/deepseek-v4.1-flash-sg:
         name: "Deepseek-V4.1-Flash (SG)"
+        reasoning: true
         input: ["text", "image"]
+        thinking:
+          mode: effort
+          efforts: [low, high, max]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
       workbuddy-ai/glm-5.3-flash:
         name: "GLM-5.3-Flash"
         reasoning: true
@@ -203,8 +170,12 @@ providers:
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false
-      opencode-zen-free/cat-jam-free:
-        name: "Cat Jam Free"
+      trae-cn/kimi-k3-auto-max:
+        name: "Kimi-K3 (Max)"
+        reasoning: true
+        input: ["text", "image"]
+      opencode-zen-free/beam-free:
+        name: "Beam Free"
         reasoning: true
         thinking:
           mode: effort
@@ -222,12 +193,12 @@ providers:
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false
-      opencode-zen-free/step-5-preview-free:
-        name: "Step 5 Preview Free"
+      opencode-zen-free/glm-5.3-flash-free:
+        name: "GLM-5.3-Flash Free"
         reasoning: true
         thinking:
           mode: effort
-          efforts: [low, medium, high]
+          efforts: [low, high, max]
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false
