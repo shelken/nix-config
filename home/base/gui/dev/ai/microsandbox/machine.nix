@@ -4,18 +4,19 @@
   default = {
     conf = ./sb-default.yaml;
 
-    tools = linuxPkgs: with linuxPkgs; [
-      bashInteractive
-      coreutils
-      ripgrep
-      fd
-      git
-      gh
-      jq
-      curl
-      mise
-      cacert
-      bun
-    ];
+    tools =
+      linuxPkgs: with linuxPkgs; [
+        bashInteractive
+        coreutils
+        ripgrep
+        fd
+        git
+        gh
+        jq
+        curl
+        mise
+        cacert
+        bun
+      ];
   };
 }

@@ -11,14 +11,11 @@ mounts:
   - "${HOME}/Code:/workspace"
   - named: sb-default-omp
     target: /data
-  # ADR 0007: 单源配置快照，单次整树只读挂载
-  - "${HOME}/.omp/sandbox-config:/data/agent:ro,follow-root-symlinks,stat-virt=relaxed"
+  # 配置直挂宿主工作树与配置目录，liveEdit 实时穿透，hm 随时修改即刻生效，绝不 rm
+  - "${HOME}/.omp/agent:/root/.omp/agent:ro,follow-root-symlinks,stat-virt=relaxed"
   - "${HOME}/.agents:/root/.agents:ro,follow-root-symlinks,stat-virt=relaxed"
   - "${HOME}/nix-config:${HOME}/nix-config:ro"
   - "/nix/store:/nix/store:ro,stat-virt=relaxed"
-
-patches:
-  - symlink: { target: "/data", link: "/root/.omp" }
 
 network:
   policy: "public"

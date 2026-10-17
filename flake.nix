@@ -48,6 +48,7 @@
         in
         inputs
         // {
+          inherit inputs;
           # 主输入即 unstable channel；HM 模块沿用 pkgs-unstable 变量名，与 pkgs 同源
           pkgs-unstable = pkgs;
 

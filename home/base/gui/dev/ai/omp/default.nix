@@ -12,15 +12,6 @@ let
   # 软链仓库内文件，仓库中直接编辑即生效
   linkOmp = rel: mylib.mkConfigFile config "home/base/gui/dev/ai/omp/${rel}";
 
-  microsandboxModels =
-    pkgs.runCommand "omp-models-microsandbox.yml"
-      {
-        nativeBuildInputs = [ pkgs.yq-go ];
-      }
-      ''
-        yq '(.. | select(tag == "!!map") | select(has("baseUrl")) | .baseUrl) |= sub("^(https?://)(127[.]0[.]0[.]1|localhost|\\[::1\\])([:/]|$)", "''${1}host.microsandbox.internal''${3}")' ${./models.yml} > "$out"
-      '';
-
   # 扩展目录内除 *.test.ts 外的 .ts 逐个软链；目录内还含测试与 AGENTS.md，不能整目录软链
   extensionFiles = builtins.attrNames (
     lib.filterAttrs (
@@ -32,50 +23,6 @@ let
       name = ".omp/agent/extensions/${name}";
       value = linkOmp "extensions/${name}";
     }) extensionFiles
-  );
-
-  agentsDir = pkgs.callPackage ./agents/dir.nix { };
-
-  # 声明式聚合沙箱纯配置集：单一 store 路径，零数据库，构建期消化 loopback 差异
-  sandboxConfig = pkgs.linkFarm "omp-sandbox-config" (
-    [
-      {
-        name = "config.yml";
-        path = mylib.mkConfigLink config "home/base/gui/dev/ai/omp/config.yml";
-      }
-      {
-        name = "keybindings.yml";
-        path = mylib.mkConfigLink config "home/base/gui/dev/ai/omp/keybindings.yml";
-      }
-      {
-        name = "permissions.yaml";
-        path = mylib.mkConfigLink config "home/base/gui/dev/ai/omp/permissions.yaml";
-      }
-      {
-        name = "models.yml";
-        path = microsandboxModels;
-      }
-      {
-        name = "AGENTS.md";
-        path = mylib.mkConfigLink config "home/base/gui/dev/ai/_agents.md";
-      }
-      {
-        name = "context-prune/settings.json";
-        path = mylib.mkConfigLink config "home/base/gui/dev/ai/pi/configs/context-prune.json";
-      }
-      {
-        name = "plugins/package.json";
-        path = ./plugins/package.json;
-      }
-      {
-        name = "agents";
-        path = agentsDir;
-      }
-    ]
-    ++ (map (name: {
-      name = "extensions/${name}";
-      path = mylib.mkConfigLink config "home/base/gui/dev/ai/omp/extensions/${name}";
-    }) extensionFiles)
   );
 in
 {
@@ -104,8 +51,6 @@ in
       ".omp/agent/permissions.yaml" = linkOmp "permissions.yaml";
       # 模型配置: provider 清单 + 自定义模型 (apiKey 为环境变量名, OMP resolveConfigValue 先查 env 后降级字面量)
       ".omp/agent/models.yml" = linkOmp "models.yml";
-      # 宿主不再暴露内部派生文件，统一暴露纯配置目录供沙箱单次整树挂载
-      ".omp/sandbox-config".source = sandboxConfig;
       ".omp/agent/context-prune/settings.json" =
         mylib.mkConfigFile config "home/base/gui/dev/ai/pi/configs/context-prune.json";
       # ".omp/agent/mcp.json" = linkOmp "mcp.json";

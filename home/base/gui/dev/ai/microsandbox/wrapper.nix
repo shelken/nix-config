@@ -15,7 +15,9 @@
 let
   lib = pkgs.lib;
 
-  tools = (if builtins.isFunction machine.tools then machine.tools linuxPkgs else machine.tools) ++ [ omp ];
+  tools = (if builtins.isFunction machine.tools then machine.tools linuxPkgs else machine.tools) ++ [
+    omp
+  ];
 
   # VM 内入口: 设置 nix 工具 PATH 与证书再 exec
   # 纯文本文件, 无需可执行位; 遵循 issue 1607 定稿约束: 不用 msb --env (会干扰 secret 机制)
@@ -27,94 +29,86 @@ let
     export XDG_DATA_HOME=/data/xdg/data
     export XDG_STATE_HOME=/data/xdg/state
     export XDG_CACHE_HOME=/data/xdg/cache
-    mkdir -p "$XDG_DATA_HOME/omp" "$XDG_STATE_HOME/omp" "$XDG_CACHE_HOME/omp"
-
-    # 插件首次自动原生构建：缺失时使用自带 Linux bun 在持久卷内执行安装
-    mkdir -p /data/plugins
-    ln -sfn /data/plugins "$XDG_DATA_HOME/omp/plugins"
-    if [ -f /data/plugins/package.json ] && [ ! -d /data/plugins/node_modules ]; then
-      (cd /data/plugins && bun install --silent) || true
-    fi
+    mkdir -p "$XDG_DATA_HOME" "$XDG_STATE_HOME" "$XDG_CACHE_HOME"
 
     exec "''$@"
   '';
-
 
   conf = machine.conf;
   sbName = "sb-${name}";
   entrypointGuest = "/nix/store/${baseNameOf entrypoint}";
 in
 pkgs.writeShellScriptBin "sb-${name}" ''
-  # msb 由 mise 在宿主机管理 (0.7.7+), wrapper 继承环境 PATH
-  set -euo pipefail
+    # msb 由 mise 在宿主机管理 (0.7.7+), wrapper 继承环境 PATH
+    set -euo pipefail
 
-  SB_NAME="${sbName}"
-  CONF="${conf}"
-  ENTRYPOINT="${entrypointGuest}"
+    SB_NAME="${sbName}"
+    CONF="${conf}"
+    ENTRYPOINT="${entrypointGuest}"
 
-  usage() {
-    cat <<EOF
-Usage: sb-${name} <command> [args...]
+    usage() {
+      cat <<EOF
+  Usage: sb-${name} <command> [args...]
 
-管理常驻 agent 沙箱 $SB_NAME (多 agent 共享, 每次 exec/ssh 即一个接入)
+  管理常驻 agent 沙箱 $SB_NAME (多 agent 共享, 每次 exec/ssh 即一个接入)
 
-Commands:
-  up                 创建(如不存在)并启动 VM
-  exec [-t] <cmd> ...  在 VM 内以 nix 工具 PATH 执行命令 (-t 分配 PTY, TUI 用)
-  shell              交互 shell
-  ssh                底层 SSH 运维通道
-  serve              暴露 SSH server 127.0.0.1:2222 (前台), 首次需 msb ssh authorize:
-                     msb ssh authorize --file ~/.ssh/id_ed25519.pub
-                     ssh -p 2222 root@127.0.0.1
-  status             查看状态
-  down               停止 (磁盘保留)
-  rm                 销毁 VM
-EOF
-    exit "''${1:-0}"
-  }
+  Commands:
+    up                 创建(如不存在)并启动 VM
+    exec [-t] <cmd> ...  在 VM 内以 nix 工具 PATH 执行命令 (-t 分配 PTY, TUI 用)
+    shell              交互 shell
+    ssh                底层 SSH 运维通道
+    serve              暴露 SSH server 127.0.0.1:2222 (前台), 首次需 msb ssh authorize:
+                       msb ssh authorize --file ~/.ssh/id_ed25519.pub
+                       ssh -p 2222 root@127.0.0.1
+    status             查看状态
+    down               停止 (磁盘保留)
+    rm                 销毁 VM
+  EOF
+      exit "''${1:-0}"
+    }
 
-  cmd_up() {
-    if msb inspect "$SB_NAME" &>/dev/null; then
-      if msb status "$SB_NAME" 2>/dev/null | grep -q "running"; then
-        echo "$SB_NAME already running."
+    cmd_up() {
+      if msb inspect "$SB_NAME" &>/dev/null; then
+        if msb status "$SB_NAME" 2>/dev/null | grep -q "running"; then
+          echo "$SB_NAME already running."
+        else
+          msb start "$SB_NAME"
+          echo "$SB_NAME started."
+        fi
       else
-        msb start "$SB_NAME"
-        echo "$SB_NAME started."
+        msb create --name "$SB_NAME" --conf "$CONF"
+        echo "$SB_NAME created and booted."
       fi
-    else
-      msb create --name "$SB_NAME" --conf "$CONF"
-      echo "$SB_NAME created and booted."
-    fi
-  }
-  # -t 透传给 msb exec (TUI 需要 PTY), 其余参数原样执行
-  cmd_exec() {
-    local tty_args=()
-    if [ "''${1:-}" = "-t" ]; then tty_args=(-t); shift; fi
-    exec msb exec "$SB_NAME" "''${tty_args[@]}" -- bash "$ENTRYPOINT" "$@"
-  }
+    }
+    # -t 透传给 msb exec (TUI 需要 PTY), 其余参数原样执行
+    cmd_exec() {
+      local tty_args=()
+      if [ "''${1:-}" = "-t" ]; then tty_args=(-t); shift; fi
+      exec msb exec "$SB_NAME" "''${tty_args[@]}" -- bash "$ENTRYPOINT" "$@"
+    }
 
-  cmd_shell() {
-    exec msb exec "$SB_NAME" -t -- bash "$ENTRYPOINT" bash
-  }
+    cmd_shell() {
+      exec msb exec "$SB_NAME" -t -- bash "$ENTRYPOINT" bash
+    }
 
-  [ $# -lt 1 ] && usage 1
-  command="$1"; shift
+    [ $# -lt 1 ] && usage 1
+    command="$1"; shift
 
-  case "$command" in
-    up) cmd_up ;;
-    exec)
-      [ $# -lt 1 ] && { echo "Usage: sb-${name} exec <cmd> [args...]" >&2; exit 1; }
-      cmd_exec "$@"
-      ;;
-    shell) cmd_shell ;;
-    ssh)
-      exec msb ssh "$SB_NAME" "''$@"
-      ;;
-    serve) exec msb ssh serve "$SB_NAME" "$@" ;;
-    status) exec msb status "$SB_NAME" "$@" ;;
-    down) exec msb stop "$SB_NAME" "$@" ;;
-    rm) msb stop "$SB_NAME" 2>/dev/null || true; exec msb rm "$SB_NAME" "$@" ;;
-    -h|--help|help) usage 0 ;;
-    *) echo "Unknown command: $command" >&2; usage 1 ;;
-  esac
+    case "$command" in
+      up) cmd_up ;;
+      exec)
+        [ $# -lt 1 ] && { echo "Usage: sb-${name} exec <cmd> [args...]" >&2; exit 1; }
+        cmd_exec "$@"
+        ;;
+      shell) cmd_shell ;;
+      ssh)
+        exec msb ssh "$SB_NAME" "''$@"
+        ;;
+      serve) exec msb ssh serve "$SB_NAME" "$@" ;;
+      status) exec msb status "$SB_NAME" "$@" ;;
+      down) exec msb stop "$SB_NAME" "$@" ;;
+      rm) msb stop "$SB_NAME" 2>/dev/null || true; exec msb rm "$SB_NAME" "$@" ;;
+      -h|--help|help) usage 0 ;;
+      *) echo "Unknown command: $command" >&2; usage 1 ;;
+    esac
 ''
