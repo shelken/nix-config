@@ -2,6 +2,11 @@
   description = "My flake configuration";
 
   nixConfig = {
+    # llm-agents 产物托管在 numtide 缓存；flake 的 nixConfig 不被下游继承，必须此处声明
+    extra-substituters = [ "https://cache.numtide.com" ];
+    extra-trusted-public-keys = [
+      "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
+    ];
     experimental-features = [
       "nix-command"
       "flakes"
@@ -303,6 +308,9 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    # agent sandbox: omp 等 aarch64-linux 包来自 numtide llm-agents
+    # 不 follows nixpkgs：numtide 缓存按它自己的 nixpkgs pin 构建，改成 follows 会使 drv 哈希变化导致缓存全 miss
+    llm-agents.url = "github:numtide/llm-agents.nix";
     # 与 nixpkgs 同分支却独立锁定，只会漂移出第二份源码树；收敛为别名
     nixpkgs-unstable.follows = "nixpkgs";
     # darwin 走 nixpkgs-unstable 分支：发布不等 NixOS 测试套件，

@@ -2,10 +2,18 @@
   config,
   lib,
   pkgs,
+  inputs,
   ...
 }:
 let
   jsonFormat = pkgs.formats.json { };
+
+  linuxPkgs = pkgs.pkgsCross.aarch64-multiplatform;
+  machines = import ./machine.nix;
+  wrap = name: machine: import ./wrapper.nix {
+    inherit pkgs linuxPkgs name machine;
+    inherit (inputs.llm-agents.packages.aarch64-linux) omp;
+  };
 in
 {
   config = lib.mkIf config.shelken.dev.ai.enable {
@@ -16,5 +24,7 @@ in
         cache = "${config.home.homeDirectory}/.cache/microsandbox";
       };
     };
+
+    home.packages = lib.mapAttrsToList (name: machine: wrap name machine) machines;
   };
 }

@@ -1,0 +1,41 @@
+# sb-default 机器的 microsandbox 原生配置文件
+# 直接由 msb 消费: msb create --conf machines/default.yaml
+# ${HOME} 由 msb 加载时根据宿主环境自动替换
+
+image: "ubuntu"
+cpus: 4
+memory: "8G"
+workdir: "/workspace"
+
+mounts:
+  - "${HOME}/Code:/workspace"
+  - named: sb-default-omp
+    target: /data
+  # ADR 0007: 单源配置快照，单次整树只读挂载
+  - "${HOME}/.omp/sandbox-config:/data/agent:ro,follow-root-symlinks,stat-virt=relaxed"
+  - "${HOME}/.agents:/root/.agents:ro,follow-root-symlinks,stat-virt=relaxed"
+  - "${HOME}/nix-config:${HOME}/nix-config:ro"
+  - "/nix/store:/nix/store:ro,stat-virt=relaxed"
+
+patches:
+  - symlink: { target: "/data", link: "/root/.omp" }
+
+network:
+  policy: "public"
+  allow:
+    - "public"
+    - "dns"
+    - "host:tcp:3425"
+    - "host:tcp:8080"
+    - "192.168.69.46"
+    - "192.168.69.60"
+
+secrets:
+  GITHUB_TOKEN:
+    allow: ["github.com", "api.github.com"]
+  CPA_PI_API_KEY:
+    allow: ["192.168.69.60"]
+  COMMANDCODE_API_KEY:
+    allow: ["commandcode.int.ooooo.space"]
+  WX_PI_API_KEY:
+    allow: ["chatapi.weixin.qq.com"]
