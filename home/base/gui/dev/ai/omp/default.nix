@@ -26,8 +26,6 @@ let
   );
 in
 {
-  imports = [ ./agents ];
-
   config = mkIf cfg.enable {
     programs.zsh.initContent = ''
       # for mnemopi gemini embedding

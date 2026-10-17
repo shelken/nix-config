@@ -32,12 +32,16 @@ description: 对抗性代码审查。触发词 "interrogate"、"对抗审查"、
 
 ## 第 3 步，派发 reviewer
 
-用 `spawn-subagent list` 实时查看当前 `reviewer-<model>` 形式的 profile（reviewer-gpt、reviewer-glm、reviewer-gemini、reviewer-ds；不含裸 `reviewer`，那是通用审查代理）。把发现的全部 profile 写进 manifest，**一次 batch 派发**，同一份变更、同一套指令：
+用 `spawn-subagent list` 实时取候选，按以下规则选出本轮 reviewer，**一次 batch 派发**，同一份变更、同一套指令：
+
+1. 候选 = 名为 `reviewer-<变体>` 的 profile；裸 `reviewer` 不进候选（它与某个变体共用模型，是默认审查代理，不是独立视角）
+2. 按 `model=` 去重：多个候选模型相同时只留一个，保留 `thinking` 更高者（`off < minimal < low < medium < high < xhigh < max`），同级取 `list` 中靠前者。对抗信号来自模型差异，同模型不同 thinking 档位提供不了新视角
+3. 不硬编码 profile 名：profile 由 nix 按 omp 的 `modelRoles` 生成，角色增减后 `list` 自动反映
 
 ```json
 {
   "task": "<按下方模板填充的完整 task，所有 reviewer 共享>",
-  "agents": ["reviewer-gpt", "reviewer-glm", "reviewer-gemini", "reviewer-ds"]
+  "agents": ["<去重后的 reviewer-<变体>>", "..."]
 }
 ```
 
@@ -67,7 +71,7 @@ reviewer 不得再派生子代理。
 
 ### 等待模式
 
-batch 返回后主代理**立即结束当前回合**（不再调任何工具、不 sleep、不轮询）。健康 reviewer 的结论经 intercom 自动注入并唤醒主代理继续。这是唯一可靠姿势：herdr 对未聚焦 pane 只报 idle，无 working/done 区分，阻塞等待无信号。
+batch 返回后主代理**立即结束当前回合**（不再调任何工具、不 sleep、不轮询）。健康 reviewer 的结论经 intercom 自动注入并唤醒主代理继续。这是唯一可靠姿势：herdr 对未聚焦 pane 只报 idle、kitty 窗口无任何状态信号，阻塞等待无可靠信号。
 
 计数只算 batch 输出中 ok 的 reviewer：应收到等于 ok 数的 intercom 结论，缺失任何一条都不开始综合（failed 的不指望回传）
 
