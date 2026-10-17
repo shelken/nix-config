@@ -24,67 +24,6 @@ let
       value = linkOmp "extensions/${name}";
     }) extensionFiles
   );
-
-  microsandboxModels =
-    pkgs.runCommand "omp-models-microsandbox.yml"
-      {
-        nativeBuildInputs = [ pkgs.yq-go ];
-      }
-      ''
-        yq '(.. | select(tag == "!!map") | select(has("baseUrl")) | .baseUrl) |= sub("^(https?://)(127[.]0[.]0[.]1|localhost|\\[::1\\])([:/]|$)", "''${1}host.microsandbox.internal''${3}")' ${./models.yml} > "$out"
-      '';
-
-  # 基础配置文件映射，消除重复
-  baseConfigFiles = {
-    "config.yml" = linkOmp "config.yml";
-    "keybindings.yml" = linkOmp "keybindings.yml";
-    "permissions.yaml" = linkOmp "permissions.yaml";
-    "models.yml" = linkOmp "models.yml";
-    "context-prune/settings.json" =
-      mylib.mkConfigFile config "home/base/gui/dev/ai/pi/configs/context-prune.json";
-  };
-
-  # ADR 0007: 声明式聚合沙箱纯配置集，单次整树挂载消除散装枚举与清单漂移
-  sandboxConfig = pkgs.linkFarm "omp-sandbox-config" (
-    [
-      {
-        name = "config.yml";
-        path = baseConfigFiles."config.yml".source;
-      }
-      {
-        name = "keybindings.yml";
-        path = baseConfigFiles."keybindings.yml".source;
-      }
-      {
-        name = "permissions.yaml";
-        path = baseConfigFiles."permissions.yaml".source;
-      }
-      {
-        name = "models.yml";
-        path = microsandboxModels;
-      }
-      {
-        name = "AGENTS.md";
-        path = mylib.mkConfigLink config "home/base/gui/dev/ai/_agents.md";
-      }
-      {
-        name = "context-prune/settings.json";
-        path = baseConfigFiles."context-prune/settings.json".source;
-      }
-      {
-        name = "plugins/package.json";
-        path = ./plugins/package.json;
-      }
-      {
-        name = "agents";
-        path = config.home.file.".omp/agent/agents".source;
-      }
-    ]
-    ++ (map (name: {
-      name = "extensions/${name}";
-      path = mylib.mkConfigLink config "home/base/gui/dev/ai/omp/extensions/${name}";
-    }) extensionFiles)
-  );
 in
 {
   imports = [ ./agents ];
@@ -104,13 +43,19 @@ in
       minimum_release_age = "0h";
     };
 
-    home.file =
-      (lib.mapAttrs' (name: val: lib.nameValuePair ".omp/agent/${name}" val) baseConfigFiles)
-      // extensionLinks
-      // {
-        # 暴露单一纯配置目录供沙箱单次整树挂载（ADR 0007）
-        ".omp/sandbox-config".source = sandboxConfig;
-      };
+    home.file = {
+      # omp 全局配置 / 快捷键 / 权限防护规则
+      # 插件清单不在此列：它必须是普通副本，软链会被 omp plugin install 写穿到仓库
+      ".omp/agent/config.yml" = linkOmp "config.yml";
+      ".omp/agent/keybindings.yml" = linkOmp "keybindings.yml";
+      ".omp/agent/permissions.yaml" = linkOmp "permissions.yaml";
+      # 模型配置: provider 清单 + 自定义模型 (apiKey 为环境变量名, OMP resolveConfigValue 先查 env 后降级字面量)
+      ".omp/agent/models.yml" = linkOmp "models.yml";
+      ".omp/agent/context-prune/settings.json" =
+        mylib.mkConfigFile config "home/base/gui/dev/ai/pi/configs/context-prune.json";
+      # ".omp/agent/mcp.json" = linkOmp "mcp.json";
+    }
+    // extensionLinks;
 
     # 插件目录以仓库清单为准：每次激活重放清单并重装，手装插件随之消失。
     # 清单用普通副本而非软链，否则 omp plugin install 会写穿到仓库文件；

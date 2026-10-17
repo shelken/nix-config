@@ -23,13 +23,13 @@ let
   # 纯文本文件, 无需可执行位; 遵循 issue 1607 定稿约束: 不用 msb --env (会干扰 secret 机制)
   entrypoint = pkgs.writeText "sb-entrypoint" ''
     export PATH="${lib.makeBinPath tools}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-    export SSL_CERT_FILE="${linuxPkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+    export GIT_SSL_CAINFO="$SSL_CERT_FILE"
 
     # XDG 状态与数据库分流：SQLite 数据库、会话天然写入持久卷，配置目录保持只读
     export XDG_DATA_HOME=/data/xdg/data
     export XDG_STATE_HOME=/data/xdg/state
     export XDG_CACHE_HOME=/data/xdg/cache
-    mkdir -p "$XDG_DATA_HOME" "$XDG_STATE_HOME" "$XDG_CACHE_HOME"
+    mkdir -p "$XDG_DATA_HOME/omp" "$XDG_STATE_HOME/omp" "$XDG_CACHE_HOME/omp"
 
     exec "''$@"
   '';
