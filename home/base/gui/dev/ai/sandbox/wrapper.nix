@@ -29,7 +29,14 @@ let
     export XDG_DATA_HOME=/data/xdg/data
     export XDG_STATE_HOME=/data/xdg/state
     export XDG_CACHE_HOME=/data/xdg/cache
-    mkdir -p "$XDG_DATA_HOME" "$XDG_STATE_HOME" "$XDG_CACHE_HOME"
+    mkdir -p "$XDG_DATA_HOME/omp" "$XDG_STATE_HOME/omp" "$XDG_CACHE_HOME/omp"
+
+    # 插件首次自动原生构建：缺失时使用自带 Linux bun 在持久卷内执行安装
+    mkdir -p /data/plugins
+    ln -sfn /data/plugins "$XDG_DATA_HOME/omp/plugins"
+    if [ -f /data/plugins/package.json ] && [ ! -d /data/plugins/node_modules ]; then
+      (cd /data/plugins && bun install --silent) || true
+    fi
 
     exec "''$@"
   '';

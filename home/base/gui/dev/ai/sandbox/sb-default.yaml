@@ -11,11 +11,15 @@ mounts:
   - "${HOME}/Code:/workspace"
   - named: sb-default-omp
     target: /data
-  # 配置直挂宿主工作树与配置目录，liveEdit 实时穿透，hm 随时修改即刻生效，绝不 rm
-  - "${HOME}/.omp/agent:/root/.omp/agent:ro,follow-root-symlinks,stat-virt=relaxed"
+  # 整目录挂载，彻底消灭逐文件枚举与硬编码
+  - "${HOME}/.omp/agent:/data/agent:ro,follow-root-symlinks,stat-virt=relaxed"
+  - "${HOME}/.omp/plugins:/data/plugins:ro,follow-root-symlinks,stat-virt=relaxed"
   - "${HOME}/.agents:/root/.agents:ro,follow-root-symlinks,stat-virt=relaxed"
   - "${HOME}/nix-config:${HOME}/nix-config:ro"
   - "/nix/store:/nix/store:ro,stat-virt=relaxed"
+
+patches:
+  - symlink: { target: "/data", link: "/root/.omp" }
 
 network:
   policy: "public"
