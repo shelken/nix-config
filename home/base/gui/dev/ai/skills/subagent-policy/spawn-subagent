@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-// spawn-subagent.ts — 在 Herdr 窗格中启动/关闭 pi 子代理
-// agent 真相源: ~/.pi/agent/agents/<profile>.md frontmatter; subagent-config.json 仅作全局默认。
+// spawn-subagent.ts — 在 Herdr 窗格或 Kitty 窗口中启动/关闭 pi 子代理
+// agent 真相源: ~/.pi/agent/agents/<profile>.md（nix 按 omp 的 modelRoles 生成）: frontmatter 定模型/工具，正文作系统提示追加。
 // 用法: spawn-subagent <profile> <slug> -- <task> | close <pane-id> | list | --check | -h
 import { execFileSync, execSync } from "node:child_process";
 import {
@@ -15,10 +15,11 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const agentsDir = join(homedir(), ".pi", "agent", "agents");
 const config = JSON.parse(readFileSync(join(scriptDir, "subagent-config.json"), "utf8"));
 const AGENT_FIELDS = ["description", "model", "thinking", "tools"];
+const subHome = join(homedir(), ".pi", "agent-subagent");
 
 type Agent = {
   name: string; model: string; thinking: string; tools: string;
-  exclude: string[]; description: string; md?: string;
+  exclude: string[]; description: string; body: string;
 };
 
 // ---------- 解析 ----------
@@ -41,24 +42,21 @@ function parseFrontmatter(text: string): Record<string, string | string[]> {
   return f;
 }
 
-// md 显式值 > config 预设; md 无对应文件时退回 config 预设。
+// md 缺 model/thinking/tools 任一字段即视为无法解析。
 function resolveAgent(profile: string): Agent | null {
-  const preset = config.presets?.[profile.toLowerCase()] ?? {};
   const mdName = existsSync(agentsDir)
     ? readdirSync(agentsDir).find((f) => basename(f, ".md").toLowerCase() === profile.toLowerCase())
     : undefined;
-  const f = mdName ? parseFrontmatter(readFileSync(join(agentsDir, mdName), "utf8")) : {};
-  const has = (k: string) => Object.prototype.hasOwnProperty.call(f, k);
-  const pick = (k: string, d: string) => (has(k) ? String(f[k]) : d);
-  const model = pick("model", preset.model);
-  const thinking = pick("thinking", preset.thinking);
-  const tools = pick("tools", preset.tools);
+  if (!mdName) return null;
+  const text = readFileSync(join(agentsDir, mdName), "utf8");
+  const f = parseFrontmatter(text);
+  const model = String(f.model ?? ""), thinking = String(f.thinking ?? ""), tools = String(f.tools ?? "");
   if (!model || !thinking || !tools) return null;
   // 插件排除全局统一：所有子代理共用一份派生 settings.json，per-md 无法生效
   return {
     name: profile, model, thinking, tools,
-    exclude: (config.exclude ?? []) as string[], description: (f.description as string) ?? "",
-    ...(mdName ? { md: join(agentsDir, mdName) } : {}),
+    exclude: (config.exclude ?? []) as string[], description: String(f.description ?? ""),
+    body: text.replace(/^---\n[\s\S]*?\n---\n?/, "").trim(),
   };
 }
 
@@ -68,12 +66,12 @@ function herdr(args: string[]): any {
   return JSON.parse(execFileSync("herdr", args, { encoding: "utf8" }));
 }
 function usage() {
-  console.log(`spawn-subagent - 在 Herdr 窗格中启动/关闭 pi 子代理
+  console.log(`spawn-subagent - 在 Herdr 窗格或 Kitty 窗口中启动/关闭 pi 子代理
 
 用法:
   spawn-subagent <profile> <slug> -- <task>   启动单个子代理，输出 pane ID
   spawn-subagent batch <manifest.json>        按 manifest 文件并发编排多个子代理（共享 task + 可选专项 task）
-  spawn-subagent resume <pane-id> -- <task>   复用已有 agent pane，注入新任务（不重启）
+  spawn-subagent resume <pane-id> -- <task>   复用已有 agent pane（kitty 为窗口 ID），注入新任务（不重启）
   spawn-subagent list                         列出所有 agent(name/model/thinking/tools/描述)
   spawn-subagent --check                      派生 settings + 打印所有 agent 生效值，不启动
   spawn-subagent close <pane-id>              关闭子代理 pane 并聚焦回主 pane
@@ -83,7 +81,8 @@ function usage() {
   单个 agent → 单发；并发多个 agent（不论任务是否相同）→ batch，禁止循环单发
 
 profile: 对应 ~/.pi/agent/agents/<profile>.md（文件名匹配大小写不敏感，agent 名统一小写）；
-         frontmatter 的 model/thinking/tools 为唯一真相源，缺字段时回退 subagent-config.json。
+         md 由 nix 生成：frontmatter 的 model/thinking/tools 为唯一真相源，缺字段则无法解析；
+         正文作为系统提示追加（--append-system-prompt）。
          插件排除由 subagent-config.json 的 exclude 全局统一，md 不支持单独声明。
 slug:    任务语义标识（小写字母/数字/连字符；agent 名 profile-slug-时间戳上限 32，
          超长自动截断，无需调用者计算）
@@ -92,7 +91,7 @@ task:    子代理任务描述，支持多行；结论经 intercom 回传，不�
 退出码与输出:
   exit 0: 派发成功。单发输出 pane ID；batch 每 agent 一行 profile\tpane\tok
   exit 1: 失败。失败原因输出在 stderr，reason 带分类前缀:
-      config-error: 模型/认证配置错
+      config-error: 模型/认证配置错/额度用尽（400/401/403/404/429）
       transient:    pi 在同一会话内重试后仍未恢复
       launch-error: pane/session/prompt 启动失败
   以上失败均直接跳过该模型；失败 pane 已由脚本自动关闭，不残留
@@ -116,7 +115,8 @@ manifest (batch，文件路径，不支持内联 JSON 或 stdin):
   spawn-subagent batch /tmp/review-auth.json
   spawn-subagent resume w1A:p3 -- "继续检查测试覆盖"
 
-env: HERDR_PANE_ID, PI_INTERCOM_SESSION_ID`);
+终端: 优先 Herdr（HERDR_PANE_ID），否则 Kitty（KITTY_WINDOW_ID；需 allow_remote_control=socket-only + listen_on，tab 布局为 splits）
+env: HERDR_PANE_ID | KITTY_WINDOW_ID, PI_INTERCOM_SESSION_ID`);
 }
 
 function listAgents() {
@@ -205,6 +205,174 @@ function layoutPane(mainPane: string): string {
   return newPane;
 }
 
+// 正文写文件再以路径传入，避开 shell/argv 的引号与长度问题；同 profile 内容恒定，并发覆盖写无冲突
+function writeAgentBody(name: string, body: string): string | undefined {
+  if (!body) return undefined;
+  const dir = join(subHome, "tmp", "agent-prompts");
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, `${name}.md`);
+  writeFileSync(file, body + "\n");
+  return file;
+}
+
+// ---------- 终端后端 ----------
+
+// 会话文件定位与存活检测：健康门只依赖这两个能力
+type Session = { locate: () => string | null; alive?: () => boolean };
+type Term = {
+  start(o: { agentName: string; g: Agent; prompt: string; promptFile?: string }): { pane: string; session: Session };
+  send(pane: string, text: string): boolean;
+  close(pane: string): void;
+  focusMain?(): void;
+};
+
+function herdrPrompt(pane: string, prompt: string): boolean {
+  for (let i = 0; i < 20; i++) {
+    try {
+      const out = execFileSync("herdr", ["agent", "prompt", pane, prompt], { encoding: "utf8" });
+      if (out.includes('"type":"agent_prompted"')) return true;
+    } catch { /* 未就绪或 pane 已关闭, 重试 */ }
+    execSync("sleep 2");
+  }
+  return false;
+}
+
+const herdrTerm: Term = {
+  start({ agentName, g, prompt, promptFile }) {
+    const newPane = layoutPane(process.env.HERDR_PANE_ID!);
+    const closeNew = () => { try { execFileSync("herdr", ["pane", "close", newPane]); } catch { /* 已关闭 */ } };
+    // 会话文件：agent_session.value 形如 ~/.pi/agent/sessions/--cwd--/ts.jsonl；
+    // 子代理实际写入 ~/.pi/agent-subagent/sessions/ 同相对段
+    let sessionFile: string | null = null;
+    try {
+      execFileSync("herdr", ["pane", "run", newPane, `export PI_CODING_AGENT_DIR=${subHome}`]);
+      const startOut = herdr(["agent", "start", agentName, "--kind", "pi", "--pane", newPane, "--", "--model", g.model, "--thinking", g.thinking, "--tools", g.tools, ...(promptFile ? ["--append-system-prompt", promptFile] : [])]);
+      const sf = startOut?.result?.agent?.agent_session?.value;
+      const m = typeof sf === "string" ? sf.match(/(sessions\/--[^/]+\/[^/]+\.jsonl)/) : null;
+      if (m) sessionFile = join(subHome, m[1]);
+    } catch (e: any) {
+      closeNew();
+      throw new Error(`启动失败: ${String(e.message ?? e)}`);
+    }
+    if (!sessionFile) {
+      closeNew();
+      throw new Error("健康门不可用: herdr 未返回可解析的 agent session 路径");
+    }
+    if (!herdrPrompt(newPane, prompt)) {
+      closeNew();
+      throw new Error("prompt 注入失败（20 次重试后 pane 未就绪）");
+    }
+    return { pane: newPane, session: { locate: () => sessionFile } };
+  },
+  send: herdrPrompt,
+  close: (pane) => { execFileSync("herdr", ["pane", "close", pane]); },
+  focusMain: () => { execFileSync("herdr", ["agent", "focus", process.env.HERDR_PANE_ID!]); },
+};
+
+type KittyWindow = { id: number; lines: number; user_vars?: Record<string, string> };
+type KittyTab = { layout: string; windows: KittyWindow[] };
+
+function kitten(args: string[], input?: string): string {
+  return execFileSync("kitten", ["@", ...args], { encoding: "utf8", input });
+}
+function kittyTabs(): KittyTab[] {
+  return JSON.parse(kitten(["ls"])).flatMap((o: any) => o.tabs);
+}
+function kittyTabOf(main: string): KittyTab {
+  const tab = kittyTabs().find((t) => t.windows.some((w) => String(w.id) === main));
+  if (!tab) throw new Error(`kitty 找不到主窗口 ${main}`);
+  return tab;
+}
+// 子代理窗口用 user var 标记；右列 = 主窗口所在 tab 内带标记的窗口（ls 顺序即上下顺序）
+const kittyRight = (main: string) => kittyTabOf(main).windows.filter((w) => w.user_vars?.subagent === "1");
+
+// splits 是二叉树，单次 launch 无法均分；逐个把行数调到平均值（容差 1 行）
+function kittyEqualize(main: string) {
+  for (let i = 0; i < 6; i++) {
+    const right = kittyRight(main);
+    if (right.length < 2) return;
+    const want = Math.floor(right.reduce((sum, w) => sum + w.lines, 0) / right.length);
+    let changed = false;
+    for (const w of right.slice(0, -1)) {
+      const cur = kittyRight(main).find((x) => x.id === w.id)!.lines;
+      const delta = want - cur;
+      if (Math.abs(delta) < 2) continue;
+      kitten(["resize-window", "--match", `id:${w.id}`, "--axis=vertical", "--increment", String(delta)]);
+      changed = true;
+    }
+    if (!changed) return;
+  }
+}
+
+const kittyAlive = (pane: string) => kittyTabs().some((t) => t.windows.some((w) => String(w.id) === pane));
+
+const kittyTerm: Term = {
+  start({ agentName, g, prompt, promptFile }) {
+    const main = process.env.KITTY_WINDOW_ID!;
+    const layout = kittyTabOf(main).layout;
+    if (layout !== "splits") throw new Error(`kitty 当前 tab 布局为 '${layout}'，需要 splits`);
+    const anchor = kittyRight(main).at(-1)?.id;
+    const placement = anchor
+      ? ["--location=hsplit", "--bias=50", "--next-to", `id:${anchor}`]
+      : ["--location=vsplit", "--bias=45", "--next-to", `id:${main}`];
+    let pane: string;
+    try {
+      // --match window_id 把窗口钉在主窗口所在 tab（否则会落进当前活动 tab）；
+      // --copy-env 复制主窗口环境（API key、PATH 等），直接 exec 不经 shell，prompt 原样传入
+      pane = kitten([
+        "launch", "--match", `window_id:${main}`, "--copy-env", "--keep-focus",
+        "--cwd", process.cwd(), "--var", "subagent=1", "--env", `PI_CODING_AGENT_DIR=${subHome}`,
+        ...placement, "--",
+        "pi", "--session-id", agentName, "--model", g.model, "--thinking", g.thinking, "--tools", g.tools,
+        ...(promptFile ? ["--append-system-prompt", promptFile] : []), "--", prompt,
+      ]).trim();
+    } catch (e: any) {
+      throw new Error(`启动失败: ${String(e.message ?? e)}`);
+    }
+    try {
+      kittyEqualize(main);
+    } catch (e: any) {
+      try { kitten(["close-window", "--match", `id:${pane}`]); } catch { /* 已关闭 */ }
+      throw new Error(`布局调整失败: ${String(e.message ?? e)}`);
+    }
+    // --session-id 让 pi 按默认布局落盘为 <ts>_<agentName>.jsonl，目录名由 pi 决定，故遍历查找
+    let found: string | null = null;
+    const locate = () => {
+      if (found) return found;
+      const root = join(subHome, "sessions");
+      if (!existsSync(root)) return null;
+      for (const d of readdirSync(root, { withFileTypes: true }).filter((e) => e.isDirectory())) {
+        const f = readdirSync(join(root, d.name)).find((x) => x.endsWith(`_${agentName}.jsonl`));
+        if (f) return (found = join(root, d.name, f));
+      }
+      return null;
+    };
+    return { pane, session: { locate, alive: () => kittyAlive(pane) } };
+  },
+  send(pane, text) {
+    if (!kittyAlive(pane)) return false;
+    // --stdin 避免 send-text 把正文里的反斜杠当作转义序列
+    kitten(["send-text", "--match", `id:${pane}`, "--bracketed-paste=enable", "--stdin"], text);
+    execSync("sleep 1");
+    kitten(["send-key", "--match", `id:${pane}`, "enter"]);
+    return true;
+  },
+  close: (pane) => { kitten(["close-window", "--match", `id:${pane}`]); },
+};
+
+// herdr 优先：herdr 可能运行在 kitty 内，此时两个环境变量同时存在
+function getTerm(): Term {
+  if (process.env.HERDR_PANE_ID) return herdrTerm;
+  if (process.env.KITTY_WINDOW_ID) return kittyTerm;
+  throw new Error("需要在 Herdr（HERDR_PANE_ID）或 Kitty（KITTY_WINDOW_ID）中运行");
+}
+function termOrExit(): Term {
+  try { return getTerm(); } catch (e: any) {
+    console.error(`spawn-subagent: ${e.message}`);
+    process.exit(1);
+  }
+}
+
 // 复用已有 agent（指定 pane）：注入新任务，不重启、不新建 pane。
 // 首次 spawn 已注入回传协议；此处仅提醒回传给主代理 session
 function resume(paneId: string, task: string) {
@@ -214,16 +382,8 @@ function resume(paneId: string, task: string) {
     process.exit(1);
   }
   const prompt = `（会话延续）新任务，完成后用 intercom 向主代理 session 回传结论（${intercom}），结论第一行标注 [${paneId}] 供对账:\n---\n${task}`;
-  let prompted = false;
-  for (let i = 0; i < 20 && !prompted; i++) {
-    try {
-      const out = execFileSync("herdr", ["agent", "prompt", paneId, prompt], { encoding: "utf8" });
-      prompted = out.includes('"type":"agent_prompted"');
-    } catch { /* 未就绪或 pane 已关闭, 重试 */ }
-    if (!prompted) execSync("sleep 2");
-  }
-  if (!prompted) {
-    console.error(`spawn-subagent: resume 注入失败（20 次重试后 pane '${paneId}' 未就绪或已关闭）`);
+  if (!termOrExit().send(paneId, prompt)) {
+    console.error(`spawn-subagent: resume 注入失败（pane '${paneId}' 未就绪或已关闭）`);
     process.exit(1);
   }
   console.log(paneId);
@@ -261,21 +421,28 @@ function checkHealthParser() {
   if (observeHealth(msg("error", "404")).status !== "error") throw new Error("失效签名自检失败");
 }
 
+// 配置/认证/额度类错误（含 429 额度用尽），重试无意义，健康门立即失败
+const CONFIG_ERROR = /400|401|403|404|429|auth|unauthorized|forbidden|not_found/i;
+
 // pi 自己负责瞬时错误重试。健康门只观察同一会话，避免脚本重启 session 造成双重重试。
 // 4xx 配置/认证错误立即失败；其他错误等到总期限，期间出现新健康 assistant 即恢复。
-async function healthGate(sessionFile: string, timeoutMs: number): Promise<{ healthy: boolean; reason?: string } | null> {
+async function healthGate(session: Session, timeoutMs: number): Promise<{ healthy: boolean; reason?: string } | null> {
   const deadline = Date.now() + timeoutMs;
   let lastErrorText = "";
   while (Date.now() < deadline) {
-    if (existsSync(sessionFile)) {
+    const sessionFile = session.locate();
+    if (sessionFile && existsSync(sessionFile)) {
       const observation = observeHealth(readFileSync(sessionFile, "utf-8"));
       if (observation.status === "healthy") return { healthy: true };
       if (observation.status === "error") {
         lastErrorText = observation.reason ?? "model error";
-        if (/400|401|403|404|auth|unauthorized|forbidden|not_found/i.test(lastErrorText)) {
+        if (CONFIG_ERROR.test(lastErrorText)) {
           return { healthy: false, reason: lastErrorText };
         }
       }
+    }
+    if (session.alive && !session.alive()) {
+      return { healthy: false, reason: lastErrorText || "pane exited before model response" };
     }
     await sleep(1000);
   }
@@ -296,7 +463,7 @@ type Launched = {
   profile: string;
   pane: string;
   agentName: string;
-  sessionFile: string;
+  session: Session;
 };
 
 // 阶段一（同步串行）：布局 + 环境 + 启动 + 注入。返回派发信息，不等待模型响应
@@ -304,12 +471,12 @@ function launchAgent(profile: string, slug: string, task: string): Launched {
   const g = resolveAgent(profile);
   if (!g) throw new Error(`profile '${profile}' 无法解析（agents 目录无对应 md，或缺少 model/thinking/tools 字段）`);
   if (!slug.match(/^[a-z0-9-]+$/)) throw new Error(`slug 只能含小写字母/数字/连字符: '${slug}'`);
-  const mainPane = process.env.HERDR_PANE_ID;
+  const term = getTerm();
   const intercom = process.env.PI_INTERCOM_SESSION_ID;
-  if (!mainPane || !intercom) throw new Error("需要 HERDR_PANE_ID 与 PI_INTERCOM_SESSION_ID");
+  if (!intercom) throw new Error("需要 PI_INTERCOM_SESSION_ID");
 
   const ts = Date.now().toString(36);
-  // herdr agent 名必须小写字母开头：profile 统一小写（如 Explore md → explore agent）
+  // herdr agent 名必须小写字母开头：profile 统一小写
   const p = profile.toLowerCase();
   const slugBudget = 32 - 1 - ts.length - 1 - p.length;
   let agentName: string;
@@ -319,30 +486,6 @@ function launchAgent(profile: string, slug: string, task: string): Launched {
     agentName = `${p.slice(0, 32 - 1 - ts.length).replace(/-$/, "")}-${ts}`;
   }
   if (agentName.length > 32) throw new Error(`无法构造 32 字符内的 agent 名（profile='${profile}' slug='${slug}'）`);
-
-  // 会话文件定位：从 herdr agent start 返回的 agent_session.value 提取 sessions/ 相对路径
-  // value 形如 ~/.pi/agent/sessions/--cwd--/ts.jsonl；子代理实际写入 ~/.pi/agent-subagent/sessions/ 同相对段
-  const agentsDir = homedir() + "/.pi/agent-subagent";
-  let sessionFile: string | null = null;
-
-  const newPane = layoutPane(mainPane);
-  try {
-    prepareEnv(g.exclude);
-    execFileSync("herdr", ["pane", "run", newPane, `export PI_CODING_AGENT_DIR=${homedir()}/.pi/agent-subagent`]);
-    const startOut = herdr(["agent", "start", agentName, "--kind", "pi", "--pane", newPane, "--", "--model", g.model, "--thinking", g.thinking, "--tools", g.tools]);
-    const sf = startOut?.result?.agent?.agent_session?.value;
-    if (typeof sf === "string") {
-      const m = sf.match(/(sessions\/--[^/]+\/[^/]+\.jsonl)/);
-      if (m) sessionFile = agentsDir + "/" + m[1];
-    }
-  } catch (e: any) {
-    try { execFileSync("herdr", ["pane", "close", newPane]); } catch { /* 已关闭 */ }
-    throw new Error(`启动失败: ${String(e.message ?? e)}`);
-  }
-  if (!sessionFile) {
-    try { execFileSync("herdr", ["pane", "close", newPane]); } catch { /* 已关闭 */ }
-    throw new Error("健康门不可用: herdr 未返回可解析的 agent session 路径");
-  }
 
   const prompt = `你是通过 spawn-subagent 启动的 pi 子代理（profile: ${profile}）。
 
@@ -357,25 +500,14 @@ function launchAgent(profile: string, slug: string, task: string): Launched {
 ---
 ${task}
 ---`;
-  let prompted = false;
-  for (let i = 0; i < 20 && !prompted; i++) {
-    try {
-      const out = execFileSync("herdr", ["agent", "prompt", newPane, prompt], { encoding: "utf8" });
-      prompted = out.includes('"type":"agent_prompted"');
-    } catch { /* pane 未就绪, 重试 */ }
-    if (!prompted) execSync("sleep 2");
-  }
-  if (!prompted) {
-    try { execFileSync("herdr", ["pane", "close", newPane]); } catch { /* 已关闭 */ }
-    throw new Error("prompt 注入失败（20 次重试后 pane 未就绪）");
-  }
-
-  return { profile, pane: newPane, agentName, sessionFile };
+  prepareEnv(g.exclude);
+  const { pane, session } = term.start({ agentName, g, prompt, promptFile: writeAgentBody(p, g.body) });
+  return { profile, pane, agentName, session };
 }
 
 // 失效分类: 404/401/403/认证属配置错误（重试无意义），其余（503/超时等）为瞬时故障（可重试）
 function classifyFailure(reason: string): string {
-  return /400|401|403|404|auth|unauthorized|forbidden|not_found/i.test(reason)
+  return CONFIG_ERROR.test(reason)
     ? `config-error: ${reason}`
     : `transient: ${reason}`;
 }
@@ -383,10 +515,10 @@ function classifyFailure(reason: string): string {
 // 阶段二（可并发）：独立健康门，等本 agent 的 stopReason:error / 健康 assistant，超时 30s
 // 失效时自动关闭 pane（模型失效的 pane 无检查价值，防残留）
 async function gateAgent(l: Launched, timeoutMs: number): Promise<DispatchResult> {
-  const gate = await healthGate(l.sessionFile, timeoutMs);
+  const gate = await healthGate(l.session, timeoutMs);
   const reason = gate && !gate.healthy ? classifyFailure(gate.reason ?? "") : (gate ? undefined : "transient: health-check timeout (no model response)");
   if (reason) {
-    try { execFileSync("herdr", ["pane", "close", l.pane]); } catch { /* 已关闭 */ }
+    try { getTerm().close(l.pane); } catch { /* 已关闭 */ }
     return { profile: l.profile, pane: "-", agentName: l.agentName, healthy: false, reason };
   }
   return { profile: l.profile, pane: l.pane, agentName: l.agentName, healthy: true };
@@ -511,8 +643,9 @@ if (!c0 || c0 === "-h" || c0 === "--help") {
     process.exit(1);
   }
   try {
-    execFileSync("herdr", ["pane", "close", c1]);
-    execFileSync("herdr", ["agent", "focus", process.env.HERDR_PANE_ID!]);
+    const term = termOrExit();
+    term.close(c1);
+    term.focusMain?.();
     console.log(`closed ${c1}`);
   } catch (e: any) {
     console.error(`spawn-subagent: 关闭失败（pane 不存在或已关闭）: ${c1}`);
