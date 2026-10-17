@@ -17,7 +17,9 @@ description: 发起、审查或规划子代理工作时(位于pi中)阅读该技
 
 ## `spawn-subagent` 环境限制
 
-- `spawn-subagent` 仅支持 Pi 和 Herdr；非 Herdr 环境（包括 Kitty）会停止并报告，不做降级。Oh My Pi（omp）使用原生子代理控制
+- `spawn-subagent` 支持 Pi 在 Herdr 或 Kitty 中运行（同时存在时 Herdr 优先）；其他终端会停止并报告，不做降级。Oh My Pi（omp）使用原生子代理控制
+- Kitty 要求 `allow_remote_control=socket-only` 与 `listen_on`（已由 nix-config 配置），且当前 tab 布局为 splits；pane-id 为 kitty 窗口 ID
+- `scout` 在 pi 中只靠提示词约束输出结构（omp 里由 output schema 强制）；需要稳定的 Summary/Files/Architecture 三段式时，在派发任务里明确要求格式
 - 复审时用 intercom 与子代理交流；主代理有不同意见时可直接讨论，直到达成共识
 
 ## `spawn-subagent` 流程
@@ -32,4 +34,4 @@ description: 发起、审查或规划子代理工作时(位于pi中)阅读该技
 
 ### 等待模式为何是唯一姿势
 
-herdr 对未聚焦 pane 的 agent 全程仅报 idle（无 working/done 区分），阻塞等待无可靠信号，等待统一由 intercom 注入完成
+herdr 对未聚焦 pane 的 agent 全程仅报 idle（无 working/done 区分），kitty 窗口更无任何完成信号，阻塞等待无可靠信号，等待统一由 intercom 注入完成

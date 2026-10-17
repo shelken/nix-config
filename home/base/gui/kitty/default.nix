@@ -78,9 +78,11 @@ in
     settings = {
       symbol_map = "U+2E80-U+9FFF,U+F900-U+FAFF,U+FE30-U+FE4F,U+FF00-U+FFEF,U+20000-U+3FFFF ${myvars.fontFamilies.cjkMonospace}";
 
-      # 允许远程控制例如执行`kitty @ --new-tab --cwd /path/to/your/directory`
+      # 仅允许通过 unix socket 远程控制（供 spawn-subagent 在 kitty 中派发子代理）
+      # socket 文件权限为用户独占，不暴露网络；listen_on 需重启 kitty 才生效
       # ref: https://sw.kovidgoyal.net/kitty/remote-control/
-      allow_remote_control = "no";
+      allow_remote_control = "socket-only";
+      listen_on = "unix:/tmp/kitty-{kitty_pid}";
       cursor_trail = 3;
       macos_show_window_title_in = "none";
 

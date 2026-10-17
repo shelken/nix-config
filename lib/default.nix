@@ -13,6 +13,17 @@ rec {
   nixosSystem = import ./nixosSystem.nix;
   mkTasksLib = import ./tasks.nix;
   relativeToRoot = lib.path.append ../.;
+
+  # pkgs -> path -> attrs；先用 yj 转成 json 再读入（构建期 IFD）
+  readYaml =
+    pkgs: file:
+    builtins.fromJSON (
+      builtins.readFile (
+        pkgs.runCommand "converted.json" { } ''
+          ${pkgs.yj}/bin/yj < ${file} > $out
+        ''
+      )
+    );
   # 扫入当前目录所有除default.nix的以nix结尾的文件，以及第一层目录
   # 返回一个目录list
   scanPaths =
