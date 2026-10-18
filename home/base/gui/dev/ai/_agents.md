@@ -30,8 +30,9 @@
 
 - 需要 GitHub 操作时，优先使用 `gh` 命令
 - 如果项目没有特别说明，项目优先使用 `mise` 管理系统中 **缺失的工具/cli**；`npm` 依赖优先使用 `bun` 管理；`python` 依赖优先使用 `uv` 管理; 所有依赖和安装包应该优先留在项目内，不污染系统全局环境
-- grep(tool)/find(tool) 在任何时候优先于在bash中执行任何grep/rg/find命令,grep(tool)支持任意路径; `ffgrep/fffind` 默认workspace级别范围,项目外时使用绝对路径
-- TODO 仅在任务有规划有计划 或者 任务很大 或 用户要求 时使用
+- `grep(tool)/find(tool)` 在任何时候优先于在bash中执行任何`grep/rg/find`命令,`grep(tool)`支持`相对/绝对`路径; `ffgrep/fffind` 默认workspace级别范围,项目外时使用绝对路径
+- `TODO` 仅在任务有规划有计划 或者 任务很大 或 用户要求 时使用
+- `omp` 中 如果需要 `codemode`, `eval` 约等于 `codemode`
 
 ## 常用目录
 
@@ -60,5 +61,5 @@
 - 写 `README` 时：`doc-readme`；写用户指南时：`doc-user-guide`；写 `AGENTS.md` 时：`doc-agent-file`
 - 发起子代理前：`subagent-policy`
 - DEBUG: `debug-best-practice`
-- 控制浏览器: `browser-best-practice`
+- 控制浏览器: `agent-browser`
 - 控制和读取任意系统APP: `computer-use-best-practice`
