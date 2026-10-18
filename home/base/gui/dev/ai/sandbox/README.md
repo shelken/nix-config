@@ -4,7 +4,7 @@ Home Manager 安装 `sb-default` 和 `omp-sb` 两个系统命令。VM 规格使�
 
 ## 启用
 
-sandbox 不是 AI 配置的默认组成，由 `shelken.dev.ai.sandbox.enable` 单独控制，默认关闭。开启后除安装两个命令外，还会引入 Linux 平台的 agent 工具闭包（实测闭包 1.46 GiB）与 `microsandbox` CLI；关闭时这些都不进入系统。当前只有 `hosts/mio` 显式开启
+sandbox 不是 AI 配置的默认组成，由 `shelken.dev.ai.sandbox.enable` 单独控制，默认关闭。开启后安装两个命令，同时引入 Linux 平台的 agent 工具闭包与 `microsandbox` CLI；关闭时这些都不进入系统
 
 ## 首次准备
 
