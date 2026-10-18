@@ -155,6 +155,4 @@ grep:
 glob:
   enabled: false
 tools:
-  xdevInlineDevices:
-    - context_prune
   xdevDocs: builtins
