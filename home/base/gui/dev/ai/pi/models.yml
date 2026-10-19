@@ -1,2 +1,5 @@
 # 只放 Pi 需要的 provider 或对共享模型的覆盖。
-providers: {}
+providers:
+  cpa:
+    compat:
+      sessionAffinityFormat: openrouter
