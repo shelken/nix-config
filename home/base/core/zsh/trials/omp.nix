@@ -1,14 +1,15 @@
-# 复刻 home/base/core/zsh/p10k/p10k.zsh 的最终效果（rainbow 三色块 + powerline 分隔符 + 两行）。
+# 复刻 home/base/core/zsh/p10k/p10k.zsh 的最终效果（rainbow 色块 + powerline 分隔符 + 两行）。
 #
-# 颜色用 ANSI 8 色名（不是 hex）：prompt 跟随终端自身调色板，不依赖 truecolor。
+# 颜色直接取 p10k 的运行时值：
+#   背景用 ANSI 0-7（跟随终端调色板），前景用 xterm256 索引（232/254/0/76/196）。
+# 256 色是标准调色板，kitty 和 herdrm 显示完全一致，不依赖 truecolor。
 #
 # 导出：
 #   nix eval --raw --impure --expr 'builtins.toJSON (import ./home/base/core/zsh/trials/omp.nix)'
-#   nix eval --raw --impure --expr 'builtins.toJSON (import ./home/base/core/zsh/trials/omp.nix { palette = "warm"; })'
-{ palette ? "classic" }:
 let
   glyph = code: builtins.fromJSON "\"\\u${code}\"";
 
+  # 字形取自 p10k 在本机的实际渲染输出。
   sep = glyph "E0BC";
   folder = glyph "F07C";
   gitIcon = glyph "F113";
@@ -20,73 +21,24 @@ let
   nixIcon = glyph "F313";
   fail = glyph "F00D";
 
-  palettes = {
-    classic = {
-      osBg = "white";
-      osFg = "black";
-      dirBg = "blue";
-      dirFg = "white";
-      gitBg = "green";
-      gitFg = "black";
-      dirtyBg = "yellow";
-      errBg = "red";
-      errFg = "white";
-      chipFg = "white";
-      timeBg = "white";
-      timeFg = "black";
-    };
-    cool = {
-      osBg = "white";
-      osFg = "black";
-      dirBg = "blue";
-      dirFg = "white";
-      gitBg = "cyan";
-      gitFg = "black";
-      dirtyBg = "yellow";
-      errBg = "red";
-      errFg = "white";
-      chipFg = "white";
-      timeBg = "white";
-      timeFg = "black";
-    };
-    warm = {
-      osBg = "white";
-      osFg = "black";
-      dirBg = "magenta";
-      dirFg = "white";
-      gitBg = "cyan";
-      gitFg = "black";
-      dirtyBg = "yellow";
-      errBg = "red";
-      errFg = "white";
-      chipFg = "white";
-      timeBg = "white";
-      timeFg = "black";
-    };
-    mono = {
-      osBg = "white";
-      osFg = "black";
-      dirBg = "black";
-      dirFg = "white";
-      gitBg = "white";
-      gitFg = "black";
-      dirtyBg = "yellow";
-      errBg = "red";
-      errFg = "white";
-      chipFg = "white";
-      timeBg = "black";
-      timeFg = "white";
-    };
-  };
-  p = palettes.${palette};
+  # p10k 的实际配色（渲染核对过）。
+  osBg = "7";
+  osFg = "232";
+  dirBg = "4";
+  dirFg = "254";
+  gitBg = "2"; # 干净时
+  gitFg = "0";
+  dirtyBg = "3"; # 有改动时整段变黄
+  errBg = "1";
+  errFg = "3";
+  timeBg = "7";
+  timeFg = "0";
+  chipFg = "7";
 
   seg = attrs: {
     style = "powerline";
     powerline_symbol = sep;
   } // attrs;
-  # 右侧块不再 invert：反转后分隔符只剩前景色，会画出悬空的箭头。
-  # 正向绘制时每个块前导箭头 = 前一块底色，与 p10k 的衔接一致。
-  rseg = seg;
 in
 {
   "$schema" = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json";
@@ -96,7 +48,7 @@ in
 
   transient_prompt = {
     background = "transparent";
-    foreground = "green";
+    foreground = "76";
     template = "❯ ";
   };
 
@@ -107,23 +59,23 @@ in
       segments = [
         (seg {
           type = "os";
-          foreground = p.osFg;
-          background = p.osBg;
+          foreground = osFg;
+          background = osBg;
           template = " {{ .Icon }} ";
         })
         (seg {
           type = "path";
-          foreground = p.dirFg;
-          background = p.dirBg;
+          foreground = dirFg;
+          background = dirBg;
           template = " ${folder} {{ .Path }} ";
           properties.style = "unique";
         })
         (seg {
           type = "git";
-          foreground = p.gitFg;
-          background = p.gitBg;
+          foreground = gitFg;
+          background = gitBg;
           background_templates = [
-            "{{ if or (.Working.Changed) (.Staging.Changed) }}${p.dirtyBg}{{ end }}"
+            "{{ if or (.Working.Changed) (.Staging.Changed) }}${dirtyBg}{{ end }}"
           ];
           properties.branch_icon = "";
           properties.fetch_status = true;
@@ -135,45 +87,45 @@ in
       type = "prompt";
       alignment = "right";
       segments = [
-        (rseg {
+        (seg {
           type = "status";
-          foreground = p.errFg;
-          background = p.errBg;
+          foreground = errFg;
+          background = errBg;
           template = " ${fail}{{ .Code }} ";
         })
-        (rseg {
+        (seg {
           type = "executiontime";
-          foreground = p.gitFg;
-          background = p.dirtyBg;
+          foreground = gitFg;
+          background = dirtyBg;
           template = " ${clock}{{ .FormattedMs }} ";
           properties = {
             threshold = 3000;
             style = "round";
           };
         })
-        (rseg {
+        (seg {
           type = "kubectl";
-          foreground = p.chipFg;
-          background = "magenta";
+          foreground = chipFg;
+          background = dirBg;
           template = " ${kube}{{ .Context }} ";
           properties.parse_kubeconfig = true;
         })
-        (rseg {
+        (seg {
           type = "terraform";
-          foreground = p.chipFg;
-          background = "black";
+          foreground = chipFg;
+          background = "0";
           template = " ${tf}{{ .WorkspaceName }} ";
         })
-        (rseg {
+        (seg {
           type = "nix-shell";
-          foreground = p.gitFg;
-          background = "blue";
+          foreground = gitFg;
+          background = dirBg;
           template = " ${nixIcon}{{ .Type }} ";
         })
-        (rseg {
+        (seg {
           type = "time";
-          foreground = p.timeFg;
-          background = p.timeBg;
+          foreground = timeFg;
+          background = timeBg;
           template = " ${timeIcon}{{ .CurrentDate | date .Format }} ";
           properties.time_format = "15:04:05";
         })
@@ -187,8 +139,8 @@ in
         {
           type = "text";
           style = "plain";
-          foreground = "green";
-          foreground_templates = [ "{{ if gt .Code 0 }}red{{ end }}" ];
+          foreground = "76";
+          foreground_templates = [ "{{ if gt .Code 0 }}196{{ end }}" ];
           template = "❯";
         }
       ];
