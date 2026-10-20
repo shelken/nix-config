@@ -13,37 +13,37 @@ in
   add_newline = true
 
   format = """
-  [${glyph "E0BA"}](fg:white)\
+  [${glyph "E0BA"}](fg:#b8c0e0)\
   $os\
-  [${glyph "E0BC"}](bg:blue fg:white)\
+  [${glyph "E0BC"}](bg:#8aadf4 fg:#b8c0e0)\
   $directory\
-  [${glyph "E0BC"}](bg:green fg:blue)\
+  [${glyph "E0BC"}](bg:#a6da95 fg:#8aadf4)\
   $git_branch\
   $git_status\
-  [${glyph "E0B0"}](fg:green)
+  [${glyph "E0B0"}](fg:#a6da95)
   $character"""
 
   right_format = """
-  [${glyph "E0B2"}](fg:black)\
+  [${glyph "E0B2"}](fg:#494d64)\
   $status\
   $cmd_duration\
   $kubernetes\
   $terraform\
-  $nix_shell\
   $hostname\
-  [${glyph "E0BA"}](bg:black fg:white)\
+  $nix_shell\
+  [${glyph "E0BA"}](bg:#494d64 fg:#b8c0e0)\
   $time\
-  [${glyph "E0BC"}](fg:white)"""
+  [${glyph "E0BC"}](fg:#b8c0e0)"""
 
   [os]
   disabled = false
-  style = 'bg:white fg:232'
+  style = 'bg:#b8c0e0 fg:232'
   format = '[ $symbol ]($style)'
   [os.symbols]
   Macos = '🤘'
 
   [directory]
-  style = 'bg:blue fg:254'
+  style = 'bg:#8aadf4 fg:254'
   format = '[ ${glyph "F07C"} $path ]($style)'
   truncation_length = 4
   truncation_symbol = '…/'
@@ -51,13 +51,13 @@ in
   use_os_path_sep = true
 
   [git_branch]
-  style = 'bg:green fg:black'
+  style = 'bg:#a6da95 fg:#494d64'
   format = '[ ${glyph "F113"} ${glyph "F126"} $branch ]($style)'
 
   # 整段被 (...) 包住：干净时黄块和它的分隔符一起消失。
   [git_status]
-  style = 'bg:yellow fg:black'
-  format = '([${glyph "E0BC"}](bg:yellow fg:green)[ $all_status ]($style))'
+  style = 'bg:#eed49f fg:#494d64'
+  format = '([${glyph "E0BC"}](bg:#eed49f fg:#a6da95)[ $all_status ]($style))'
   conflicted = '~'
   ahead = '⇡'
   behind = '⇣'
@@ -71,43 +71,43 @@ in
 
   [status]
   disabled = false
-  style = 'bg:red fg:yellow'
+  style = 'bg:#ed8796 fg:#eed49f'
   format = '[ ✘$status ]($style)'
 
   [cmd_duration]
   min_time = 3000
   show_milliseconds = false
-  style = 'bg:yellow fg:black'
+  style = 'bg:#eed49f fg:#494d64'
   format = '[ ${glyph "F252"}$duration ]($style)'
 
   [kubernetes]
   disabled = false
   symbol = '${glyph "F10FE"} '
-  style = 'bg:blue fg:white'
+  style = 'bg:#8aadf4 fg:#b8c0e0'
   format = '[ $symbol$context( \($namespace\)) ]($style)'
 
   [terraform]
   disabled = false
   symbol = '${glyph "F1BB"} '
-  style = 'bg:black fg:white'
+  style = 'bg:#494d64 fg:#b8c0e0'
   format = '[ $symbol$workspace ]($style)'
 
   [nix_shell]
   disabled = false
   symbol = '${glyph "F313"} '
-  style = 'bg:blue fg:black'
-  format = '[ $symbol$state( \($name\)) ]($style)'
+  style = 'bg:#8aadf4 fg:#494d64'
+  format = '[ $symbol$state ]($style)'
 
   # p10k 的 context 段：user@hostname，本机也常显
   [hostname]
   ssh_only = false
-  style = 'bg:black fg:yellow'
+  style = 'bg:#494d64 fg:#eed49f'
   format = '[ @$hostname ]($style)'
 
   [time]
   disabled = false
   time_format = '%H:%M:%S'
-  style = 'bg:white fg:black'
+  style = 'bg:#b8c0e0 fg:#494d64'
   format = '[ $time ${glyph "F017"} ]($style)'
 
   [character]
