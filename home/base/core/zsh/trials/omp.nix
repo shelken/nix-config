@@ -92,7 +92,7 @@ in
           foreground = dirFg;
           background = dirBg;
           template = " ${folder} {{ .Path }} ";
-          properties.style = "unique";
+          properties.style = "full";
         }
         (divider dirBg gitBg)
         {
