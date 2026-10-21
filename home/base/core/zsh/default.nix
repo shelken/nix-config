@@ -97,11 +97,6 @@ in
           # K8s Pod 交互式路径选择 widget
           zle -N kube-pod-path-widget
           bindkey '^k' kube-pod-path-widget
-
-          # p10k custom
-          POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION='🤘'
-          # mitigation: https://github.com/romkatv/powerlevel10k?tab=readme-ov-file#mitigation
-          POWERLEVEL9K_TERM_SHELL_INTEGRATION=true
         '';
       in
       lib.mkMerge [
@@ -110,13 +105,6 @@ in
         defaultInit
       ];
     plugins = [
-      {
-        # A prompt will appear the first time to configure it properly
-        # make sure to select MesloLGS NF as the font in Konsole
-        name = "powerlevel10k";
-        src = pkgs.zsh-powerlevel10k;
-        file = "share/zsh-powerlevel10k/powerlevel10k.zsh-theme";
-      }
       # oh-my-zsh/compinit
       #    -> fzf key bindings, 不含 Tab completion
       #    -> fzf-tab
@@ -137,11 +125,6 @@ in
         src = pkgs.zsh-autosuggestions;
         file = "share/zsh-autosuggestions/zsh-autosuggestions.zsh";
       }
-      {
-        name = "powerlevel10k-config";
-        src = lib.cleanSource ./p10k;
-        file = "p10k.zsh";
-      }
     ];
   };
 
@@ -159,9 +142,4 @@ in
       myvars.fontFamilies.cjkMonospace
     ];
   };
-  home.packages = with pkgs; [
-    # Meslo Nerd Font patched for Powerlevel10k
-    # Restart Konsole and configure it (profile) to choose MesloLGS NF
-    meslo-lgs-nf
-  ];
 }
