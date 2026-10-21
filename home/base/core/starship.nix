@@ -1,6 +1,17 @@
-{ lib, myvars, ... }:
+{
+  lib,
+  catppuccin,
+  myvars,
+  ...
+}:
 let
-  inherit (myvars.catppuccin) accent;
+  inherit (myvars.catppuccin) accent flavor;
+  paletteSource = (lib.importJSON "${catppuccin}/pkgs/sources.json").palette;
+  palette = builtins.fetchTarball {
+    url = "https://github.com/catppuccin/palette/archive/${paletteSource.rev}.tar.gz";
+    sha256 = paletteSource.hash;
+  };
+  colors = (lib.importJSON "${palette}/palette.json").${flavor}.colors;
 
   # Nix 字符串不支持 \u 转义；用 JSON 解析得到字形，避免源码里出现不可见字符。
   glyph = code: builtins.fromJSON "\"\\u${code}\"";
@@ -10,11 +21,18 @@ let
   rcap = glyph "E0B2";
 in
 {
-  # 色板与 palette 由 catppuccin.starship（autoEnable）注入，这里只引用颜色名。
+  # 不用 catppuccin.starship 与 catppuccin.sources.*：它们都是需要构建的 derivation（IFD），
+  # 在 macOS 上求值 Linux 主机（just deploy pve155 等）需要 Linux builder，求值直接失败。
+  # 色板改为求值期用 builtins.fetchTarball 取 catppuccin/palette，rev/hash 读 catppuccin
+  # flake 自带的 sources.json，随 flake update 同步；颜色名与官方预设一致。
+  catppuccin.starship.enable = false;
+
   programs.starship = {
     enable = true;
     settings = {
       add_newline = true;
+      palette = "catppuccin_${flavor}";
+      palettes."catppuccin_${flavor}" = lib.mapAttrs (_: c: c.hex) colors;
 
       # 两行：第 1 行 左 [os 目录 git] ... 右 [主机名 nix_shell 时间]，第 2 行 ❯。
       # zsh 的 right_format 落在最后一行，所以右侧用 $fill 放进第 1 行。
