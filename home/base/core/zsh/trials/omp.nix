@@ -1,21 +1,23 @@
 # 复刻 home/base/core/zsh/p10k/p10k.zsh 的最终效果。
 #
 # 基准是本机 p10k 的真实终端输出（pty 抓取）：
-#   左：E0BA(白) → 🤘(白底/232) → E0BC → 目录(蓝底/254) → E0BC → git(绿底/0) → E0B0
-#   右：@mio(黑底/3) → E0BA → 时间+时钟(白底/0) → E0BC
+#   第 1 行 左：E0BA(白) → 🤘(白底/232) → E0BC → 目录(蓝底/254) → E0BC → git → E0B0(跟随 git 底色)
+#   第 1 行 右：E0B2 → @mio(黑底/黄) → [nix_shell(蓝底)] → 时间+F017(白底) → E0BC
+#   第 2 行：❯
 #
-# 颜色写死 Catppuccin Macchiato 的 hex（wiki §2 的决策）：prompt 在 kitty 和
-# herdrm 里显示完全一致，不再依赖宿主终端的 16 色映射。
-# 前景 232/254/76 是 xterm256 索引——16-255 不被任何主题重映射，两边同样一致。
+# 颜色写死 Catppuccin Macchiato 的 hex（Catppuccin 官方 OMP/Starship 预设同样用 hex）：
+# kitty 和 herdrm 里显示一致。前景 232/254/76/196 是 xterm256 索引，主题不会重映射。
 #
-# 结构：左块用 powerline（分隔符自动跟随 git 段的动态底色）；右块用
-# powerline + invert_powerline（p10k 右侧分隔符方向相反，invert 正好复刻）。
+# 结构：OMP 的 powerline 样式会在段后自动补收尾符号，且下一段是 plain 时丢失底色，
+# 复现不了 p10k 的箭头。所以内容段全用 plain，分隔符与收尾箭头用模板内联颜色
+# <fg,bg>…</> 显式指定，git 脏/净时随之变色。
 let
   glyph = code: builtins.fromJSON "\"\\u${code}\"";
 
-  cap = glyph "E0BA"; # LEFT_PROMPT_FIRST_SEGMENT_START_SYMBOL
-  sep = glyph "E0BC"; # LEFT_SEGMENT_SEPARATOR
+  cap = glyph "E0BA"; # LEFT_PROMPT_FIRST_SEGMENT_START_SYMBOL / RIGHT_SEGMENT_SEPARATOR
+  sep = glyph "E0BC"; # LEFT_SEGMENT_SEPARATOR / RIGHT_PROMPT_LAST_SEGMENT_END_SYMBOL
   end = glyph "E0B0"; # LEFT_PROMPT_LAST_SEGMENT_END_SYMBOL
+  rcap = glyph "E0B2"; # RIGHT_PROMPT_FIRST_SEGMENT_START_SYMBOL
   folder = glyph "F07C";
   gitIcon = glyph "F113";
   branchIcon = glyph "F126";
@@ -36,6 +38,10 @@ let
   errFg = "#eed49f"; # ANSI 3
   timeBg = "#b8c0e0"; # ANSI 7
   timeFg = "#494d64"; # ANSI 0
+
+  dirty = "or .Working.Changed .Staging.Changed";
+  gitColor = "{{ if ${dirty} }}${dirtyBg}{{ else }}${gitBg}{{ end }}";
+  inNix = ".Env.IN_NIX_SHELL";
 in
 {
   "$schema" = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json";
@@ -55,39 +61,36 @@ in
       alignment = "left";
       segments = [
         {
-          type = "text";
-          style = "plain";
-          foreground = osBg;
-          template = cap;
-        }
-        {
           type = "os";
-          style = "plain";
+          style = "diamond";
+          leading_diamond = cap;
           foreground = osFg;
           background = osBg;
           template = " 🤘 ";
         }
         {
           type = "path";
-          style = "powerline";
-          powerline_symbol = sep;
+          style = "plain";
           foreground = dirFg;
           background = dirBg;
-          template = " ${folder} {{ .Path }} ";
+          template = "<${osBg}>${sep}</> ${folder} {{ .Path }} ";
           properties.style = "full";
         }
         {
           type = "git";
-          style = "powerline";
-          powerline_symbol = sep;
+          style = "plain";
           foreground = gitFg;
           background = gitBg;
-          background_templates = [
-            "{{ if or (.Working.Changed) (.Staging.Changed) }}${dirtyBg}{{ end }}"
-          ];
+          background_templates = [ "{{ if ${dirty} }}${dirtyBg}{{ end }}" ];
           properties.branch_icon = "";
           properties.fetch_status = true;
-          template = " ${gitIcon} ${branchIcon} {{ .HEAD }}{{ if gt .Working.Modified 0 }} !{{ .Working.Modified }}{{ end }}{{ if gt .Working.Untracked 0 }} ?{{ .Working.Untracked }}{{ end }}{{ if gt .Staging.Modified 0 }} +{{ .Staging.Modified }}{{ end }} ";
+          template = "<${dirBg}>${sep}</> ${gitIcon} ${branchIcon} {{ .HEAD }}{{ if gt .Working.Modified 0 }} !{{ .Working.Modified }}{{ end }}{{ if gt .Working.Untracked 0 }} ?{{ .Working.Untracked }}{{ end }}{{ if gt .Staging.Modified 0 }} +{{ .Staging.Modified }}{{ end }} <${gitColor},transparent>${end}</>";
+        }
+        {
+          type = "text";
+          style = "plain";
+          foreground = dirBg;
+          template = "{{ if not (.Segments.Contains \"Git\") }}${end}{{ end }}";
         }
       ];
     }
@@ -97,18 +100,16 @@ in
       segments = [
         {
           type = "status";
-          style = "powerline";
-          invert_powerline = true;
-          powerline_symbol = cap;
+          style = "diamond";
+          leading_diamond = rcap;
           foreground = errFg;
           background = errBg;
           template = " ${fail}{{ .Code }} ";
         }
         {
           type = "executiontime";
-          style = "powerline";
-          invert_powerline = true;
-          powerline_symbol = cap;
+          style = "diamond";
+          leading_diamond = rcap;
           foreground = gitFg;
           background = dirtyBg;
           template = " ${clock}{{ .FormattedMs }} ";
@@ -119,31 +120,47 @@ in
         }
         {
           type = "session";
-          style = "powerline";
-          invert_powerline = true;
-          powerline_symbol = cap;
+          style = "diamond";
+          leading_diamond = rcap;
           foreground = errFg;
           background = gitFg;
           template = " @{{ .HostName }} ";
         }
         {
+          type = "text";
+          style = "plain";
+          foreground = dirBg;
+          background = gitFg;
+          template = "{{ if ${inNix} }}${cap}{{ end }}";
+        }
+        {
           type = "nix-shell";
-          style = "powerline";
-          invert_powerline = true;
-          powerline_symbol = cap;
+          style = "plain";
           foreground = gitFg;
           background = dirBg;
-          template = " ${nixIcon}{{ .Type }} ";
+          template = " {{ .Type }} ${nixIcon} ";
+        }
+        {
+          type = "text";
+          style = "plain";
+          foreground = timeBg;
+          background = gitFg;
+          background_templates = [ "{{ if ${inNix} }}${dirBg}{{ end }}" ];
+          template = cap;
         }
         {
           type = "time";
-          style = "powerline";
-          invert_powerline = true;
-          powerline_symbol = cap;
+          style = "plain";
           foreground = timeFg;
           background = timeBg;
           template = " {{ .CurrentDate | date .Format }} ${timeIcon} ";
           properties.time_format = "15:04:05";
+        }
+        {
+          type = "text";
+          style = "plain";
+          foreground = timeBg;
+          template = sep;
         }
       ];
     }
