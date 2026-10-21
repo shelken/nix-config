@@ -33,4 +33,7 @@ extend-ignore-re = [
   "fab387",
 
   "198c2ba3",
+
+  # Nerd Font powerline 字形码点（home/base/core/starship.nix）
+  "E0BA",
 ]

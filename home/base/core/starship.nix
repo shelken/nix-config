@@ -66,15 +66,20 @@ in
         format = "[${sep}](bg:green fg:blue)[ ${glyph "F113"} ${glyph "F126"} $branch ]($style)";
       };
 
-      # 整段被 (...) 包住：干净时黄块、分隔符、收尾箭头一起消失。
+      # ahead/behind 并入绿色分支块（与旧 p10k 一致，先 ⇣ 后 ⇡）；黄色状态块整段被 (...) 包住，
+      # 没有文件状态时黄块、分隔符、收尾箭头一起消失，所以只领先/落后时仍只有 end_clean 一个箭头。
       git_status = {
         style = "bg:yellow fg:crust";
-        format = "([${sep}](bg:yellow fg:green)[ $all_status]($style)[${end}](fg:yellow))";
+        format = "([$ahead_behind ](bg:green fg:crust))([${sep}](bg:yellow fg:green)[ $all_status]($style)[${end}](fg:yellow))";
+        ahead = "⇡\${count}";
+        behind = "⇣\${count}";
+        diverged = "⇣\${behind_count} ⇡\${ahead_count}";
         conflicted = "~\${count} ";
         stashed = "";
         deleted = "✘\${count} ";
         renamed = "»\${count} ";
         modified = "!\${count} ";
+        typechanged = "!\${count} ";
         staged = "+\${count} ";
         untracked = "?\${count} ";
       };
