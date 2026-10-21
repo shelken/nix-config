@@ -39,7 +39,7 @@ git -c core.quotepath=false log --all --pretty=format: --name-only | sort -u | s
 git log --all --pretty=format: --name-only | sort -u | \
   grep -iE "\.(env|key|pem|p12|pfx|crt|cer)$|secret|credential|token|\.db$"
 
-# 真实 .env 是否曾被提交(diff-filter=A 找新增)
+# 真实 .env 是否曾被提交(有输出即曾有 commit 触及 .env)
 git log --all --oneline -- '.env'
 ```
 
@@ -90,7 +90,7 @@ git push origin --delete <branch>
 ```bash
 # 核对清单路径在当前 main 是否存在(必须全部「仅历史有」)
 for p in <路径>; do
-  git ls-files "$p" | head -1 && echo "⚠️ 当前main仍有: $p" || echo "✅ 仅历史: $p"
+  [ -n "$(git ls-files "$p" | head -1)" ] && echo "⚠️ 当前main仍有: $p" || echo "✅ 仅历史: $p"
 done
 ```
 
@@ -110,6 +110,7 @@ done
 ```bash
 # clone 副本(--no-local 走完整传输)
 git clone --no-local <主仓> /tmp/<project>-rewrite-test
+cd /tmp/<project>-rewrite-test
 
 # 关键:--invert-paths 表示「排除」这些路径;漏了会变成「只保留」
 git filter-repo --invert-paths --paths-from-file /tmp/cleanup_paths.txt --force

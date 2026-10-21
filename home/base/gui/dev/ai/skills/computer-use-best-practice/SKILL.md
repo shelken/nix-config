@@ -108,7 +108,7 @@ computer-use click t41 --wait t45
 - `observe` 里出现只有该动作才会造成的元素变化，例如按钮标签翻转；
 - `verify` 返回 `verdict=satisfied`；
 - 进度条或播放时间在间隔 1 秒的两次 `appshot` 之间持续增加；
-- 应用原生接口确证，例如 `osascript -e 'tell application "Music" to get player state'` 返回 `Playing`。
+- 应用原生接口确证，例如 `osascript -e 'tell application "Music" to get player state'` 返回 `playing`。
 
 实测可用的一招：找那个状态会写进标签的控件。音乐播放器的随机播放按钮，点击后 `observe` 报 `+ Button 随机播放 / - Button 不随机播放`，这种差分就是硬证据。反过来，如果差分内容与动作无关（比如刚启动的应用把界面加载完了），那不是你的动作造成的。
 
@@ -207,13 +207,13 @@ computer-use drag 200 300 600 520
 
 这事按几何判定，驱动报的 `is_on_screen` 不能用：这些窗口全都报 `true`。脚本按窗口矩形与屏幕矩形实算，`clipped` 表示被裁掉一部分，`off-viewport` 表示整个在屏幕外。
 
-离屏不影响读取，也不影响 `t<idx>` 元素动作。实测对 `x=1919` 的窗口做元素点击，`observe` 正常回出差分。能不能投递以输出里的 `routes=` 行为准，那是驱动的判定，不要替它推断。
+离屏不影响读取，也不影响 `t<idx>` 元素动作。实测对 `x=1919` 的窗口做元素点击，`observe` 正常回出差分。能不能投递以输出里的 `routes:` 行为准，那是驱动的判定，不要替它推断。
 
 要用像素坐标时先 `computer-use move` 把窗口挪回屏幕内。抢焦点、切工作区或移动窗口这类动作，先说明影响并取得许可。
 
 ### 路由诊断
 
-`routes=` 行来自驱动，逐条列出 `accessibility`、`window_pointer`、`pid_keyboard` 三种投递方式此刻是否可用，以及被拒的原因。它是判断动作为什么落不下去的权威来源，只在有路由不可用或者树为空时才打印。
+`routes:` 行来自驱动，逐条列出 `accessibility`、`window_pointer`、`pid_keyboard` 三种投递方式此刻是否可用，以及被拒的原因。它是判断动作为什么落不下去的权威来源，只在有路由不可用或者树为空时才打印。
 
 树为空时它给出原因，例如 `ax=ax_unresolved accessibility=refused(off_space_or_ax_unresolved)`。这种情况改用 `appshot` 走像素，或者确认窗口是不是还在初始化。
 

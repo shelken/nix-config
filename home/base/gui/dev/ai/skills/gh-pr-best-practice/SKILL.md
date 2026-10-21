@@ -7,14 +7,14 @@ description: 当提交PR时阅读该技能
 
 - 提交前确认目标目录对应的默认仓库，避免提交到错误的 repo
 - 涉及他人的公开仓库时，先阅读 `gh-open-policy`
-- 完整阅读目标仓库的 `CONTRIBUTING.md` 和 `.github/{PULL_REQUEST_TEMPLATE}.md`，按要求填写 PR title、body 和 commit message
+- 完整阅读目标仓库的 `CONTRIBUTING.md` 和 PR 模板（`.github/PULL_REQUEST_TEMPLATE.md` 或 `.github/PULL_REQUEST_TEMPLATE/` 目录），按要求填写 PR title、body 和 commit message
 - PR title 的 scope 沿用仓库已合并 PR 的惯例，用 `gh pr list --state merged` 查看，不自行创造
 
 ## 分支与提交历史
 
 - 从 upstream 的干净基点建立分支，不在 fork main 上累积多个 commit 后再提 PR；多个修复 commit 压缩为一个后提交
 - PR base 必须是默认分支，不通过 feature 分支互相 merge 建立堆栈；紧耦合改动合成一个分支、一个 PR
-- 已有堆栈须在合并前逐个执行 `gh pr edit <n> --base <默认分支>`；否则 GitHub 不会自动重定向 base 或关闭 Issue
+- 已有堆栈须在合并前逐个执行 `gh pr edit <n> --base <默认分支>`：合并进非默认分支的 PR 不会关闭 `Fixes` 引用的 Issue；GitHub 只在合并后删除 head 分支时自动重定向依赖 PR 的 base，`gh pr merge --delete-branch` 时并不可靠
 - 不直接修改 commit 历史，不 amend，在 PR 中清楚展示每个历史变更
 - 不自行添加或清除 commit message 中的 `Co-Authored-By` trailer
 

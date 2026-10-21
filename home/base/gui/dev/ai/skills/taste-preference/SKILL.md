@@ -7,7 +7,7 @@ description: 当需要设计 UI/UX 时 默认的用户偏好, 涉及`主题`,`�
 
 ## 关于主题
 
-配色主题偏好 Catppuccin Macchiato ; flavor `pink`
+配色主题偏好 Catppuccin Macchiato ; 强调色 `pink`
 
 ### 相关文件
 

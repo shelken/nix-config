@@ -56,7 +56,7 @@ bun run --cwd "$PM_DIR" pm -- status   # 默认 text；程序用 status --format
 ### Skill
 
 - 必须是项目强相关
-- 写 skill 前先读取 `writing-great-skills`，缺失时提醒且不做记录
+- 写 skill 前先读取 `writing-for-agents`，缺失时提醒且不做记录
 - 只记录可复用流程，不记录单次错误；踩坑点只有当以后会重复且重要才记录
 - 语言精简凝练，模仿当前项目已有 skill 风格
 
@@ -86,7 +86,7 @@ bun run --cwd "$PM_DIR" pm -- status   # 默认 text；程序用 status --format
 
 ### 当前 Session
 
-Pi 中存在 `vcc_recall` 时优先使用它：默认检索 active lineage，只有历史分支可能影响结论时才用 `scope: "all"`，用 `expand` 展开必要原文。没有 `vcc_recall` 时，只使用当前 Agent 可见上下文，不声称拥有完整当前 Session 历史。
+只使用当前 Agent 可见上下文，不声称拥有完整当前 Session 历史。
 
 ### 跨 Session
 
@@ -116,7 +116,7 @@ bun run --cwd "$PM_DIR" pm -- show "<session-id>:<entry-id>" --context 5 --max-c
 
 ## Capture
 
-用户显式调用 `capture` 即代表允许写入；证据、目标或作用域有歧义时，最多询问 1 至 3 个关键问题。
+用户显式调用 `capture` 即代表允许写入（`AGENTS.md` 除外，仍按上文只提供建议并经用户确认）；证据、目标或作用域有歧义时，最多询问 1 至 3 个关键问题。
 
 ### 写入前检查
 
@@ -143,7 +143,7 @@ bun run --cwd "$PM_DIR" pm -- show "<session-id>:<entry-id>" --context 5 --max-c
 
 - 优先遵循项目已有目录、命名、编号和 frontmatter
 - AGENTS 使用被影响代码路径最近的已存在文件；未经明确要求不新建
-- 项目 Skill 使用项目已有 Skill 目录；编写前读取已有 Skill 风格，相关能力存在时使用 `writing-great-skills`
+- 项目 Skill 使用项目已有 Skill 目录；编写前读取已有 Skill 风格，相关能力存在时使用 `writing-for-agents`
 - ADR 或 Postmortem 没有既有目录时，首次创建前询问用户
 - 不把项目专属流程写入全局 Skill
 

@@ -75,7 +75,7 @@ batch 返回后主代理**立即结束当前回合**（不再调任何工具、�
 
 计数只算 batch 输出中 ok 的 reviewer：应收到等于 ok 数的 intercom 结论，缺失任何一条都不开始综合（failed 的不指望回传）
 
-每条结论消息第一行是 `[<agentName>]` 标签（由派发协议自动注入），用它对账到 profile；无标签的消息才用 batch 输出的 session/pane 映射反查。
+每条结论消息第一行是 `[<agentName>]` 标签（由派发协议自动注入），用它对账到 profile；无标签的消息才用 batch 输出的 profile/pane 映射反查。
 
 ## 第 4 步，综合
 
