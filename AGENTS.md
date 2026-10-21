@@ -23,3 +23,4 @@
 - 问题、规格与 Wayfinder 路线地图使用 GitHub Issues 管理，详见 `docs/agents/issue-tracker.md`
 - 根目录 `GLOSSARY.md` 记录共享领域知识，架构决策记录放在 `docs/adr/`，详见 `docs/agents/domain.md`
 - 创建、修改或测试机器特定定时任务时使用 `.agents/skills/create-task/`
+- 修改或新增 `home/base/gui/dev/ai/skills/` 下的技能前，先读该目录的 `README.md`，其中规定外部拷贝技能的来源记录
