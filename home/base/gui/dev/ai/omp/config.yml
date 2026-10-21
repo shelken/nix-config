@@ -11,15 +11,20 @@ mnemopi:
   embeddingModel: gemini-embedding-2
   embeddingApiUrl: https://generativelanguage.googleapis.com/v1beta
 modelRoles:
-  glm-flash: mp/workbuddy/glm-5.3-flash:max
-  glm-max: mp/workbuddy/glm-5.3:high
-  dsf: mp/workbuddy-ai/deepseek-v4.1-flash-sg:high
+  glm-flash: cpa/workbuddy/glm-5.3-flash:max
+  glm-max: cpa/workbuddy/glm-5.3:high
+  dsf: cpa/workbuddy/deepseek-v4.1-flash:high
   gpt: mp/codex/gpt-6.1-sol:high
-  reviewer-general: "@dsf"
+  claude-lite: anthropic/claude-haiku-5-5:max
+  claude: anthropic/claude-sonnet-5-5:high
+  claude-max: anthropic/claude-opus-5-5:medium
+  gpt-lite: mp/codex/gpt-5.6-luna:max
+  reviewer-general: "@glm-flash"
   reviewer-gemini: google-antigravity/gemini-3.8-flash:high
-  reviewer-ds: "@dsf:high"
-  reviewer-glm: "@glm-flash"
+  reviewer-ds: "@dsf:max"
+  reviewer-glm: "@glm-flash:max"
   reviewer-gpt: "@gpt:xhigh"
+  reviewer-cc: "@claude-max:high"
   vision: cpa/gpt-5.6-luna:high
   commit: cpa/workbuddy/hy3:high
   tiny: cpa/workbuddy/hy3:high
@@ -27,15 +32,16 @@ modelRoles:
   web: google/gemini-2.5-flash
   gog: google-antigravity/gemini-3.8-flash:high
   plan: "@reviewer-gpt"
-  smol: "@glm-flash"
-  scout: "@gpt:high"
-  default: "@dsf"
-  task: "@dsf"
+  smol: "@gpt-lite"
+  scout: "@gpt"
+  default: "@claude"
+  task: "@claude"
   slow: "@gpt:high"
 cycleOrder:
   - smol
   - task
   - default
+  - claude-max
   - gpt
   - gog
   - glm-flash
@@ -70,7 +76,7 @@ statusLine:
     - usage
 task:
   agentModelOverrides:
-    reviewer: "@reviewer-gemini"
+    reviewer: "@reviewer-general"
     reviewer-general: "@reviewer-general"
     reviewer-gemini: "@reviewer-gemini"
     reviewer-ds: "@reviewer-ds"
@@ -101,11 +107,11 @@ retry:
       - google-antigravity/gemini-3.8-flash:high
     # context-prune
     "cpa/workbuddy/hy3":
-      - cpa/gpt-5.6-luna:high
+      - mp/codex/gpt-5.6-luna:high
       - google-antigravity/gemini-3.8-flash:medium
     "cpa/gpt-5.6-luna":
-      - cpa/workbuddy/hy3:high
       - google-antigravity/gemini-3.8-flash:medium
+      - cpa/workbuddy/hy3:high
     commit:
       - google-antigravity/gemini-3.8-flash:medium
     tiny:
@@ -121,13 +127,9 @@ retry:
       - mp/qoder-cn/gmodel:high
     dsf:
       - cpa/workbuddy/deepseek-v4.1-flash:high
-      - mp/workbuddy-ai/deepseek-v4.1-flash:high
     web:
       - web/exa
       - web/brave
-      - anthropic/claude-haiku-4-5
-      - openai-codex/gpt-5.6-luna
-      - xai/grok-4.5
       - web/zai
       - web/tinyfish
       - web/jina
@@ -146,7 +148,6 @@ retry:
       - web/public
       - web/perplexity
       - google-antigravity/gemini-2.5-flash
-      - xai-oauth/grok-4.5
       - web/ollama
 compaction:
   enabled: false

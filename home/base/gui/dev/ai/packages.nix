@@ -17,10 +17,10 @@
       # agent client
       # 需要保留的会定死版本
       # codex = "latest";
-      # claude-code = "latest";
       # "npm:droid" = "latest";
       antigravity-cli = "1.1.24";
       codex = "0.160.1";
+      claude-code = "2.1.304";
     };
 
     programs.zsh.initContent = ''

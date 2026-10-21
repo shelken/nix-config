@@ -7,6 +7,9 @@
     "+codemode"
   ],
   "enabledModels": [
+    "mp/codex/gpt-5.6-sol:high",
+    "mp/codex/gpt-6.1-sol:xhigh",
+    "mp/workbuddy/deepseek-v4.1-flash:high",
     "mp/workbuddy-ai/deepseek-v4.1-flash-sg:high",
     "commandcode-local/claude-haiku-5-5:high",
     "commandcode-local/deepseek/deepseek-v4.1-flash:high",
