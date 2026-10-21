@@ -38,8 +38,9 @@
     connect-timeout = 3
     builders-use-substitutes = true
     trusted-users = shelken nixos
-    # builders = ssh-ng://nix-builder aarch64-linux / 4 1 big-parallel,kvm; ssh://shelken@10.211.55.6 aarch64-linux - 4 1 big-parallel
-    # extra-platforms = aarch64-linux
+    # Linux 构建由 Determinate 的 Native Linux Builder 提供，这里不配 builders / extra-platforms：
+    # external-builders 由 determinate-nixd 写入 /etc/nix/nix.conf，手写会绕过开通检查。
+    # 不生效时看 `determinate-nixd version` 是否列出 native-linux-builder，没有就重新 `determinate-nixd auth login`
   '';
 
   # `nix.enable = false`（Determinate）时 nix-darwin 不接管 registry，
