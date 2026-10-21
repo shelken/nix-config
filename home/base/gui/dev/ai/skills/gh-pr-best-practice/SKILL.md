@@ -21,7 +21,7 @@ description: 当提交PR时阅读该技能
 ## 正文与验证
 
 - 阅读 `pr`，在 body 中以通俗易懂的方式展示关键变更
-- UI 变更在 PR 中提供 1 到 3 张有效验证截图，尺寸为 1920×1080；浏览器场景阅读 `browser-best-practice`，桌面应用阅读 `computer-use-best-practice`
+- UI 变更在 PR 中提供 1 到 3 张有效验证截图，尺寸为 1920×1080；浏览器场景阅读 `agent-browser`，桌面应用阅读 `computer-use-best-practice`
 - 推送前核对 `Fixes #xxx` 引用的上游 Issue，确认编号正确且根因相同
 
 ## 上传图片
