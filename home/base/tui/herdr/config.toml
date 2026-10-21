@@ -25,16 +25,8 @@ navigate_pane_right = ""
 
 # agent/workspace 跳转用 session navigator：prefix+g（默认）
 
-# 当前页按面积递推开 pi（auto-pi 插件）
-# herdr 不支持按键双击；用单键 chord。alt+p / alt+s 比 prefix 序列更短。
-[[keys.command]]
-key = "alt+p"
-type = "plugin_action"
-command = "shelken.auto-pi.enter-pi"
-description = "open pi in next free pane"
-
 # auto-pi：当前目录 session 浮窗（过滤 skill）
-# 不用 prefix+r：留给内置 resize_mode；与 alt+p 同为直达键
+# 不用 prefix+r：留给内置 resize_mode。
 [[keys.command]]
 key = "alt+s"
 type = "plugin_action"
