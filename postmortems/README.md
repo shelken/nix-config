@@ -3,3 +3,4 @@
 - [001 · Determinate Nix 迁移后丢失 nix-community 信任配置](./001-determinate-nix-lost-community-cache-trust.md)
 - [002 · Determinate Nix 配置合并导致 custom.conf 修改未生效](./002-nix-conf-merge-semantics.md)
 - [003 · computer-use AX 树遍历饥饿与虚假播放确认](./003-computer-use-ax-starvation-and-false-confirmation.md)
+- [004 · 共享模块读取 catppuccin.sources 导致 Linux 主机无法在 macOS 上求值](./004-catppuccin-sources-ifd-breaks-linux-eval.md)
