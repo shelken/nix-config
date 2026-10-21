@@ -1,13 +1,12 @@
 ---
 name: code-context
-description:
-  使用于用户说「查官方API」「找真实示例」「新的文档」「最新api」「ctx7」;使用于需要任何库的当前最新文档，读取此 skill
+description: 用 Context7 CLI（`ctx7`）查询库的当前最新文档与官方 API
 disable-model-invocation: true
 ---
 
 ## 适用场景
 
-获取库的当前最新文档，在编写代码、验证 API 签名或训练数据可能过时时使用
+获取库的当前最新文档：编写代码、验证 API 签名，或训练数据可能过时时使用
 
 ## CLI 准备
 
@@ -27,4 +26,4 @@ ctx7 docs <libraryId> <query>         # Step 2: fetch docs
 ## 常见错误
 
 - Library ID 必须以 `/` 开头，如 `/facebook/react`，不能写成 `facebook/react`
-- 先执行 `ctx7 library` 获取有效 ID，再执行 `ctx7 docs`；`ctx7 docs react "hooks"` 会因 ID 无效而失败
+- `ctx7 docs` 的 ID 必须取自 `ctx7 library` 的结果；直接执行 `ctx7 docs react "hooks"` 会因 ID 无效而失败

@@ -1,6 +1,6 @@
 # Mine 参考
 
-本文件为 `mine` 模式的分析纪律与信号参考。主流程在 `SKILL.md` 的 Mine 节。
+本文件为 `mine` 模式的完整参考：分析纪律、分析流程、信号与输出格式。共用规则（调用约定、候选知识准入、安全边界）见 `SKILL.md`。
 
 ## 分析纪律（强制）
 
@@ -11,15 +11,17 @@
 3. **脚本价值 = 前后文**：用 Jump / `show --context` 读链，不用 mine 列表当终审
 4. **降智嫌疑（尤其 GPT 系）**：若同时出现「明显忽略用户指令」+「突然低级错误/空转/格式自限/情绪对骂式复读」，标 **降智嫌疑**，**不要当错误展开分析，不要写 rule**（rule 纠不了降智）。只可在汇总里一行计数
 5. **单次纠正 ≠ rule**：产品偏好、一次性指偏、证据不足的质疑句 → 丢弃。rule 需要可复用强制动作，且最好 ≥2 次非降智样本，或上下文证明系统性做错
-6. **已在 auto-model-prompt / AGENTS 出现过的** → 不输出；最多内部记「执行失败」，不写进汇报正文
+6. **已在 `auto-model-prompts` / AGENTS 出现过的** → 不输出；最多内部记「执行失败」，不写进汇报正文
 7. **汇报只保留有价值信息**（维度：项目 + 模型，不要 session 流水账）：
    - 建议 rule（简洁正文；无则「无」）
    - 用户习惯（跨上下文稳定偏好；无则「无」）
    - 降智嫌疑（模型 + 一句特征/计数；**不写 rule**）
    - 禁止：情绪词统计、已知禁令再清单、证据不足条目、降智过程复述
-8. **默认不改** auto-model-prompt 文件，除非用户当轮明确要求写入
+8. **默认不改** `auto-model-prompts` 文件，除非用户当轮明确要求写入
 
-## 分析流程（重做）
+## 分析流程
+
+每批最多处理 5 个 unseen 或 changed 的 Session。先发现高信号问题片段，再按需展开完整会话；摘要或 transcript 数量不算分析结果。
 
 ```
 mine 纠错/复读 → Jump 读上下文 → 分类 → 只留下「可沉淀」
@@ -32,7 +34,7 @@ mine 纠错/复读 → Jump 读上下文 → 分类 → 只留下「可沉淀」
 
 ## HARVEST
 
-主路径只挖纠错/复读（跨项目，默认脱敏）。`--signals` 未写 `--since` 时默认 **15d**（全量：`--since all`）。preset 仅有**明确假设**时再加，命中仍须分类 A–D：
+主路径只挖纠错/复读（跨项目，默认脱敏），首次只跑下面这一条。`--signals` 未写 `--since` 时默认 **15d**（全量：`--since all`）。preset 仅有**明确假设**时再加，命中仍须分类 A–D：
 
 ```sh
 bun run --cwd "$PM_DIR" pm -- mine --since 15d --signals --limit 5 --all-projects \
@@ -78,11 +80,11 @@ bun run --cwd "$PM_DIR" pm -- show --session "<session-id>" --transcript \
 
 ## 无报错怪癖与 behavior 分诊
 
-**规则与频率由 agent 传入，脚本不替 agent 做判断。** 默认不启用 `behavior_risk`；需要时按假设传入规则，**命中后必须 `show` 上下文判断是否真错**，禁止用 regex 命中反推「模型又犯已知错误」。
+**规则与频率由 agent 传入，脚本不替 agent 做判断。** 默认不启用 `behavior_risk`，需要时按假设传入规则；命中后的裁决见分析纪律 #2。禁止用 regex 命中反推「模型又犯已知错误」。
 
 行为扫描只看 **被执行的 bash 命令**（忽略 toolResult）；侦察类命令不计。`matched` 仅供核验，不是定罪。
 
-有明确假设时才用 behavior 规则（**不是首次入口**）：
+有明确假设时才用 behavior 规则（`--rule` / `--preset-behaviors` / `--rules-file`，**不是首次入口**）：
 
 ```sh
 # 规则：id::regex::title（:: 分隔，避免正则里的 |）
@@ -96,11 +98,24 @@ bun run --cwd "$PM_DIR" pm -- show --session <sid> --outline \
 
 分诊要点：
 
-- 首次只跑 HARVEST 那一条；不要一上来 preset
-- `--rule` / `--preset-behaviors` / `--rules-file` 仅有假设时再加；命中须 Jump 上下文裁决
 - `--correction-marker` 等 **追加** 默认词表；覆盖用 `--replace-markers`
 - 同 rule 的 behavior 合并为一条并带 `count`
 - 非法 `--signal-kind` / 坏正则 / 用 `|` 当分隔 → stderr 报错退出
 - 仅要 `behavior_risk` 却不传规则 → 直接报错
 
 其余 flag（`--repeated-threshold` / `--min-prompt-len` / `--episode-radius*` / `--no-*-filter` / `--outline-max-*` / `--context` / `--max-chars` 等）见 `mine --help` 与 `show --help`。
+
+## 输出格式
+
+单条候选知识：
+
+```text
+候选知识：
+适用范围：
+为什么值得保留：
+历史证据：
+当前验证：
+反向证据：
+建议载体：
+未满足条件：
+```
