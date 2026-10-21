@@ -1,24 +1,20 @@
 ---
 name: taste-preference
-description: 当需要设计 UI/UX 时 默认的用户偏好, 涉及`主题`,`配色`; 当需要决定cli/开源项目是否采用和选择
+description: 用户的 UI/UX 默认偏好（主题、配色）与 CLI/开源项目选用规则。设计 UI、选主题或配色时，以及选用、安装 CLI/开源项目前使用。
 ---
 
-以下均是在涉及UI/UX时, 用户没有做相关要求时用户的偏好, 没有相关指定时优先采用下面的描述
+## 主题与配色
 
-## 关于主题
+用户未指定主题或配色时, 默认采用 Catppuccin Macchiato, 强调色 `pink`
 
-配色主题偏好 Catppuccin Macchiato ; 强调色 `pink`
+适用场景:
 
-### 相关文件
+- Demo/原型 展示
+- 任何 GUI/Web 界面设计
 
-- [调色板](./references/catppuccin-palette.md)
+需要具体色值时, 阅读 [调色板](./references/catppuccin-palette.md)
 
-### 适用场景
+## CLI/开源项目的选择
 
-- Demo/原型 展示时
-- 任何和GUI/Web界面设计 相关的场景
-
-## 关于 cli/开源项目 的选择
-
-- 安装系统不存在的 命令/cli/工具 前, 用户必须知晓, 必须用户同意
-- 永远不直接推荐star数量少的, 任何开源项目必须让用户知晓star数
+- 安装系统中不存在的命令/CLI/工具前, 必须让用户知晓并取得同意
+- 永远不直接推荐 star 数量少的项目; 任何开源项目都必须让用户知晓 star 数

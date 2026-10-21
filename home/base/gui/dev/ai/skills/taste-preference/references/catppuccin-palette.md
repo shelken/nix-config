@@ -1,6 +1,6 @@
 # Catppuccin 官方色板
 
-来源: [catppuccin.com/palette](https://catppuccin.com/palette/)
+来源：[catppuccin.com/palette](https://catppuccin.com/palette/)
 
 偏好组合：**Macchiato** + 强调色 **Pink** `#f5bde6`。Latte 为浅色，其余三个为深色。
 

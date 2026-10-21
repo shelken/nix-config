@@ -41,7 +41,7 @@ isMine?  →  hasUI?  →  锁+幂等?
 
 `currentUi = ctx.ui` 这类缓存把 per-session `ctx` 提升到模块级. `ctx.ui` 的 getter
 内部调 pi-core `runner.assertActive()`; 一旦 session 被
-`ctx.newSession()` / `fork()` / `switchSession()` / `reload()` 替换, 旧 ctx 即被打
+`ctx.newSession()` / `fork()` / `switchSession()` / `reload()` 替换, 旧 ctx 即变为
 stale, 再读 `ctx.ui` 会抛 `This extension ctx is stale...`.
 
 **安全用法**: 缓存的 `ctx`/`ctx.ui` 只在**同一事件回调内**同步消费, 回调返回后
@@ -49,17 +49,17 @@ stale, 再读 `ctx.ui` 会抛 `This extension ctx is stale...`.
 
 **危险用法**: 把 `ctx.ui` 存进模块级闭包, 交给**跨事件、跨 session 的长生命周期
 异步链**调用 (典型: chat/failover/refresh/后台任务里调 `notify`). 这些链可能活过
-session 替换, 此时缓存的 ctx 已 stale, 一调即抛, 并沿异步链上抛搞垮主流程
+session 替换, 此时缓存的 ctx 已 stale, 一调即抛, 并沿异步链上抛, 中断主流程
 (chat 被误判为 error).
 
 触发替换的常见路径: 切到异 provider 的模型、`/new`、`/reload`、fork、子会话.
 并非显式 `/reload` 才会 stale —— provider 切换也可能内部走 session 替换.
 
-**正确姿势**:
+**正确做法**:
 
 - 模块级缓存的 UI/通知函数, 调用处必须 `try/catch` 容错: stale 时降级
   (`console.error` 兜底) + 清缓存, 等下次 `session_start`/`model_select` 刷新.
-- 不要让 UI 通知 (展示层) 的失败上抛到 chat/failover 主链.
+- UI 通知 (展示层) 的失败在通知层消化, 不上抛到 chat/failover 主链.
 - 或: 不缓存闭包, 改为每次从 fresh ctx 取 (仅当调用点本身在事件回调内时可行).
 
 ## 五条规则
@@ -69,10 +69,10 @@ session 替换, 此时缓存的 ctx 已 stale, 一调即抛, 并沿异步链上�
 | R1 非阻塞 | 所有网络 `p().catch(log)`, 绝不 `await` | 不阻塞事件循环 |
 | R2 模型门闩 | `!isMine` → 清状态栏 + `return`, 不发任何网络. 模型列表属 factory, 豁免 | 切换/启动非本 provider 时零网络 |
 | R3 hasUI 门闩 | 账号级后台任务 (签到类) 额外加 `ctx.hasUI`, 防 pi-subagent 同进程 `createAgentSession` 重复触发 | 子会话不重复 |
-| R4 锁只给副作用网络 | 写远端/写账号状态的操作用跨进程文件锁; 只读 GET (usage/billing) 不加锁 | 防多 pi 并发启动重复打副作用接口 |
+| R4 锁只给副作用网络 | 写远端/写账号状态的操作用跨进程文件锁; 只读 GET (usage/billing) 不加锁 | 防多 pi 并发启动重复调用副作用接口 |
 | R5 幂等 | 被 R3/R4 放行的任务必须自身幂等 (按日记录/TTL), 失败仅日志不抛 | 重复触发是 no-op |
 
-**为何只读 GET 不加锁**: 只读、幂等、按会话独立 footer; 模型门闩 (R2) 已挡掉非本 provider 的并发. 锁会让并发启动时 footer 串行延迟, 得不偿失. 锁只留给有副作用的签到类 (写远端 claim、写账号当日状态), 那才是并发会出错的.
+**为何只读 GET 不加锁**: 只读、幂等、按会话独立 footer; 模型门闩 (R2) 已挡掉非本 provider 的并发. 锁会让并发启动时 footer 串行延迟, 代价大于收益. 锁只留给有副作用的签到类 (写远端 claim、写账号当日状态), 那才是并发会出错的.
 
 ## session_start 与 model_select 的一致性
 

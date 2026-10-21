@@ -1,11 +1,6 @@
----
-name: pi-extension-e2e-testing
-description: pi 插件端到端契约测试编写模板与选跑矩阵
----
-
 # 插件契约测试规范
 
-测试目标为验证插件对外能力的可用性及生命周期安全, 防范跨底座兼容回退, 杜绝过度拟合内部实现
+测试目标: 验证插件对外能力的可用性及生命周期安全, 防范跨底座兼容回退, 杜绝过度拟合内部实现
 
 ## 变更决策与测试矩阵
 
@@ -15,12 +10,11 @@ description: pi 插件端到端契约测试编写模板与选跑矩阵
 | :--- | :--- | :--- | :--- |
 | **内部重构 / 内部 Bug** | 仅修改 `src/` 私有实现, 对外能力未变 | 对应单元测试 | 严禁增加特化契约测试, 保持全量契约测试绿灯 |
 | **对外功能增改** | 新增或修改 Provider、Command、Tool、Flag | 全量单元测试 | 必须在 `tests/contract.test.ts` 补充标识与格式断言 |
-| **生命周期 / 兼容层** | 修改 `index.ts`、增加生命周期钩子（如 `turn_start`） | 全量单元测试 | 在状态机仿真测试中增加对新钩子的兼容断言 |
+| **生命周期 / 兼容层** | 修改 `index.ts`、增加生命周期钩子 (如 `turn_start`) | 全量单元测试 | 在状态机仿真测试中增加对新钩子的兼容断言 |
 
 ## 零依赖通用契约测试模板
 
-所有独立仓库或 monorepo 子包的 `tests/contract.test.ts` 均统一采用以下模板:
-仅依赖各插件已有的 `vitest` 与 Node.js 内置模块, 无需跨仓库安装共享依赖包
+所有独立仓库或 monorepo 子包的 `tests/contract.test.ts` 均采用以下模板, 仅依赖各插件已有的 `vitest` 与 Node.js 内置模块, 无需跨仓库安装共享依赖包:
 
 ```ts
 import { execFileSync } from "node:child_process"
@@ -101,8 +95,7 @@ describe("Pi Extension Contract Baseline", () => {
 
 ## 统一验证门禁
 
-在插件目录的 `justfile` 中声明标准指令:
-交付前必须运行 `just verify`, 确保测试通过
+交付前必须运行 `just verify`, 确保测试通过。在插件目录的 `justfile` 中声明标准指令:
 
 ```just
 verify:

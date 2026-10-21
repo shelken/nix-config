@@ -1,12 +1,12 @@
 ---
 name: organize-files
-description: 当用户要求需要 整理电脑的文件夹/文件 时使用该技能
+description: 整理电脑中的文件夹和文件：读取权限、分类、命名规则。
 disable-model-invocation: true
 ---
 
 ## 读取权限
 
-- 未经用户允许，不直接读取文件内容
+- 读取文件内容前，先取得用户允许
 
 ## 分类与命名
 

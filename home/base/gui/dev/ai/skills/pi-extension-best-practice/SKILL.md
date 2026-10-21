@@ -1,6 +1,6 @@
 ---
 name: pi-extension-best-practice
-description: 编写或审查任何 pi 插件的 factory、事件、命令、配置、日志或测试时使用
+description: pi 插件的编写与审查规范：factory、事件、命令、TUI、配置、日志、测试，以及 Provider 激活
 disable-model-invocation: true
 ---
 
@@ -8,17 +8,10 @@ disable-model-invocation: true
 
 所有 pi 插件遵守通用边界: 轻量 factory、生命周期安全、数据边界、隔离验证。Provider 再叠加模型门闩、网络和跨进程锁
 
-## 何时用
-
-- 创建或修改 pi 插件的 factory、事件处理器、命令或 TUI
-- 设计插件配置、缓存、日志和时间字段
-- 编写插件单元测试、契约测试、真实 Pi 在线冒烟或审查生命周期安全
-- 开发或排查 Provider 激活与生命周期同步逻辑
-
 ## 参考文档
 
-- [session-start 规范](./references/session-start.md): Provider 的 `session_start` / `model_select` 契约 (`activate`、模型门闩、`hasUI`、跨进程锁), 编写或审查 Provider 激活逻辑时加载
-- [e2e 契约测试规范](./references/e2e-testing.md): 插件对外暴露能力、CLI 黑盒发现与回归测试规范, 包含测试选跑矩阵、零外部依赖测试模板及验证门禁, 编写或重构插件测试时加载
+- [session-start 规范](./references/session-start.md): Provider 的 `session_start` / `model_select` 契约 (`activate`、模型门闩、`hasUI`、跨进程锁); 编写或审查 Provider 激活逻辑时加载
+- [e2e 契约测试规范](./references/e2e-testing.md): 契约测试的选跑矩阵、零外部依赖测试模板、验证门禁; 编写或重构插件测试时加载
 
 ## 通用原则
 
@@ -50,7 +43,7 @@ disable-model-invocation: true
 ### 测试与交付
 
 - 单元测试通过依赖注入隔离网络、文件系统和凭据, 专精内部算法、边界与状态转移, 隔离生产目录
-- 契约测试（E2E）使用 `tests/contract.test.ts`, 仅通过真实 `pi` CLI 与公开 `ExtensionAPI` 断言标准 Schema、退出码与事件返回, 严禁断言内部私有函数或局部变量
+- 契约测试 (E2E) 使用 `tests/contract.test.ts`, 仅通过真实 `pi` CLI 与公开 `ExtensionAPI` 断言标准 Schema、退出码与事件返回, 严禁断言内部私有函数或局部变量
 - 修改内部逻辑仅执行对应单元测试; 增改 Provider、Command、Tool、Flag 等对外能力时, 必须在契约测试中补齐对应标识断言
 - 真实 Pi 在线冒烟使用临时目录和经济模型, 优先从 `pi --list-models` 选取 free / mini / nano / flash
 - 提交前运行项目统一验证命令 (`just verify`), 确保单元测试与契约测试全部绿灯; 项目使用 changesets 时, 用户可见行为变更必须带 changeset

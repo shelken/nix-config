@@ -1,13 +1,12 @@
 ---
 name: repo-open-source
-description:
-  把项目从 private 开源为 public 的完整流程。当用户说「开源项目」「仓库转public」「清理历史后开源」「private 转 public」或要把现有项目公开时使用。覆盖历史归档、敏感信息扫描、git history rewrite、分支清理的通用开源流程。
+description: 把 private 项目开源为 public 的完整流程,覆盖历史归档、敏感信息扫描、git filter-repo 重写历史和分支清理。
 disable-model-invocation: true
 ---
 
 # repo-open-source
 
-把项目从 private 开源为 public 前，需要检查完整 Git 历史中的个人配置、临时文档和过时结构。默认采用「双仓 + history rewrite」：private 仓作为完整历史的只读归档，公开仓用 `git filter-repo` 清除指定路径后再开源。
+把项目从 private 开源为 public 前,需要检查完整 Git 历史中的个人配置、临时文档和过时结构。默认采用「双仓 + history rewrite」:private 仓作为完整历史的只读归档,公开仓用 `git filter-repo` 清除指定路径后再开源。
 
 ## 前置确认
 
@@ -15,7 +14,7 @@ disable-model-invocation: true
 
 1. **private 仓是否仅作归档查看**。若是,双仓方案无同步负担,推荐;若 private 还要继续开发,双仓会分叉,改用单仓 rewrite。
 2. **作者邮箱是否算隐私**。若邮箱公开,rewrite 只需清文件;若要隐藏邮箱,需额外 `--mailmap`。
-3. **子项目/第三方目录去留**。如 `sub-dir/` 这类子项目、`.agents/skills/` 第三方 skill,逐一确认保留还是移除,不要擅自决定。
+3. **子项目/第三方目录去留**。如 `sub-dir/` 这类子项目、`.agents/skills/` 第三方 skill,逐一向用户确认保留还是移除。
 
 ## 工具
 
@@ -26,8 +25,6 @@ disable-model-invocation: true
 
 ### 1. 历史敏感扫描(只读,不改仓库)
 
-开源前先摸清历史里有什么。这些命令只读,安全:
-
 ```bash
 # git 历史中所有存在过的文件(全分支去重)
 git log --all --pretty=format: --name-only | sort -u | sed '/^$/d'
@@ -35,7 +32,7 @@ git log --all --pretty=format: --name-only | sort -u | sed '/^$/d'
 # 中文文件名会被转义,用 core.quotepath=false 输出真实路径
 git -c core.quotepath=false log --all --pretty=format: --name-only | sort -u | sed '/^$/d'
 
-# 扫敏感文件:密钥/凭据/db/截图
+# 扫敏感文件:.env/密钥/证书后缀、.db,以及路径含 secret/credential/token 的文件
 git log --all --pretty=format: --name-only | sort -u | \
   grep -iE "\.(env|key|pem|p12|pfx|crt|cer)$|secret|credential|token|\.db$"
 
@@ -81,7 +78,7 @@ done
 git push origin --delete <branch>
 ```
 
-**注意 squash merge 陷阱**:走 squash merge 的分支,`--is-ancestor` 会显示「未合并」,但内容已进 main。判断依据看 commit message 是否带 PR 编号(`(#6)`),或看分支 tree 是否还是旧状态(如仍含 `.envrc`)。这类分支内容已进 main,可安全删。
+**注意 squash merge 陷阱**:走 squash merge 的分支,`--is-ancestor` 会显示「未合并」,但内容已进 main。判断依据看 commit message 是否带 PR 编号(`(#6)`),或看分支 tree 是否还是旧状态(如仍含 `.envrc`)。这类分支可安全删。
 
 ### 4. 制定历史清除清单
 
@@ -95,13 +92,16 @@ done
 ```
 
 典型该清的类别:
+
 - 个人配置:`.claude/` `.zed/` `.hindsight/` `.mcp.json` `.opencode/` `.beads/`
 - 开发过程产物:`.planning/` `PLAN.md` `TODO.md` 临时 todos
 - 已迁移的旧环境:`flake.nix` `flake.lock` `.envrc`
 - v1 旧结构:`actions/`(根级)、根级散落 `.py`(已重构进 `src/` 的)
 - 不开源的内部文档:`docs/plans/` `docs/needs/` `docs/superpowers/`
 
-**根级 .py 陷阱**:`config.py` 这类清单项会误匹配 `src/.../config.py`。清单里写根级路径前,先确认它在历史中是否真存在于根级(`git log --all --name-only | grep "^config.py$"`,0 条则历史本就没有,从清单移除)。
+**根级 .py 陷阱**:`git log --all --name-only | grep "config.py"` 这类模糊匹配会命中 `src/.../config.py`,误以为没清干净。验证用精确前缀 `grep -E "^${path}"`;清单里写根级路径前,先确认它在历史中确实存在于根级(`git log --all --name-only | grep "^config.py$"`,0 条则历史本就没有,从清单移除)。
+
+**子目录同名文件**:`flake.nix` 在根级和 `sub-dir/flake.nix` 是两个路径。清单写 `flake.nix` 是根级精确匹配,不会误清子目录;要清子目录的,单独写 `sub-dir/flake.nix`。
 
 ### 5. filter-repo 副本实验(必须先做)
 
@@ -112,10 +112,10 @@ done
 git clone --no-local <主仓> /tmp/<project>-rewrite-test
 cd /tmp/<project>-rewrite-test
 
-# 关键:--invert-paths 表示「排除」这些路径;漏了会变成「只保留」
+# 关键:--invert-paths 表示「排除」清单路径;漏写则变成「只保留」清单路径,删光其余文件
 git filter-repo --invert-paths --paths-from-file /tmp/cleanup_paths.txt --force
 
-# 恢复工作区(filter-repo 会清空 working tree)
+# 切回 main 并重置工作区(filter-repo 结束时已执行 git reset --hard,这里确保停在 main)
 git checkout main
 git reset --hard HEAD
 ```
@@ -148,16 +148,18 @@ git log --oneline -- main_v2.py | wc -l
 # 确认工作区干净
 git status --short
 
-# 执行(filter-repo 会移除 origin remote,记录原地址备用)
+# 执行(记录 origin 原地址备用)
 git filter-repo --invert-paths --paths-from-file /tmp/cleanup_paths.txt --force
 
-# 恢复工作区
+# 切回 main 并重置工作区
 git checkout main
 git reset --hard HEAD
 
-# 重连 origin(filter-repo 会移除它)
+# 重连 origin
 git remote add origin https://github.com/<user>/<project>.git
 ```
+
+filter-repo 会移除 origin remote,这是它的设计行为(防止误推回原仓),所以 rewrite 后要手动重连。
 
 验证同副本四项。filter-repo 默认 `--prune-empty auto` 会剪除因重写变空的 commit,无需手动处理空 commit。
 
@@ -176,7 +178,7 @@ gh repo edit <user>/<project> --visibility public --accept-visibility-change-con
 
 ### 8. 清理本地旧分支
 
-rewrite 后本地还留着大量旧历史分支(含被清除的文件)。全部已归档到 archive 仓,可删。但要先排查 worktree 关联分支。
+rewrite 后本地还留着大量旧历史分支(含被清除的文件),已全部归档到 archive 仓,可删。删之前先排查 worktree 关联分支。
 
 ```bash
 # 查 worktree 关联的分支(这些要先处理 worktree)
@@ -189,14 +191,8 @@ rm -rf .worktrees/<失效目录>
 # 删除非保留分支(排除 main 和 worktree 分支)
 git branch | sed 's/^[* +]*//' | grep -vE '^(main|<worktree分支>)$' | xargs -I{} git branch -D {}
 
-# 清理 filter-repo 拉取的 archive 远程跟踪引用(可选,留着便于查阅归档)
+# 可选:移除 archive remote 及其 refs/remotes/archive/*(已被 filter-repo 重写,不再对应归档仓的原始历史,旧历史请到归档仓查阅)
+git remote remove archive
 ```
 
-## 踩坑
-
-- **`--invert-paths` 不能漏**:`--paths-from-file` 默认是「保留」这些路径。漏写 `--invert-paths` 会变成只留清单里的文件,删光整个项目。副本实验能挡住这个错误
-- **grep 验证误报**:`git log --name-only | grep "config.py"` 会匹配到 `src/.../config.py`,误以为没清干净。验证用精确前缀 `grep -E "^${path}"`,且清单里的根级路径先确认历史中真存在
-- **squash merge 分支显示未合并**:走 squash merge 的功能分支,`--is-ancestor` 判断「未合并」,但内容已进 main。看 commit message 的 PR 编号或分支 tree 是否旧状态来判断,这类分支可安全删
-- **filter-repo 移除 origin**:这是它的设计行为(防止误推回原仓)。rewrite 后需手动 `git remote add origin` 重连
-- **worktree 分支删不掉**:`git branch -D` 报错因为分支被 worktree checkout。先 `git worktree prune`(目录已失效时)或 `git worktree remove`(目录还在时),再删分支
-- **子目录同名文件**:`flake.nix` 在根级和 `sub-dir/flake.nix` 是两个路径。清单写 `flake.nix` 是根级精确匹配,不会误清子目录。若要清子目录的,单独写 `sub-dir/flake.nix`
+`git branch -D` 报错是因为分支被 worktree checkout。先 `git worktree prune`(目录已失效时)或 `git worktree remove`(目录还在时),再删分支。

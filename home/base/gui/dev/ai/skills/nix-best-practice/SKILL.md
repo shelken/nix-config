@@ -1,6 +1,6 @@
 ---
 name: nix-best-practice
-description: 当需要 处理 nix/nix-config/home-manager等等和nixos/nix相关内容 时阅读该技能
+description: Nix 生态任务的包查找方式与命令限制。涉及 nix、nix-config、Home Manager、NixOS 时使用。
 ---
 
 ## 包查找与命令约束
