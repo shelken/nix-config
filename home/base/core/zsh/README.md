@@ -1,7 +1,7 @@
 ## 目录说明
 
 - `functions/` — 存放 zsh 函数脚本，目录已加入 `fpath`，所有函数通过 `autoload` 按需加载
-- `p10k/` — Powerlevel10k 主题配置
+- prompt 由 `../starship.nix` 管理（Starship，配色来自 catppuccin/nix）
 
 ## 特定配置
 

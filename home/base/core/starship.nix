@@ -1,0 +1,141 @@
+{ lib, myvars, ... }:
+let
+  inherit (myvars.catppuccin) accent;
+
+  # Nix 字符串不支持 \u 转义；用 JSON 解析得到字形，避免源码里出现不可见字符。
+  glyph = code: builtins.fromJSON "\"\\u${code}\"";
+  cap = glyph "E0BA";
+  sep = glyph "E0BC";
+  end = glyph "E0B0";
+  rcap = glyph "E0B2";
+in
+{
+  # 色板与 palette 由 catppuccin.starship（autoEnable）注入，这里只引用颜色名。
+  programs.starship = {
+    enable = true;
+    settings = {
+      add_newline = true;
+
+      # 两行：第 1 行 左 [os 目录 git] ... 右 [主机名 nix_shell 时间]，第 2 行 ❯。
+      # zsh 的 right_format 落在最后一行，所以右侧用 $fill 放进第 1 行。
+      format = lib.concatStrings [
+        "[${cap}](fg:${accent})"
+        "$os"
+        "[${sep}](bg:blue fg:${accent})"
+        "$directory"
+        "$git_branch"
+        "$git_status"
+        "\${custom.end_nogit}"
+        "\${custom.end_clean}"
+        "$fill"
+        "[${rcap}](fg:surface1)"
+        "$status"
+        "$cmd_duration"
+        "$hostname"
+        "$nix_shell"
+        "\${custom.time_cap}"
+        "$time"
+        "[${sep}](fg:lavender)"
+        "\n$character"
+      ];
+
+      fill.symbol = " ";
+
+      os = {
+        disabled = false;
+        style = "bg:${accent} fg:crust";
+        format = "[ $symbol ]($style)";
+        symbols = {
+          Macos = "🤘";
+          NixOS = "🤘";
+        };
+      };
+
+      directory = {
+        style = "bg:blue fg:crust";
+        format = "[ ${glyph "F07C"} $path ]($style)";
+        truncation_length = 4;
+        truncation_symbol = "…/";
+        truncate_to_repo = false;
+        use_os_path_sep = true;
+      };
+
+      # 与 directory 的分隔符放进 git 模块：不在仓库里时不会冒出孤立的绿色箭头。
+      git_branch = {
+        style = "bg:green fg:crust";
+        format = "[${sep}](bg:green fg:blue)[ ${glyph "F113"} ${glyph "F126"} $branch ]($style)";
+      };
+
+      # 整段被 (...) 包住：干净时黄块、分隔符、收尾箭头一起消失。
+      git_status = {
+        style = "bg:yellow fg:crust";
+        format = "([${sep}](bg:yellow fg:green)[ $all_status]($style)[${end}](fg:yellow))";
+        conflicted = "~\${count} ";
+        stashed = "";
+        deleted = "✘\${count} ";
+        renamed = "»\${count} ";
+        modified = "!\${count} ";
+        staged = "+\${count} ";
+        untracked = "?\${count} ";
+      };
+
+      # 收尾箭头的颜色取决于 git 是否变脏，单个内置模块表达不了，用 when 条件补。
+      custom = {
+        end_nogit = {
+          when = "! git rev-parse --git-dir >/dev/null 2>&1";
+          format = "[${end}](fg:blue)";
+        };
+        # 判定与 git_status 的 $all_status 一致（含未跟踪）。
+        end_clean = {
+          when = ''git rev-parse --git-dir >/dev/null 2>&1 && test -z "$(git status --porcelain 2>/dev/null)"'';
+          format = "[${end}](fg:green)";
+        };
+        # 不在 nix shell 里时，hostname 与 time 之间的尖角；在里面则由 nix_shell 自带。
+        time_cap = {
+          when = ''test -z "$IN_NIX_SHELL"'';
+          format = "[${cap}](bg:surface1 fg:lavender)";
+        };
+      };
+
+      status = {
+        disabled = false;
+        style = "bg:red fg:crust";
+        format = "[ ✘$status ]($style)";
+      };
+
+      cmd_duration = {
+        min_time = 3000;
+        show_milliseconds = false;
+        style = "bg:peach fg:crust";
+        format = "[ ${glyph "F252"}$duration ]($style)";
+      };
+
+      hostname = {
+        ssh_only = false;
+        style = "bg:surface1 fg:${accent}";
+        format = "[ @$hostname ]($style)";
+      };
+
+      nix_shell = {
+        disabled = false;
+        impure_msg = "impure";
+        pure_msg = "pure";
+        unknown_msg = "nix";
+        style = "bg:sapphire fg:crust";
+        format = "[${cap}](bg:surface1 fg:sapphire)[ $state ${glyph "F313"} ]($style)[${cap}](bg:sapphire fg:lavender)";
+      };
+
+      time = {
+        disabled = false;
+        time_format = "%H:%M:%S";
+        style = "bg:lavender fg:crust";
+        format = "[ $time ${glyph "F017"} ]($style)";
+      };
+
+      character = {
+        success_symbol = "[❯](bold fg:green)";
+        error_symbol = "[❯](bold fg:red)";
+      };
+    };
+  };
+}
