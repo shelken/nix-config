@@ -1,8 +1,10 @@
-_:
+{ self, ... }:
 let
   hostname = "yuuko";
 in
 {
+  imports = [ self.modules.darwin.macos ];
+
   networking.hostName = hostname;
   networking.computerName = hostname;
   system.defaults.smb.NetBIOSName = hostname;

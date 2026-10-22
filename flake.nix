@@ -117,11 +117,9 @@
           system = "aarch64-darwin";
           deploy = true;
           darwin-modules = map mylib.relativeToRoot [
-            "modules/darwin"
             "hosts/yuuko"
           ];
           home-modules = map mylib.relativeToRoot [
-            "home/darwin"
             "hosts/yuuko/home.nix"
           ];
         };
@@ -130,11 +128,9 @@
           system = "aarch64-darwin";
           deploy = true;
           darwin-modules = map mylib.relativeToRoot [
-            "modules/darwin"
             "hosts/sakamoto"
           ];
           home-modules = map mylib.relativeToRoot [
-            "home/darwin"
             "hosts/sakamoto/home.nix"
           ];
         };
@@ -142,11 +138,9 @@
           type = "darwin";
           system = "aarch64-darwin";
           darwin-modules = map mylib.relativeToRoot [
-            "modules/darwin"
             "hosts/mio"
           ];
           home-modules = map mylib.relativeToRoot [
-            "home/darwin"
             "hosts/mio/home.nix"
           ];
         };
@@ -155,11 +149,9 @@
           system = "aarch64-darwin";
           deploy = true;
           darwin-modules = map mylib.relativeToRoot [
-            "modules/darwin"
             "hosts/ling"
           ];
           home-modules = map mylib.relativeToRoot [
-            "home/darwin"
             "hosts/ling/home.nix"
           ];
         };
@@ -172,10 +164,15 @@
       deployHosts = lib.filterAttrs (_: v: v.deploy or false) hosts;
     in
     flake-parts.lib.mkFlake { inherit inputs; } {
-      # 每个功能一个文件，同一文件内声明 darwin / homeManager / nixos 各自的部分
+      # 同名即同一功能：一个功能的 darwin / homeManager / nixos 部分写在同一文件或同一目录；
+      # 路径含 /_ 的文件不自动导入，用于数据或私有片段
       imports = [
         flake-parts.flakeModules.modules
-        (inputs.import-tree ./modules/features)
+        (inputs.import-tree [
+          ./modules/flake
+          ./modules/features
+          ./modules/profiles
+        ])
       ];
 
       systems = [

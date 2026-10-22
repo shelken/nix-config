@@ -4,6 +4,7 @@ let
 in
 {
   imports = with self.modules.darwin; [
+    macos
     autoinputswitch
   ];
 
