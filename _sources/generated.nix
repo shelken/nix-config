@@ -122,6 +122,18 @@
       sha256 = "sha256-jLcC22X7tRAHrW+B32PH+dID0tcVoUJ1CdBbS1SwNgY=";
     };
   };
+  security-audit-skill = {
+    pname = "security-audit-skill";
+    version = "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8";
+    src = fetchFromGitHub {
+      owner = "cloudflare";
+      repo = "security-audit-skill";
+      rev = "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8";
+      fetchSubmodules = false;
+      sha256 = "sha256-oVVACjotkHvllQGxEP8yWaEt4c3GxT0d909TUM5P3NM=";
+    };
+    date = "2026-09-14";
+  };
   yazi-plugins = {
     pname = "yazi-plugins";
     version = "6229767f7fef39a2a78f5cee9122cc4dfb43f327";
