@@ -64,11 +64,15 @@ in
       githubToken="$(${pkgs.gh}/bin/gh auth token)"
       plugins="$HOME/.omp/plugins"
       mkdir -p "$plugins"
-      rm -rf "$plugins/node_modules" "$plugins/bun.lock" "$plugins/omp-plugins.lock.json" "$plugins/.bun-cache"
+      rm -rf "$plugins/node_modules" "$plugins/bun.lock" "$plugins/omp-plugins.lock.json"
       cp -f ${./plugins/package.json} "$plugins/package.json"
       chmod u+w "$plugins/package.json"
-      # Bun 对 #main 分支依赖的解析结果会命中多层内部缓存（上游缺陷 #11548，1.4.2 未修复），
-      # 给本次安装一个一次性缓存目录强制全新解析，全局 ~/.bun/install/cache 原样保留
+      # Bun 对缓存里已有的 git 裸仓库只 fetch 到 FETCH_HEAD，不更新 refs/heads/main，#main 永远解析成首次克隆的提交
+      # （上游缺陷 #11548）。只删 git 条目（*.git 裸仓库、@G@<sha> 提取目录）强制重新克隆；
+      # npm 包条目跨激活保留，否则每次激活要重下全部 npm 包（实测约 35s → 5s）。
+      # 上游修复 oven-sh/bun#44968 于 2026-10-14 合并，未进 1.4.3；bun ≥ 1.4.4 后实测
+      # 不删 git 条目也能跟上 main（修复面向 bun update，可能需改用它），即可删掉下面这行
+      rm -rf "$plugins/.bun-cache"/*.git "$plugins/.bun-cache"/@G@*
       PATH="${pkgs.git}/bin:$PATH" GITHUB_TOKEN="$githubToken" BUN_INSTALL_CACHE_DIR="$plugins/.bun-cache" \
         ${pkgs.bun}/bin/bun install --cwd "$plugins" --silent
       unset githubToken
