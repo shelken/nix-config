@@ -1,8 +1,12 @@
-_:
+{ self, ... }:
 let
   hostname = "mio";
 in
 {
+  imports = with self.modules.darwin; [
+    autoinputswitch
+  ];
+
   networking.hostName = hostname;
   networking.computerName = hostname;
   system.defaults.smb.NetBIOSName = hostname;
@@ -37,7 +41,6 @@ in
     tools.others.enable = true;
     tools.rclone.enable = true;
     tools.backup.enable = true;
-    tools.autoinputswitch.enable = true;
     tools.remote-control.enable = true;
 
     tools.virts.enable = false; # utm parallel
