@@ -1,4 +1,4 @@
-# Xcode（可选）
+# Xcode（可选功能）
 { ... }:
 {
   flake.modules.darwin.xcode.homebrew.masApps = { };

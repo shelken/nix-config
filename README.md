@@ -6,6 +6,8 @@
 </h3>
 
 <h6 align="center">
+  <a href="#结构">结构</a>
+  ·
   <a href="#darwin">Darwin</a>
   ·
   <a href="#部署">部署</a>
@@ -29,6 +31,20 @@
 
 &nbsp;
 
+# 结构
+
+一个软件一个「功能」，nix-darwin、NixOS、Home Manager 的配置写在同一处；主机只选一个「角色」，功能自己声明属于哪个角色
+
+```text
+modules/
+├── features/<分类>/<功能>   # 一个软件的系统侧与用户态配置
+├── profiles/                # 角色链 core ⊂ tui ⊂ gui ⊂ desktop ⊂ workstation，附加角色 homelab
+└── flake/                   # homeManager.<名> 自动挂到同名系统模块
+hosts/<主机>/                # 选角色、少数单机功能与参数
+```
+
+加软件、启用可选功能、新增主机的步骤见 [功能与角色](docs/user-guide/02-features.md)，设计原因见 [ADR 0002](docs/adr/0002-dendritic-feature-modules.md)
+
 # darwin
 
 ![](https://cdn.jsdelivr.net/gh/shelken/picbed@main/uPic/2025-08/VRa3Gk_eXkZdS.png)
@@ -36,7 +52,7 @@
 ## 初始化
 
 ```bash
-# 0. 如果有用到secrets，将新机器加入secrets.nix
+# 0. 如果有用到secrets，将新机器加入secrets.nix，并在 hosts/<host>/default.nix 写 shelken.secrets.enable = true;
 ssh-keygen -t ed25519 -C "shelken@[host]"
 cat ~/.ssh/id_ed25519.pub
 ## 将公钥放到github上
@@ -48,7 +64,7 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # 2. install nix
 ## macOS 使用 Determinate Nix；NixOS 使用系统 NixOS 配置管理。
-## note：在此说明，linux目前使用nixos源，mac使用determinate的管理。此项配置分别在`nix.nix`文件中有体现
+## note：在此说明，linux目前使用nixos源，mac使用determinate的管理。此项配置分别在 modules/features/nix/nix-settings.nix 与 modules/features/darwin/nix/ 中有体现
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix \
   | sh -s -- install --determinate
 
@@ -71,23 +87,7 @@ just sw
 
 ## 日常命令
 
-```bash
-
-# before run, you should have just. `brew install just`
-# switch
-just switch
-just sw
-
-# only build result
-just b
-
-# only home manager switch
-just hm
-
-# update flake inputs
-just up
-just upp <input>
-```
+构建、切换、更新 inputs 的命令见 [快速上手](docs/user-guide/00-quickstart.md)
 
 ## 卸载
 
@@ -203,7 +203,9 @@ just gen-image work-test qcow
 > 配置参考来源
 
 - [ryan4yin's nix-config](https://github.com/ryan4yin/nix-config) `*`主要配置来源
-- [khaneliman/khanelinix](https://github.com/khaneliman/khanelinix) `*`使用 Snowfall 感觉不错
+- [khaneliman/khanelinix](https://github.com/khaneliman/khanelinix) `*`早期参考的 Snowfall 结构
+- [mightyiam/dendritic](https://github.com/mightyiam/dendritic) `*`当前按功能组织的 Dendritic 模式
+- [flake-parts modules](https://flake.parts/options/flake-parts-modules.html) 与 [import-tree](https://github.com/denful/import-tree)：Dendritic 的实现基础
 - [catppuccin/catppuccin](https://github.com/catppuccin/catppuccin) `*`主题配色
 - [Web结构化展示nix-darwin,home-manager,nixos等所有的选项（很实用直观）](https://mynixos.com/flakes)
 - [Home Manager Options](https://home-manager-options.extranix.com)
@@ -212,3 +214,7 @@ just gen-image work-test qcow
 - [NixOS Options Search](https://search.nixos.org/options)
 - [NUR - 社区包搜索](https://nur.nix-community.org)
 - [NixOS 与 Flakes 一份非官方的新手指南](https://nixos-and-flakes.thiscute.world/zh) `*`中文教程
+
+# 许可证
+
+[MIT](LICENSE)

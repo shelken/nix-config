@@ -44,3 +44,4 @@
 - [Darwin defaults readback](./darwin-defaults-readback.md)：回读构建产物中的 defaults 写入，与系统实际存储逐项比对
 - [Home partial switch](./home-partial-switch.md)：经授权应用 Home 局部配置，并从用户入口确认文件、包或服务副作用
 - [Darwin system switch](./darwin-system-switch.md)：经授权切换完整 Darwin system，并确认 system generation 与内嵌 Home 激活结果
+- [Refactor closure diff](./refactor-closure-diff.md)：对比两个修订下任意主机的系统与 Home 闭包，证明结构调整只改变 hash 与顺序
