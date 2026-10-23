@@ -33,4 +33,12 @@ iphone up
 - 免费账号最多同时装 3 个开发 App。
 - `launch` 只认 bundle id。`xcrun devicectl device info apps` 实测只列出 5 个开发者签名的 App，不含 App Store 的 App，所以 CLI 不提供按名称启动。
 - 自绘界面、部分游戏的 AX 树为空，用 `shot` 加坐标点击。
-- 设置页没有可用的 URL scheme：iOS 27.0.1 上经 WDA 打开 `prefs:` 与 `settings-navigation:` 被系统拒绝（`LSApplicationWorkspaceErrorDomain 115`）；`App-prefs:` 能打开设置，但任何带页面路径的写法都落到「App」页，只有 `App-prefs:` 本身回到设置首页。所以 `iphone autolock` 按界面逐级点击，用不随语言变的元素标识（`com.apple.settings.displayAndBrightness`、`AUTOLOCK`、选项 cell 的秒数）定位，每步滚动查找，设置后用对勾位置核验。
+- WDA 直接打开 `prefs:` / `settings-navigation:` 会被系统拒绝（iOS 27.0.1，`LSApplicationWorkspaceErrorDomain 115`）；`App-prefs:` 带页面路径会落到「App」页。但快捷指令的「打开 URL」动作能打开 `prefs:root=DISPLAY&path=AUTOLOCK`，WDA 又能打开 `shortcuts://run-shortcut?name=…`，所以经快捷指令可一步直达任意设置页。
+
+## 自动锁定快捷指令（可选）
+
+`iphone up` / `down` 用它把自动锁定在「永不」与 3 分钟之间切换；没配置时改走设置 App 的界面逐级点击（约 13 秒）。
+
+1. 在「快捷指令」新建一个只含「打开 URL」的快捷指令，URL 填 `prefs:root=DISPLAY&path=AUTOLOCK`，名称自拟。
+2. 把名称写进 `~/.local/share/iphone-use/config.json`：`"autolock_shortcut": "<名称>"`（`iphone init` 会重写该文件，之后需重新加上）。
+3. 验证：`iphone autolock 180`，输出「自动锁定已设为 3分钟」。

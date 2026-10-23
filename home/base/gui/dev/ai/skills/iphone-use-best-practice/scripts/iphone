@@ -610,19 +610,40 @@ def _find_scrolling(kind, name, scrolls):
     raise Fail(f"设置里没找到 {kind} {name}（iOS 版本或语言变了？）")
 
 
+def _wait_node(kind, name, timeout):
+    """页面切换瞬间 /source 可能报 404（旧 App 已不在），重试到超时。"""
+    end, last = time.time() + timeout, None
+    while time.time() < end:
+        try:
+            n = next((n for n in snapshot_now()["nodes"] if n["type"] == kind and n.get("name") == name), None)
+        except Fail as e:
+            last, n = e, None
+        if n:
+            return n
+        time.sleep(0.5)
+    raise Fail(f"{timeout}s 内没出现 {kind} {name}" + (f"（最后错误: {last}）" if last else ""))
+
+
 def set_autolock(seconds):
-    """没有可用的 URL scheme（iOS 27 上 prefs:/settings-navigation: 被拒，App-prefs: 只能到设置首页），
-    所以走 UI：设置 → 显示与亮度 → 自动锁定 → 选项。"""
+    """直接开 prefs: 会被拒（iOS 27 上 WDA 的 openURL 对 prefs:/settings-navigation: 报 115），
+    但快捷指令里的「打开 URL」可以。配置了 autolock_shortcut 就用 shortcuts://run-shortcut 一步直达自动锁定页，
+    否则走 UI：设置 → 显示与亮度 → 自动锁定。"""
+    from urllib.parse import quote
+    shortcut = config().get("autolock_shortcut")
     require_unlocked()
     sess("POST", "/wda/apps/terminate", {"bundleId": SETTINGS})
     wda("POST", "/wda/homescreen", {})
     time.sleep(0.8)
     try:
-        sess("POST", "/wda/apps/activate", {"bundleId": SETTINGS}, timeout=45)
-        time.sleep(0.8)
-        for kind, name, scrolls in (("Button", "com.apple.settings.displayAndBrightness", 8), ("Cell", "AUTOLOCK", 3)):
-            _tap_node(_find_scrolling(kind, name, scrolls)[1])
-            time.sleep(0.7)
+        if shortcut:
+            sess("POST", "/url", {"url": "shortcuts://run-shortcut?name=" + quote(shortcut)}, timeout=30)
+            _wait_node("Cell", str(seconds), 10)
+        else:
+            sess("POST", "/wda/apps/activate", {"bundleId": SETTINGS}, timeout=45)
+            time.sleep(0.8)
+            for kind, name, scrolls in (("Button", "com.apple.settings.displayAndBrightness", 8), ("Cell", "AUTOLOCK", 3)):
+                _tap_node(_find_scrolling(kind, name, scrolls)[1])
+                time.sleep(0.7)
         s, row = _find_scrolling("Cell", str(seconds), 0)
         _tap_node(row)
         time.sleep(0.7)
