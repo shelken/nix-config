@@ -1,21 +1,16 @@
-# Neovim：最小变体（yuuko 用，只有 nvim 本体不带配置）
-# 原 home/base/core/neovim；完整变体见 features/editor/neovim
-# 两者均声明 shelken.neovim.minimal（true / false），同一台主机只会导入其中一个
+# Neovim 本体：所有主机都有的最小安装（nvim、vi/vim 别名，不带配置）
+# 原 home/base/core/neovim；完整配置见 features/editor/neovim（tui 及以上的 HM 角色）
+# 两个功能同时生效：本文件只开 nvim，full 版本按 shelken.neovim.minimal 决定是否装配置与工具链
+{ config, ... }:
 {
-  flake.modules.homeManager.neovim-minimal =
-    { lib, ... }:
-    {
-      options.shelken.neovim.minimal = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "最小化安装nvim（不带配置）";
-      };
+  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.neovim-minimal ];
 
-      programs.neovim = {
-        enable = true;
+  flake.modules.homeManager.neovim-minimal = {
+    programs.neovim = {
+      enable = true;
 
-        viAlias = true;
-        vimAlias = true;
-      };
+      viAlias = true;
+      vimAlias = true;
     };
+  };
 }

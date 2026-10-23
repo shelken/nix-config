@@ -9,5 +9,8 @@
     ./_gc.nix
   ];
 
-  flake.modules.homeManager.tasks.imports = [ ./_user-tasks.nix ];
+  flake.modules.homeManager.tasks.imports = [
+    ./_user-tasks.nix
+    ./_notify.nix
+  ];
 }

@@ -7,23 +7,17 @@
 # 由各功能文件自己声明加入哪一层。
 { config, ... }:
 {
-  flake.modules.darwin.core = {
-    imports = [
-      config.flake.modules.darwin.overlays
-      config.flake.modules.darwin.system-packages
-      config.flake.modules.darwin.secrets
-    ];
-  };
+  flake.modules.darwin.core.imports = [
+    config.flake.modules.darwin.overlays
+    config.flake.modules.darwin.secrets
+  ];
 
   flake.modules.nixos.core = {
     imports = [
       ../nixos/base
       config.flake.modules.nixos.overlays
       config.flake.modules.nixos.nix-settings
-      config.flake.modules.nixos.system-packages
-      config.flake.modules.nixos.user-account
       config.flake.modules.nixos.secrets
-      config.flake.modules.nixos.fonts
     ];
     home-manager.sharedModules = [ ../../home/linux/base ];
   };
@@ -40,7 +34,5 @@
     config.flake.modules.homeManager.core-cli
     config.flake.modules.homeManager.fastfetch
     config.flake.modules.homeManager.yazi
-    config.flake.modules.homeManager.dev-options
-    config.flake.modules.homeManager.infisical
   ];
 }

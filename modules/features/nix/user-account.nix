@@ -1,5 +1,10 @@
 # 用户账号：authorized_keys（modules/base/users.nix 迁入）
+# nixos 与 darwin 两侧的账号都写在 core：登录能力是所有主机的最低要求（HM 侧随同名挂接进入）
+{ config, ... }:
 {
+  flake.modules.nixos.core.imports = [ config.flake.modules.nixos.user-account ];
+  flake.modules.darwin.core.imports = [ config.flake.modules.darwin.user-account ];
+
   flake.modules.nixos.user-account =
     { myvars, ... }:
     {

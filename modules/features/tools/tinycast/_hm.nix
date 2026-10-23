@@ -6,7 +6,8 @@
   ...
 }:
 let
-  scriptsDir = ./scripts;
+  # 目录名保持 tinycast：HM 以源路径 basename 生成 store 链接名（hm_tinycast），迁移前后一致
+  scriptsDir = ./tinycast;
 
   # 自动扫描 tinycast 目录下的全部 .sh 脚本并构建为 CLI 包
   scriptFiles = lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".sh" name) (
@@ -150,7 +151,7 @@ in
   targets.darwin.defaults."com.tinycast.app" = tinycastDefaults;
 
   # 软链接脚本目录至 ~/.config/tinycast/scripts，便于调试
-  xdg.configFile."tinycast/scripts" = mylib.mkConfigFile config ./scripts;
+  xdg.configFile."tinycast/scripts" = mylib.mkConfigFile config scriptsDir;
 
   # 激活时同步到 Tinycast，使其在启动器中立即可被搜索调用
   # 先导入快捷键偏好，再合并命令列表，避免两个激活步骤的写入顺序不明确。

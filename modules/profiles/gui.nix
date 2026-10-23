@@ -10,9 +10,7 @@ in
     imports = [
       ../nixos/desktop.nix
       nixos.tui
-      config.flake.modules.nixos.fonts
     ];
-    shelken.fonts.enable = true;
     home-manager.sharedModules = [ ../../home/linux/gui ];
   };
 }

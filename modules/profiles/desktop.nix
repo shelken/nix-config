@@ -4,11 +4,5 @@ let
   inherit (config.flake.modules) darwin;
 in
 {
-  flake.modules.darwin.desktop = {
-    imports = [
-      darwin.gui
-      config.flake.modules.darwin.fonts
-    ];
-    shelken.fonts.enable = true;
-  };
+  flake.modules.darwin.desktop.imports = [ darwin.gui ];
 }

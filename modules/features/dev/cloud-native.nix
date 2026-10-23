@@ -1,6 +1,9 @@
 # 容器/K8s 终端工具：dive、lazydocker、skopeo、k9s、kubecolor
-# 原 home/base/tui/container.nix，随 cloud-native 开关迁为 mio 专属功能
+# 原 home/base/tui/container.nix；只有主力机（mio）需要 → workstation，开关已删除
+{ config, ... }:
 {
+  flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.cloud-native ];
+
   flake.modules.homeManager.cloud-native =
     {
       pkgs,
@@ -68,7 +71,7 @@
 
         echo "Inspecting image: $IMAGE_URL"
         echo "OS: $OS, Architecture: $ARCH"
-        echo "Executing: skopeo inspect --override-os="$OS" --override-arch="$ARCH" "$IMAGE_URL""
+        echo "Executing: skopeo inspect --override-os=\"$OS\" --override-arch=\"$ARCH\" \"$IMAGE_URL\""
 
         # 执行镜像检查并计算大小
         if ! result=$(skopeo inspect --override-os="$OS" --override-arch="$ARCH" "$IMAGE_URL" 2>&1); then

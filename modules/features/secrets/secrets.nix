@@ -132,7 +132,7 @@
           del|rm)
             KEY="''${2:-}"
             if [[ -z "$KEY" ]]; then
-              echo "错误: 未提供要删除的变量名 (KEY)" >&2
+              echo "错误: 未提供要删除的变量名" >&2
               usage
             fi
             if [[ ! -f "$SPECIFIC_FILE" ]]; then
@@ -177,31 +177,6 @@
           default = osConfig.shelken.secrets.enable;
           readOnly = true;
           description = "主机是否持有 age 密钥（来自 osConfig.shelken.secrets.enable）";
-        };
-      };
-      # 中间态补丁：backup 选项原在 home/base/core/backup-options.nix（W2Darwin 分片负责），
-      # 该文件已随 HM core 整体引入删除；在 W2Darwin 的 backup feature 合并前，
-      # kopia（读 enable）与 AI 功能（写 app）求值需要这些声明。合并后整体删除。
-      options.shelken.backup = {
-        enable = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-          description = "是否开启备份（临时声明，W2Darwin backup feature 合并后删除）";
-        };
-        app = lib.mkOption {
-          type = with lib.types; attrsOf (listOf str);
-          default = { };
-          description = "各 app 模块自己声明的备份路径，key 为 app 名（临时声明）";
-        };
-        backupPaths = lib.mkOption {
-          type = with lib.types; listOf str;
-          default = [ ];
-          description = "要备份的路径列表（临时声明）";
-        };
-        ignores = lib.mkOption {
-          type = with lib.types; listOf str;
-          default = [ ];
-          description = "用户自定义的忽略模式列表（临时声明）";
         };
       };
       config = mkIf cfg.enable {
