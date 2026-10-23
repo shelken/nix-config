@@ -213,7 +213,7 @@ rec {
     runtimeInputs = [ pkgs.coreutils ];
     text = ''
       CACHE_DIR="''${XDG_CACHE_HOME:-$HOME/.cache}/task-island"
-      SRC="${../modules/darwin/tasks/task-island.swift}"
+      SRC="${../features/darwin/tasks/task-island.swift}"
       # 用源码内容哈希做缓存键：nix store 里的文件 mtime 恒为 epoch，-nt 判据永远不成立
       HASH="$(sha256sum "$SRC" | cut -c1-16)"
       BIN="$CACHE_DIR/task-island-$HASH"

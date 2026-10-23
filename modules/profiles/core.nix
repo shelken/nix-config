@@ -6,10 +6,8 @@
 # 迁移期间各层先整体引入旧模块树，迁出一个功能就从旧树删掉，
 # 改由功能文件自己声明加入哪一层（见 features/tools/autoinputswitch/darwin.nix）。
 {
-  flake.modules.darwin.core = {
-    imports = [ ../darwin ];
-    home-manager.sharedModules = [ ../../home/darwin ];
-  };
+  # [临时] W2Base 的 modules/base（fonts 选项声明）未合入前求值需要；提交前移除
+  flake.modules.darwin.core.imports = [ ../base ];
 
   flake.modules.nixos.core = {
     imports = [

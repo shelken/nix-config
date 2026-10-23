@@ -6,12 +6,9 @@
   shelken = {
     dotfiles.liveEdit = true;
 
-    backup = {
-      enable = true;
-      backupPaths = [
-        "${config.home.homeDirectory}/Code"
-      ];
-    };
+    backup.backupPaths = [
+      "${config.home.homeDirectory}/Code"
+    ];
 
     dev.ai.sandbox.enable = true;
     # dev.ai.claudePreset = "cpa-codex";
@@ -22,6 +19,5 @@
     dev.cloud-native.enable = true;
 
     infisical.enable = true; # 试用 Infisical CLI, 与 sops/sec-run 并存
-
   };
 }
