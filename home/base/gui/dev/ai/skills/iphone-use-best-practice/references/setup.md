@@ -37,15 +37,23 @@ iphone up
 
 ## 中转快捷指令（prefs: 与自动锁定用）
 
-WDA 直接打开 `prefs:` 会被系统拒绝，只有「快捷指令」里的「打开 URL」能打开。`iphone open <url>` 先直接打开，被拒（115）时转给中转快捷指令；`iphone autolock`、`up`、`down` 也靠它一步直达自动锁定页（约 6 秒，没有时走界面点击约 13 秒）。
+WDA 直接打开 `prefs:` 会被系统拒绝，只有「快捷指令」里的「打开 URL」能打开。`iphone open <url>` 先直接打开，被拒（115）时转给中转快捷指令；`iphone autolock`、`up`、`down` 也靠它一步直达自动锁定页（约 6 秒）。
 
 ```bash
 iphone setup-shortcut            # 默认名 iphone-open-url，--name 可改
 ```
 
-它在 Mac 上生成并签名只含「打开 URL」（输入取「快捷指令输入」）的快捷指令，后台导入并用 `computer-use` 点掉确认框，写入配置 `open_url_shortcut`，等 iCloud 同步到手机后用 `prefs:root=BATTERY_USAGE` 实测。
+快捷指令靠 iCloud 同步，所以**按设备记录**：配置 `relay_devices` 列出能用它的手机 UDID，当前 `udid` 不在其中就不走中转，`autolock` 直接走界面点击（设置 → 显示与亮度 → 自动锁定，约 20 秒）。与 Mac 不同 iCloud 的手机属于这一类，无需也无法配置。中转失败时 `autolock` 同样自动回退到界面点击；`up` 里设置自动锁定失败只警告，不让已就绪的 `up` 失败。
+
+`setup-shortcut` 在 Mac 上生成并签名只含「打开 URL」（输入取「快捷指令输入」）的快捷指令，后台导入并用 `computer-use` 点掉确认框，然后在**当前手机**上用 `prefs:root=BATTERY_USAGE` 实测；通过后才写入 `open_url_shortcut` 与 `relay_devices`。
 
 - 需要：macOS 的 `shortcuts` 与 `computer-use` 命令、Mac 与手机同一 iCloud 且开启「快捷指令」同步、WDA 在运行（否则只导入不实测）。
-- 同名已存在会拒绝，避免得到「iphone-open-url 1」；先在快捷指令里删掉。
+- Mac 上已有同名快捷指令时不重复导入，只在当前手机上实测并登记；换到另一台同 iCloud 的手机，直接再跑一次即可。
 - 手机上首次运行可能弹授权提示。命令会把弹窗文字打印出来并最多等 60 秒，需要用户本人在手机上批准。
-- `iphone init` 会重写 `config.json`，之后重新运行 `iphone setup-shortcut` 或手动补回 `open_url_shortcut`。
+- `iphone init` 会重写 `config.json`，之后重新运行 `iphone setup-shortcut` 或手动补回 `open_url_shortcut` 与 `relay_devices`。
+
+## 界面点击路径的坑
+
+- 设置 App 重开会恢复上次的滚动位置，快照里的坐标是列表还在动时的；`_poll_node` 要求坐标连续两次一致才点。
+- 目标行贴着屏幕底边时，点击中心落进底部手势区，点击被吞（iPhone 14 上「显示与亮度」在 y=807/844 时必现）；`_find_scrolling` 要求节点完整落在视口 8%~90% 内才点。
+- 找不到时先向下滚，到头再掉头向上。

@@ -434,7 +434,10 @@ def cmd_up(a):
         if ready():
             print("WDA 已就绪")
             if not a.no_keep_awake:
-                set_autolock(AUTOLOCK_NEVER)
+                try:
+                    set_autolock(AUTOLOCK_NEVER)
+                except Fail as e:  # 常亮只是附加功能，不能让 WDA 已就绪的 up 失败
+                    print(f"警告: 没能把自动锁定改为永不（{e}）。可手动改，或 iphone autolock never", file=sys.stderr)
             return
         text = UPLOG.read_text(errors="replace")
         for pattern, msg, fatal in LOG_HINTS:
@@ -631,18 +634,62 @@ def _tap_node(n):
     sess("POST", "/wda/tap", {"x": x + w / 2, "y": y + h / 2})
 
 
-def _find_scrolling(kind, name, scrolls):
-    """按 (type, name) 找节点，没有就向下滚动再找；name 是不随语言变化的标识。"""
-    for i in range(scrolls + 1):
-        s = snapshot_now()
-        n = next((n for n in s["nodes"] if n["type"] == kind and n.get("name") == name), None)
+def _poll_node(kind, name, wait):
+    """等 (type, name) 出现，并且坐标连续两次一致才返回：设置 App 重开时会恢复上次的滚动位置，
+    列表还在动时拿到的坐标点下去会落在别处。页面刚切换时 /source 可能 404，也在这里吞掉。"""
+    end, s, n, last = time.time() + wait, None, None, None
+    while True:
+        try:
+            s = snapshot_now()
+            n = next((n for n in s["nodes"] if n["type"] == kind and n.get("name") == name), None)
+        except Fail:
+            n = None
         if n:
-            return s, n
-        if i < scrolls:
-            vp = s["viewport"]
-            sess("POST", "/wda/dragfromtoforduration", {"fromX": vp["width"] / 2, "fromY": vp["height"] * 0.7,
-                                                        "toX": vp["width"] / 2, "toY": vp["height"] * 0.3, "duration": 0.2})
-            time.sleep(0.4)
+            if last == n["rect"] or time.time() >= end + 3:
+                return s, n
+            last = n["rect"]
+            time.sleep(0.3)
+            continue
+        last = None
+        if time.time() >= end:
+            return s, None
+        time.sleep(0.4)
+
+
+def _drag_list(vp, step):
+    a, b = (0.7, 0.3) if step > 0 else (0.3, 0.7)
+    sess("POST", "/wda/dragfromtoforduration", {"fromX": vp["width"] / 2, "fromY": vp["height"] * a,
+                                                "toX": vp["width"] / 2, "toY": vp["height"] * b, "duration": 0.2})
+    time.sleep(0.4)
+
+
+def _find_scrolling(kind, name, scrolls):
+    """按 (type, name) 找节点；找不到就滚动，滚到头再掉头。name 是不随语言变化的标识。
+    首次多等一会儿，页面刚切换时节点还没出现，先滚会把还没换掉的上一页滚走（慢设备上必现）。
+    节点必须完整落在视口 8%~90% 内才返回：贴着底边的行点击中心会落进底部手势区，点击被系统吞掉（iPhone 14 上必现）。
+    scrolls=0 表示不滚动，直接返回。"""
+    step, flipped, prev, edge = 1, False, None, None
+    for i in range(scrolls * 2 + 1):
+        s, n = _poll_node(kind, name, 4 if i == 0 else 0.6)
+        if n:
+            vp, (_, y, _, h) = s["viewport"], n["rect"]
+            if not scrolls or n["rect"] == edge or (vp["height"] * 0.08 <= y and y + h <= vp["height"] * 0.9):
+                return s, n  # edge：滚过一次位置没变，列表到头，只能就这样点
+            edge = n["rect"]
+            _drag_list(vp, 1 if y + h > vp["height"] * 0.9 else -1)
+            continue
+        if not s:
+            continue
+        if i == scrolls * 2:
+            break
+        here = [(x["type"], text_of(x), tuple(x["rect"])) for x in s["nodes"]]
+        if here == prev:  # 滚不动了，到头
+            if flipped:
+                break
+            step, flipped, prev = -step, True, None
+        else:
+            prev = here
+        _drag_list(s["viewport"], step)
     raise Fail(f"设置里没找到 {kind} {name}（iOS 版本或语言变了？）")
 
 
@@ -663,6 +710,20 @@ def _wait_node(kind, name, timeout):
 AUTOLOCK_URL = "prefs:root=DISPLAY&path=AUTOLOCK"
 
 
+def relay_name():
+    """中转快捷指令按设备记录：它靠 iCloud 同步，与 Mac 不同账号的手机没有它。"""
+    cfg = config()
+    return cfg.get("open_url_shortcut") if cfg["udid"] in cfg.get("relay_devices", []) else None
+
+
+def _autolock_via_ui():
+    sess("POST", "/wda/apps/activate", {"bundleId": SETTINGS}, timeout=45)
+    time.sleep(0.8)
+    for kind, name, scrolls in (("Button", "com.apple.settings.displayAndBrightness", 8), ("Cell", "AUTOLOCK", 3)):
+        _tap_node(_find_scrolling(kind, name, scrolls)[1])
+        time.sleep(0.7)
+
+
 def set_autolock(seconds):
     """WDA 直接开 prefs: 会被拒（iOS 27，错误 115），所以配置了中转快捷指令（iphone setup-shortcut）就经它一步直达自动锁定页；
     否则走 UI：设置 → 显示与亮度 → 自动锁定。"""
@@ -671,15 +732,15 @@ def set_autolock(seconds):
     wda("POST", "/wda/homescreen", {})
     time.sleep(0.8)
     try:
-        if config().get("open_url_shortcut"):
-            open_url(AUTOLOCK_URL, direct=False)
-            _wait_node("Cell", str(seconds), 10)
+        if relay_name():
+            try:
+                open_url(AUTOLOCK_URL, direct=False)
+                _wait_node("Cell", str(seconds), 10)
+            except Fail:
+                print("中转快捷指令没跑通，改走界面点击", file=sys.stderr)
+                _autolock_via_ui()
         else:
-            sess("POST", "/wda/apps/activate", {"bundleId": SETTINGS}, timeout=45)
-            time.sleep(0.8)
-            for kind, name, scrolls in (("Button", "com.apple.settings.displayAndBrightness", 8), ("Cell", "AUTOLOCK", 3)):
-                _tap_node(_find_scrolling(kind, name, scrolls)[1])
-                time.sleep(0.7)
+            _autolock_via_ui()
         s, row = _find_scrolling("Cell", str(seconds), 0)
         _tap_node(row)
         time.sleep(0.7)
@@ -701,7 +762,7 @@ def cmd_autolock(a):
     set_autolock(AUTOLOCK_CHOICES[a.value])
 
 
-def open_url(url, direct=True):
+def open_url(url, direct=True, relay=None):
     """直接让 WDA 打开；prefs: 之类被系统拒绝（115）时，经接收输入的快捷指令（open_url_shortcut）转一手。"""
     from urllib.parse import quote
     if direct:
@@ -711,9 +772,9 @@ def open_url(url, direct=True):
         except Fail as e:
             if "115" not in str(e):
                 raise
-    name = config().get("open_url_shortcut")
+    name = relay or relay_name()
     if not name:
-        raise Fail("系统拒绝直接打开这个 URL（如 prefs:）。先运行 iphone setup-shortcut 安装中转快捷指令")
+        raise Fail("系统拒绝直接打开这个 URL（如 prefs:）。这台手机没有中转快捷指令；与 Mac 同一 iCloud 时可 iphone setup-shortcut，否则改用界面点击")
     sess("POST", "/url", {"url": f"shortcuts://run-shortcut?name={quote(name)}&input=text&text={quote(url)}"}, timeout=30)
 
 
@@ -762,23 +823,21 @@ def cmd_setup_shortcut(a):
     """在 Mac 上生成并签名中转快捷指令，后台导入，经 iCloud 同步到手机，再用 prefs: 实测。"""
     import tempfile
     if a.name in mac_shortcuts():
-        raise Fail(f"快捷指令「{a.name}」已存在；重复导入会得到「{a.name} 1」。先在快捷指令里删掉，或用 --name 换名")
-    with tempfile.TemporaryDirectory() as d:
-        raw_f, signed = Path(d) / "raw.shortcut", Path(d) / f"{a.name}.shortcut"
-        raw_f.write_bytes(relay_shortcut_bytes())
-        subprocess.run(["shortcuts", "sign", "-m", "anyone", "-i", str(raw_f), "-o", str(signed)], check=True, capture_output=True)
-        subprocess.run(["open", "-g", "-a", "Shortcuts", str(signed)], check=True)
-        for _ in range(30):
-            if a.name in mac_shortcuts():
-                break
-            confirm_mac_import()
-            time.sleep(2)
-        else:
-            raise Fail("60s 内 Mac 的快捷指令里没出现该条目；手动打开快捷指令 App 点「添加快捷指令」，需要 computer-use 命令可用")
-    cfg = config()
-    cfg["open_url_shortcut"] = a.name
-    CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
-    print(f"已导入「{a.name}」并写入配置，等待 iCloud 同步到手机...", flush=True)
+        print(f"Mac 的快捷指令里已有「{a.name}」，跳过导入，只在当前手机上验证", flush=True)
+    else:
+        with tempfile.TemporaryDirectory() as d:
+            raw_f, signed = Path(d) / "raw.shortcut", Path(d) / f"{a.name}.shortcut"
+            raw_f.write_bytes(relay_shortcut_bytes())
+            subprocess.run(["shortcuts", "sign", "-m", "anyone", "-i", str(raw_f), "-o", str(signed)], check=True, capture_output=True)
+            subprocess.run(["open", "-g", "-a", "Shortcuts", str(signed)], check=True)
+            for _ in range(30):
+                if a.name in mac_shortcuts():
+                    break
+                confirm_mac_import()
+                time.sleep(2)
+            else:
+                raise Fail("60s 内 Mac 的快捷指令里没出现该条目；手动打开快捷指令 App 点「添加快捷指令」，需要 computer-use 命令可用")
+        print(f"已导入「{a.name}」，等待 iCloud 同步到手机...", flush=True)
     if not ready():
         print("WDA 未运行，跳过实测。iphone up 之后用 iphone open prefs:root=BATTERY_USAGE 验证")
         return
@@ -790,9 +849,9 @@ def cmd_setup_shortcut(a):
             break
         time.sleep(3)
     else:
-        raise Fail("60s 内手机上没出现该快捷指令；确认两端登录同一 iCloud 且「快捷指令」开启了 iCloud 同步")
+        raise Fail("60s 内手机上没出现该快捷指令。它经 iCloud 从 Mac 同步，手机与 Mac 不是同一账号时收不到；这种手机不需要它，autolock 会走界面点击")
     wda("POST", "/wda/homescreen", {})
-    open_url("prefs:root=BATTERY_USAGE", direct=False)
+    open_url("prefs:root=BATTERY_USAGE", direct=False, relay=a.name)
     # 快捷指令首次运行可能在手机上弹授权提示；批准属于用户，这里只把内容报出来并等待
     told, app, seen = False, None, []
     for _ in range(30):
@@ -810,7 +869,11 @@ def cmd_setup_shortcut(a):
     wda("POST", "/wda/homescreen", {})
     if app != SETTINGS:
         raise Fail(f"实测失败：前台是 {app}，不是设置；屏幕上: {' | '.join(seen) or '无'}。手机上打开该快捷指令，确认含「打开 URL」且输入是「快捷指令输入」")
-    print("实测通过：prefs: 经中转快捷指令打开了设置")
+    cfg = config()
+    cfg["open_url_shortcut"] = a.name
+    cfg["relay_devices"] = sorted({*cfg.get("relay_devices", []), cfg["udid"]})
+    CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
+    print("实测通过：prefs: 经中转快捷指令打开了设置，已记录该设备可用")
 
 
 # ---------- 自检 ----------
@@ -842,6 +905,37 @@ def selftest():
         stop_wda()
         assert pid_alive() is None and not PIDFILE.exists()
     g["PIDFILE"], g["CLI"] = saved[0], saved[1]
+    # 贴着底边的行（中心落进底部手势区）要先滚进安全区再返回；列表滚不动时照样返回，不能白耗循环
+    vp, drags = {"width": 390, "height": 844}, []
+
+    def fake_list(y, movable):
+        pos = [y]
+
+        def poll(kind, name, wait):
+            return {"viewport": vp, "nodes": [{"type": "Button", "name": "row", "rect": [16, pos[0], 358, 53]}]}, \
+                {"type": "Button", "name": "row", "rect": [16, pos[0], 358, 53]}
+
+        def drag(method, path, body=None, **kw):
+            drags.append(body)
+            if movable:
+                pos[0] -= 250
+        return poll, drag
+
+    saved = (g["_poll_node"], g["sess"], g["time"])
+    class NoSleep:
+        sleep = staticmethod(lambda s: None)
+        time = staticmethod(time.time)
+    try:
+        g["time"] = NoSleep
+        g["_poll_node"], g["sess"] = fake_list(807, True)
+        _, n = _find_scrolling("Button", "row", 3)
+        assert n["rect"][1] == 557 and len(drags) == 1, (n, drags)
+        drags.clear()
+        g["_poll_node"], g["sess"] = fake_list(807, False)
+        _, n = _find_scrolling("Button", "row", 3)
+        assert n["rect"][1] == 807 and len(drags) == 1, (n, drags)
+    finally:
+        g["_poll_node"], g["sess"], g["time"] = saved
     print("selftest ok")
 
 
