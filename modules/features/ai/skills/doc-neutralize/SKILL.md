@@ -55,7 +55,7 @@ disable-model-invocation: true
 
 ### 风险信号排查(词之外)
 
-1. **文件/目录命名**: 含 `reverse`、`bypass`、`crack`、`hook` 的名字按第三层重命名
+1. **文件/目录命名**: 含第三层关键词的名字按第三层重命名
 2. **README 功能排列**: 把签到/任务/注册并排高亮,整体观感是薅羊毛工具箱。核心功能(LLM 调用)放第一位,签到/任务降为"客户端功能适配"子项
 3. **文档结论导向**: tasks.md 类文档通篇讲"如何零消耗完成" → 开头补定位句"复刻客户端任务系统,使 pi 侧用户获得等价的任务进度体验",正文焦点从"零消耗"转到"客户端行为复刻"
 4. **功能组合呈现**: 避免"自动签到 + 自动任务 + 自动注册"三自动并列,拆分为"LLM 调用 / 账号管理 / 客户端功能适配"三层
@@ -69,7 +69,7 @@ disable-model-invocation: true
 
 ## 第三层: 重命名 abuse 关键词文件与命令
 
-文件/目录/命令名里的 `reverse`、`bypass`、`crack`、`hook` 是 abuse 检测关键词,比文档措辞更显眼。重命名为 `interface-check`、`api-verify`、`study`,同步改 justfile 命令与 skill 目录名。重命名是代码级变更,需识别影响范围:
+文件/目录/命令名里的 `reverse`、`bypass`、`crack`、`hook` 是 abuse 检测关键词,比文档措辞更显眼。保留项里的文件名除外。重命名为 `interface-check`、`api-verify`、`study`,同步改 justfile 命令与 skill 目录名。重命名是代码级变更,需识别影响范围:
 
 **影响范围识别**:
 - **代码级**(必改): import 路径、justfile 命令名、test describe 名、源码内的路径常量
@@ -100,5 +100,5 @@ disable-model-invocation: true
 - 行为信号词(伪造/零消耗/白嫖/批量造号)grep 全库 0 命中,或已按框架表重构
 - AGENTS.md 有公开接口兼容声明
 - README 核心功能(LLM 调用)在首屏,签到/任务为"客户端功能适配"子项
-- 无 `reverse`/`bypass`/`crack` 命名的文件或目录(已重命名)
+- 无含第三层关键词的文件或目录名(已重命名,保留项除外)
 - 语义未变: 每处替换都能通读,读者仍能理解流程;中性化不等于删功能描述

@@ -1,6 +1,6 @@
 # 软件配置决策
 
-放置位置：一个软件一个功能，放在 `modules/features/<分类>/<名>`，系统侧（brew、launchd、defaults）与 Home Manager 部分写在同一处。功能加入哪个角色、何时用选项而不是导入，按 `docs/adr/0002-dendritic-feature-modules.md` 的「功能声明归属」决定；参考样本 `modules/features/tools/autoinputswitch/`
+放置位置：一个软件一个功能，放在 `modules/features/<分类>/<名>`，系统侧（brew、launchd、defaults）与 Home Manager 部分写在同一处。功能加入哪个角色、何时用选项而不是导入，按 `docs/adr/0004-dendritic-feature-modules.md` 的「功能声明归属」决定；参考样本 `modules/features/tools/autoinputswitch/`
 
 引入或管理一个新软件的配置时，按此顺序决策：
 

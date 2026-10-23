@@ -1,6 +1,6 @@
 # 功能与角色
 
-一个软件就是一个「功能」，放在 `modules/features/<分类>/<名>`，系统侧（Homebrew、launchd、defaults）和 Home Manager 部分写在同一处。主机不列具体功能，只选一个「角色」，功能自己声明属于哪个角色。设计原因见 [ADR 0002](../adr/0002-dendritic-feature-modules.md)
+一个软件就是一个「功能」，放在 `modules/features/<分类>/<名>`，系统侧（Homebrew、launchd、defaults）和 Home Manager 部分写在同一处。主机不列具体功能，只选一个「角色」，功能自己声明属于哪个角色。设计原因见 [ADR 0004](../adr/0004-dendritic-feature-modules.md)
 
 ## 角色
 

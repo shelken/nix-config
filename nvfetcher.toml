@@ -47,6 +47,11 @@ fetch.github   = "mattpocock/skills"
 src.github_tag = "zhaoxuya520/reverse-skill"
 fetch.github   = "zhaoxuya520/reverse-skill"
 
+[security-audit-skill]
+src.git      = "https://github.com/cloudflare/security-audit-skill"
+src.branch   = "main"
+fetch.github = "cloudflare/security-audit-skill"
+
 [zjstatus]
 src.github = "dj95/zjstatus"
 fetch.url  = "https://github.com/dj95/zjstatus/releases/download/$ver/zjstatus.wasm"

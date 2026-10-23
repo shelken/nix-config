@@ -1,0 +1,1118 @@
+#!/usr/bin/env python3
+"""iphone: 通过 WebDriverAgent (WDA) 读取并操作 USB 连接的真实 iPhone。
+
+只依赖标准库。HTTP 直接走 usbmuxd，不需要端口转发进程。
+子命令: iphone --help
+"""
+import argparse
+import http.client
+import json
+import os
+import plistlib
+import re
+import shutil
+import signal
+import socket
+import struct
+import subprocess
+import sys
+import time
+import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
+from pathlib import Path
+
+HOME = Path(os.environ.get("IPHONE_HOME", "~/.local/share/iphone-use")).expanduser()
+CFG = HOME / "config.json"
+CLI = HOME / "cli"
+LAST = CLI / "last.json"
+PIDFILE = CLI / "wda.pid"
+UPLOG = CLI / "up.log"
+SHOTS = CLI / "shots"
+DERIVED = HOME / "derived_data"
+RUNNER = DERIVED / "Build/Products/Debug-iphoneos/WebDriverAgentRunner-Runner.app"
+WDA_COMMIT = "d17782422d55ff1e5e0ceb74eb1fd509cc0c35b6"  # appium/WebDriverAgent 16.14.0
+MAX_NODES = 200
+KEEP_EMPTY = {"Alert", "Sheet", "TextField", "SecureTextField", "TextView", "SearchField", "Switch"}
+CONTAINERS = {"Application", "Window", "CollectionView", "Table", "ScrollView", "NavigationBar"}  # 容器本身不可操作，子节点已单独列出
+GROUP = {"Button", "Cell", "Link", "Switch", "Tab"}  # 其内部重复标签的子节点会被折叠
+SESSION_CAPS = {"capabilities": {"alwaysMatch": {
+    "shouldWaitForQuiescence": False, "shouldTerminateApp": False,
+    "waitForIdleTimeout": 0, "maxTypingFrequency": 30}}}
+
+
+class Fail(Exception):
+    pass
+
+
+# ---------- 配置 ----------
+
+def config():
+    try:
+        return json.loads(CFG.read_text())
+    except FileNotFoundError:
+        raise Fail("尚未配置。先运行 iphone init --team <TeamID> --bundle <唯一bundleId>")
+
+
+# ---------- usbmux 传输 ----------
+
+def _mux(message):
+    s = socket.socket(socket.AF_UNIX)
+    s.settimeout(10)
+    try:
+        s.connect("/var/run/usbmuxd")
+    except OSError as e:
+        raise Fail(f"连不上 usbmuxd: {e}")
+    body = plistlib.dumps({"ClientVersionString": "iphone-cli", "ProgName": "iphone", **message})
+    s.sendall(struct.pack("<IIII", 16 + len(body), 1, 8, 1) + body)
+    head = _recv(s, 16)
+    return s, plistlib.loads(_recv(s, struct.unpack("<I", head[:4])[0] - 16))
+
+
+def _recv(s, n):
+    buf = b""
+    while len(buf) < n:
+        chunk = s.recv(n - len(buf))
+        if not chunk:
+            raise Fail("usbmuxd 连接中断")
+        buf += chunk
+    return buf
+
+
+def usb_devices():
+    s, reply = _mux({"MessageType": "ListDevices"})
+    s.close()
+    return [(d["DeviceID"], d["Properties"]["SerialNumber"]) for d in reply.get("DeviceList", [])
+            if d["Properties"].get("ConnectionType") == "USB"]
+
+
+def usb_device(udid):
+    return next((d for d in usb_devices() if udid is None or d[1] == udid), None)
+
+
+class _Conn(http.client.HTTPConnection):
+    def __init__(self, device_id, port, timeout):
+        super().__init__("wda", timeout=timeout)
+        self.device_id, self.port = device_id, port
+
+    def connect(self):
+        s, reply = _mux({"MessageType": "Connect", "DeviceID": self.device_id, "PortNumber": socket.htons(self.port)})
+        if reply.get("Number") != 0:
+            s.close()
+            raise ConnectionRefusedError("WDA 端口无响应")
+        s.settimeout(self.timeout)
+        self.sock = s
+
+
+def raw(method, path, body=None, timeout=30):
+    cfg = config()
+    dev = usb_device(cfg["udid"])
+    if not dev:
+        raise Fail("iPhone 没有通过 USB 连接。接上数据线并解锁。")
+    conn = _Conn(dev[0], cfg.get("device_port", 8100), timeout)
+    try:
+        conn.request(method, path, json.dumps(body) if body is not None else None, {"Content-Type": "application/json"})
+        resp = conn.getresponse()
+        data = resp.read()
+    except (ConnectionError, OSError) as e:
+        raise Fail(f"WDA 未运行 ({e})。先运行 iphone up")
+    finally:
+        conn.close()
+    try:
+        doc = json.loads(data)
+    except ValueError:
+        raise Fail(f"WDA 返回了非 JSON 内容: {data[:120]!r}")
+    if resp.status >= 400:
+        v = doc.get("value") or {}
+        raise Fail(f"WDA {resp.status}: {v.get('error', '')} {v.get('message', '')}".strip(), )
+    return doc
+
+
+def wda(method, path, body=None, timeout=30):
+    return raw(method, path, body, timeout).get("value")
+
+
+def _new_session():
+    doc = raw("POST", "/session", SESSION_CAPS)
+    sid = doc.get("sessionId") or (doc.get("value") or {}).get("sessionId")
+    if not sid:
+        raise Fail("WDA 没有返回 session")
+    return sid
+
+
+def sess(method, path, body=None, timeout=30):
+    """需要 session 的接口；session 失效时重建一次。"""
+    CLI.mkdir(parents=True, exist_ok=True)
+    f = CLI / "session"
+    for attempt in (0, 1):
+        sid = f.read_text().strip() if f.exists() and attempt == 0 else None
+        if not sid:
+            sid = _new_session()
+            f.write_text(sid)
+        try:
+            return wda(method, f"/session/{sid}{path}", body, timeout)
+        except Fail as e:
+            if attempt == 0 and "invalid session" in str(e):
+                continue
+            raise
+
+
+# ---------- 界面树 ----------
+
+def parse_tree(xml_text):
+    """返回 (app, viewport, nodes)。nodes 已折叠重复标签、裁掉视口外。"""
+    root = ET.fromstring(xml_text)
+    app = root.get("bundleId") or "?"
+    vw, vh = float(root.get("width", 0)), float(root.get("height", 0))
+    nodes = []
+
+    def walk(el, groups):
+        a = el.attrib
+        kind = (a.get("type") or "").removeprefix("XCUIElementType")
+        label, name, value = a.get("label") or "", a.get("name") or "", a.get("value") or ""
+        text = label or name or value
+        try:
+            x, y, w, h = (round(float(a.get(k, 0))) for k in ("x", "y", "width", "height"))
+        except ValueError:
+            x = y = w = h = 0
+        inside = w > 0 and h > 0 and x < vw and y < vh and x + w > 0 and y + h > 0
+        folded = (kind == "StaticText" and text in groups) or (kind == "Image" and groups)  # 按钮内的图标是装饰
+        if (text or kind in KEEP_EMPTY) and inside and not folded and kind not in CONTAINERS:
+            n = {"type": kind, "rect": [x, y, w, h]}
+            if label:
+                n["label"] = label
+            if name and name != label:
+                n["name"] = name
+            if value and value != label and value != name:
+                n["value"] = value
+            if a.get("enabled") == "false":
+                n["disabled"] = True
+            nodes.append(n)
+        sub = groups | {t for t in (label, name) if t} if kind in GROUP else groups
+        for child in el:
+            walk(child, sub)
+
+    walk(root, frozenset())
+    for i, n in enumerate(nodes, 1):
+        n["t"] = f"t{i}"
+    return app, {"width": round(vw), "height": round(vh)}, nodes
+
+
+def text_of(n):
+    return n.get("label") or n.get("name") or n.get("value") or ""
+
+
+def fmt(n, width=60):
+    s = f'{n["t"]} {n["type"]} "{text_of(n)[:width]}"'
+    if n.get("name") and n.get("label") and n["name"] != n["label"]:
+        s += f' name={n["name"]}'
+    if n.get("value") and (n.get("label") or n.get("name")):
+        s += f' value="{n["value"][:40 if width else None]}"'
+    if n.get("disabled"):
+        s += " disabled"
+    return s + " [{},{},{},{}]".format(*n["rect"])
+
+
+def snapshot_now():
+    xml_text = wda("GET", "/source?format=xml&excluded_attributes=visible,accessible", timeout=60)
+    if not isinstance(xml_text, str):
+        raise Fail("WDA /source 没有返回 XML")
+    app, viewport, nodes = parse_tree(xml_text)
+    CLI.mkdir(parents=True, exist_ok=True)
+    LAST.write_text(json.dumps({"app": app, "viewport": viewport, "nodes": nodes}, ensure_ascii=False))
+    return {"app": app, "viewport": viewport, "nodes": nodes}
+
+
+def sig(n):
+    return (n["type"], text_of(n), n.get("value", ""))
+
+
+def diff(old, new, limit=20):
+    """动作前后的树差分；新节点带新 token（旧 token 已失效）。"""
+    pool = {}
+    for n in old["nodes"]:
+        pool[sig(n)] = pool.get(sig(n), 0) + 1
+    added = []
+    for n in new["nodes"]:
+        k = sig(n)
+        if pool.get(k, 0) > 0:
+            pool[k] -= 1
+        else:
+            added.append(n)
+    seen = {}
+    for n in new["nodes"]:
+        seen[sig(n)] = seen.get(sig(n), 0) + 1
+    removed = []
+    for n in old["nodes"]:
+        k = sig(n)
+        if seen.get(k, 0) > 0:
+            seen[k] -= 1
+        else:
+            removed.append(n)
+    lines = []
+    if old["app"] != new["app"]:
+        lines.append(f'app: {old["app"]} → {new["app"]}')
+    shown_added, shown_removed = added[:limit], removed[:limit // 2]
+    lines += ["+ " + fmt(n) for n in shown_added] + ["- " + fmt(n).split(" ", 1)[1] for n in shown_removed]
+    extra = len(added) + len(removed) - len(shown_added) - len(shown_removed)
+    if not lines:
+        return ["observe: 树无变化（可能没生效，或界面变化不在 AX 树里；用 iphone shot 目视确认）"]
+    if extra > 0:
+        lines.append(f"... 另有变化未显示，用 iphone snapshot 查看")
+    return ["observe: tokens 已刷新"] + lines
+
+
+def load_last():
+    try:
+        return json.loads(LAST.read_text())
+    except FileNotFoundError:
+        raise Fail("没有快照。先运行 iphone snapshot")
+
+
+def require_unlocked():
+    if wda("GET", "/wda/locked") is not False:
+        raise Fail("手机处于锁屏。请用户本人解锁（密码、Face ID 由用户完成）。")
+
+
+def act(args, do):
+    """执行动作并输出前后差分。"""
+    require_unlocked()
+    old = load_last() if LAST.exists() else {"app": "?", "nodes": []}
+    do()
+    if getattr(args, "no_observe", False):
+        print("ok")
+        return
+    time.sleep(args.wait / 1000)
+    print("\n".join(diff(old, snapshot_now())))
+
+
+def resolve_point(target):
+    """tN → 中心点（并确认前台 App 与快照一致）；否则 x y。"""
+    last = load_last()
+    node = next((n for n in last["nodes"] if n["t"] == target), None)
+    if not node:
+        raise Fail(f"没有元素 {target}。先运行 iphone snapshot")
+    app = (wda("GET", "/wda/activeAppInfo") or {}).get("bundleId")
+    if app != last["app"]:
+        raise Fail(f"快照已过期：快照时前台是 {last['app']}，现在是 {app}。重新 iphone snapshot")
+    x, y, w, h = node["rect"]
+    return x + w / 2, y + h / 2, node
+
+
+# ---------- 证书与进程 ----------
+
+def profile_expiry():
+    f = RUNNER / "embedded.mobileprovision"
+    if not f.exists():
+        return None
+    out = subprocess.run(["security", "cms", "-D", "-i", str(f)], capture_output=True)
+    if out.returncode:
+        return None
+    return plistlib.loads(out.stdout)["ExpirationDate"].replace(tzinfo=timezone.utc)
+
+
+def days_left():
+    exp = profile_expiry()
+    return None if exp is None else (exp - datetime.now(timezone.utc)).total_seconds() / 86400
+
+
+def xcode_cmd(cfg, action):
+    return ["xcodebuild", "-project", str(Path(cfg["source_dir"]) / "WebDriverAgent.xcodeproj"),
+            "-scheme", "WebDriverAgentRunner", "-configuration", "Debug", "-destination", "id=" + cfg["udid"],
+            "-derivedDataPath", str(DERIVED), "-allowProvisioningUpdates",
+            "DEVELOPMENT_TEAM=" + cfg["team_id"], "CODE_SIGN_STYLE=Automatic",
+            "CODE_SIGN_IDENTITY=Apple Development", "PRODUCT_BUNDLE_IDENTIFIER=" + cfg["bundle_id"],
+            "USE_PORT=" + str(cfg.get("device_port", 8100)), action]
+
+
+def ready():
+    try:
+        return (wda("GET", "/status", timeout=3) or {}).get("ready") is True
+    except Fail:
+        return False
+
+
+def pid_alive():
+    try:
+        pid = int(PIDFILE.read_text())
+    except (FileNotFoundError, ValueError):
+        return None
+    try:
+        # up 自己启动的 xcodebuild 退出后是僵尸，kill(pid, 0) 仍成功、再发信号还会 EPERM；先回收
+        if os.waitpid(pid, os.WNOHANG)[0] == pid:
+            return None
+    except ChildProcessError:
+        pass  # 不是本进程的子进程（上一次 up 留下的），交给 kill 判断
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return None
+    return pid
+
+
+LOG_HINTS = [
+    (r"Unlock .* to Continue", "手机锁屏，等待用户解锁（xcodebuild 会继续等）", False),
+    (r"Developer App Certificate is not trusted",
+     "手机没信任开发者证书：设置 → 通用 → VPN 与设备管理 → 开发者 App → 信任，然后重新 iphone up", True),
+    (r"login details .* were rejected|Unable to log in with account",
+     "Xcode 的 Apple ID 登录失效：打开 Xcode → Settings → Accounts 重新登录一次，然后重新 iphone up", True),
+    (r"No signing certificate|No profiles for", "签名证书或描述文件缺失，见 iphone renew", True),
+    (r"Testing failed", "xcodebuild 测试失败，见 " + str(UPLOG), True),
+]
+
+
+# ---------- 子命令 ----------
+
+def cmd_init(a):
+    """首次配置，也用于换设备：沿用已有配置里的 team、bundle 和其他键。"""
+    HOME.mkdir(parents=True, exist_ok=True)
+    old = json.loads(CFG.read_text()) if CFG.exists() else {}
+    if pid_alive():
+        raise Fail("WDA 还在运行。先 iphone down（会把旧手机的自动锁定恢复为 3 分钟），再换设备")
+    team, bundle = a.team or old.get("team_id"), a.bundle or old.get("bundle_id")
+    if not (team and bundle):
+        raise Fail("首次配置需要 --team 和 --bundle")
+    udid = a.udid
+    if not udid:
+        devs = usb_devices()
+        if not devs:
+            raise Fail("没有 USB 设备。接上并解锁 iPhone，或用 --udid 指定")
+        if len(devs) > 1:
+            raise Fail("有多台 USB 设备，用 --udid 指定其一: " + ", ".join(d[1] for d in devs))
+        udid = devs[0][1]
+    src = Path(a.source or old.get("source_dir") or HOME / "runtime/WebDriverAgent").expanduser()
+    if not (src / "WebDriverAgent.xcodeproj").exists():
+        src.mkdir(parents=True, exist_ok=True)
+        for c in (["git", "init", "-q"], ["git", "remote", "add", "origin", "https://github.com/appium/WebDriverAgent.git"],
+                  ["git", "fetch", "-q", "--depth", "1", "origin", WDA_COMMIT], ["git", "checkout", "-q", "--detach", "FETCH_HEAD"]):
+            subprocess.run(c, cwd=src, check=True)
+    if udid != old.get("udid"):
+        # 旧构建的描述文件只含旧设备；删掉后 up 会自动 renew，为新设备重新签名
+        shutil.rmtree(RUNNER, ignore_errors=True)
+        (CLI / "session").unlink(missing_ok=True)
+    cfg = {"local_port": 18100, "device_port": 8100, **old,
+           "udid": udid, "team_id": team, "bundle_id": bundle, "source_dir": str(src)}
+    CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
+    print(f"已写入 {CFG}（设备 {udid}）\n下一步: iphone up")
+    print(relay_notice())
+
+
+def cmd_renew(a):
+    cfg = config()
+    CLI.mkdir(parents=True, exist_ok=True)
+    print("构建并重新签名 WDA（首次约几分钟）...", flush=True)
+    with open(CLI / "build.log", "w") as log:
+        rc = subprocess.run(xcode_cmd(cfg, "build-for-testing"), stdout=log, stderr=subprocess.STDOUT, cwd=cfg["source_dir"]).returncode
+    text = (CLI / "build.log").read_text()
+    if rc:
+        errs = [l for l in text.splitlines() if "error:" in l][-5:]
+        hint = next((m for p, m, fatal in LOG_HINTS if fatal and re.search(p, text)), "")
+        raise Fail("构建失败:\n" + "\n".join(errs) + (f"\n{hint}" if hint else ""))
+    d = days_left()
+    print(f"构建成功，证书剩余 {d:.1f} 天" if d is not None else "构建成功")
+
+
+def cmd_up(a):
+    if ready() and not a.restart:
+        print("WDA 已就绪")
+        return
+    cfg = config()
+    if not usb_device(cfg["udid"]):
+        raise Fail("iPhone 没有通过 USB 连接。接上数据线并解锁。")
+    if a.restart:
+        stop_wda()
+    d = days_left()
+    if d is None or d <= 0:
+        print("没有可用构建或证书已过期，先 renew", flush=True)
+        cmd_renew(a)
+    CLI.mkdir(parents=True, exist_ok=True)
+    log = open(UPLOG, "w")
+    proc = subprocess.Popen(xcode_cmd(cfg, "test-without-building"), stdout=log, stderr=subprocess.STDOUT,
+                            stdin=subprocess.DEVNULL, cwd=cfg["source_dir"], start_new_session=True)
+    PIDFILE.write_text(str(proc.pid))
+    told = False
+    deadline = time.time() + a.timeout
+    while time.time() < deadline:
+        if ready():
+            print("WDA 已就绪")
+            if not a.no_keep_awake:
+                try:
+                    set_autolock(AUTOLOCK_NEVER)
+                except Fail as e:  # 常亮只是附加功能，不能让 WDA 已就绪的 up 失败
+                    print(f"警告: 没能把自动锁定改为永不（{e}）。可手动改，或 iphone autolock never", file=sys.stderr)
+            return
+        text = UPLOG.read_text(errors="replace")
+        for pattern, msg, fatal in LOG_HINTS:
+            if re.search(pattern, text):
+                if fatal:
+                    stop_wda()
+                    raise Fail(msg)
+                if not told:
+                    print(msg, flush=True)
+                    told = True
+        if proc.poll() is not None:
+            raise Fail(f"xcodebuild 已退出，见 {UPLOG}")
+        time.sleep(2)
+    stop_wda()
+    raise Fail(f"{a.timeout}s 内 WDA 没就绪，见 {UPLOG}")
+
+
+def cmd_down(a):
+    if not a.no_keep_awake and pid_alive() and ready():
+        try:
+            set_autolock(AUTOLOCK_DEFAULT)
+        except Fail as e:
+            print(f"警告: 没能把自动锁定恢复为 3 分钟（{e}）。请手动设置，或 iphone autolock 180", file=sys.stderr)
+    stop_wda()
+
+
+def stop_wda():
+    pid = pid_alive()
+    if pid:
+        try:
+            os.killpg(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        for _ in range(20):
+            if not pid_alive():
+                break
+            time.sleep(0.5)
+        else:
+            os.killpg(pid, signal.SIGKILL)
+    PIDFILE.unlink(missing_ok=True)
+    (CLI / "session").unlink(missing_ok=True)
+    if pid is None and ready():
+        raise Fail("WDA 在运行，但不是本 CLI 启动的；没有动它")
+    print("WDA 已停止")
+
+
+def cmd_status(a):
+    cfg = config()
+    dev = usb_device(cfg["udid"])
+    print(f"设备: {'USB 已连接' if dev else '未通过 USB 连接'} ({cfg['udid']})")
+    ok = bool(dev) and ready()
+    print(f"WDA: {'就绪' if ok else '未运行'}" + (f" (pid {pid_alive()})" if pid_alive() else ""))
+    if ok:
+        print(f"锁屏: {'是' if wda('GET', '/wda/locked') else '否'}")
+        print(f"前台: {(wda('GET', '/wda/activeAppInfo') or {}).get('bundleId')}")
+    d = days_left()
+    print("证书: " + ("无构建" if d is None else f"剩余 {d:.1f} 天（免费账号 7 天，过期后 iphone up 会自动重签）" if d > 0 else "已过期，iphone up 会自动重签"))
+    return 0 if ok else 1
+
+
+def cmd_snapshot(a):
+    require_unlocked()
+    s = snapshot_now()
+    shown = s["nodes"][:a.max]
+    print(f'app={s["app"]} viewport={s["viewport"]["width"]}x{s["viewport"]["height"]} shown={len(shown)} total={len(s["nodes"])}')
+    print("\n".join(fmt(n, None if a.full else 60) for n in shown))
+    if len(s["nodes"]) > a.max:
+        print(f"... 还有 {len(s['nodes']) - a.max} 个，用 iphone find <文字> 定位")
+
+
+def matching(nodes, q):
+    return [n for n in nodes if q in " ".join((n.get("label", ""), n.get("name", ""), n.get("value", ""))).lower()]
+
+
+def cmd_find(a):
+    require_unlocked()
+    s = snapshot_now()
+    q = " ".join(a.text).lower()
+    hits = matching(s["nodes"], q)
+    print(f'app={s["app"]} matches={len(hits)}')
+    print("\n".join(fmt(n, None if a.full else 60) for n in hits[:a.max]))
+    return 0 if hits else 1
+
+
+def cmd_wait(a):
+    q = " ".join(a.text).lower()
+    end = time.time() + a.timeout
+    while time.time() < end:
+        s = snapshot_now()
+        hits = matching(s["nodes"], q)
+        if hits:
+            print("\n".join(fmt(n) for n in hits[:5]))
+            return 0
+        time.sleep(1)
+    print(f"{a.timeout}s 内没出现: {q}")
+    return 1
+
+
+def cmd_shot(a):
+    require_unlocked()
+    png = __import__("base64").b64decode(wda("GET", "/screenshot", timeout=60))
+    SHOTS.mkdir(parents=True, exist_ok=True)
+    for old in sorted(SHOTS.glob("*"))[:-20]:
+        old.unlink()
+    base = SHOTS / time.strftime("%Y%m%d-%H%M%S")
+    src = base.with_suffix(".png")
+    src.write_bytes(png)
+    out = base.with_suffix(".jpg")
+    subprocess.run(["sips", "-Z", str(a.size), "-s", "format", "jpeg", str(src), "--out", str(out)], capture_output=True, check=True)
+    src.unlink()
+    w, h = struct.unpack(">II", png[16:24])
+    vp = load_last()["viewport"] if LAST.exists() else {"width": 402}
+    print(f"{out} native={w}x{h} points_per_native_pixel={vp['width'] / w:.4f}")
+
+
+def cmd_tap(a):
+    if len(a.target) == 1:
+        x, y, node = resolve_point(a.target[0])
+        if node.get("disabled"):
+            print(f"注意: {a.target[0]} 是 disabled")
+    elif len(a.target) == 2:
+        x, y = float(a.target[0]), float(a.target[1])
+        vp = load_last()["viewport"] if LAST.exists() else {"width": 402, "height": 874}
+        if not (0 <= x < vp["width"] and 0 <= y < vp["height"]):
+            raise Fail(f"坐标 ({x:g},{y:g}) 在视口 {vp['width']}x{vp['height']} 之外。单位是点，不是截图像素")
+    else:
+        raise Fail("用法: iphone tap tN | iphone tap X Y（单位是点，不是截图像素）")
+    act(a, lambda: sess("POST", "/wda/tap", {"x": x, "y": y}))
+
+
+def _pick_by_text(q, index):
+    s = snapshot_now()
+    vp = s["viewport"]
+    pool, seen = [], set()
+    for n in matching(s["nodes"], q):
+        x, y, w, h = n["rect"]
+        if 0 <= x + w / 2 < vp["width"] and 0 <= y + h / 2 < vp["height"] and tuple(n["rect"]) not in seen:
+            seen.add(tuple(n["rect"]))
+            pool.append(n)
+    pool = [n for n in pool if text_of(n).lower() == q] or pool
+    if not pool:
+        raise Fail(f"屏幕内没有包含「{q}」的元素；先 iphone find {q} 或 iphone shot 看看")
+    if index is None and len(pool) > 1:
+        raise Fail(f"{len(pool)} 个元素命中，用 --index N 选一个（从 0 起）:\n" + "\n".join(f"  [{i}] {fmt(n)}" for i, n in enumerate(pool)))
+    if not 0 <= (index or 0) < len(pool):
+        raise Fail(f"--index 超出范围，共 {len(pool)} 个命中")
+    return pool[index or 0]
+
+
+def cmd_tap_text(a):
+    """现取快照，点屏幕内文字命中的元素：一次调用代替 find + 取 token + tap，token 不会过期。
+    精确等于优先于包含；同一位置的重复节点算一个；仍有多个就列出来，不猜。
+    坐标连续两次一致才点：刚启动或翻页后列表还在滚动，现取的坐标点下去会落在别处。"""
+    require_unlocked()
+    q = " ".join(a.text).lower()
+    n = _pick_by_text(q, a.index)
+    for _ in range(8):
+        time.sleep(0.3)
+        again = _pick_by_text(q, a.index)
+        if again["rect"] == n["rect"]:
+            break
+        n = again
+    else:
+        raise Fail(f"「{q}」的位置一直在变（页面还在滚动或动画），稍后再试")
+    x, y, w, h = n["rect"]
+    act(a, lambda: sess("POST", "/wda/tap", {"x": x + w / 2, "y": y + h / 2}))
+
+
+def cmd_type(a):
+    if a.clear and not a.target:
+        raise Fail("--clear 需要 --target tN，才知道清哪个输入框")
+    if not a.clear and not a.text:
+        raise Fail("没有要输入的文字；只清空请加 --clear")
+
+    def do():
+        if a.target:
+            x, y, node = resolve_point(a.target)
+            if a.clear:
+                # 点输入框右端把光标落在文字末尾，再按当前内容长度逐个删除；过长而滚出框外的文字清不干净
+                sess("POST", "/wda/tap", {"x": node["rect"][0] + node["rect"][2] - 3, "y": y})
+            else:
+                sess("POST", "/wda/tap", {"x": x, "y": y})
+            time.sleep(0.4)
+            if a.clear:
+                sess("POST", "/wda/keys", {"value": ["\u0008" * (len(node.get("value", "") or text_of(node)) + 5)]}, timeout=30)
+        for i in range(0, len(a.text), 200):
+            sess("POST", "/wda/keys", {"value": [a.text[i:i + 200]], "frequency": 30}, timeout=60)
+    act(a, do)
+
+
+def cmd_key(a):
+    keys = {"return": "\n", "delete": "\u0008"}
+    if a.name == "home":
+        return act(a, lambda: wda("POST", "/wda/homescreen", {}))
+    act(a, lambda: sess("POST", "/wda/keys", {"value": [keys[a.name]]}))
+
+
+def cmd_home(a):
+    act(a, lambda: wda("POST", "/wda/homescreen", {}))
+
+
+def cmd_scroll(a):
+    vp = load_last()["viewport"] if LAST.exists() else {"width": 402, "height": 874}
+    if a.target:
+        cx, cy, node = resolve_point(a.target)
+        w, h = node["rect"][2], node["rect"][3]
+    else:
+        cx, cy, w, h = vp["width"] / 2, vp["height"] / 2, vp["width"], vp["height"]
+    dx, dy = {"down": (0, -1), "up": (0, 1), "right": (-1, 0), "left": (1, 0)}[a.direction]  # 手指方向与内容相反
+    x1, y1 = cx - dx * w * 0.3, cy - dy * h * 0.3
+    x2, y2 = cx + dx * w * 0.3, cy + dy * h * 0.3
+    act(a, lambda: sess("POST", "/wda/dragfromtoforduration", {"fromX": x1, "fromY": y1, "toX": x2, "toY": y2, "duration": 0.2}))
+
+
+def cmd_drag(a):
+    act(a, lambda: sess("POST", "/wda/dragfromtoforduration", {"fromX": a.x1, "fromY": a.y1, "toX": a.x2, "toY": a.y2, "duration": a.duration}))
+
+
+def cmd_launch(a):
+    if not re.fullmatch(r"[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)+", a.bundle):
+        raise Fail("需要 bundle id（如 com.apple.mobilesafari）。不知道时: iphone home → iphone find 名称 → iphone tap tN")
+    act(a, lambda: sess("POST", "/wda/apps/activate", {"bundleId": a.bundle}, timeout=45))
+
+
+def cmd_stop(a):
+    act(a, lambda: sess("POST", "/wda/apps/terminate", {"bundleId": a.bundle}))
+
+
+SETTINGS = "com.apple.Preferences"
+AUTOLOCK_NEVER, AUTOLOCK_DEFAULT = -1, 180  # Settings 里选项 cell 的 name 就是秒数，永不是 -1
+AUTOLOCK_CHOICES = {"never": -1, "30": 30, "60": 60, "120": 120, "180": 180, "240": 240, "300": 300}
+
+
+def _tap_node(n):
+    x, y, w, h = n["rect"]
+    sess("POST", "/wda/tap", {"x": x + w / 2, "y": y + h / 2})
+
+
+def _poll_node(kind, name, wait):
+    """等 (type, name) 出现，并且坐标连续两次一致才返回：设置 App 重开时会恢复上次的滚动位置，
+    列表还在动时拿到的坐标点下去会落在别处。页面刚切换时 /source 可能 404，也在这里吞掉。"""
+    end, s, n, last = time.time() + wait, None, None, None
+    while True:
+        try:
+            s = snapshot_now()
+            n = next((n for n in s["nodes"] if n["type"] == kind and n.get("name") == name), None)
+        except Fail:
+            n = None
+        if n:
+            if last == n["rect"] or time.time() >= end + 3:
+                return s, n
+            last = n["rect"]
+            time.sleep(0.3)
+            continue
+        last = None
+        if time.time() >= end:
+            return s, None
+        time.sleep(0.4)
+
+
+def _drag_list(vp, step):
+    a, b = (0.7, 0.3) if step > 0 else (0.3, 0.7)
+    sess("POST", "/wda/dragfromtoforduration", {"fromX": vp["width"] / 2, "fromY": vp["height"] * a,
+                                                "toX": vp["width"] / 2, "toY": vp["height"] * b, "duration": 0.2})
+    time.sleep(0.4)
+
+
+def _find_scrolling(kind, name, scrolls):
+    """按 (type, name) 找节点；找不到就滚动，滚到头再掉头。name 是不随语言变化的标识。
+    首次多等一会儿，页面刚切换时节点还没出现，先滚会把还没换掉的上一页滚走（慢设备上必现）。
+    节点必须完整落在视口 8%~90% 内才返回：贴着底边的行点击中心会落进底部手势区，点击被系统吞掉（iPhone 14 上必现）。
+    scrolls=0 表示不滚动，直接返回。"""
+    step, flipped, prev, edge = 1, False, None, None
+    for i in range(scrolls * 2 + 1):
+        s, n = _poll_node(kind, name, 4 if i == 0 else 0.6)
+        if n:
+            vp, (_, y, _, h) = s["viewport"], n["rect"]
+            if not scrolls or n["rect"] == edge or (vp["height"] * 0.08 <= y and y + h <= vp["height"] * 0.9):
+                return s, n  # edge：滚过一次位置没变，列表到头，只能就这样点
+            edge = n["rect"]
+            _drag_list(vp, 1 if y + h > vp["height"] * 0.9 else -1)
+            continue
+        if not s:
+            continue
+        if i == scrolls * 2:
+            break
+        here = [(x["type"], text_of(x), tuple(x["rect"])) for x in s["nodes"]]
+        if here == prev:  # 滚不动了，到头
+            if flipped:
+                break
+            step, flipped, prev = -step, True, None
+        else:
+            prev = here
+        _drag_list(s["viewport"], step)
+    raise Fail(f"设置里没找到 {kind} {name}（iOS 版本或语言变了？）")
+
+
+def _wait_node(kind, name, timeout):
+    """页面切换瞬间 /source 可能报 404（旧 App 已不在），重试到超时。"""
+    end, last = time.time() + timeout, None
+    while time.time() < end:
+        try:
+            n = next((n for n in snapshot_now()["nodes"] if n["type"] == kind and n.get("name") == name), None)
+        except Fail as e:
+            last, n = e, None
+        if n:
+            return n
+        time.sleep(0.5)
+    raise Fail(f"{timeout}s 内没出现 {kind} {name}" + (f"（最后错误: {last}）" if last else ""))
+
+
+AUTOLOCK_URL = "prefs:root=DISPLAY&path=AUTOLOCK"
+
+
+def relay_name():
+    return config().get("open_url_shortcut", RELAY_NAME)  # 假定每台手机首次配置时已装好，不逐次验证
+
+
+def relay_notice():
+    return ("中转快捷指令让自动锁定与 prefs: 稳定直达，没有它只能界面点击，慢且不稳。每台手机装一次，二选一，装完跑 iphone setup-shortcut 验证：\n"
+            "  与 Mac 同一 iCloud:   iphone setup-shortcut（Mac 导入，经 iCloud 同步到手机）\n"
+            "  与 Mac 不同 iCloud:   iphone shortcut-link 取 iCloud 链接，在手机 Safari 里打开并点「添加快捷指令」，再 iphone setup-shortcut")
+
+
+def cmd_shortcut_link(a):
+    print(RELAY_URL)
+
+
+def _autolock_via_ui():
+    sess("POST", "/wda/apps/activate", {"bundleId": SETTINGS}, timeout=45)
+    time.sleep(0.8)
+    for kind, name, scrolls in (("Button", "com.apple.settings.displayAndBrightness", 8), ("Cell", "AUTOLOCK", 3)):
+        _tap_node(_find_scrolling(kind, name, scrolls)[1])
+        time.sleep(0.7)
+
+
+def set_autolock(seconds):
+    """WDA 直接开 prefs: 会被拒（iOS 27，错误 115），所以假定手机已装中转快捷指令（iphone setup-shortcut），
+    经它一步直达自动锁定页；没跑通才回退 UI：设置 → 显示与亮度 → 自动锁定。"""
+    require_unlocked()
+    sess("POST", "/wda/apps/terminate", {"bundleId": SETTINGS})
+    wda("POST", "/wda/homescreen", {})
+    time.sleep(0.8)
+    try:
+        try:
+            open_url(AUTOLOCK_URL, direct=False)
+            _wait_node("Cell", str(seconds), 10)
+        except Fail:
+            print("中转快捷指令没跑通，改走界面点击（每台手机要先装一次，见 iphone shortcut-link）", file=sys.stderr)
+            _autolock_via_ui()
+        s, row = _find_scrolling("Cell", str(seconds), 0)
+        _tap_node(row)
+        time.sleep(0.7)
+        s = snapshot_now()
+        row = next((n for n in s["nodes"] if n["type"] == "Cell" and n.get("name") == str(seconds)), None)
+        check = next((n for n in s["nodes"] if n["type"] == "Button" and n.get("label") == "checkmark"), None)
+        if not (row and check and row["rect"][1] <= check["rect"][1] < row["rect"][1] + row["rect"][3]):
+            raise Fail("点了选项，但没有在该行看到对勾；用 iphone shot 确认")
+        print(f"自动锁定已设为 {text_of(row)}")
+    finally:
+        try:
+            sess("POST", "/wda/apps/terminate", {"bundleId": SETTINGS})
+            wda("POST", "/wda/homescreen", {})
+        except Fail:
+            pass
+
+
+def cmd_autolock(a):
+    set_autolock(AUTOLOCK_CHOICES[a.value])
+
+
+def open_url(url, direct=True, relay=None):
+    """直接让 WDA 打开；prefs: 之类被系统拒绝（115）时，经接收输入的快捷指令（open_url_shortcut）转一手。"""
+    from urllib.parse import quote
+    if direct:
+        try:
+            sess("POST", "/url", {"url": url}, timeout=30)
+            return
+        except Fail as e:
+            if "115" not in str(e):
+                raise
+    name = relay or relay_name()
+    sess("POST", "/url", {"url": f"shortcuts://run-shortcut?name={quote(name)}&input=text&text={quote(url)}"}, timeout=30)
+
+
+def cmd_open(a):
+    act(a, lambda: open_url(a.url))
+
+
+RELAY_NAME = "iphone-open-url"
+RELAY_URL = "https://www.icloud.com/shortcuts/425895ce7d254e9cba00198ce8e7aa42"  # 同一个只含「打开 URL」的快捷指令，供不同 iCloud 的手机直接添加
+
+
+def relay_shortcut_bytes():
+    """只含「打开 URL」、输入取快捷指令输入的工作流。"""
+    token = {"Value": {"string": "\ufffc", "attachmentsByRange": {"{0, 1}": {"Type": "ExtensionInput"}}},
+             "WFSerializationType": "WFTextTokenString"}
+    return plistlib.dumps({
+        "WFWorkflowClientVersion": "2900", "WFWorkflowMinimumClientVersion": 900, "WFWorkflowMinimumClientRelease": 900,
+        "WFWorkflowIcon": {"WFWorkflowIconStartColor": 431817727, "WFWorkflowIconGlyphNumber": 59511},
+        "WFWorkflowImportQuestions": [], "WFWorkflowTypes": [],
+        "WFWorkflowInputContentItemClasses": ["WFStringContentItem", "WFURLContentItem"],
+        "WFWorkflowActions": [{"WFWorkflowActionIdentifier": "is.workflow.actions.openurl",
+                               "WFWorkflowActionParameters": {"WFInput": token}}],
+    }, fmt=plistlib.FMT_BINARY)
+
+
+def mac_shortcuts():
+    out = subprocess.run(["shortcuts", "list"], capture_output=True, text=True, check=True).stdout
+    return out.splitlines()
+
+
+def confirm_mac_import():
+    """导入确认框是「快捷指令」的一个窗口，里面有「添加快捷指令」按钮；用 computer-use 在后台点掉。"""
+    def cu(*args):
+        return subprocess.run(["computer-use", *args], capture_output=True, text=True, timeout=60).stdout
+    for line in cu("windows").splitlines():
+        cols = line.split("\t")
+        if len(cols) > 2 and cols[2] == "快捷指令":
+            for hit in cu("find", cols[0], "添加快捷指令").splitlines():
+                m = re.match(r"(t\d+)\tButton\t添加快捷指令", hit)
+                if m:
+                    cu("click", cols[0], m.group(1))
+                    return True
+    return False
+
+
+def cmd_setup_shortcut(a):
+    """在 Mac 上生成并签名中转快捷指令，后台导入，经 iCloud 同步到手机，再用 prefs: 实测。"""
+    import tempfile
+    if a.name in mac_shortcuts():
+        print(f"Mac 的快捷指令里已有「{a.name}」，跳过导入，只在当前手机上验证", flush=True)
+    else:
+        with tempfile.TemporaryDirectory() as d:
+            raw_f, signed = Path(d) / "raw.shortcut", Path(d) / f"{a.name}.shortcut"
+            raw_f.write_bytes(relay_shortcut_bytes())
+            subprocess.run(["shortcuts", "sign", "-m", "anyone", "-i", str(raw_f), "-o", str(signed)], check=True, capture_output=True)
+            subprocess.run(["open", "-g", "-a", "Shortcuts", str(signed)], check=True)
+            for _ in range(30):
+                if a.name in mac_shortcuts():
+                    break
+                confirm_mac_import()
+                time.sleep(2)
+            else:
+                raise Fail("60s 内 Mac 的快捷指令里没出现该条目；手动打开快捷指令 App 点「添加快捷指令」，需要 computer-use 命令可用")
+        print(f"已导入「{a.name}」，等待 iCloud 同步到手机...", flush=True)
+    if not ready():
+        print("WDA 未运行，跳过实测。iphone up 之后用 iphone open prefs:root=BATTERY_USAGE 验证")
+        return
+    require_unlocked()
+    for _ in range(12):
+        sess("POST", "/wda/apps/activate", {"bundleId": "com.apple.shortcuts"}, timeout=45)
+        time.sleep(2)
+        if any(n["type"] == "Cell" and text_of(n).startswith(a.name) for n in snapshot_now()["nodes"]):
+            break
+        time.sleep(3)
+    else:
+        raise Fail("60s 内手机上没出现该快捷指令。\n" + relay_notice())
+    wda("POST", "/wda/homescreen", {})
+    open_url("prefs:root=BATTERY_USAGE", direct=False, relay=a.name)
+    # 快捷指令首次运行可能在手机上弹授权提示；批准属于用户，这里只把内容报出来并等待
+    told, app, seen = False, None, []
+    for _ in range(30):
+        time.sleep(2)
+        app = (wda("GET", "/wda/activeAppInfo") or {}).get("bundleId")
+        if app == SETTINGS:
+            break
+        try:
+            seen = [text_of(n) for n in snapshot_now()["nodes"] if n["type"] in ("Alert", "Sheet", "Button", "StaticText")][:8]
+        except Fail:
+            seen = []
+        if seen and not told:
+            print("手机上可能出现了授权提示，请你本人处理（最多等 60 秒）: " + " | ".join(seen), flush=True)
+            told = True
+    wda("POST", "/wda/homescreen", {})
+    if app != SETTINGS:
+        raise Fail(f"实测失败：前台是 {app}，不是设置；屏幕上: {' | '.join(seen) or '无'}。手机上打开该快捷指令，确认含「打开 URL」且输入是「快捷指令输入」")
+    cfg = config()
+    cfg["open_url_shortcut"] = a.name
+    CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
+    print("实测通过：prefs: 经中转快捷指令打开了设置")
+
+
+# ---------- 自检 ----------
+
+def selftest():
+    xml = ('<XCUIElementTypeApplication type="XCUIElementTypeApplication" bundleId="com.test" x="0" y="0" width="400" height="800">'
+           '<XCUIElementTypeButton type="XCUIElementTypeButton" label="通用" name="BackButton" x="16" y="60" width="44" height="44">'
+           '<XCUIElementTypeStaticText type="XCUIElementTypeStaticText" label="通用" x="20" y="64" width="30" height="20"/></XCUIElementTypeButton>'
+           '<XCUIElementTypeStaticText type="XCUIElementTypeStaticText" label="屏外" x="0" y="900" width="30" height="20"/>'
+           '<XCUIElementTypeTextField type="XCUIElementTypeTextField" x="10" y="100" width="200" height="30"/>'
+           '<XCUIElementTypeOther type="XCUIElementTypeOther" x="0" y="0" width="400" height="800"/>'
+           '</XCUIElementTypeApplication>')
+    app, vp, nodes = parse_tree(xml)
+    assert app == "com.test" and vp == {"width": 400, "height": 800}
+    assert [n["type"] for n in nodes] == ["Button", "TextField"], nodes  # 折叠重复文字、裁掉屏外和空容器
+    assert nodes[0]["name"] == "BackButton" and nodes[0]["t"] == "t1"
+    old = {"app": "a", "nodes": nodes}
+    new = {"app": "a", "nodes": [dict(nodes[0], t="t1"), {"t": "t2", "type": "Switch", "label": "Wi-Fi", "rect": [0, 0, 1, 1]}]}
+    d = diff(old, new)
+    assert "+ t2 Switch \"Wi-Fi\" [0,0,1,1]" in d and any(l.startswith("- TextField") for l in d), d
+    assert diff(old, old)[0].startswith("observe: 树无变化")
+    # 本进程启动的子进程被终止后是僵尸；pid_alive 必须把它当作已退出，stop_wda 不能抛 EPERM
+    import tempfile
+    g, saved = globals(), (PIDFILE, CLI)
+    with tempfile.TemporaryDirectory() as tmp:
+        g["CLI"], g["PIDFILE"] = Path(tmp), Path(tmp) / "wda.pid"
+        child = subprocess.Popen(["sleep", "60"], start_new_session=True)
+        PIDFILE.write_text(str(child.pid))
+        stop_wda()
+        assert pid_alive() is None and not PIDFILE.exists()
+    g["PIDFILE"], g["CLI"] = saved[0], saved[1]
+    # 贴着底边的行（中心落进底部手势区）要先滚进安全区再返回；列表滚不动时照样返回，不能白耗循环
+    vp, drags = {"width": 390, "height": 844}, []
+
+    def fake_list(y, movable):
+        pos = [y]
+
+        def poll(kind, name, wait):
+            return {"viewport": vp, "nodes": [{"type": "Button", "name": "row", "rect": [16, pos[0], 358, 53]}]}, \
+                {"type": "Button", "name": "row", "rect": [16, pos[0], 358, 53]}
+
+        def drag(method, path, body=None, **kw):
+            drags.append(body)
+            if movable:
+                pos[0] -= 250
+        return poll, drag
+
+    saved = (g["_poll_node"], g["sess"], g["time"])
+    class NoSleep:
+        sleep = staticmethod(lambda s: None)
+        time = staticmethod(time.time)
+    try:
+        g["time"] = NoSleep
+        g["_poll_node"], g["sess"] = fake_list(807, True)
+        _, n = _find_scrolling("Button", "row", 3)
+        assert n["rect"][1] == 557 and len(drags) == 1, (n, drags)
+        drags.clear()
+        g["_poll_node"], g["sess"] = fake_list(807, False)
+        _, n = _find_scrolling("Button", "row", 3)
+        assert n["rect"][1] == 807 and len(drags) == 1, (n, drags)
+    finally:
+        g["_poll_node"], g["sess"], g["time"] = saved
+    # tap-text：精确优先、同位置重复节点算一个、屏外不算、多个命中不猜
+    def node(t, kind, label, rect):
+        return {"t": t, "type": kind, "label": label, "rect": rect}
+
+    screen = {"app": "a", "viewport": {"width": 390, "height": 844}, "nodes": [
+        node("t1", "Button", "Home", [0, 766, 78, 44]), node("t2", "StaticText", "Home", [0, 766, 78, 44]),
+        node("t3", "StaticText", "Homework", [100, 100, 80, 20]),
+        node("t4", "Button", "Done", [10, 200, 50, 20]), node("t5", "Button", "Done", [10, 300, 50, 20]),
+        node("t6", "Button", "Offscreen", [10, 900, 50, 20])]}
+    taps = []
+    saved = tuple(g[k] for k in ("snapshot_now", "sess", "act", "require_unlocked", "time"))
+    g["snapshot_now"], g["require_unlocked"], g["time"] = lambda: screen, lambda: None, NoSleep
+    g["sess"] = lambda method, path, body=None, **kw: taps.append(body)
+    g["act"] = lambda args, do: do()
+
+    def tap_text(*words, index=None):
+        taps.clear()
+        cmd_tap_text(argparse.Namespace(text=list(words), index=index))
+
+    try:
+        tap_text("home")
+        assert taps == [{"x": 39, "y": 788}], taps  # 精确的 Home 压过 Homework，Button 与 StaticText 同位置只点一次
+        for bad in ("done", "offscreen", "nope"):
+            try:
+                tap_text(bad)
+            except Fail:
+                continue
+            raise AssertionError(f"{bad} 应该报错")
+        tap_text("done", index=1)
+        assert taps == [{"x": 35, "y": 310}], taps
+        calls = [0]
+
+        def drifting():  # 列表一直在滚：目标位置每次都不同，不能点
+            calls[0] += 1
+            return {**screen, "nodes": [node("t1", "Button", "Moving", [10, 100 + calls[0], 50, 20])]}
+
+        g["snapshot_now"] = drifting
+        try:
+            tap_text("moving")
+        except Fail:
+            assert not taps
+        else:
+            raise AssertionError("位置一直在变时不该点击")
+    finally:
+        g["snapshot_now"], g["sess"], g["act"], g["require_unlocked"], g["time"] = saved
+    print("selftest ok")
+
+
+def main():
+    p = argparse.ArgumentParser(prog="iphone", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    def add(name, fn, help, observe=False):
+        sp = sub.add_parser(name, help=help)
+        sp.set_defaults(fn=fn)
+        if observe:
+            sp.add_argument("--no-observe", action="store_true", help="动作后不输出树差分")
+            sp.add_argument("--wait", type=int, default=500, help="动作后等待界面稳定的毫秒数，默认 500")
+        return sp
+
+    sp = add("init", cmd_init, "写配置并拉取固定版本 WDA 源码")
+    sp.add_argument("--team", help="Apple Team ID；已有配置时可省略")
+    sp.add_argument("--bundle", help="全局唯一的 bundle id，如 com.example.wda；已有配置时可省略")
+    sp.add_argument("--udid")
+    sp.add_argument("--source")
+    add("renew", cmd_renew, "构建并重新签名 WDA（免费证书 7 天过期后用）")
+    sp = add("up", cmd_up, "启动 WDA（必要时自动重签），等待就绪")
+    sp.add_argument("--restart", action="store_true")
+    sp.add_argument("--timeout", type=int, default=120)
+    sp.add_argument("--no-keep-awake", action="store_true", help="不把自动锁定改为永不")
+    sp = add("down", cmd_down, "停止由本 CLI 启动的 WDA，并把自动锁定恢复为 3 分钟")
+    sp.add_argument("--no-keep-awake", action="store_true", help="不恢复自动锁定")
+    sp = add("autolock", cmd_autolock, "设置自动锁定时间（走设置 App 的 UI）")
+    sp.add_argument("value", choices=list(AUTOLOCK_CHOICES), help="never 或秒数 30/60/120/180/240/300")
+    add("status", cmd_status, "设备、WDA、锁屏、前台 App、证书剩余天数")
+    sp = add("snapshot", cmd_snapshot, "读界面树（带 tN 元素 token）")
+    sp.add_argument("--max", type=int, default=MAX_NODES)
+    sp.add_argument("--full", action="store_true", help="标签不截断（读长帖、长消息）")
+    sp = add("find", cmd_find, "按文字查找元素；无命中退出码 1")
+    sp.add_argument("text", nargs="+")
+    sp.add_argument("--max", type=int, default=MAX_NODES)
+    sp.add_argument("--full", action="store_true", help="标签不截断（读长帖、长消息）")
+    sp = add("wait", cmd_wait, "等待文字出现；超时退出码 1")
+    sp.add_argument("text", nargs="+")
+    sp.add_argument("--timeout", type=int, default=10)
+    sp = add("shot", cmd_shot, "截图存为缩小的 JPEG，输出路径")
+    sp.add_argument("--size", type=int, default=1000, help="长边像素，默认 1000")
+    sp = add("tap", cmd_tap, "点击 tN 或点坐标 X Y", observe=True)
+    sp.add_argument("target", nargs="+")
+    sp = add("tap-text", cmd_tap_text, "按文字点击屏幕上的元素（先精确后包含）；多个命中时报出候选，用 --index 选", observe=True)
+    sp.add_argument("text", nargs="+")
+    sp.add_argument("--index", type=int, help="多个命中时选第几个（从 0 起）")
+    sp = add("type", cmd_type, "输入文字；给 tN 则先点它聚焦，--clear 先清空。不会提交", observe=True)
+    sp.add_argument("--target", metavar="tN")
+    sp.add_argument("--clear", action="store_true", help="先清空 --target 输入框再输入；text 可省略")
+    sp.add_argument("text", nargs="?", default="")
+    sp = add("key", cmd_key, "按键", observe=True)
+    sp.add_argument("name", choices=["return", "delete", "home"])
+    add("home", cmd_home, "回主屏幕", observe=True)
+    sp = add("scroll", cmd_scroll, "滚动：down 表示看后面的内容", observe=True)
+    sp.add_argument("direction", choices=["down", "up", "left", "right"])
+    sp.add_argument("target", nargs="?", metavar="tN")
+    sp = add("drag", cmd_drag, "手指从 (x1,y1) 拖到 (x2,y2)，单位是点", observe=True)
+    for k in ("x1", "y1", "x2", "y2"):
+        sp.add_argument(k, type=float)
+    sp.add_argument("--duration", type=float, default=0.3)
+    sp = add("launch", cmd_launch, "按 bundle id 启动 App", observe=True)
+    sp.add_argument("bundle")
+    sp = add("stop", cmd_stop, "结束某个 App", observe=True)
+    sp.add_argument("bundle")
+    sp = add("open", cmd_open, "打开 URL 或 scheme（https:、prefs:root=BATTERY_USAGE 等）", observe=True)
+    sp.add_argument("url")
+    sp.set_defaults(wait=2500)  # 跨 App 跳转比应用内点击慢
+    sp = add("setup-shortcut", cmd_setup_shortcut, "在 Mac 安装中转快捷指令（同一 iCloud 的手机自动同步），并在当前手机上验证")
+    sp.add_argument("--name", default=RELAY_NAME)
+    sub.add_parser("shortcut-link", help="展示中转快捷指令的 iCloud 链接（给与 Mac 不同 iCloud 的手机用）").set_defaults(fn=cmd_shortcut_link)
+    sub.add_parser("selftest", help="离线自检").set_defaults(fn=lambda a: selftest())
+
+    a = p.parse_args()
+    t = time.time()
+    try:
+        rc = a.fn(a) or 0
+    except Fail as e:
+        print(f"error: {e}", file=sys.stderr)
+        rc = 1
+    except subprocess.CalledProcessError as e:
+        print(f"error: 命令失败 {e.cmd[:3]} rc={e.returncode}", file=sys.stderr)
+        rc = 1
+    print(f"duration_ms={int((time.time() - t) * 1000)}")
+    return rc
+
+
+if __name__ == "__main__":
+    sys.exit(main())

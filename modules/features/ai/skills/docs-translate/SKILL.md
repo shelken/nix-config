@@ -79,7 +79,7 @@ description: Translate a named document in place, keeping a language-suffixed ba
 
 ## 特别习惯
 
-- 不论中英文,全部使用英文标点符号
+- 不论中英文,全部使用英文标点符号; 中文引号除外,遵循 `docs-policy` 的「语言与格式」
 - 纠正/润色时,常见表达不应该翻译为中文,例如:`bug`不应该翻译成`错误`
 
 ## 失败处理

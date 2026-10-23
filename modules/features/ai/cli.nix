@@ -39,11 +39,13 @@
           enable = false; # use homebrew
         };
 
-        # computer-use / spawn-subagent 与 skills 同源，软链到工作树源码即时生效
+        # computer-use / spawn-subagent / iphone 与 skills 同源，软链到工作树源码即时生效
         home.file.".local/bin/computer-use" =
           mylib.mkConfigFile config ./skills/computer-use-best-practice/scripts/computer-use.ts;
         home.file.".local/bin/spawn-subagent" =
           mylib.mkConfigFile config ./skills/subagent-policy/spawn-subagent;
+        home.file.".local/bin/iphone" =
+          mylib.mkConfigFile config ./skills/iphone-use-best-practice/scripts/iphone;
 
         home.packages = [
           ctx7

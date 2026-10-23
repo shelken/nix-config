@@ -114,6 +114,12 @@
           root = sources.reverse-skill.src;
           skills.reverse-skill = "skills";
         };
+
+        security-audit-skill = {
+          root = sources.security-audit-skill.src;
+          skills.security-audit = "skills/security-audit";
+          frontmatter.security-audit.disable-model-invocation = true;
+        };
       };
 
       discoverSkillSources =

@@ -915,7 +915,7 @@ token 也可写成驱动限定形式 s<snapshot>:<idx>；限定快照与当前�
   off-viewport 表示窗口在屏幕外：AX 可用，像素投递会被拒绝
   screenshot= 路径与 PNG 像素尺寸   coordinates=png-pixels
   t<idx> 行: 元素角色、标签、ax= 屏幕点、sel/on 标志
-  ~ 行: 无索引节点，格式为 role / label / no-token
+  ~ 行: 无索引节点，格式为 role / label / no-token[ / in=t<idx>]；in= 是最近的有索引祖先（如列表行），点它等于点这段文字
 
 默认不下发遍历预算，交给驱动（深度 25、元素 2000）；--depth / --max-elements 可收紧。
 只打印窗口视口内元素以控制 token 开销，元素多的时候先 find 投影，不要用 --all 全量打印。`,
@@ -1415,18 +1415,27 @@ function deepestDepth(elements: AxElement[]): number {
 
 // 驱动只给可操作元素发 token，其余节点只出现在 markdown 里。它们真实存在于界面上，
 // 但没有 token，所以只能读、不能按 <t<idx>> 操作——之前 find 对它们一律报零命中。
-type TextOnlyNode = { role: string; label: string };
+// parent 是缩进上最近的有索引祖先：列表行里的文字几乎总挂在可点的 AXRow 下，点那个 token 就等于点这段文字。
+type TextOnlyNode = { role: string; label: string; parent?: number };
 
 const MD_NODE = /^(\s*)-\s+(?:\[(\d+)\]\s+)?(AX\w+)(.*)$/;
 
 function markdownOnlyNodes(md?: string): TextOnlyNode[] {
   if (!md) return [];
   const out: TextOnlyNode[] = [];
+  const stack: { indent: number; index?: number; role: string }[] = [];
   for (const line of md.split("\n")) {
     const m = line.match(MD_NODE);
-    if (!m || m[2] != null) continue; // 有索引的已在 elements 里，不重复列出
+    if (!m) continue;
+    const indent = m[1].length;
+    while (stack.length && stack[stack.length - 1].indent >= indent) stack.pop();
+    const index = m[2] != null ? Number(m[2]) : undefined;
+    stack.push({ indent, index, role: m[3] });
+    if (index != null) continue; // 有索引的已在 elements 里，不重复列出
     const lbl = (m[4] ?? "").match(/^\s*(?:"([^"]*)"|\(([^)]*)\)|=\s*"([^"]*)")/);
-    out.push({ role: m[3], label: lbl?.[1] ?? lbl?.[2] ?? lbl?.[3] ?? "" });
+    // 窗口本身不算：点窗口不等于点这段文字
+    const parent = [...stack].reverse().find((s) => s.index != null && s.role !== "AXWindow")?.index;
+    out.push({ role: m[3], label: lbl?.[1] ?? lbl?.[2] ?? lbl?.[3] ?? "", parent });
   }
   return out;
 }
@@ -1707,7 +1716,7 @@ function dispatch(cmd: string | undefined, args: string[]): void {
     if (!useFull && state.elements.length >= DRIVER_DEFAULT_MAX_ELEMENTS) notes.push(`已达驱动默认元素上限 ${DRIVER_DEFAULT_MAX_ELEMENTS}，可能仍有未返回元素；用 '--full' 解除`);
     if (view !== "visible" && rect) notes.push(`窗口大部分在屏幕外 (x=${Math.round(rect.x)} w=${Math.round(rect.width)} screen=${screen.width})；需要像素坐标时先用 'computer-use move' 挪回屏幕内`);
     for (const n of notes) console.log(`note=${n}`);
-    for (const n of textOnly) console.log(`~\t${n.role.replace(/^AX/, "")}\t${n.label.replace(/[\t\n]/g, " ").trim()}\tno-token`);
+    for (const n of textOnly) console.log(`~\t${n.role.replace(/^AX/, "")}\t${n.label.replace(/[\t\n]/g, " ").trim()}\tno-token${n.parent != null ? `\tin=t${n.parent}` : ""}`);
     for (const e of vis.sort((a, b) => (a.frame?.y ?? Infinity) - (b.frame?.y ?? Infinity) || (a.frame?.x ?? Infinity) - (b.frame?.x ?? Infinity))) {
       console.log(elementRow(e, projection ? (projection.matches.has(e.element_index!) ? "match" : "ancestor") : undefined));
     }

@@ -43,7 +43,7 @@ modules/
 hosts/<主机>/                # 选角色、少数单机功能与参数
 ```
 
-加软件、启用可选功能、新增主机的步骤见 [功能与角色](docs/user-guide/02-features.md)，设计原因见 [ADR 0002](docs/adr/0002-dendritic-feature-modules.md)
+加软件、启用可选功能、新增主机的步骤见 [功能与角色](docs/user-guide/02-features.md)，设计原因见 [ADR 0004](docs/adr/0004-dendritic-feature-modules.md)
 
 # darwin
 
