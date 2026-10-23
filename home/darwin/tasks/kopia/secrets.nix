@@ -18,8 +18,6 @@ in
       }
     ];
 
-    shelken.tools.backup.enable = true;
-
     sops = {
       secrets.kopia-password = mylib.mkDefaultSecret { key = "kopia/password"; };
       secrets.kopia-s3-host = mylib.mkDefaultSecret { key = "drive/s3/host"; };

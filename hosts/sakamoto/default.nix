@@ -6,6 +6,7 @@ in
   imports = with self.modules.darwin; [
     desktop
     homelab
+    virts
   ];
 
   networking.hostName = hostname;
@@ -13,14 +14,6 @@ in
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
     secrets.enable = true;
-
-    dev.container.enable = true; # docker
-
-    network.fl-clash.enable = true;
-
-    suites.desktop.enable = true;
-
-    tools.virts.enable = true;
   };
   # homebrew = {
   #   onActivation = {

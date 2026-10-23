@@ -13,11 +13,5 @@ in
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
     secrets.enable = true;
-
-    dev.container.enable = true;
-
-    network.fl-clash.enable = true;
-
-    suites.desktop.enable = true;
   };
 }
