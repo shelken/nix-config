@@ -27,8 +27,6 @@ in
       ];
       casks = [
         # "ollama-app"
-        "lm-studio"
-
         "stablyai/orca/orca"
 
         "openusage"
