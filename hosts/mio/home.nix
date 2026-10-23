@@ -19,7 +19,6 @@
     # dev.ai.claudePreset = "cpa-gemini-claude";
     # dev.ai.claudePreset = "anti-tools";
 
-    dev.go.enable = true;
     dev.cloud-native.enable = true;
 
     infisical.enable = true; # 试用 Infisical CLI, 与 sops/sec-run 并存

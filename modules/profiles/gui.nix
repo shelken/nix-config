@@ -13,6 +13,4 @@ in
     ];
     home-manager.sharedModules = [ ../../home/linux/gui ];
   };
-
-  flake.modules.homeManager.gui.imports = [ ../../home/base/gui ];
 }
