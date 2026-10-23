@@ -201,8 +201,8 @@ def text_of(n):
     return n.get("label") or n.get("name") or n.get("value") or ""
 
 
-def fmt(n):
-    s = f'{n["t"]} {n["type"]} "{text_of(n)[:60]}"'
+def fmt(n, width=60):
+    s = f'{n["t"]} {n["type"]} "{text_of(n)[:width]}"'
     if n.get("name") and n.get("label") and n["name"] != n["label"]:
         s += f' name={n["name"]}'
     if n.get("value") and (n.get("label") or n.get("name")):
@@ -504,7 +504,7 @@ def cmd_snapshot(a):
     s = snapshot_now()
     shown = s["nodes"][:a.max]
     print(f'app={s["app"]} viewport={s["viewport"]["width"]}x{s["viewport"]["height"]} shown={len(shown)} total={len(s["nodes"])}')
-    print("\n".join(fmt(n) for n in shown))
+    print("\n".join(fmt(n, None if a.full else 60) for n in shown))
     if len(s["nodes"]) > a.max:
         print(f"... 还有 {len(s['nodes']) - a.max} 个，用 iphone find <文字> 定位")
 
@@ -515,7 +515,7 @@ def cmd_find(a):
     q = " ".join(a.text).lower()
     hits = [n for n in s["nodes"] if q in " ".join((n.get("label", ""), n.get("name", ""), n.get("value", ""))).lower()]
     print(f'app={s["app"]} matches={len(hits)}')
-    print("\n".join(fmt(n) for n in hits[:a.max]))
+    print("\n".join(fmt(n, None if a.full else 60) for n in hits[:a.max]))
     return 0 if hits else 1
 
 
@@ -972,9 +972,11 @@ def main():
     add("status", cmd_status, "设备、WDA、锁屏、前台 App、证书剩余天数")
     sp = add("snapshot", cmd_snapshot, "读界面树（带 tN 元素 token）")
     sp.add_argument("--max", type=int, default=MAX_NODES)
+    sp.add_argument("--full", action="store_true", help="标签不截断（读长帖、长消息）")
     sp = add("find", cmd_find, "按文字查找元素；无命中退出码 1")
     sp.add_argument("text", nargs="+")
     sp.add_argument("--max", type=int, default=MAX_NODES)
+    sp.add_argument("--full", action="store_true", help="标签不截断（读长帖、长消息）")
     sp = add("wait", cmd_wait, "等待文字出现；超时退出码 1")
     sp.add_argument("text", nargs="+")
     sp.add_argument("--timeout", type=int, default=10)

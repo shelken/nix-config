@@ -40,6 +40,7 @@ iphone status
 ```bash
 iphone snapshot              # 前 200 个节点，每行一个 tN
 iphone find 设置              # 只回命中项；无命中退出码 1
+iphone find 设置 --full      # 标签默认截到 60 字；读长帖、长消息加 --full（snapshot 同样支持）
 iphone shot                  # 缩小的 JPEG，路径在输出里；用 Read 工具看图
 ```
 
