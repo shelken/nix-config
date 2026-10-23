@@ -44,5 +44,5 @@
 ## Skills
 
 - 全局 skills 在 `~/.agents/skills/`，项目 skills 在 `{project}/.agents/skills/`；harness 没列出 skills 时，到这两处按目录名找
-- `~/.agents/skills/` 是 nix 部署产物，不要直接改：自有 skill 改 `~/nix-config/home/base/gui/dev/ai/skills/`；外部 skill 来自 `skill.nix` 的 `fetchedSkillRepos`，向上游反馈
+- `~/.agents/skills/` 是 nix 部署产物，不要直接改：自有 skill 改 `~/nix-config/modules/features/ai/skills/`；外部 skill 来自 `skill.nix` 的 `fetchedSkillRepos`，向上游反馈
 - 发现 skill 有事实错误或过时描述时，提醒用户一次

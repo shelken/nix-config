@@ -329,7 +329,7 @@ describe("omp-guard — 纯内存函数测试 (In-Memory Audit)", () => {
         "package.json",
         "README.md",
         "tests/foo.test.ts",
-        "home/base/gui/dev/ai/omp/default.nix",
+        "modules/features/ai/omp/default.nix",
       ];
 
       for (const p of safePaths) {

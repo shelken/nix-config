@@ -1,20 +1,8 @@
+{ config, ... }:
 {
-  lib,
-  mylib,
-  config,
-  ...
-}:
-let
-  inherit (lib) mkIf;
-  inherit (mylib) mkBoolOpt;
-  cfg = config.shelken.dev.ai;
-in
-{
-  options.shelken.dev.ai = {
-    enable = mkBoolOpt false "Whether or not to enable.";
-  };
+  flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.ai ];
 
-  config = mkIf cfg.enable {
+  flake.modules.darwin.ai = {
     homebrew = {
       taps = [
         {
