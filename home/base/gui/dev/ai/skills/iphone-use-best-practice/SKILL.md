@@ -53,6 +53,7 @@ AX 树为空或缺控件（游戏、自绘界面）时用 `shot` 目视，再用
 iphone launch com.apple.Preferences   # 只认 bundle id
 iphone tap t12
 iphone type --target t7 "你好"         # 先点 t7 聚焦再输入
+iphone type --target t7 --clear "新值"  # 先清空 t7 再输入；省略文字则只清空
 iphone key return
 iphone scroll down                    # down = 看后面的内容；可加 tN 指定滚动区域
 iphone home

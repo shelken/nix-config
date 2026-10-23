@@ -537,11 +537,22 @@ def cmd_tap(a):
 
 
 def cmd_type(a):
+    if a.clear and not a.target:
+        raise Fail("--clear 需要 --target tN，才知道清哪个输入框")
+    if not a.clear and not a.text:
+        raise Fail("没有要输入的文字；只清空请加 --clear")
+
     def do():
         if a.target:
-            x, y, _ = resolve_point(a.target)
-            sess("POST", "/wda/tap", {"x": x, "y": y})
+            x, y, node = resolve_point(a.target)
+            if a.clear:
+                # 点输入框右端把光标落在文字末尾，再按当前内容长度逐个删除；过长而滚出框外的文字清不干净
+                sess("POST", "/wda/tap", {"x": node["rect"][0] + node["rect"][2] - 3, "y": y})
+            else:
+                sess("POST", "/wda/tap", {"x": x, "y": y})
             time.sleep(0.4)
+            if a.clear:
+                sess("POST", "/wda/keys", {"value": ["\u0008" * (len(node.get("value", "") or text_of(node)) + 5)]}, timeout=30)
         for i in range(0, len(a.text), 200):
             sess("POST", "/wda/keys", {"value": [a.text[i:i + 200]], "frequency": 30}, timeout=60)
     act(a, do)
@@ -838,9 +849,10 @@ def main():
     sp.add_argument("--size", type=int, default=1000, help="长边像素，默认 1000")
     sp = add("tap", cmd_tap, "点击 tN 或点坐标 X Y", observe=True)
     sp.add_argument("target", nargs="+")
-    sp = add("type", cmd_type, "输入文字；给 tN 则先点它聚焦。不会提交", observe=True)
+    sp = add("type", cmd_type, "输入文字；给 tN 则先点它聚焦，--clear 先清空。不会提交", observe=True)
     sp.add_argument("--target", metavar="tN")
-    sp.add_argument("text")
+    sp.add_argument("--clear", action="store_true", help="先清空 --target 输入框再输入；text 可省略")
+    sp.add_argument("text", nargs="?", default="")
     sp = add("key", cmd_key, "按键", observe=True)
     sp.add_argument("name", choices=["return", "delete", "home"])
     add("home", cmd_home, "回主屏幕", observe=True)
