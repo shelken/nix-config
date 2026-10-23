@@ -509,11 +509,15 @@ def cmd_snapshot(a):
         print(f"... 还有 {len(s['nodes']) - a.max} 个，用 iphone find <文字> 定位")
 
 
+def matching(nodes, q):
+    return [n for n in nodes if q in " ".join((n.get("label", ""), n.get("name", ""), n.get("value", ""))).lower()]
+
+
 def cmd_find(a):
     require_unlocked()
     s = snapshot_now()
     q = " ".join(a.text).lower()
-    hits = [n for n in s["nodes"] if q in " ".join((n.get("label", ""), n.get("name", ""), n.get("value", ""))).lower()]
+    hits = matching(s["nodes"], q)
     print(f'app={s["app"]} matches={len(hits)}')
     print("\n".join(fmt(n, None if a.full else 60) for n in hits[:a.max]))
     return 0 if hits else 1
@@ -524,7 +528,7 @@ def cmd_wait(a):
     end = time.time() + a.timeout
     while time.time() < end:
         s = snapshot_now()
-        hits = [n for n in s["nodes"] if q in " ".join((n.get("label", ""), n.get("name", ""), n.get("value", ""))).lower()]
+        hits = matching(s["nodes"], q)
         if hits:
             print("\n".join(fmt(n) for n in hits[:5]))
             return 0
@@ -563,6 +567,44 @@ def cmd_tap(a):
     else:
         raise Fail("用法: iphone tap tN | iphone tap X Y（单位是点，不是截图像素）")
     act(a, lambda: sess("POST", "/wda/tap", {"x": x, "y": y}))
+
+
+def _pick_by_text(q, index):
+    s = snapshot_now()
+    vp = s["viewport"]
+    pool, seen = [], set()
+    for n in matching(s["nodes"], q):
+        x, y, w, h = n["rect"]
+        if 0 <= x + w / 2 < vp["width"] and 0 <= y + h / 2 < vp["height"] and tuple(n["rect"]) not in seen:
+            seen.add(tuple(n["rect"]))
+            pool.append(n)
+    pool = [n for n in pool if text_of(n).lower() == q] or pool
+    if not pool:
+        raise Fail(f"屏幕内没有包含「{q}」的元素；先 iphone find {q} 或 iphone shot 看看")
+    if index is None and len(pool) > 1:
+        raise Fail(f"{len(pool)} 个元素命中，用 --index N 选一个（从 0 起）:\n" + "\n".join(f"  [{i}] {fmt(n)}" for i, n in enumerate(pool)))
+    if not 0 <= (index or 0) < len(pool):
+        raise Fail(f"--index 超出范围，共 {len(pool)} 个命中")
+    return pool[index or 0]
+
+
+def cmd_tap_text(a):
+    """现取快照，点屏幕内文字命中的元素：一次调用代替 find + 取 token + tap，token 不会过期。
+    精确等于优先于包含；同一位置的重复节点算一个；仍有多个就列出来，不猜。
+    坐标连续两次一致才点：刚启动或翻页后列表还在滚动，现取的坐标点下去会落在别处。"""
+    require_unlocked()
+    q = " ".join(a.text).lower()
+    n = _pick_by_text(q, a.index)
+    for _ in range(8):
+        time.sleep(0.3)
+        again = _pick_by_text(q, a.index)
+        if again["rect"] == n["rect"]:
+            break
+        n = again
+    else:
+        raise Fail(f"「{q}」的位置一直在变（页面还在滚动或动画），稍后再试")
+    x, y, w, h = n["rect"]
+    act(a, lambda: sess("POST", "/wda/tap", {"x": x + w / 2, "y": y + h / 2}))
 
 
 def cmd_type(a):
@@ -940,6 +982,51 @@ def selftest():
         assert n["rect"][1] == 807 and len(drags) == 1, (n, drags)
     finally:
         g["_poll_node"], g["sess"], g["time"] = saved
+    # tap-text：精确优先、同位置重复节点算一个、屏外不算、多个命中不猜
+    def node(t, kind, label, rect):
+        return {"t": t, "type": kind, "label": label, "rect": rect}
+
+    screen = {"app": "a", "viewport": {"width": 390, "height": 844}, "nodes": [
+        node("t1", "Button", "Home", [0, 766, 78, 44]), node("t2", "StaticText", "Home", [0, 766, 78, 44]),
+        node("t3", "StaticText", "Homework", [100, 100, 80, 20]),
+        node("t4", "Button", "Done", [10, 200, 50, 20]), node("t5", "Button", "Done", [10, 300, 50, 20]),
+        node("t6", "Button", "Offscreen", [10, 900, 50, 20])]}
+    taps = []
+    saved = tuple(g[k] for k in ("snapshot_now", "sess", "act", "require_unlocked", "time"))
+    g["snapshot_now"], g["require_unlocked"], g["time"] = lambda: screen, lambda: None, NoSleep
+    g["sess"] = lambda method, path, body=None, **kw: taps.append(body)
+    g["act"] = lambda args, do: do()
+
+    def tap_text(*words, index=None):
+        taps.clear()
+        cmd_tap_text(argparse.Namespace(text=list(words), index=index))
+
+    try:
+        tap_text("home")
+        assert taps == [{"x": 39, "y": 788}], taps  # 精确的 Home 压过 Homework，Button 与 StaticText 同位置只点一次
+        for bad in ("done", "offscreen", "nope"):
+            try:
+                tap_text(bad)
+            except Fail:
+                continue
+            raise AssertionError(f"{bad} 应该报错")
+        tap_text("done", index=1)
+        assert taps == [{"x": 35, "y": 310}], taps
+        calls = [0]
+
+        def drifting():  # 列表一直在滚：目标位置每次都不同，不能点
+            calls[0] += 1
+            return {**screen, "nodes": [node("t1", "Button", "Moving", [10, 100 + calls[0], 50, 20])]}
+
+        g["snapshot_now"] = drifting
+        try:
+            tap_text("moving")
+        except Fail:
+            assert not taps
+        else:
+            raise AssertionError("位置一直在变时不该点击")
+    finally:
+        g["snapshot_now"], g["sess"], g["act"], g["require_unlocked"], g["time"] = saved
     print("selftest ok")
 
 
@@ -984,6 +1071,9 @@ def main():
     sp.add_argument("--size", type=int, default=1000, help="长边像素，默认 1000")
     sp = add("tap", cmd_tap, "点击 tN 或点坐标 X Y", observe=True)
     sp.add_argument("target", nargs="+")
+    sp = add("tap-text", cmd_tap_text, "按文字点击屏幕上的元素（先精确后包含）；多个命中时报出候选，用 --index 选", observe=True)
+    sp.add_argument("text", nargs="+")
+    sp.add_argument("--index", type=int, help="多个命中时选第几个（从 0 起）")
     sp = add("type", cmd_type, "输入文字；给 tN 则先点它聚焦，--clear 先清空。不会提交", observe=True)
     sp.add_argument("--target", metavar="tN")
     sp.add_argument("--clear", action="store_true", help="先清空 --target 输入框再输入；text 可省略")

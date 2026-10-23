@@ -52,7 +52,8 @@ AX 树为空或缺控件（游戏、自绘界面）时用 `shot` 目视，再用
 
 ```bash
 iphone launch com.apple.Preferences   # 只认 bundle id
-iphone tap t12
+iphone tap-text 通用                  # 按文字点：精确优先，多个命中时列候选，用 --index N 选；省掉 find + 取 token
+iphone tap t12                       # 或按 token 点（来自最近一次 snapshot / find）
 iphone type --target t7 "你好"         # 先点 t7 聚焦再输入
 iphone type --target t7 --clear "新值"  # 先清空 t7 再输入；省略文字则只清空
 iphone key return
@@ -63,7 +64,7 @@ iphone open https://example.com        # URL 或 App scheme；prefs:root=… 需
 
 不知道 bundle id：`iphone home` → `iphone find <App 名>` → `iphone tap tN`。
 
-每个动作结束后自动重采一次，打印 `+`（新增，带**新** token）与 `-`（消失）。旧 `tN` 此时失效；前台 App 变了的旧 token 会被拒绝。
+每个动作结束后自动重采一次，打印 `+`（新增，带**新** token）与 `-`（消失）。旧 `tN` 此时失效；前台 App 变了的旧 token 会被拒绝。`tap-text` 每次现取快照，不受 token 失效影响。
 
 判据：差分里出现只有该动作才会造成的元素变化。
 
