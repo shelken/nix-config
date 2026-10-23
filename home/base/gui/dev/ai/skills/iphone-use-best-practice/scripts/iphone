@@ -393,8 +393,7 @@ def cmd_init(a):
            "udid": udid, "team_id": team, "bundle_id": bundle, "source_dir": str(src)}
     CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
     print(f"已写入 {CFG}（设备 {udid}）\n下一步: iphone up")
-    if udid not in cfg.get("relay_devices", []):
-        print(relay_notice())
+    print(relay_notice())
 
 
 def cmd_renew(a):
@@ -436,8 +435,6 @@ def cmd_up(a):
         if ready():
             print("WDA 已就绪")
             if not a.no_keep_awake:
-                if not relay_name():
-                    print(relay_notice(), flush=True)
                 try:
                     set_autolock(AUTOLOCK_NEVER)
                 except Fail as e:  # 常亮只是附加功能，不能让 WDA 已就绪的 up 失败
@@ -499,10 +496,6 @@ def cmd_status(a):
         print(f"前台: {(wda('GET', '/wda/activeAppInfo') or {}).get('bundleId')}")
     d = days_left()
     print("证书: " + ("无构建" if d is None else f"剩余 {d:.1f} 天（免费账号 7 天，过期后 iphone up 会自动重签）" if d > 0 else "已过期，iphone up 会自动重签"))
-    if relay_name():
-        print("中转快捷指令: 已装")
-    else:
-        print(relay_notice())
     return 0 if ok else 1
 
 
@@ -719,13 +712,11 @@ AUTOLOCK_URL = "prefs:root=DISPLAY&path=AUTOLOCK"
 
 
 def relay_name():
-    """中转快捷指令按设备记录：它靠 iCloud 同步，与 Mac 不同账号的手机没有它。"""
-    cfg = config()
-    return cfg.get("open_url_shortcut") if cfg["udid"] in cfg.get("relay_devices", []) else None
+    return config().get("open_url_shortcut", RELAY_NAME)  # 假定每台手机首次配置时已装好，不逐次验证
 
 
 def relay_notice():
-    return ("这台手机没有中转快捷指令：自动锁定只能走界面点击，慢且不稳。请用户装上它（二选一，之后都跑 iphone setup-shortcut 验证）：\n"
+    return ("中转快捷指令让自动锁定与 prefs: 稳定直达，没有它只能界面点击，慢且不稳。每台手机装一次，二选一，装完跑 iphone setup-shortcut 验证：\n"
             "  与 Mac 同一 iCloud:   iphone setup-shortcut（Mac 导入，经 iCloud 同步到手机）\n"
             "  与 Mac 不同 iCloud:   iphone shortcut-link 取 iCloud 链接，在手机 Safari 里打开并点「添加快捷指令」，再 iphone setup-shortcut")
 
@@ -743,21 +734,18 @@ def _autolock_via_ui():
 
 
 def set_autolock(seconds):
-    """WDA 直接开 prefs: 会被拒（iOS 27，错误 115），所以配置了中转快捷指令（iphone setup-shortcut）就经它一步直达自动锁定页；
-    否则走 UI：设置 → 显示与亮度 → 自动锁定。"""
+    """WDA 直接开 prefs: 会被拒（iOS 27，错误 115），所以假定手机已装中转快捷指令（iphone setup-shortcut），
+    经它一步直达自动锁定页；没跑通才回退 UI：设置 → 显示与亮度 → 自动锁定。"""
     require_unlocked()
     sess("POST", "/wda/apps/terminate", {"bundleId": SETTINGS})
     wda("POST", "/wda/homescreen", {})
     time.sleep(0.8)
     try:
-        if relay_name():
-            try:
-                open_url(AUTOLOCK_URL, direct=False)
-                _wait_node("Cell", str(seconds), 10)
-            except Fail:
-                print("中转快捷指令没跑通，改走界面点击", file=sys.stderr)
-                _autolock_via_ui()
-        else:
+        try:
+            open_url(AUTOLOCK_URL, direct=False)
+            _wait_node("Cell", str(seconds), 10)
+        except Fail:
+            print("中转快捷指令没跑通，改走界面点击（每台手机要先装一次，见 iphone shortcut-link）", file=sys.stderr)
             _autolock_via_ui()
         s, row = _find_scrolling("Cell", str(seconds), 0)
         _tap_node(row)
@@ -791,8 +779,6 @@ def open_url(url, direct=True, relay=None):
             if "115" not in str(e):
                 raise
     name = relay or relay_name()
-    if not name:
-        raise Fail("系统拒绝直接打开这个 URL（如 prefs:），这台手机没有中转快捷指令。\n" + relay_notice())
     sess("POST", "/url", {"url": f"shortcuts://run-shortcut?name={quote(name)}&input=text&text={quote(url)}"}, timeout=30)
 
 
@@ -890,9 +876,8 @@ def cmd_setup_shortcut(a):
         raise Fail(f"实测失败：前台是 {app}，不是设置；屏幕上: {' | '.join(seen) or '无'}。手机上打开该快捷指令，确认含「打开 URL」且输入是「快捷指令输入」")
     cfg = config()
     cfg["open_url_shortcut"] = a.name
-    cfg["relay_devices"] = sorted({*cfg.get("relay_devices", []), cfg["udid"]})
     CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
-    print("实测通过：prefs: 经中转快捷指令打开了设置，已记录该设备可用")
+    print("实测通过：prefs: 经中转快捷指令打开了设置")
 
 
 # ---------- 自检 ----------
