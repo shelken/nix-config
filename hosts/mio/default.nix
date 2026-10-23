@@ -9,6 +9,7 @@ in
   networking.computerName = hostname;
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
+    secrets.enable = true;
     # window manager
     wm.aerospace.enable = false;
     wm.omniwm.enable = true;

@@ -4,7 +4,7 @@ let
 in
 {
   imports = with self.modules.darwin; [
-    gui
+    desktop
     homelab
   ];
 
@@ -12,6 +12,8 @@ in
   networking.computerName = hostname;
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
+    secrets.enable = true;
+
     dev.container.enable = true;
 
     network.fl-clash.enable = true;

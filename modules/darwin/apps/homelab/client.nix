@@ -18,7 +18,6 @@ in
     # 版本差异的
     homebrew = {
       brews = [
-        "lima"
         "azure-cli"
       ];
     };

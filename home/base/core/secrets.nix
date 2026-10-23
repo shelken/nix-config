@@ -4,10 +4,10 @@
   lib,
   pkgs,
   sops-nix,
+  osConfig,
   ...
 }:
 let
-  inherit (mylib) mkBoolOpt;
   inherit (lib) mkIf;
   cfg = config.shelken.secrets;
 
@@ -146,7 +146,13 @@ in
     sops-nix.homeManagerModules.sops
   ];
   options.shelken.secrets = {
-    enable = mkBoolOpt false "Whether or not use secrets";
+    # 主机属性：只在 hosts/<host>/default.nix 声明，HM 侧只读
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = osConfig.shelken.secrets.enable;
+      readOnly = true;
+      description = "主机是否持有 age 密钥（来自 osConfig.shelken.secrets.enable）";
+    };
   };
   config = mkIf cfg.enable {
     # ─── 统一明确的 Age 解密密钥 ───
