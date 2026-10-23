@@ -206,7 +206,7 @@ def fmt(n, width=60):
     if n.get("name") and n.get("label") and n["name"] != n["label"]:
         s += f' name={n["name"]}'
     if n.get("value") and (n.get("label") or n.get("name")):
-        s += f' value="{n["value"][:40]}"'
+        s += f' value="{n["value"][:40 if width else None]}"'
     if n.get("disabled"):
         s += " disabled"
     return s + " [{},{},{},{}]".format(*n["rect"])
