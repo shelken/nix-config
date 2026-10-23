@@ -1,41 +1,31 @@
 {
   pkgs,
   linuxPkgs,
-  omp,
   gitConfig,
   msbConfig,
   msbHome,
   name,
   conf,
+  sharedMiseDir,
 }:
 let
-  tools = with linuxPkgs; [
-    bashInteractive
-    coreutils
-    ripgrep
-    fd
-    git
-    gh
-    jq
-    curl
-    mise
-    bun
-    omp
-  ];
-
   entrypoint = pkgs.writeText "sb-entrypoint" ''
-    export PATH="${pkgs.lib.makeBinPath tools}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    # 环境唯一来源：guest-env.sh（generator 生成，ADR 0004 决策 5）。
+    # 缺失说明 VM 未挂载生成配置；legacy sb-default 的配置目录由 sb-default.yaml
+    # 显式挂到 /run/sandbox-config，所以这里不再维护第二份回退。
+    if [[ ! -f /run/sandbox-config/current/guest-env.sh ]]; then
+      echo "[-] 错误: 缺少 /run/sandbox-config/current/guest-env.sh，无法确定 guest 环境" >&2
+      exit 1
+    fi
+    source /run/sandbox-config/current/guest-env.sh
     export GIT_SSL_CAINFO="$SSL_CERT_FILE"
     export GIT_CONFIG_GLOBAL="${gitConfig}"
-    export XDG_DATA_HOME=/data/xdg/data
-    export XDG_STATE_HOME=/data/xdg/state
-    export XDG_CACHE_HOME=/data/xdg/cache
     # Linux stat 对 ext4 使用 ext2/ext3 的类型名；拒绝目录卷承载数据库
     if [[ "$(stat -f -c %T /data)" != ext2/ext3 ]]; then
       echo '/data 必须使用 disk 命名卷，请按 README 创建 --kind disk 的状态卷' >&2
       exit 1
     fi
-    mkdir -p "$XDG_DATA_HOME/omp" "$XDG_STATE_HOME/omp" "$XDG_CACHE_HOME/omp"
+    mkdir -p "$XDG_DATA_HOME/omp" "$XDG_STATE_HOME/omp" "$XDG_CACHE_HOME/omp" "$MISE_SHIMS_DIR"
     exec "$@"
   '';
 
@@ -114,10 +104,5 @@ let
     exec ${sb}/bin/${name} exec "''${terminal[@]}" -w "$cwd" omp "$@"
   '';
 in
-pkgs.symlinkJoin {
-  inherit name;
-  paths = [
-    sb
-    ompSb
-  ];
-}
+# sb-default 命令本身保留到单元 6，omp-sb 移至 sb.nix 新实现
+sb
