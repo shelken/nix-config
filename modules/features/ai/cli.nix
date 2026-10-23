@@ -33,8 +33,7 @@
     in
     {
       config = {
-        programs.bun.enable = true;
-        programs.gh.enable = true;
+        # bun/gh 由共享工具登记表提供（shelken.dev.tools，ADR 0003），不再各自 programs.* 声明
         programs.opencode = {
           enable = false; # use homebrew
         };
@@ -46,6 +45,11 @@
           mylib.mkConfigFile config ./skills/subagent-policy/spawn-subagent;
         home.file.".local/bin/iphone" =
           mylib.mkConfigFile config ./skills/iphone-use-best-practice/scripts/iphone;
+
+        shelken.dev.sandbox.hostCommands = {
+          computer-use = "computer-use 控制宿主 macOS 图形界面，沙箱内无法访问宿主窗口";
+          spawn-subagent = "spawn-subagent 在宿主终端 (Herdr/Kitty) 编排子代理，沙箱内无法访问宿主终端 multiplexer";
+        };
 
         home.packages = [
           ctx7

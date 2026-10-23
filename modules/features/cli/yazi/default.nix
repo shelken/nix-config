@@ -26,7 +26,7 @@
 
       home.packages = with pkgs; [
         file
-        fd
+        # fd 由共享工具登记表提供（shelken.dev.tools，ADR 0003）
         exiftool
         mediainfo
         # for markdown preview

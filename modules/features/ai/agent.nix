@@ -109,6 +109,11 @@
 
       config = {
         home.file = agentsLinks;
+        # agents 文档进共享工具登记表：宿主照常作为 home.file，沙箱经 files 拿到同一批链接
+        shelken.dev.tools.agent-common.package = null;
+        shelken.dev.tools.agent-common.files = lib.filterAttrs (
+          name: _: lib.hasPrefix ".agents/" name
+        ) agentsLinks;
       };
     };
 }

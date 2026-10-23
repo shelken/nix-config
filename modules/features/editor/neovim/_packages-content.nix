@@ -22,21 +22,16 @@ in
         # llvmPackages.clang-unwrapped
         # clang-tools
         gnumake
-        # 查询文件内容使用
-        ripgrep
+        # ripgrep 由共享工具登记表提供（shelken.dev.tools，ADR 0003）
 
         #-- python
         pyright
         ruff
         # ruff-lsp has been deprecated, use `ruff server` instead
         # ruff-lsp
-        (python313.withPackages (
-          ps: with ps; [
-            pip
-            # ruff
-            black # python formatter
-          ]
-        ))
+        # python3 由共享工具登记表提供（shelken.dev.tools，ADR 0003）；
+        # pip 收敛掉，格式化只留 black
+        black # none-ls 的 python formatter
 
         #-- nix
         nil
@@ -97,7 +92,7 @@ in
 
         #-- frontend
         #javascript/typescript --#
-        nodejs
+        # nodejs 由共享工具登记表提供（shelken.dev.tools，ADR 0003）
         typescript
         typescript-language-server
         # html/css lsp

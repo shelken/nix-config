@@ -18,8 +18,7 @@
           # codex = "latest";
           # "npm:droid" = "latest";
           antigravity-cli = "1.1.24";
-          codex = "0.160.1";
-          claude-code = "2.1.304";
+          # codex / claude-code 已迁入共享工具登记表（modules/features/ai/tools.nix）
         };
 
         programs.zsh.initContent = ''
