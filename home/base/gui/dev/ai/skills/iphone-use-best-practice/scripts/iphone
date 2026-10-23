@@ -624,19 +624,19 @@ def _wait_node(kind, name, timeout):
     raise Fail(f"{timeout}s 内没出现 {kind} {name}" + (f"（最后错误: {last}）" if last else ""))
 
 
+AUTOLOCK_URL = "prefs:root=DISPLAY&path=AUTOLOCK"
+
+
 def set_autolock(seconds):
-    """直接开 prefs: 会被拒（iOS 27 上 WDA 的 openURL 对 prefs:/settings-navigation: 报 115），
-    但快捷指令里的「打开 URL」可以。配置了 autolock_shortcut 就用 shortcuts://run-shortcut 一步直达自动锁定页，
+    """WDA 直接开 prefs: 会被拒（iOS 27，错误 115），所以配置了中转快捷指令（iphone setup-shortcut）就经它一步直达自动锁定页；
     否则走 UI：设置 → 显示与亮度 → 自动锁定。"""
-    from urllib.parse import quote
-    shortcut = config().get("autolock_shortcut")
     require_unlocked()
     sess("POST", "/wda/apps/terminate", {"bundleId": SETTINGS})
     wda("POST", "/wda/homescreen", {})
     time.sleep(0.8)
     try:
-        if shortcut:
-            sess("POST", "/url", {"url": "shortcuts://run-shortcut?name=" + quote(shortcut)}, timeout=30)
+        if config().get("open_url_shortcut"):
+            open_url(AUTOLOCK_URL, direct=False)
             _wait_node("Cell", str(seconds), 10)
         else:
             sess("POST", "/wda/apps/activate", {"bundleId": SETTINGS}, timeout=45)
@@ -665,23 +665,116 @@ def cmd_autolock(a):
     set_autolock(AUTOLOCK_CHOICES[a.value])
 
 
-def open_url(url):
+def open_url(url, direct=True):
     """直接让 WDA 打开；prefs: 之类被系统拒绝（115）时，经接收输入的快捷指令（open_url_shortcut）转一手。"""
     from urllib.parse import quote
-    try:
-        sess("POST", "/url", {"url": url}, timeout=30)
-        return
-    except Fail as e:
-        if "115" not in str(e):
-            raise
+    if direct:
+        try:
+            sess("POST", "/url", {"url": url}, timeout=30)
+            return
+        except Fail as e:
+            if "115" not in str(e):
+                raise
     name = config().get("open_url_shortcut")
     if not name:
-        raise Fail("系统拒绝直接打开这个 URL（如 prefs:）。需要配置 open_url_shortcut，见 references/setup.md")
+        raise Fail("系统拒绝直接打开这个 URL（如 prefs:）。先运行 iphone setup-shortcut 安装中转快捷指令")
     sess("POST", "/url", {"url": f"shortcuts://run-shortcut?name={quote(name)}&input=text&text={quote(url)}"}, timeout=30)
 
 
 def cmd_open(a):
     act(a, lambda: open_url(a.url))
+
+
+RELAY_NAME = "iphone-open-url"
+
+
+def relay_shortcut_bytes():
+    """只含「打开 URL」、输入取快捷指令输入的工作流。"""
+    token = {"Value": {"string": "\ufffc", "attachmentsByRange": {"{0, 1}": {"Type": "ExtensionInput"}}},
+             "WFSerializationType": "WFTextTokenString"}
+    return plistlib.dumps({
+        "WFWorkflowClientVersion": "2900", "WFWorkflowMinimumClientVersion": 900, "WFWorkflowMinimumClientRelease": 900,
+        "WFWorkflowIcon": {"WFWorkflowIconStartColor": 431817727, "WFWorkflowIconGlyphNumber": 59511},
+        "WFWorkflowImportQuestions": [], "WFWorkflowTypes": [],
+        "WFWorkflowInputContentItemClasses": ["WFStringContentItem", "WFURLContentItem"],
+        "WFWorkflowActions": [{"WFWorkflowActionIdentifier": "is.workflow.actions.openurl",
+                               "WFWorkflowActionParameters": {"WFInput": token}}],
+    }, fmt=plistlib.FMT_BINARY)
+
+
+def mac_shortcuts():
+    out = subprocess.run(["shortcuts", "list"], capture_output=True, text=True, check=True).stdout
+    return out.splitlines()
+
+
+def confirm_mac_import():
+    """导入确认框是「快捷指令」的一个窗口，里面有「添加快捷指令」按钮；用 computer-use 在后台点掉。"""
+    def cu(*args):
+        return subprocess.run(["computer-use", *args], capture_output=True, text=True, timeout=60).stdout
+    for line in cu("windows").splitlines():
+        cols = line.split("\t")
+        if len(cols) > 2 and cols[2] == "快捷指令":
+            for hit in cu("find", cols[0], "添加快捷指令").splitlines():
+                m = re.match(r"(t\d+)\tButton\t添加快捷指令", hit)
+                if m:
+                    cu("click", cols[0], m.group(1))
+                    return True
+    return False
+
+
+def cmd_setup_shortcut(a):
+    """在 Mac 上生成并签名中转快捷指令，后台导入，经 iCloud 同步到手机，再用 prefs: 实测。"""
+    import tempfile
+    if a.name in mac_shortcuts():
+        raise Fail(f"快捷指令「{a.name}」已存在；重复导入会得到「{a.name} 1」。先在快捷指令里删掉，或用 --name 换名")
+    with tempfile.TemporaryDirectory() as d:
+        raw_f, signed = Path(d) / "raw.shortcut", Path(d) / f"{a.name}.shortcut"
+        raw_f.write_bytes(relay_shortcut_bytes())
+        subprocess.run(["shortcuts", "sign", "-m", "anyone", "-i", str(raw_f), "-o", str(signed)], check=True, capture_output=True)
+        subprocess.run(["open", "-g", "-a", "Shortcuts", str(signed)], check=True)
+        for _ in range(30):
+            if a.name in mac_shortcuts():
+                break
+            confirm_mac_import()
+            time.sleep(2)
+        else:
+            raise Fail("60s 内 Mac 的快捷指令里没出现该条目；手动打开快捷指令 App 点「添加快捷指令」，需要 computer-use 命令可用")
+    cfg = config()
+    cfg["open_url_shortcut"] = a.name
+    CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
+    print(f"已导入「{a.name}」并写入配置，等待 iCloud 同步到手机...", flush=True)
+    if not ready():
+        print("WDA 未运行，跳过实测。iphone up 之后用 iphone open prefs:root=BATTERY_USAGE 验证")
+        return
+    require_unlocked()
+    for _ in range(12):
+        sess("POST", "/wda/apps/activate", {"bundleId": "com.apple.shortcuts"}, timeout=45)
+        time.sleep(2)
+        if any(n["type"] == "Cell" and text_of(n).startswith(a.name) for n in snapshot_now()["nodes"]):
+            break
+        time.sleep(3)
+    else:
+        raise Fail("60s 内手机上没出现该快捷指令；确认两端登录同一 iCloud 且「快捷指令」开启了 iCloud 同步")
+    wda("POST", "/wda/homescreen", {})
+    open_url("prefs:root=BATTERY_USAGE", direct=False)
+    # 快捷指令首次运行可能在手机上弹授权提示；批准属于用户，这里只把内容报出来并等待
+    told, app, seen = False, None, []
+    for _ in range(30):
+        time.sleep(2)
+        app = (wda("GET", "/wda/activeAppInfo") or {}).get("bundleId")
+        if app == SETTINGS:
+            break
+        try:
+            seen = [text_of(n) for n in snapshot_now()["nodes"] if n["type"] in ("Alert", "Sheet", "Button", "StaticText")][:8]
+        except Fail:
+            seen = []
+        if seen and not told:
+            print("手机上可能出现了授权提示，请你本人处理（最多等 60 秒）: " + " | ".join(seen), flush=True)
+            told = True
+    wda("POST", "/wda/homescreen", {})
+    if app != SETTINGS:
+        raise Fail(f"实测失败：前台是 {app}，不是设置；屏幕上: {' | '.join(seen) or '无'}。手机上打开该快捷指令，确认含「打开 URL」且输入是「快捷指令输入」")
+    print("实测通过：prefs: 经中转快捷指令打开了设置")
 
 
 # ---------- 自检 ----------
@@ -765,6 +858,8 @@ def main():
     sp = add("open", cmd_open, "打开 URL 或 scheme（https:、prefs:root=BATTERY_USAGE 等）", observe=True)
     sp.add_argument("url")
     sp.set_defaults(wait=2500)  # 跨 App 跳转比应用内点击慢
+    sp = add("setup-shortcut", cmd_setup_shortcut, "安装 prefs: 所需的中转快捷指令（Mac 生成签名导入，iCloud 同步）")
+    sp.add_argument("--name", default=RELAY_NAME)
     sub.add_parser("selftest", help="离线自检").set_defaults(fn=lambda a: selftest())
 
     a = p.parse_args()

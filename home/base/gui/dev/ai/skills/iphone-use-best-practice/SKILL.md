@@ -56,7 +56,7 @@ iphone type --target t7 "你好"         # 先点 t7 聚焦再输入
 iphone key return
 iphone scroll down                    # down = 看后面的内容；可加 tN 指定滚动区域
 iphone home
-iphone open https://example.com        # URL 或 App scheme；prefs:root=… 需要 setup.md 里的快捷指令
+iphone open https://example.com        # URL 或 App scheme；prefs:root=… 需先 iphone setup-shortcut
 ```
 
 不知道 bundle id：`iphone home` → `iphone find <App 名>` → `iphone tap tN`。
@@ -81,7 +81,7 @@ iphone shot                           # 目视兜底
 |---|---|
 | `iphone up` | 启动 WDA（后台进程），等待就绪；证书过期自动 `renew`；随后把自动锁定设为「永不」（约 6 秒；未配置快捷指令时约 13 秒） |
 | `iphone down` | 把自动锁定恢复为 3 分钟，再停止由本 CLI 启动的 WDA |
-| `iphone autolock never\|30\|60\|120\|180\|240\|300` | 手动设置自动锁定（秒）；配置快捷指令后直达该页，见 references/setup.md |
+| `iphone autolock never\|30\|60\|120\|180\|240\|300` | 手动设置自动锁定（秒）；装了中转快捷指令后直达该页（iphone setup-shortcut，见 references/setup.md） |
 | `iphone renew` | 重新构建并签名。免费账号证书 7 天过期，`status` 显示剩余天数 |
 | `iphone status` | 设备、WDA、锁屏、前台 App、证书 |
 

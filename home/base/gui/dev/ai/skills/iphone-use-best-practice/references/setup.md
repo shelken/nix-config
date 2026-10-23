@@ -35,21 +35,17 @@ iphone up
 - 自绘界面、部分游戏的 AX 树为空，用 `shot` 加坐标点击。
 - WDA 直接打开 `prefs:` / `settings-navigation:` 会被系统拒绝（iOS 27.0.1，`LSApplicationWorkspaceErrorDomain 115`）；`App-prefs:` 带页面路径会落到「App」页。但快捷指令的「打开 URL」动作能打开 `prefs:root=DISPLAY&path=AUTOLOCK`，WDA 又能打开 `shortcuts://run-shortcut?name=…`，所以经快捷指令可一步直达任意设置页。
 
-## 自动锁定快捷指令（可选）
+## 中转快捷指令（prefs: 与自动锁定用）
 
-`iphone up` / `down` 用它把自动锁定在「永不」与 3 分钟之间切换；没配置时改走设置 App 的界面逐级点击（约 13 秒）。
+WDA 直接打开 `prefs:` 会被系统拒绝，只有「快捷指令」里的「打开 URL」能打开。`iphone open <url>` 先直接打开，被拒（115）时转给中转快捷指令；`iphone autolock`、`up`、`down` 也靠它一步直达自动锁定页（约 6 秒，没有时走界面点击约 13 秒）。
 
-1. 在「快捷指令」新建一个只含「打开 URL」的快捷指令，URL 填 `prefs:root=DISPLAY&path=AUTOLOCK`，名称自拟。
-2. 把名称写进 `~/.local/share/iphone-use/config.json`：`"autolock_shortcut": "<名称>"`（`iphone init` 会重写该文件，之后需重新加上）。
-3. 验证：`iphone autolock 180`，输出「自动锁定已设为 3分钟」。
+```bash
+iphone setup-shortcut            # 默认名 iphone-open-url，--name 可改
+```
 
-## 通用「打开 URL」快捷指令（可选，未实测）
+它在 Mac 上生成并签名只含「打开 URL」（输入取「快捷指令输入」）的快捷指令，后台导入并用 `computer-use` 点掉确认框，写入配置 `open_url_shortcut`，等 iCloud 同步到手机后用 `prefs:root=BATTERY_USAGE` 实测。
 
-`iphone open <url>` 先让 WDA 直接打开；系统拒绝（`prefs:` 一类）时，转交配置项 `open_url_shortcut` 指定的快捷指令，调用 `shortcuts://run-shortcut?name=<名称>&input=text&text=<url>`。
-
-1. 在「快捷指令」新建一个只含「打开 URL」的快捷指令，URL 栏放入变量「快捷指令输入」。
-2. 把名称写进 `~/.local/share/iphone-use/config.json`：`"open_url_shortcut": "<名称>"`。
-3. 验证：`iphone open "prefs:root=BATTERY_USAGE"` 应跳到电池页。
-
-已实测：直接路径（`https:`、`App-prefs:`）和对快捷指令传入 `input=text&text=` 的调用不报错。
-未实测：快捷指令是否真的把输入用作 URL；确认后可让 `autolock` 复用它，去掉 `autolock_shortcut`。
+- 需要：macOS 的 `shortcuts` 与 `computer-use` 命令、Mac 与手机同一 iCloud 且开启「快捷指令」同步、WDA 在运行（否则只导入不实测）。
+- 同名已存在会拒绝，避免得到「iphone-open-url 1」；先在快捷指令里删掉。
+- 手机上首次运行可能弹授权提示。命令会把弹窗文字打印出来并最多等 60 秒，需要用户本人在手机上批准。
+- `iphone init` 会重写 `config.json`，之后重新运行 `iphone setup-shortcut` 或手动补回 `open_url_shortcut`。
