@@ -56,6 +56,7 @@ iphone type --target t7 "你好"         # 先点 t7 聚焦再输入
 iphone key return
 iphone scroll down                    # down = 看后面的内容；可加 tN 指定滚动区域
 iphone home
+iphone open https://example.com        # URL 或 App scheme；prefs:root=… 需要 setup.md 里的快捷指令
 ```
 
 不知道 bundle id：`iphone home` → `iphone find <App 名>` → `iphone tap tN`。

@@ -665,6 +665,25 @@ def cmd_autolock(a):
     set_autolock(AUTOLOCK_CHOICES[a.value])
 
 
+def open_url(url):
+    """直接让 WDA 打开；prefs: 之类被系统拒绝（115）时，经接收输入的快捷指令（open_url_shortcut）转一手。"""
+    from urllib.parse import quote
+    try:
+        sess("POST", "/url", {"url": url}, timeout=30)
+        return
+    except Fail as e:
+        if "115" not in str(e):
+            raise
+    name = config().get("open_url_shortcut")
+    if not name:
+        raise Fail("系统拒绝直接打开这个 URL（如 prefs:）。需要配置 open_url_shortcut，见 references/setup.md")
+    sess("POST", "/url", {"url": f"shortcuts://run-shortcut?name={quote(name)}&input=text&text={quote(url)}"}, timeout=30)
+
+
+def cmd_open(a):
+    act(a, lambda: open_url(a.url))
+
+
 # ---------- 自检 ----------
 
 def selftest():
@@ -743,6 +762,9 @@ def main():
     sp.add_argument("bundle")
     sp = add("stop", cmd_stop, "结束某个 App", observe=True)
     sp.add_argument("bundle")
+    sp = add("open", cmd_open, "打开 URL 或 scheme（https:、prefs:root=BATTERY_USAGE 等）", observe=True)
+    sp.add_argument("url")
+    sp.set_defaults(wait=2500)  # 跨 App 跳转比应用内点击慢
     sub.add_parser("selftest", help="离线自检").set_defaults(fn=lambda a: selftest())
 
     a = p.parse_args()

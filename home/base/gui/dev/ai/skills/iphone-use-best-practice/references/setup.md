@@ -42,3 +42,14 @@ iphone up
 1. 在「快捷指令」新建一个只含「打开 URL」的快捷指令，URL 填 `prefs:root=DISPLAY&path=AUTOLOCK`，名称自拟。
 2. 把名称写进 `~/.local/share/iphone-use/config.json`：`"autolock_shortcut": "<名称>"`（`iphone init` 会重写该文件，之后需重新加上）。
 3. 验证：`iphone autolock 180`，输出「自动锁定已设为 3分钟」。
+
+## 通用「打开 URL」快捷指令（可选，未实测）
+
+`iphone open <url>` 先让 WDA 直接打开；系统拒绝（`prefs:` 一类）时，转交配置项 `open_url_shortcut` 指定的快捷指令，调用 `shortcuts://run-shortcut?name=<名称>&input=text&text=<url>`。
+
+1. 在「快捷指令」新建一个只含「打开 URL」的快捷指令，URL 栏放入变量「快捷指令输入」。
+2. 把名称写进 `~/.local/share/iphone-use/config.json`：`"open_url_shortcut": "<名称>"`。
+3. 验证：`iphone open "prefs:root=BATTERY_USAGE"` 应跳到电池页。
+
+已实测：直接路径（`https:`、`App-prefs:`）和对快捷指令传入 `input=text&text=` 的调用不报错。
+未实测：快捷指令是否真的把输入用作 URL；确认后可让 `autolock` 复用它，去掉 `autolock_shortcut`。
