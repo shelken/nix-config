@@ -234,6 +234,17 @@ mise 工具的安装产物与下载缓存不在各 VM 数据盘各存一份，�
 ### 宿主控制命令防护
 
 根据 [ADR 0003 决策 12](../../../adr/0003-shared-tool-single-declaration.md)，对于仅属于宿主管理权限的命令（如 `sb`、`spawn-subagent`、`computer-use`、`just hm/sw`），沙箱生成器在 guest PATH 注入同名桩。沙箱内部进程调用这些命令时，会立即以非零状态码退出并明确给出拒绝原因，防止 Agent 反复无谓重试。
+
+## 端到端测试
+
+自动化端到端只保留隔离边界冒烟测试 [e2e/smoke.sh](./e2e/smoke.sh)：一次性隔离 `MSB_HOME` 中启动临时 VM，验证相邻项目不可见、未声明的私网目标不可达、secret 在网络边界被替换、worktree 内 `git status`/`git commit` 可用四项断言；其余端到端验证不维护自动化套件，在单元 6 切换时手动做一次
+
+```bash
+bash modules/features/ai/sandbox/e2e/smoke.sh
+```
+
+前置：宿主有 `msb`、ubuntu 镜像缓存与共用 mise 目录，且能访问公网（secret 断言请求 api.github.com）。默认现场构建 `sb`，可用 `SB_BIN=<sb路径>` 覆盖；共用 mise 目录只读挂载，测试不写入也不触发 `sb sync`
+
 ## 配置、工作区与状态
 
 宿主 `~/Code` 映射到 `/workspace`，`~/nix-config` 按同一路径提供读写访问，供代码编辑及 Git 工作树公共目录使用。其他目录需在 YAML 中显式声明
