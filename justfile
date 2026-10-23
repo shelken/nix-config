@@ -105,15 +105,7 @@ kitty-clean:
 
 # 调试 kitty
 # kitty-test: kitty-clean
-#   @ln -s {{justfile_directory()}}/home/apps/kitty/kitty.conf $HOME/.config/kitty/kitty.conf
-
-# continue clean
-continue-clean:
-    @rm -f $HOME/.continue/config.json
-
-# 调试 continue
-continue-test: continue-clean
-    @ln -s {{ justfile_directory() }}/home/apps/dev/continue/config.json $HOME/.continue/config.json
+#   @ln -s {{justfile_directory()}}/modules/features/terminal/kitty/kitty.conf $HOME/.config/kitty/kitty.conf
 
 # 显示历史配置列表
 [macos]
