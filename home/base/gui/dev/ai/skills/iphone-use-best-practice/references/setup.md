@@ -49,6 +49,7 @@ WDA 直接打开 `prefs:` 会被系统拒绝，只有「快捷指令」里的「
 - `launch` 只认 bundle id。`xcrun devicectl device info apps` 实测只列出 5 个开发者签名的 App，不含 App Store 的 App，所以 CLI 不提供按名称启动。
 - 自绘界面、部分游戏的 AX 树为空，用 `shot` 加坐标点击。
 - WDA 直接打开 `prefs:` / `settings-navigation:` 会被系统拒绝（iOS 27.0.1，`LSApplicationWorkspaceErrorDomain 115`）；`App-prefs:` 带页面路径会落到「App」页。但快捷指令的「打开 URL」动作能打开 `prefs:root=DISPLAY&path=AUTOLOCK`，WDA 又能打开 `shortcuts://run-shortcut?name=…`，所以经快捷指令可一步直达任意设置页。
+- 手机界面文字随系统语言变化，所以 `find`、`wait` 的关键词要用当前语言（英文系统用 `General`，不是 `通用`）。CLI 内部（`autolock`、`setup-shortcut`）只按不随语言变化的 `name` 标识（如 `com.apple.settings.displayAndBrightness`、`AUTOLOCK`、秒数）匹配，唯一例外是选中对勾的 `label == "checkmark"`（SF Symbol 名）。`setup-shortcut` 里点掉 Mac 导入确认框的 `confirm_mac_import` 按 Mac 的中文界面文字（「快捷指令」「添加快捷指令」）匹配，Mac 系统换语言会失效，此时手动点「添加快捷指令」。
 
 ## 界面点击路径的坑
 
