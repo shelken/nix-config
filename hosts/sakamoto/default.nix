@@ -3,7 +3,7 @@ let
   hostname = "sakamoto";
 in
 {
-  imports = [ self.modules.darwin.macos ];
+  imports = [ self.modules.darwin.gui ];
 
   networking.hostName = hostname;
   networking.computerName = hostname;

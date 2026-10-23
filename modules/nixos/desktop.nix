@@ -1,9 +1,6 @@
 { niri, pkgs, ... }:
 {
   imports = [
-    ./base
-    ../base
-
     niri.nixosModules.niri
     ./desktop
   ]

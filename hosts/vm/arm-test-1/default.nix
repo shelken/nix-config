@@ -1,10 +1,13 @@
 {
+  self,
   username,
   disko,
   ...
 }:
 {
   imports = [
+    self.modules.nixos.gui
+
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
 

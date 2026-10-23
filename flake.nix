@@ -71,46 +71,32 @@
           type = "nixos";
           system = "x86_64-linux";
           nixos-modules = map mylib.relativeToRoot [
-            "modules/nixos/server.nix"
             "hosts/pve155"
             # "modules/nixos/hyprland.nix"
-          ];
-          home-modules = map mylib.relativeToRoot [
-            "home/linux/core.nix"
           ];
         };
         pve156 = mkHost {
           type = "nixos";
           system = "x86_64-linux";
           nixos-modules = map mylib.relativeToRoot [
-            "modules/nixos/server.nix"
             "hosts/pve156"
-          ];
-          home-modules = map mylib.relativeToRoot [
-            "home/linux/core.nix"
           ];
         };
         arm-test-1 = mkHost {
           type = "nixos";
           system = "aarch64-linux";
           nixos-modules = map mylib.relativeToRoot [
-            "modules/nixos/desktop.nix"
             "hosts/vm/arm-test-1"
           ];
           home-modules = map mylib.relativeToRoot [
-            "home/linux/gui.nix"
             "hosts/vm/arm-test-1/home.nix"
           ];
         };
         work-test = mkHost {
           type = "nixos";
           system = "x86_64-linux";
-          nixos-modules = map mylib.relativeToRoot [
-            "modules/nixos/server.nix"
-          ];
-          home-modules = map mylib.relativeToRoot [
-            "home/linux/tui.nix"
-          ];
+          # 无硬件配置的求值测试机，不建 hosts 目录：calcUniformSchedule 按 hosts/ 目录数排定备份时段
+          nixos-modules = [ self.modules.nixos.tui ];
         };
         yuuko = mkHost {
           type = "darwin";
@@ -159,7 +145,6 @@
 
       darwinHosts = lib.filterAttrs (_: v: v.type == "darwin") hosts;
       nixosHosts = lib.filterAttrs (_: v: v.type == "nixos") hosts;
-      homeHosts = lib.filterAttrs (_: v: v ? "home-modules") hosts;
 
       deployHosts = lib.filterAttrs (_: v: v.deploy or false) hosts;
     in
@@ -214,7 +199,7 @@
             config = checkedHome;
             activationPackage = checkedHome.home.activationPackage;
           }
-        ) homeHosts;
+        ) hosts;
 
         # deploy-rs 远程部署：hosts 中标记 `deploy = true`（或 attrset 透传参数）的主机自动生成节点
         deploy = {
@@ -314,7 +299,7 @@
       url = "github:hercules-ci/flake-parts";
       inputs.nixpkgs-lib.follows = "nixpkgs";
     };
-    # 递归导入 modules/features 下的 flake-parts 模块（路径含 /_ 的忽略）
+    # 递归导入 modules/{flake,features,profiles} 下的 flake-parts 模块（路径含 /_ 的忽略）
     import-tree.url = "github:denful/import-tree";
     # 保留上游 nixpkgs pin，让 OMP 与 Linux 工具复用同一份构建缓存
     llm-agents.url = "github:numtide/llm-agents.nix";

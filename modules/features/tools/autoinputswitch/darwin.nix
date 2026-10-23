@@ -1,6 +1,10 @@
-# 自动输入法切换：主机导入 darwin.autoinputswitch 即启用；
+# 自动输入法切换：所在角色的主机即启用；
 # 主机可设 shelken.tools.autoinputswitch.app 切换软件，HM 部分经 osConfig 读取同一值
+{ config, ... }:
 {
+  # 加入哪一层只在这里声明，主机不直接导入具体功能
+  flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.autoinputswitch ];
+
   flake.modules.darwin.autoinputswitch =
     { lib, config, ... }:
     let

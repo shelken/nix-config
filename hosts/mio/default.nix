@@ -3,10 +3,7 @@ let
   hostname = "mio";
 in
 {
-  imports = with self.modules.darwin; [
-    macos
-    autoinputswitch
-  ];
+  imports = [ self.modules.darwin.workstation ];
 
   networking.hostName = hostname;
   networking.computerName = hostname;
