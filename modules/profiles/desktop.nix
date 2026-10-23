@@ -5,7 +5,10 @@ let
 in
 {
   flake.modules.darwin.desktop = {
-    imports = [ darwin.gui ];
-    shelken.modules.desktop.fonts.enable = true;
+    imports = [
+      darwin.gui
+      config.flake.modules.darwin.fonts
+    ];
+    shelken.fonts.enable = true;
   };
 }

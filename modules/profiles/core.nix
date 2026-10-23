@@ -3,22 +3,44 @@
 # 经同名挂接随系统侧进入。flake-parts 不给模块设 key，同一模块导入两次不会去重，
 # 所以 HM 侧不能再写 imports 链。
 #
-# 迁移期间各层先整体引入旧模块树，迁出一个功能就从旧树删掉，
-# 改由功能文件自己声明加入哪一层（见 features/tools/autoinputswitch/darwin.nix）。
+# 旧目录（modules/base、home/base/*）已迁为 features/ 下的独立功能，
+# 由各功能文件自己声明加入哪一层。
+{ config, ... }:
 {
-  # [临时] W2Base 的 modules/base（fonts 选项声明）未合入前求值需要；提交前移除
-  flake.modules.darwin.core.imports = [ ../base ];
+  flake.modules.darwin.core = {
+    imports = [
+      config.flake.modules.darwin.overlays
+      config.flake.modules.darwin.system-packages
+      config.flake.modules.darwin.secrets
+    ];
+  };
 
   flake.modules.nixos.core = {
     imports = [
       ../nixos/base
-      ../base
+      config.flake.modules.nixos.overlays
+      config.flake.modules.nixos.nix-settings
+      config.flake.modules.nixos.system-packages
+      config.flake.modules.nixos.user-account
+      config.flake.modules.nixos.secrets
+      config.flake.modules.nixos.fonts
     ];
     home-manager.sharedModules = [ ../../home/linux/base ];
   };
 
   flake.modules.homeManager.core.imports = [
-    ../../home/base/core
-    ../../home/base/home.nix
+    config.flake.modules.homeManager.home-base
+    config.flake.modules.homeManager.zsh
+    config.flake.modules.homeManager.git
+    config.flake.modules.homeManager.ssh
+    config.flake.modules.homeManager.starship
+    config.flake.modules.homeManager.catppuccin-theme
+    config.flake.modules.homeManager.rclone-conf
+    config.flake.modules.homeManager.btop
+    config.flake.modules.homeManager.core-cli
+    config.flake.modules.homeManager.fastfetch
+    config.flake.modules.homeManager.yazi
+    config.flake.modules.homeManager.dev-options
+    config.flake.modules.homeManager.infisical
   ];
 }

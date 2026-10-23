@@ -3,7 +3,11 @@ let
   hostname = "mio";
 in
 {
-  imports = [ self.modules.darwin.workstation ];
+  # 只在 mio 使用的终端容器工具集（dive/k9s/kubecolor 等）；HM 部分经同名挂接自动进入
+  imports = [
+    self.modules.darwin.workstation
+    self.modules.darwin.cloud-native
+  ];
 
   networking.hostName = hostname;
   networking.computerName = hostname;
