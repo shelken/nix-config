@@ -34,6 +34,9 @@ iphone status
 - `WDA: 未运行` → `iphone up`（自动检查证书，过期则重签，等待就绪）。
 - `设备: 未通过 USB 连接` → 请用户接数据线并解锁。
 - `up` 或其他命令报错时，按报错里的提示做；需要更多信息读 [references/setup.md](references/setup.md)。
+- `iphone init`、`iphone up` 输出「这台手机没有中转快捷指令」→ **先把这段话转告用户，再继续**。中转快捷指令让自动锁定与 `prefs:` 稳定直达；没有它只能界面点击，慢且不稳。用户二选一：
+  - 与 Mac 同一 iCloud：`iphone setup-shortcut`（Mac 导入并同步到手机，随后在手机上验证）
+  - 与 Mac 不同 iCloud：`iphone shortcut-link` 取 iCloud 链接，用户在手机 Safari 里打开并点「添加快捷指令」，再 `iphone setup-shortcut` 验证
 
 ### 2. 读界面
 
@@ -82,7 +85,7 @@ iphone shot                           # 目视兜底
 |---|---|
 | `iphone up` | 启动 WDA（后台进程），等待就绪；证书过期自动 `renew`；随后把自动锁定设为「永不」（中转快捷指令约 6 秒，界面点击约 20 秒；设置失败只警告，`up` 仍算成功） |
 | `iphone down` | 把自动锁定恢复为 3 分钟，再停止由本 CLI 启动的 WDA |
-| `iphone autolock never\|30\|60\|120\|180\|240\|300` | 手动设置自动锁定（秒）；当前手机在 `relay_devices` 里就经中转快捷指令直达，否则（如与 Mac 不同 iCloud 的手机）走界面点击；见 references/setup.md |
+| `iphone autolock never\|30\|60\|120\|180\|240\|300` | 手动设置自动锁定（秒）；当前手机在 `relay_devices` 里就经中转快捷指令直达，否则走界面点击（兜底，较不稳） |
 | `iphone renew` | 重新构建并签名。免费账号证书 7 天过期，`status` 显示剩余天数 |
 | `iphone status` | 设备、WDA、锁屏、前台 App、证书 |
 

@@ -39,18 +39,21 @@ iphone up
 
 WDA 直接打开 `prefs:` 会被系统拒绝，只有「快捷指令」里的「打开 URL」能打开。`iphone open <url>` 先直接打开，被拒（115）时转给中转快捷指令；`iphone autolock`、`up`、`down` 也靠它一步直达自动锁定页（约 6 秒）。
 
-```bash
-iphone setup-shortcut            # 默认名 iphone-open-url，--name 可改
-```
+没有它时 `autolock` 走界面点击（设置 → 显示与亮度 → 自动锁定，约 20 秒），只作兜底。所以每台手机一开始就该装上它：`iphone init`、`iphone up` 发现当前手机不在配置 `relay_devices`（能用它的手机 UDID 列表）时会打印提示，转告用户二选一：
 
-快捷指令靠 iCloud 同步，所以**按设备记录**：配置 `relay_devices` 列出能用它的手机 UDID，当前 `udid` 不在其中就不走中转，`autolock` 直接走界面点击（设置 → 显示与亮度 → 自动锁定，约 20 秒）。与 Mac 不同 iCloud 的手机属于这一类，无需也无法配置。中转失败时 `autolock` 同样自动回退到界面点击；`up` 里设置自动锁定失败只警告，不让已就绪的 `up` 失败。
+| 手机与 Mac | 命令 |
+|---|---|
+| 同一 iCloud | `iphone setup-shortcut`：Mac 导入，经 iCloud 同步到手机，并在手机上验证 |
+| 不同 iCloud | `iphone shortcut-link` 展示 iCloud 链接；用户在手机 Safari 打开并点「添加快捷指令」；再 `iphone setup-shortcut` 验证 |
 
-`setup-shortcut` 在 Mac 上生成并签名只含「打开 URL」（输入取「快捷指令输入」）的快捷指令，后台导入并用 `computer-use` 点掉确认框，然后在**当前手机**上用 `prefs:root=BATTERY_USAGE` 实测；通过后才写入 `open_url_shortcut` 与 `relay_devices`。
+`setup-shortcut` 在 Mac 上生成并签名只含「打开 URL」（输入取「快捷指令输入」）的快捷指令，后台导入并用 `computer-use` 点掉确认框，然后在**当前手机**上用 `prefs:root=BATTERY_USAGE` 实测；通过后才写入 `open_url_shortcut` 与 `relay_devices`。Mac 上已有同名快捷指令时不重复导入，只验证并登记。
 
-- 需要：macOS 的 `shortcuts` 与 `computer-use` 命令、Mac 与手机同一 iCloud 且开启「快捷指令」同步、WDA 在运行（否则只导入不实测）。
-- Mac 上已有同名快捷指令时不重复导入，只在当前手机上实测并登记；换到另一台同 iCloud 的手机，直接再跑一次即可。
+`shortcut-link` 展示配置 `shortcut_url`。还没有时，它在 Mac 的「快捷指令」里打开该快捷指令，用户在窗口里点「共享 → 拷贝 iCloud 链接」，再 `iphone shortcut-link <链接>` 记录，之后直接展示。链接只含一个「打开 URL」动作，不含个人信息。
+
+- 需要：macOS 的 `shortcuts` 与 `computer-use` 命令；WDA 在运行（否则 `setup-shortcut` 只导入不实测）。
 - 手机上首次运行可能弹授权提示。命令会把弹窗文字打印出来并最多等 60 秒，需要用户本人在手机上批准。
-- `iphone init` 会重写 `config.json`，之后重新运行 `iphone setup-shortcut` 或手动补回 `open_url_shortcut` 与 `relay_devices`。
+- 中转失败时 `autolock` 自动回退界面点击；`up` 里设置自动锁定失败只警告，不让已就绪的 `up` 失败。
+- `iphone init` 保留 `config.json` 里已有的键，包括 `open_url_shortcut`、`relay_devices`、`shortcut_url`。
 
 ## 界面点击路径的坑
 

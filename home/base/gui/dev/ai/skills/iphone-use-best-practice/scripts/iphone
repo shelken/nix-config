@@ -393,6 +393,8 @@ def cmd_init(a):
            "udid": udid, "team_id": team, "bundle_id": bundle, "source_dir": str(src)}
     CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
     print(f"已写入 {CFG}（设备 {udid}）\n下一步: iphone up")
+    if udid not in cfg.get("relay_devices", []):
+        print(relay_notice())
 
 
 def cmd_renew(a):
@@ -434,6 +436,8 @@ def cmd_up(a):
         if ready():
             print("WDA 已就绪")
             if not a.no_keep_awake:
+                if not relay_name():
+                    print(relay_notice(), flush=True)
                 try:
                     set_autolock(AUTOLOCK_NEVER)
                 except Fail as e:  # 常亮只是附加功能，不能让 WDA 已就绪的 up 失败
@@ -716,6 +720,31 @@ def relay_name():
     return cfg.get("open_url_shortcut") if cfg["udid"] in cfg.get("relay_devices", []) else None
 
 
+def relay_notice():
+    return ("这台手机没有中转快捷指令：自动锁定只能走界面点击，慢且不稳。请用户装上它（二选一，之后都跑 iphone setup-shortcut 验证）：\n"
+            "  与 Mac 同一 iCloud:   iphone setup-shortcut（Mac 导入，经 iCloud 同步到手机）\n"
+            "  与 Mac 不同 iCloud:   iphone shortcut-link 取 iCloud 链接，在手机 Safari 里打开并点「添加快捷指令」，再 iphone setup-shortcut")
+
+
+def cmd_shortcut_link(a):
+    cfg = config()
+    if a.url:
+        if not re.fullmatch(r"https://www\.icloud\.com/shortcuts/[0-9A-Za-z]+", a.url):
+            raise Fail("不是 iCloud 快捷指令链接（形如 https://www.icloud.com/shortcuts/…）")
+        cfg["shortcut_url"] = a.url
+        CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
+        print("已记录。之后 iphone shortcut-link 直接展示")
+        return
+    if cfg.get("shortcut_url"):
+        print(cfg["shortcut_url"])
+        return
+    name = cfg.get("open_url_shortcut") or RELAY_NAME
+    if name not in mac_shortcuts():
+        raise Fail("Mac 上还没有该快捷指令，先 iphone setup-shortcut")
+    subprocess.run(["shortcuts", "view", name], check=True)
+    print(f"还没有 iCloud 链接。已在 Mac「快捷指令」里打开「{name}」：共享 → 拷贝 iCloud 链接，然后 iphone shortcut-link <链接> 记录；以后直接展示")
+
+
 def _autolock_via_ui():
     sess("POST", "/wda/apps/activate", {"bundleId": SETTINGS}, timeout=45)
     time.sleep(0.8)
@@ -774,7 +803,7 @@ def open_url(url, direct=True, relay=None):
                 raise
     name = relay or relay_name()
     if not name:
-        raise Fail("系统拒绝直接打开这个 URL（如 prefs:）。这台手机没有中转快捷指令；与 Mac 同一 iCloud 时可 iphone setup-shortcut，否则改用界面点击")
+        raise Fail("系统拒绝直接打开这个 URL（如 prefs:），这台手机没有中转快捷指令。\n" + relay_notice())
     sess("POST", "/url", {"url": f"shortcuts://run-shortcut?name={quote(name)}&input=text&text={quote(url)}"}, timeout=30)
 
 
@@ -849,7 +878,7 @@ def cmd_setup_shortcut(a):
             break
         time.sleep(3)
     else:
-        raise Fail("60s 内手机上没出现该快捷指令。它经 iCloud 从 Mac 同步，手机与 Mac 不是同一账号时收不到；这种手机不需要它，autolock 会走界面点击")
+        raise Fail("60s 内手机上没出现该快捷指令。\n" + relay_notice())
     wda("POST", "/wda/homescreen", {})
     open_url("prefs:root=BATTERY_USAGE", direct=False, relay=a.name)
     # 快捷指令首次运行可能在手机上弹授权提示；批准属于用户，这里只把内容报出来并等待
@@ -999,8 +1028,10 @@ def main():
     sp = add("open", cmd_open, "打开 URL 或 scheme（https:、prefs:root=BATTERY_USAGE 等）", observe=True)
     sp.add_argument("url")
     sp.set_defaults(wait=2500)  # 跨 App 跳转比应用内点击慢
-    sp = add("setup-shortcut", cmd_setup_shortcut, "安装 prefs: 所需的中转快捷指令（Mac 生成签名导入，iCloud 同步）")
+    sp = add("setup-shortcut", cmd_setup_shortcut, "在 Mac 安装中转快捷指令（同一 iCloud 的手机自动同步），并在当前手机上验证")
     sp.add_argument("--name", default=RELAY_NAME)
+    sp = add("shortcut-link", cmd_shortcut_link, "展示中转快捷指令的 iCloud 链接（给与 Mac 不同 iCloud 的手机用）；带 URL 则记录它")
+    sp.add_argument("url", nargs="?")
     sub.add_parser("selftest", help="离线自检").set_defaults(fn=lambda a: selftest())
 
     a = p.parse_args()
