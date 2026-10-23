@@ -7,7 +7,7 @@
 - `unindexed=` 树里存在、但拿不到 token 的节点数。驱动只给可操作元素发索引，其余节点只出现在 `tree_markdown` 里：读得到，按不了 `t<idx>`。实测音乐播放器满树 425 个 markdown 节点 vs 231 个 elements，差 194。
 - `tree=full | depth-limited(depth=N)`。`depth-limited` 表示最深元素正好停在请求深度上，下面可能还有更深的，加深一层再看。
 
-判断「是不是还有东西没读到」，读 `unindexed=` 与 `tree=` 这两个完整性读数，并结合 `walked=`。两者都是保守下界：`unindexed` 只数驱动已经走到的部分，被深度砍掉的还没算进去。`find` 命中无索引节点时会打印 `~` 行标出来。
+判断「是不是还有东西没读到」，读 `unindexed=` 与 `tree=` 这两个完整性读数，并结合 `walked=`。两者都是保守下界：`unindexed` 只数驱动已经走到的部分，被深度砍掉的还没算进去。`find` 命中无索引节点时会打印 `~` 行标出来；行尾的 `in=t<idx>` 是最近的有索引祖先（列表行里的文字通常挂在可点的 AXRow 下），`click t<idx>` 点它就等于点这段文字。
 
 ## 遍历成本
 

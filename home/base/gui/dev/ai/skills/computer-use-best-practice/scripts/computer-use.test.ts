@@ -98,6 +98,7 @@ if (tool === "get_window_state") {
     // markdown 是 elements 的超集：驱动只给可操作元素发索引，其余节点只在这里出现。
     tree_markdown: "- [0] AXWindow \\"Test\\"\\n  - [1] " + interactiveRole + " \\"Play\\" actions=[press]\\n  - [3] AXStaticText = \\"Queue\\""
       + (process.env.MOCK_TEXT_ONLY === "1" ? "\\n  - AXButton (上一首)" : "")
+      + (process.env.MOCK_TEXT_IN_ROW === "1" ? "\\n  - [4] AXRow\\n    - AXStaticText = \\"第二首\\"" : "")
   }));
 } else if (tool === "list_windows") {
   const windows = [
@@ -300,9 +301,19 @@ describe("computer-use action protocol", () => {
     expect(textOnly.stdout).toContain("shown=1");
     expect(textOnly.stdout).toContain("~\tButton\t上一首\tno-token");
     expect(textOnly.stdout).toContain("unindexed=1");
+    // 直属窗口的无索引文字没有可点的祖先，不该给 in=
+    expect(textOnly.stdout).not.toContain("\tin=t");
     // 改前这里会报「该窗口没有可操作元素」，把真实存在的文字说成不存在
     expect(textOnly.stdout).not.toContain("没有可操作元素");
     expect(textOnly.stdout).toContain("没有索引");
+  });
+
+  test("points a no-token match at its nearest indexed ancestor", () => {
+    const { env } = setup();
+
+    const inRow = run({ ...env, MOCK_TEXT_IN_ROW: "1" }, ["find", "42:7", "第二首"]);
+    expect(inRow.code).toBe(0);
+    expect(inRow.stdout).toContain("~\tStaticText\t第二首\tno-token\tin=t4");
   });
 
   test("verifies a UI predicate through verify_state and echoes its verdict", () => {
