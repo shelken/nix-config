@@ -22,7 +22,7 @@ aerospace-clean:
 
 aerospace-test:
     just aerospace-clean
-    @ln -s {{ justfile_directory() }}/home/darwin/wm/aerospace/aerospace.toml $HOME/.config/aerospace/aerospace.toml
+    @ln -s {{ justfile_directory() }}/modules/features/wm/aerospace/aerospace.toml $HOME/.config/aerospace/aerospace.toml
     @aerospace reload-config
 
 # git add all

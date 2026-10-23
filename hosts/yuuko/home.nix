@@ -4,7 +4,6 @@
   #   inherit (myvars.networking.ssh) extraConfig;
   # };
   shelken = {
-    wm.aerospace.enable = true;
     neovim.minimal = true;
   };
 }

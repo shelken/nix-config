@@ -11,10 +11,7 @@ in
   shelken = {
     secrets.enable = true;
     # window manager
-    wm.aerospace.enable = false;
-    wm.omniwm.enable = true;
-    tools.hammerspoon.enable = false;
-    wm.thaw.enable = true;
+    wm.manager = "omniwm";
 
     # suites
     suites.desktop.enable = true;

@@ -14,14 +14,12 @@
 
 ## 使用
 
-窗口管理与其他没有兼容如有必要，先关闭yabi aerospace配置
+窗口管理与其他没有兼容如有必要，需注意窗口管理器冲突（当前默认平铺窗口管理器为 aerospace，由 `shelken.wm.manager` 控制）
 
 配置
 
 ```nix
-config.shelken.tools.hammerspoon.enable = true;
-config.shelken.tools.hammerspoon.wm.enable = true;
-# config.shelken.wm.aerospace.enable = false
-# config.shelken.tools.typeswitch.enable = false
-# config.shelken.wm.yabi.enable = false
+imports = [ config.flake.modules.darwin.hammerspoon ];
+shelken.tools.hammerspoon.wm.enable = true;
+# 注意：窗口管理器二选一选项 shelken.wm.manager 默认启用 aerospace
 ```

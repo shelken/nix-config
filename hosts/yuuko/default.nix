@@ -19,7 +19,5 @@ in
     network.fl-clash.enable = true;
 
     suites.desktop.enable = true;
-
-    wm.aerospace.enable = true;
   };
 }

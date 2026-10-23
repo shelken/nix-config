@@ -21,8 +21,6 @@ in
     suites.desktop.enable = true;
 
     tools.virts.enable = true;
-
-    wm.aerospace.enable = true;
   };
   # homebrew = {
   #   onActivation = {
