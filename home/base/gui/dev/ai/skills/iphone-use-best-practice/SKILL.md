@@ -34,9 +34,9 @@ iphone status
 - `WDA: 未运行` → `iphone up`（自动检查证书，过期则重签，等待就绪）。
 - `设备: 未通过 USB 连接` → 请用户接数据线并解锁。
 - `up` 或其他命令报错时，按报错里的提示做；需要更多信息读 [references/setup.md](references/setup.md)。
-- `iphone init`、`iphone up` 输出「这台手机没有中转快捷指令」→ **先把这段话转告用户，再继续**。中转快捷指令让自动锁定与 `prefs:` 稳定直达；没有它只能界面点击，慢且不稳。用户二选一：
+- `iphone status`、`iphone init`、`iphone up` 输出「这台手机没有中转快捷指令」→ **先把这段话转告用户，再继续**。中转快捷指令让自动锁定与 `prefs:` 稳定直达；没有它只能界面点击，慢且不稳。用户二选一：
   - 与 Mac 同一 iCloud：`iphone setup-shortcut`（Mac 导入并同步到手机，随后在手机上验证）
-  - 与 Mac 不同 iCloud：`iphone shortcut-link` 取 iCloud 链接，用户在手机 Safari 里打开并点「添加快捷指令」，再 `iphone setup-shortcut` 验证
+  - 与 Mac 不同 iCloud：`iphone shortcut-link` 展示 iCloud 链接，用户在手机 Safari 里打开并点「添加快捷指令」，再 `iphone setup-shortcut` 验证
 
 ### 2. 读界面
 

@@ -499,6 +499,10 @@ def cmd_status(a):
         print(f"前台: {(wda('GET', '/wda/activeAppInfo') or {}).get('bundleId')}")
     d = days_left()
     print("证书: " + ("无构建" if d is None else f"剩余 {d:.1f} 天（免费账号 7 天，过期后 iphone up 会自动重签）" if d > 0 else "已过期，iphone up 会自动重签"))
+    if relay_name():
+        print("中转快捷指令: 已装")
+    else:
+        print(relay_notice())
     return 0 if ok else 1
 
 
@@ -727,22 +731,7 @@ def relay_notice():
 
 
 def cmd_shortcut_link(a):
-    cfg = config()
-    if a.url:
-        if not re.fullmatch(r"https://www\.icloud\.com/shortcuts/[0-9A-Za-z]+", a.url):
-            raise Fail("不是 iCloud 快捷指令链接（形如 https://www.icloud.com/shortcuts/…）")
-        cfg["shortcut_url"] = a.url
-        CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
-        print("已记录。之后 iphone shortcut-link 直接展示")
-        return
-    if cfg.get("shortcut_url"):
-        print(cfg["shortcut_url"])
-        return
-    name = cfg.get("open_url_shortcut") or RELAY_NAME
-    if name not in mac_shortcuts():
-        raise Fail("Mac 上还没有该快捷指令，先 iphone setup-shortcut")
-    subprocess.run(["shortcuts", "view", name], check=True)
-    print(f"还没有 iCloud 链接。已在 Mac「快捷指令」里打开「{name}」：共享 → 拷贝 iCloud 链接，然后 iphone shortcut-link <链接> 记录；以后直接展示")
+    print(RELAY_URL)
 
 
 def _autolock_via_ui():
@@ -812,6 +801,7 @@ def cmd_open(a):
 
 
 RELAY_NAME = "iphone-open-url"
+RELAY_URL = "https://www.icloud.com/shortcuts/425895ce7d254e9cba00198ce8e7aa42"  # 同一个只含「打开 URL」的快捷指令，供不同 iCloud 的手机直接添加
 
 
 def relay_shortcut_bytes():
@@ -1030,8 +1020,7 @@ def main():
     sp.set_defaults(wait=2500)  # 跨 App 跳转比应用内点击慢
     sp = add("setup-shortcut", cmd_setup_shortcut, "在 Mac 安装中转快捷指令（同一 iCloud 的手机自动同步），并在当前手机上验证")
     sp.add_argument("--name", default=RELAY_NAME)
-    sp = add("shortcut-link", cmd_shortcut_link, "展示中转快捷指令的 iCloud 链接（给与 Mac 不同 iCloud 的手机用）；带 URL 则记录它")
-    sp.add_argument("url", nargs="?")
+    sub.add_parser("shortcut-link", help="展示中转快捷指令的 iCloud 链接（给与 Mac 不同 iCloud 的手机用）").set_defaults(fn=cmd_shortcut_link)
     sub.add_parser("selftest", help="离线自检").set_defaults(fn=lambda a: selftest())
 
     a = p.parse_args()
