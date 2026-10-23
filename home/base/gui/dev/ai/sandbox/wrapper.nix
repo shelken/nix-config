@@ -39,6 +39,100 @@ let
     exec "$@"
   '';
 
+  growVolume = pkgs.writeShellScript "sb-volume-grow" ''
+    set -euo pipefail
+    if [[ $# != 1 || "$1" == -h || "$1" == --help ]]; then
+      echo '用法: ${name} volume grow SIZE，例如 32G'
+      [[ $# == 1 ]] && exit 0
+      exit 2
+    fi
+    size="$1"
+    state=$(msb inspect ${name} --format json)
+    status=$(${pkgs.jq}/bin/jq -er '.status | select(. == "Running" or . == "Stopped")' <<< "$state")
+    volume=$(${pkgs.jq}/bin/jq -er '
+      [(if .status == "Running" then .active_config else .config end).mounts[]
+        | select(.type == "Named" and .guest == "/data")]
+      | if length == 1 then .[0].name else error("/data 必须挂载一个命名卷") end
+    ' <<< "$state")
+    info=$(msb volume list --format json | ${pkgs.jq}/bin/jq -ec --arg name "$volume" '
+      .[] | select(.name == $name)
+      | if .kind == "disk" and .disk_format == "raw" and .disk_fstype == "ext4"
+        then . else error("扩容只支持 raw ext4 磁盘卷") end
+    ')
+    old_capacity=$(${pkgs.jq}/bin/jq -r '.capacity_bytes' <<< "$info")
+    source_disk="$MSB_HOME/volumes/$volume/disk.raw"
+    [[ -f "$source_disk" ]] || { echo "找不到卷镜像: $source_disk" >&2; exit 1; }
+    temporary="${name}-grow-$$"
+    helper="grow-$$"
+    temporary_disk="$MSB_HOME/volumes/$temporary/disk.raw"
+    phase=prepared
+
+    cleanup() {
+      result=$?
+      trap - EXIT INT TERM
+      if msb inspect "$helper" --format json >/dev/null 2>&1; then
+        if ! msb rm --force "$helper" >/dev/null; then
+          echo "无法清理迁移 VM ''${helper}，保留临时卷 $temporary" >&2
+          exit 1
+        fi
+      fi
+      if [[ "$phase" == replacing ]]; then
+        echo "扩容未完成，已校验的数据保留在卷 ''${temporary}；${name} 保持停止" >&2
+        exit 1
+      fi
+      if ! msb volume rm "$temporary" >/dev/null; then
+        result=1
+      fi
+      if [[ "$status" == Running && "$phase" != prepared ]]; then
+        if ! sec-run msb start ${name}; then
+          echo '卷数据已保留，VM 启动失败' >&2
+          result=1
+        fi
+      fi
+      if [[ "$result" == 0 && "$phase" == complete ]]; then
+        echo "卷 $volume 已扩容到 $size"
+      fi
+      exit "$result"
+    }
+
+    msb volume create "$temporary" --kind disk --size "$size" --quiet >/dev/null
+    trap cleanup EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    new_capacity=$(msb volume list --format json | ${pkgs.jq}/bin/jq -er --arg name "$temporary" '
+      .[] | select(.name == $name) | .capacity_bytes
+    ')
+    if (( new_capacity == old_capacity )); then
+      echo "卷 $volume 已是 ''${size}，无需扩容"
+      exit 0
+    fi
+    if (( new_capacity < old_capacity )); then
+      echo '目标容量必须大于当前容量，不支持缩容' >&2
+      exit 1
+    fi
+
+    phase=copying
+    if [[ "$status" == Running ]]; then msb stop ${name}; fi
+    msb run --name "$helper" --pull never --no-stdin \
+      --mount-named "$volume:/old:kind=disk,size=$((old_capacity / 1024 / 1024))M,ro" \
+      --mount-named "$temporary:/new:kind=disk,size=$size" \
+      ubuntu -- bash -euo pipefail -c '
+        cp -a /old/. /new/
+        tar --acls --xattrs --numeric-owner -C /old -cf - . |
+          tar --acls --xattrs --numeric-owner -C /new -df -
+        sync
+      '
+    msb rm --force "$helper" >/dev/null
+
+    # 容量记录交给原生 API 更新，避免直接修改 msb 数据库。
+    phase=replacing
+    msb volume rm "$volume" >/dev/null
+    msb volume create "$volume" --kind disk --size "$size" --quiet >/dev/null
+    # 两个卷目录同属 MSB_HOME；保留临时硬链接，替换失败时仍有完整数据。
+    ${pkgs.coreutils}/bin/ln -f "$temporary_disk" "$source_disk"
+    phase=complete
+  '';
+
   sb = pkgs.writeShellScriptBin name ''
     set -euo pipefail
     export MSB_CONFIG_PATH="${msbConfig}"
@@ -52,6 +146,7 @@ let
       ${name} shell                    进入交互 shell
       ${name} status                   查看状态
       ${name} inspect                  查看 JSON 规格与挂载
+      ${name} volume grow SIZE         扩容 /data 磁盘卷，保留卷名并恢复原运行状态
       ${name} volume …                 原生命名卷管理
       ${name} down                     停止 VM
       ${name} rm                       删除 VM，保留命名卷
@@ -77,7 +172,13 @@ let
       shell) set -- -t bash "$@" ;;
       status) exec msb status ${name} "$@" ;;
       inspect) exec msb inspect ${name} --format json ;;
-      volume) exec msb volume "$@" ;;
+      volume)
+        if [[ "''${1:-}" == grow ]]; then
+          shift
+          exec ${growVolume} "$@"
+        fi
+        exec msb volume "$@"
+        ;;
       down) exec msb stop ${name} "$@" ;;
       rm) exec msb rm --force ${name} "$@" ;;
       -h|--help|help) usage ;;
