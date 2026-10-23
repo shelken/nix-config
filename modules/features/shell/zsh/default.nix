@@ -1,5 +1,8 @@
 # zsh：shell、oh-my-zsh、fzf（home/base/core/zsh + shell.nix + core.nix 迁入）
+{ config, ... }:
 {
+  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.zsh ];
+
   flake.modules.homeManager.zsh =
     {
       pkgs,

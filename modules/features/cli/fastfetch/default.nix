@@ -1,5 +1,8 @@
 # fastfetch：mise 安装 + 配置软链（home/base/core/fastfetch 迁入）
+{ config, ... }:
 {
+  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.fastfetch ];
+
   flake.modules.homeManager.fastfetch =
     { config, mylib, ... }:
     {

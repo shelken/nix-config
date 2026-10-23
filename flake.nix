@@ -72,7 +72,8 @@
           system = "x86_64-linux";
           nixos-modules = map mylib.relativeToRoot [
             "hosts/pve155"
-            # "modules/nixos/hyprland.nix"
+            # 可选功能按需加入 imports，例如 Hyprland（仓库默认桌面是 niri）：
+            # self.modules.nixos.hyprland
           ];
         };
         pve156 = mkHost {

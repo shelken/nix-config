@@ -1,5 +1,8 @@
 # herdr：任务编排器配置（home/base/tui/herdr 迁入）
+{ config, ... }:
 {
+  flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.herdr ];
+
   flake.modules.homeManager.herdr =
     {
       config,

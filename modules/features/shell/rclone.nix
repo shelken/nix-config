@@ -1,6 +1,9 @@
 # rclone：sops 渲染的 rclone.conf（home/base/core/rclone.nix 迁入）
 # darwin 侧的 macfuse 依赖在 features/tools/rclone.nix（已有）
+{ config, ... }:
 {
+  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.rclone-conf ];
+
   flake.modules.homeManager.rclone-conf =
     {
       config,

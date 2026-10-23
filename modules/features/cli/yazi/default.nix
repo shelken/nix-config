@@ -1,5 +1,8 @@
 # yazi：文件管理器（home/base/core/yazi 迁入）
+{ config, ... }:
 {
+  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.yazi ];
+
   flake.modules.homeManager.yazi =
     {
       config,

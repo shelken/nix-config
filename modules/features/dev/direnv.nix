@@ -1,5 +1,8 @@
 # direnv：nix-direnv 集成（home/base/tui/direnv.nix 迁入）
+{ config, ... }:
 {
+  flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.direnv ];
+
   flake.modules.homeManager.direnv = {
     programs.direnv = {
       enable = true;

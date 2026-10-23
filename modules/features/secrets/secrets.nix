@@ -1,7 +1,12 @@
 # secrets：age 密钥能力（主机属性）与 sops-nix 用户态模块
 # 系统侧选项在此声明（原 modules/base/secrets.nix），值由 hosts/<host>/default.nix 设置；
 # HM 侧经 osConfig 只读同名选项
+# 所有主机都可能有 age 密钥 → 两个 core 都导入；开关仍由主机设置
+{ config, ... }:
 {
+  flake.modules.darwin.core.imports = [ config.flake.modules.darwin.secrets ];
+  flake.modules.nixos.core.imports = [ config.flake.modules.nixos.secrets ];
+
   flake.modules.darwin.secrets =
     { lib, ... }:
     {

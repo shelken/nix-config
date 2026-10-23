@@ -296,7 +296,7 @@ view:
 # 调试wez
 wez-test:
     @rm -f $HOME/.config/wezterm/wezterm.lua
-    @ln -s {{ justfile_directory() }}/home/apps/wezterm/wezterm.lua $HOME/.config/wezterm/wezterm.lua
+    @ln -s {{ justfile_directory() }}/modules/features/terminal/wezterm/wezterm.lua $HOME/.config/wezterm/wezterm.lua
 
 
 # 同步 magpie 模型能力差集到 omp models.yml

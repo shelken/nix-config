@@ -1,5 +1,8 @@
 # starship：提示符（home/base/core/starship.nix 迁入）
+{ config, ... }:
 {
+  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.starship ];
+
   flake.modules.homeManager.starship =
     {
       lib,

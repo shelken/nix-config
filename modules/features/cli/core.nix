@@ -1,5 +1,8 @@
 # nix 周边工具：zmx、nix-melt、nix-tree、nix-output-monitor（home/base/core/packages.nix 迁入）
+{ config, ... }:
 {
+  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.core-cli ];
+
   flake.modules.homeManager.core-cli =
     { pkgs, ... }:
     {
