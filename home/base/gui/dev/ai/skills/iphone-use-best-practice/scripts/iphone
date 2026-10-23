@@ -10,6 +10,7 @@ import json
 import os
 import plistlib
 import re
+import shutil
 import signal
 import socket
 import struct
@@ -77,14 +78,15 @@ def _recv(s, n):
     return buf
 
 
-def usb_device(udid):
+def usb_devices():
     s, reply = _mux({"MessageType": "ListDevices"})
     s.close()
-    for d in reply.get("DeviceList", []):
-        p = d["Properties"]
-        if p.get("ConnectionType") == "USB" and (udid is None or p.get("SerialNumber") == udid):
-            return d["DeviceID"], p["SerialNumber"]
-    return None
+    return [(d["DeviceID"], d["Properties"]["SerialNumber"]) for d in reply.get("DeviceList", [])
+            if d["Properties"].get("ConnectionType") == "USB"]
+
+
+def usb_device(udid):
+    return next((d for d in usb_devices() if udid is None or d[1] == udid), None)
 
 
 class _Conn(http.client.HTTPConnection):
@@ -332,10 +334,19 @@ def ready():
 def pid_alive():
     try:
         pid = int(PIDFILE.read_text())
-        os.kill(pid, 0)
-        return pid
-    except (FileNotFoundError, ValueError, ProcessLookupError):
+    except (FileNotFoundError, ValueError):
         return None
+    try:
+        # up 自己启动的 xcodebuild 退出后是僵尸，kill(pid, 0) 仍成功、再发信号还会 EPERM；先回收
+        if os.waitpid(pid, os.WNOHANG)[0] == pid:
+            return None
+    except ChildProcessError:
+        pass  # 不是本进程的子进程（上一次 up 留下的），交给 kill 判断
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return None
+    return pid
 
 
 LOG_HINTS = [
@@ -352,22 +363,36 @@ LOG_HINTS = [
 # ---------- 子命令 ----------
 
 def cmd_init(a):
+    """首次配置，也用于换设备：沿用已有配置里的 team、bundle 和其他键。"""
     HOME.mkdir(parents=True, exist_ok=True)
+    old = json.loads(CFG.read_text()) if CFG.exists() else {}
+    if pid_alive():
+        raise Fail("WDA 还在运行。先 iphone down（会把旧手机的自动锁定恢复为 3 分钟），再换设备")
+    team, bundle = a.team or old.get("team_id"), a.bundle or old.get("bundle_id")
+    if not (team and bundle):
+        raise Fail("首次配置需要 --team 和 --bundle")
     udid = a.udid
     if not udid:
-        dev = usb_device(None)
-        if not dev:
+        devs = usb_devices()
+        if not devs:
             raise Fail("没有 USB 设备。接上并解锁 iPhone，或用 --udid 指定")
-        udid = dev[1]
-    src = Path(a.source or HOME / "runtime/WebDriverAgent").expanduser()
+        if len(devs) > 1:
+            raise Fail("有多台 USB 设备，用 --udid 指定其一: " + ", ".join(d[1] for d in devs))
+        udid = devs[0][1]
+    src = Path(a.source or old.get("source_dir") or HOME / "runtime/WebDriverAgent").expanduser()
     if not (src / "WebDriverAgent.xcodeproj").exists():
         src.mkdir(parents=True, exist_ok=True)
         for c in (["git", "init", "-q"], ["git", "remote", "add", "origin", "https://github.com/appium/WebDriverAgent.git"],
                   ["git", "fetch", "-q", "--depth", "1", "origin", WDA_COMMIT], ["git", "checkout", "-q", "--detach", "FETCH_HEAD"]):
             subprocess.run(c, cwd=src, check=True)
-    cfg = {"udid": udid, "team_id": a.team, "bundle_id": a.bundle, "source_dir": str(src), "local_port": 18100, "device_port": 8100}
-    CFG.write_text(json.dumps(cfg, indent=2))
-    print(f"已写入 {CFG}\n下一步: iphone renew && iphone up")
+    if udid != old.get("udid"):
+        # 旧构建的描述文件只含旧设备；删掉后 up 会自动 renew，为新设备重新签名
+        shutil.rmtree(RUNNER, ignore_errors=True)
+        (CLI / "session").unlink(missing_ok=True)
+    cfg = {"local_port": 18100, "device_port": 8100, **old,
+           "udid": udid, "team_id": team, "bundle_id": bundle, "source_dir": str(src)}
+    CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
+    print(f"已写入 {CFG}（设备 {udid}）\n下一步: iphone up")
 
 
 def cmd_renew(a):
@@ -807,6 +832,16 @@ def selftest():
     d = diff(old, new)
     assert "+ t2 Switch \"Wi-Fi\" [0,0,1,1]" in d and any(l.startswith("- TextField") for l in d), d
     assert diff(old, old)[0].startswith("observe: 树无变化")
+    # 本进程启动的子进程被终止后是僵尸；pid_alive 必须把它当作已退出，stop_wda 不能抛 EPERM
+    import tempfile
+    g, saved = globals(), (PIDFILE, CLI)
+    with tempfile.TemporaryDirectory() as tmp:
+        g["CLI"], g["PIDFILE"] = Path(tmp), Path(tmp) / "wda.pid"
+        child = subprocess.Popen(["sleep", "60"], start_new_session=True)
+        PIDFILE.write_text(str(child.pid))
+        stop_wda()
+        assert pid_alive() is None and not PIDFILE.exists()
+    g["PIDFILE"], g["CLI"] = saved[0], saved[1]
     print("selftest ok")
 
 
@@ -823,8 +858,8 @@ def main():
         return sp
 
     sp = add("init", cmd_init, "写配置并拉取固定版本 WDA 源码")
-    sp.add_argument("--team", required=True, help="Apple Team ID")
-    sp.add_argument("--bundle", required=True, help="全局唯一的 bundle id，如 com.example.wda")
+    sp.add_argument("--team", help="Apple Team ID；已有配置时可省略")
+    sp.add_argument("--bundle", help="全局唯一的 bundle id，如 com.example.wda；已有配置时可省略")
     sp.add_argument("--udid")
     sp.add_argument("--source")
     add("renew", cmd_renew, "构建并重新签名 WDA（免费证书 7 天过期后用）")
