@@ -18,7 +18,7 @@
         version = "latest";
         minimum_release_age = "0h";
       };
-      # 插件按仓库清单 bun install 补齐（只补缺，不删除现有依赖，ADR 0005 决策 4）：
+      # 插件按仓库清单 bun install 补齐（只补缺，不删除现有依赖，ADR 0006 决策 4）：
       # 沙箱内手装的插件与已从清单删除的插件不被清理。
       # 清单用普通副本而非软链，否则 bun install 会写穿到仓库文件；
       # 但 store 里的源文件是只读的，cp 在目标不存在时会连权限一起继承（444），
@@ -36,11 +36,11 @@
         # 上游修复 oven-sh/bun#44968 于 2026-10-14 合并，未进 1.4.3；bun ≥ 1.4.4 后实测
         # 不删 git 条目也能跟上 main（修复面向 bun update，可能需改用它），即可删掉下面这行
         rm -rf "$plugins/.bun-cache"/*.git "$plugins/.bun-cache"/@G@*
-        # Bun 下载缓存共用（ADR 0004）：沙箱侧落到共用 mise 层；宿主激活走默认 HOME 缓存
+        # Bun 下载缓存共用（ADR 0005）：沙箱侧落到共用 mise 层；宿主激活走默认 HOME 缓存
         bunCache="''${SB_BUN_CACHE_DIR:-$HOME/.omp/.bun-cache}"
         mkdir -p "$bunCache"
 
-        # 依赖安装脚本一律不执行（ADR 0004 决策 11）：node-pty 在 Linux 无预编译产物，
+        # 依赖安装脚本一律不执行（ADR 0005 决策 11）：node-pty 在 Linux 无预编译产物，
         # 装它要回落 node-gyp 编译；guest 补 C 工具链的闭包增量实测 1.3 GiB
         # （gcc-wrapper 370 MiB + binutils 121 MiB + isl/mpfr/mpc/gcc), 超出 200 MiB 预算。
         # 跳过脚本不影响其余纯 JS 插件的加载；node-pty 仅供终端桥接，非插件加载必需。

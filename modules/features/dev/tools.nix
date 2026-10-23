@@ -123,7 +123,7 @@
               lib.optional (tool.postInstall != null && tool.postInstall != "") {
                 name = "tool-postInstall-${name}";
                 value = lib.hm.dag.entryAfter [ "writeBoundary" "sops-nix" ] ''
-                  # 只注入辅助工具；bun 统一由 mise 提供（ADR 0004 单一来源），不把 Nix Bun 带进闭包
+                  # 只注入辅助工具；bun 统一由 mise 提供（ADR 0003 决策 5 单一来源），不把 Nix Bun 带进闭包
                   export PATH="${
                     lib.makeBinPath (
                       with pkgs;

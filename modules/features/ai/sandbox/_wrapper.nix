@@ -10,7 +10,7 @@
 }:
 let
   entrypoint = pkgs.writeText "sb-entrypoint" ''
-    # 环境唯一来源：guest-env.sh（generator 生成，ADR 0004 决策 5）。
+    # 环境唯一来源：guest-env.sh（generator 生成，ADR 0005 决策 5）。
     # 缺失说明 VM 未挂载生成配置；legacy sb-default 的配置目录由 sb-default.yaml
     # 显式挂到 /run/sandbox-config，所以这里不再维护第二份回退。
     if [[ ! -f /run/sandbox-config/current/guest-env.sh ]]; then

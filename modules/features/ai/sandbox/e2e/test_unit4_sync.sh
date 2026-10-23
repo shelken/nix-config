@@ -183,7 +183,7 @@ EOF
   echo "[+] Status: $(jq -c '{status,missing_tools,busy}' <<< "$status_json")"
   jq -e '.missing_tools == []' <<< "$status_json" >/dev/null \
     || fail "装齐后 missing_tools 不是空数组: $(jq -c '.missing_tools' <<< "$status_json")"
-  # ADR 0005 决策 5：status 只报告缺失 mise 工具，不再有插件状态字段
+  # ADR 0006 决策 5：status 只报告缺失 mise 工具，不再有插件状态字段
   jq -e 'has("skipped_plugins") | not' <<< "$status_json" >/dev/null \
     || fail "status 仍包含已删除的 skipped_plugins 字段"
   # 公开仓库与 npm 源插件必须装好（私有仓库在假凭据下 clone 失败仅警告，不进任何清单）

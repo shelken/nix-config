@@ -21,13 +21,13 @@ DEFAULT_SANDBOX_CONFIG="@SANDBOX_CONFIG@"
 
 export MSB_CONFIG_PATH="${MSB_CONFIG_PATH:-$DEFAULT_MSB_CONFIG}"
 export MSB_HOME="${MSB_HOME:-$DEFAULT_MSB_HOME}"
-# 宿主共用 mise 目录真实路径（ADR 0004）；e2e 通过覆盖它把一次性 VM 挂到 harness 共用目录
+# 宿主共用 mise 目录真实路径（ADR 0005）；e2e 通过覆盖它把一次性 VM 挂到 harness 共用目录
 export SB_MISE_HOST_DIR="${SB_MISE_HOST_DIR:-/opt/sandbox-mise}"
 
 # ------------------------------------------------------------------
 # 主 VM 生命周期锁：跨进程互斥，锁目录固定在 $MSB_HOME/locks，
 # 不放在可被删除的 VM 目录 ($MSB_HOME/sandboxes/<vm>) 内。
-# 只包住「检查上限指纹 → 必要时重建 → 启动 VM」（ADR 0005 决策 3）。
+# 只包住「检查上限指纹 → 必要时重建 → 启动 VM」（ADR 0006 决策 3）。
 # ------------------------------------------------------------------
 SB_LOCK_DIR="$MSB_HOME/locks"
 mkdir -p "$SB_LOCK_DIR"
@@ -188,7 +188,7 @@ generate_msb_config() {
     sb_mount_json="[]"
   fi
 
-  # 宿主共用 mise 目录（ADR 0004）：挂进主 VM，guest 路径固定 /opt/sandbox-mise。
+  # 宿主共用 mise 目录（ADR 0005）：挂进主 VM，guest 路径固定 /opt/sandbox-mise。
   # 上限指纹只含 guest 路径与读写属性，不含宿主真实路径。
   # 宿主真实路径默认取环境变量 SB_MISE_HOST_DIR（由 default.nix 统一注入），
   # e2e 一次性 VM 通过覆盖它指向 harness 共用目录，同样实现全 VM 共用。
@@ -246,7 +246,7 @@ generate_msb_config() {
 }
 
 # 计算上限指纹：先在副本里把共用 mise 挂载的宿主源路径规范化为固定占位值，
-# 再对 canonical JSON 做哈希 —— 实际 VM 配置仍使用真实路径（ADR 0004 决策 2）。
+# 再对 canonical JSON 做哈希 —— 实际 VM 配置仍使用真实路径（ADR 0005 决策 2）。
 get_config_fingerprint() {
   local conf_file="$1"
   jq -S -c --arg mise_mount "$SB_MISE_HOST_DIR_REAL:/opt/sandbox-mise:rw" '
@@ -271,7 +271,7 @@ wait_for_vm_running() {
   return 1
 }
 
-# 判定主 VM 是否有运行中的执行上下文：忙闲只看 guest 内 launcher 的登记表（ADR 0005 决策 3）
+# 判定主 VM 是否有运行中的执行上下文：忙闲只看 guest 内 launcher 的登记表（ADR 0006 决策 3）
 is_vm_busy() {
   local vm_name="$1"
   local st
@@ -298,7 +298,7 @@ is_vm_busy() {
   return 1
 }
 
-# 查询 guest 内缺失的 mise 工具（ADR 0005 决策 5：不报告插件安装状态）。
+# 查询 guest 内缺失的 mise 工具（ADR 0006 决策 5：不报告插件安装状态）。
 # guest 侧脚本独立成 guest-status.sh（只输出 TSV），JSON 组装在这里做，避免多层引号嵌套。
 # 查询失败必须报错而不是伪装成全齐：返回非零并打印原因。
 query_guest_tool_state() {
@@ -336,7 +336,7 @@ exec_sync_guest() {
 }
 
 # 获取共用 mise 写锁后执行 sync（调用前必须已持有主 VM 生命周期锁）。
-# 锁目录固定在共用 mise 层根目录，跨 VM 串行化所有对安装层的写入（ADR 0004 决策 6）。
+# 锁目录固定在共用 mise 层根目录，跨 VM 串行化所有对安装层的写入（ADR 0005 决策 6）。
 run_sync_with_mise_lock() {
   local vm_name="$1"
   shift
@@ -435,7 +435,7 @@ ensure_vm_locked() {
         echo "[sb] 主 VM $vm_name 启动成功" >&2
       fi
     else
-      # 上限发生变化；锁内重读忙碌状态（ADR 0005 决策 2）：
+      # 上限发生变化；锁内重读忙碌状态（ADR 0006 决策 2）：
       # 空闲 → 直接重建；忙 → 只报错并给出运行中上下文数，不登记任何状态
       if is_vm_busy "$vm_name"; then
         local active_count
@@ -457,7 +457,7 @@ ensure_vm_locked() {
     record_vm_state
     wait_for_vm_running "$vm_name"
     echo "[sb] 主 VM $vm_name 创建并启动成功" >&2
-    # 首次创建自动补齐一次工具（ADR 0004 决策 8）；已持有生命周期锁，只补共用 mise 写锁
+    # 首次创建自动补齐一次工具（ADR 0005 决策 8）；已持有生命周期锁，只补共用 mise 写锁
     echo "[sb] 首次创建自动执行 sb sync 补齐工具..." >&2
     run_sync_with_mise_lock "$vm_name" || echo "[sb] 首次工具自动补齐未全部完成 (可稍后通过 sb sync 补齐)" >&2
   fi
@@ -764,7 +764,7 @@ case "$cmd" in
       ceiling_match="inconsistent"
     fi
 
-    # 只报告缺失的 mise 工具（ADR 0005 决策 5）
+    # 只报告缺失的 mise 工具（ADR 0006 决策 5）
     missing_tools_json="[]"
     missing_tools_str="无"
     if [[ "$status" == "Running" ]]; then

@@ -190,7 +190,7 @@ harness_setup() {
   E2E_MSB_CONFIG="$E2E_DIR/microsandbox-config.json"
   mkdir -p "$E2E_MSB_HOME"
 
-  # 宿主共用 mise 目录（ADR 0004 / 任务硬约束）：一次性 VM 也挂真实共用目录，
+  # 宿主共用 mise 目录（ADR 0005 / 任务硬约束）：一次性 VM 也挂真实共用目录，
   # 保证整个任务期间每种工具最多完整下载一次；清理绝不删除该目录。
   # 可用 SB_MISE_HOST_DIR 覆盖（默认指向任务规定路径），始终 realpath。
   E2E_MISE_HOST_DIR="${SB_MISE_HOST_DIR:-$HOME/Data/sandboxes/mise/aarch64-linux}"
@@ -242,7 +242,7 @@ harness_msb() {
 }
 
 # ------------------------------------------------------------------------------
-# 辅助: 生成带共用 mise 挂载的一次性 VM conf (ADR 0004)
+# 辅助: 生成带共用 mise 挂载的一次性 VM conf (ADR 0005)
 #   宿主 E2E_MISE_HOST_DIR (真实路径) → guest /opt/sandbox-mise:rw
 #   与 sb generate_msb_config 的注入方式一致 (SB_MISE_HOST_DIR 变量驱动)
 # ------------------------------------------------------------------------------
@@ -268,7 +268,7 @@ harness_create_vm() {
 
   echo "[+] 正在创建一次性测试 VM: $vm_name"
   if [[ $# -eq 0 ]]; then
-    # 默认创建带共用 mise 挂载的 Ubuntu VM（ADR 0004）；使用 --pull never 保证不发起外网镜像下载
+    # 默认创建带共用 mise 挂载的 Ubuntu VM（ADR 0005）；使用 --pull never 保证不发起外网镜像下载
     local auto_conf="$E2E_DIR/${vm_name}.conf.json"
     harness_write_vm_conf "$auto_conf"
     harness_msb create --name "$vm_name" --conf "$auto_conf" --pull never
