@@ -1,4 +1,4 @@
-# 全平台系统级 CLI 基础包（modules/base/packages.nix 迁入）
+# 全平台系统级 CLI 基础包
 # darwin 与 nixos 用同一份包列表；flake-parts 顶层拿不到 pkgs，
 # 以 specialArgs 之外的方式：包列表提出为 let，pkgs 由系统模块自己的参数提供
 { config, lib, ... }:

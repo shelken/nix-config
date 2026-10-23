@@ -18,4 +18,4 @@
 
 ## 放置约定
 
-- 项目级 skill 必须放在仓库根 `.agents/skills/` 下，不要放到 `home/` 等用户环境配置目录
+- 项目级 skill 必须放在仓库根 `.agents/skills/` 下，不要放到 `modules/features/ai/skills/`（那里是部署到所有机器的全局 skill）

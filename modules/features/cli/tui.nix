@@ -1,5 +1,4 @@
 # tui 开发工具链：rust/ansible/ts/python/nix/net 工具与 npm/bun 设置
-# （home/base/tui/core.nix 迁入）
 { config, ... }:
 {
   flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.tui-cli ];

@@ -1,5 +1,5 @@
 # brave/chromium 浏览器扩展（可选功能，未加入任何角色）
-# 原 home/apps/chromium；程序本身由 brew 安装，这里只声明受管扩展
+# 程序本身由 brew 安装，这里只声明受管扩展
 {
   flake.modules.homeManager.chromium =
     { ... }:

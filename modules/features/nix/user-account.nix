@@ -1,4 +1,4 @@
-# 用户账号：authorized_keys、普通用户与组、root 的部署密钥（modules/base/users.nix 迁入）
+# 用户账号：authorized_keys、普通用户与组、root 的部署密钥
 # nixos 与 darwin 两侧的账号都写在 core：登录能力是所有主机的最低要求（HM 侧随同名挂接进入）
 { config, ... }:
 {
@@ -53,7 +53,7 @@
     };
 
   # darwin 侧同样的 authorizedKeys 写入 /etc/ssh/nix_authorized_keys.d/<user>
-  # （nix-darwin 的 users.users.<user>.openssh 行为，原 modules/base/users.nix 同时作用于两平台）
+  # （nix-darwin 的 users.users.<user>.openssh 行为）
   flake.modules.darwin.user-account =
     { myvars, ... }:
     {

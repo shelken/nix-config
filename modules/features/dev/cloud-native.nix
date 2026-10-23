@@ -1,5 +1,5 @@
 # 容器/K8s 终端工具：dive、lazydocker、skopeo、k9s、kubecolor
-# 原 home/base/tui/container.nix；只有主力机（mio）需要 → workstation，开关已删除
+# 只有主力机（mio）需要 → workstation
 { config, ... }:
 {
   flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.cloud-native ];

@@ -11,7 +11,7 @@
 
 ## 修改配置
 
-1. 改动 `modules/`（共享逻辑）、`home/`（用户环境）或 `hosts/<机器>/`（机器专属）
+1. 改动 `modules/features/<分类>/<功能>`（一个软件的系统侧与用户态配置都在这里）或 `hosts/<机器>/`（机器专属）；功能加入哪个角色见 [ADR 0002](../adr/0002-dendritic-feature-modules.md)
 2. `just bd` 验证构建
 3. `just sw` 切换生效（新文件先 `git add`，否则 flake 检测不到）
 

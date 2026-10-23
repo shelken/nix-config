@@ -1,4 +1,4 @@
-# btop：系统监视器（home/base/core/btop.nix 迁入）
+# btop：系统监视器
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.btop ];

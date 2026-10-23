@@ -1,4 +1,4 @@
-# nix-index 与 shell 集成（原 home/darwin/nix.nix）
+# nix-index 与 shell 集成
 # 所有 darwin 主机 → darwin.core
 { config, ... }:
 {

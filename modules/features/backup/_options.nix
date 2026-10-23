@@ -1,5 +1,5 @@
 # shelken.backup 的「备份什么」意图选项：接口声明（实现按平台提供，darwin 为 kopia）。
-# enable 开关已删除：kopia 实现直接加入 workstation 角色，无开关可关。
+# kopia 实现直接加入 workstation 角色，没有 enable 开关。
 # app 会被 ai（omp/pi）等功能写入，backupPaths/ignores 是主机参数。
 {
   lib,

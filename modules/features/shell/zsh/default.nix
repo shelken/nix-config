@@ -1,4 +1,4 @@
-# zsh：shell、oh-my-zsh、fzf（home/base/core/zsh + shell.nix + core.nix 迁入）
+# zsh：shell、oh-my-zsh、fzf
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.zsh ];
@@ -151,7 +151,7 @@
             firstInit
             functionsInit
             defaultInit
-            # PATH、代理函数（原 shell.nix 的 zsh 部分）
+            # PATH、代理函数
             (lib.mkOrder 1001 initContent)
           ];
         plugins = [
@@ -193,7 +193,7 @@
         ];
       };
 
-      # bash：补全与 PATH、代理函数（原 shell.nix）
+      # bash：补全与 PATH、代理函数
       programs.bash = {
         enable = true;
         enableCompletion = true;
@@ -208,7 +208,7 @@
         ll = "eza --icons -l -T -L=1";
       };
 
-      # ls 替代：现代 ls（原 core.nix）
+      # ls 替代：现代 ls
       # A modern replacement for 'ls'
       # useful in bash/zsh prompt, not in nushell.
       programs.eza = {

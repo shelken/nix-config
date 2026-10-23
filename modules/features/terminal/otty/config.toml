@@ -1,4 +1,4 @@
-# Otty — 对齐 kitty 手感（home/base/gui/kitty）
+# Otty — 对齐 kitty 手感（modules/features/terminal/kitty）
 # 字体由 vars/default.nix 注入，修改后执行 `just hm`
 # CLI `otty config reload` 与快捷键 reload 目前不可靠；构建后用
 # Settings → Advanced → Config File → Reload Config，或命令面板 "Reload Config"

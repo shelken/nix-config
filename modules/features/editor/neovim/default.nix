@@ -1,5 +1,5 @@
 # Neovim：完整版（AstroNvim + 全套 LSP 工具）
-# 原 home/base/tui/neovim；yuuko 的 minimal 变体见 features/editor/neovim-minimal.nix
+# yuuko 的 minimal 变体见 features/editor/neovim-minimal.nix
 { config, ... }:
 {
   flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.neovim ];

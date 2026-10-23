@@ -1,5 +1,4 @@
 # HM 基础：liveEdit 选项、username、stateVersion、home-manager 自管理
-# （home/base/home.nix 迁入）
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.home-base ];

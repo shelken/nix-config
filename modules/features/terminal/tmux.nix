@@ -1,5 +1,5 @@
-# tmux：会话与状态栏配置（可选功能，未加入任何角色）
-# 原 home/apps/tmux；需要时主机 imports = [ self.modules.darwin.tmux ]（HM 部分随同名挂接）
+# tmux：会话与状态栏配置
+# 可选功能，需要时主机 imports = [ self.modules.darwin.tmux ]（HM 部分随同名挂接）
 {
   flake.modules.homeManager.tmux =
     { lib, pkgs, ... }:

@@ -1,4 +1,4 @@
-# ssh：客户端配置（home/base/core/ssh.nix 迁入）
+# ssh：客户端配置
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.ssh ];

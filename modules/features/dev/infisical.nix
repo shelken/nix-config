@@ -1,4 +1,4 @@
-# Infisical CLI 配置（home/base/core/infisical.nix 迁入）
+# Infisical CLI 配置
 # CLI 本体由 mise 托管（mise feature），此处只声明配置；主力机独有 → workstation
 { config, ... }:
 {

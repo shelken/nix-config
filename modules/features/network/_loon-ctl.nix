@@ -1,4 +1,4 @@
-# loon-ctl：查询 Loon DNS 记录的 CLI 脚本（原 home/darwin/scripts/loon-ctl.nix）
+# loon-ctl：查询 Loon DNS 记录的 CLI 脚本
 { pkgs, ... }:
 {
   home.packages = [

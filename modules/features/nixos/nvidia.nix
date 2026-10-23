@@ -1,5 +1,5 @@
-# NVIDIA 驱动（可选功能，未加入任何角色）
-# 原 modules/nixos/nvidia.nix，从未被导入；需要时主机 imports = [ self.modules.nixos.nvidia ]
+# NVIDIA 驱动
+# 可选功能，需要时主机 imports = [ self.modules.nixos.nvidia ]
 {
   flake.modules.nixos.nvidia =
     { config, ... }:

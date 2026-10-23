@@ -1,4 +1,4 @@
-# GitHub CLI：gh 与 git 凭据 helper（home/base/tui/git.nix 迁入）
+# GitHub CLI：gh 与 git 凭据 helper
 { config, ... }:
 {
   flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.gh ];

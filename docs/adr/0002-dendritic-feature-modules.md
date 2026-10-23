@@ -1,10 +1,10 @@
 # 0002. 按功能内聚的 Dendritic 模块结构
 
-日期：2026-10-23
+日期：2026-10-23（第 4、11–13 条于同日全量迁移时补充）
 
 ## 状态
 
-已采纳 (Accepted)。试点见 PR #125，全量迁移按本文规则进行
+已采纳 (Accepted)。试点与全量迁移见 PR #125
 
 ## 背景与问题
 
@@ -20,7 +20,7 @@
 1. **flake-parts + import-tree**：`flake.nix` 使用 `flake-parts.lib.mkFlake`，递归加载 `modules/{flake,features,profiles}`；路径含 `/_` 的文件不自动导入，用于数据或私有片段
 2. **同名即同一功能**：功能以 `flake.modules.<类>.<名>` 发布，类为 `darwin`、`nixos`、`homeManager`。`modules/flake/features.nix` 把 `homeManager.<名>` 自动挂到同名系统模块，功能文件不写接线代码
 3. **大功能拆目录**：同一个 `flake.modules.<类>.<名>` 可由多个文件分别声明并自动合并，如 `features/tools/autoinputswitch/{darwin,home}.nix`
-4. **主角色链**：`core ⊂ tui ⊂ gui ⊂ workstation`，每台主机只导入一个主角色。包含关系只写在系统侧，`homeManager.<角色>` 只放本层内容
+4. **主角色链**：darwin 为 `core ⊂ tui ⊂ gui ⊂ desktop ⊂ workstation`，NixOS 为 `core ⊂ tui ⊂ gui`；每台主机只导入一个主角色。`desktop` 是日常桌面机共有的一层（容器、字体、lima 等），精简桌面机（ling）停在 `gui`。包含关系只写在系统侧，`homeManager.<角色>` 只放本层内容
 5. **附加角色**：给主角色叠加一类职责，与主角色并列导入，如 `[ gui homelab ]`。附加角色不导入主角色链
 6. **功能声明归属**：功能在自己的文件里声明加入哪个角色，主机不列具体功能。差异落点：
    - 某个角色的所有主机需要：加入该角色
@@ -31,6 +31,9 @@
 8. **密钥是主机属性**：sops 模块放 core。`shelken.secrets.enable` 表示「这台主机有 age 密钥」，由主机设置。需要密钥的功能在自己文件里声明 `sops.secrets.*`，并断言 `secrets.enable`，不替主机打开该开关。系统侧镜像的同名选项删除，系统需要时读 HM 配置
 9. **平台分支**：HM 部分由 darwin 与 nixos 共用。少量差异保留 `isDarwin` 判断；只在 darwin 需要的大块 HM 配置放到功能的 `darwin.nix`，经 `home-manager.sharedModules` 注入
 10. **仓库内文件软链使用路径字面量**：`mylib.mkConfigLink` / `mkConfigFile` 接收 `./x` 形式的路径，文件挪动后求值即报错（`lib/default.nix`）
+11. **没有主机启用的功能做成可选功能**：迁移成功能但不加入任何角色，也不保留 `enable` 开关；要用的主机在 `imports` 里加一行
+12. **互斥实现用选项**：同一职责有多个互斥实现时，功能加入覆盖全部主机的角色，用 enum 选项选择实现，例如 `shelken.wm.manager = "aerospace" | "omniwm"`（默认 aerospace，mio 设 omniwm）。不拆成多个可选功能：拆开后各主机都要显式导入一个，同时导入两个也拦不住
+13. **HM 配置跟随应用本体归属**：应用由系统侧某个功能安装时（如 brew cask），它的 HM 配置并入同一功能或同一角色，不按「GUI 配置」整体挂在 `gui` 上。迁移时以此修正了 orca、zed、pi 配置出现在未安装应用的主机上的问题
 
 ## 不变量
 
@@ -51,5 +54,5 @@
 
 - 主机的 `imports` 一行即可表达职责组合，新增功能只改功能自己的目录
 - 模块合并时，层级越深的定义越靠前。角色链改变了列表选项的顺序，Brewfile、`system-path` 的包顺序会变：`system-path` 开启 `ignoreCollisions`，同优先级时排前的包胜出，迁移时需要确认首次出现顺序或同路径文件无冲突
-- 角色名与功能名共用 `flake.modules.<类>` 命名空间，功能不能命名为 `core`、`tui`、`gui`、`workstation`、`homelab`
+- 角色名与功能名共用 `flake.modules.<类>` 命名空间，功能不能命名为 `core`、`tui`、`gui`、`desktop`、`workstation`、`homelab`
 - 同名挂接会为每个 HM 功能生成 `nixos.<名>` 与 `darwin.<名>`，即使该功能只适用于一个平台。只适用 darwin 的功能在 NixOS 上导入会因缺少选项而报错

@@ -1,4 +1,4 @@
-# IntelliJ IDEA 的命令行包装（idea <path>）：脚本所有 darwin 主机都有（原 home/darwin/scripts），
+# IntelliJ IDEA 的命令行包装（idea <path>）：脚本所有 darwin 主机都有，
 # 应用 cask 在 dev/ide.nix，只给 workstation
 { config, ... }:
 {

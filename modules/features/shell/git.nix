@@ -1,4 +1,4 @@
-# git：git/delta/lazygit/tig 配置（home/base/core/git.nix 迁入）
+# git：git/delta/lazygit/tig 配置
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.git ];

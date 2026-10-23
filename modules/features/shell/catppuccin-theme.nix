@@ -1,4 +1,4 @@
-# catppuccin：主题基座（home/base/core/theme.nix 迁入）
+# catppuccin：主题基座
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.catppuccin-theme ];
