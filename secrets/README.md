@@ -13,7 +13,7 @@
   - **配置解密归 Age**：使用独立的原生 Age 根密钥，由 `~/.config/sops/age/keys.txt` 提供解密私钥，公钥声明在 `secrets.nix/.sops.yaml`。
   - 两套密钥完全独立，轮换 SSH 密钥绝不影响 SOPS 解密，反之亦然。
 - **配置集中收敛**：
-  - 系统内所有用户态凭据与 SOPS 选项统一收敛在 `home/base/core/secrets.nix`。
+  - 系统内所有用户态凭据与 SOPS 选项统一收敛在 `modules/features/secrets/secrets.nix`。
   - 明确声明密钥路径：`sops.age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt"`。
 
 ---

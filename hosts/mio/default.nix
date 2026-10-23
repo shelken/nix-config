@@ -1,59 +1,18 @@
-_:
+{ self, ... }:
 let
   hostname = "mio";
 in
 {
+  imports = [ self.modules.darwin.workstation ];
+
   networking.hostName = hostname;
   networking.computerName = hostname;
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
-    # window manager
-    wm.aerospace.enable = false;
-    wm.omniwm.enable = true;
-    tools.hammerspoon.enable = false;
-    wm.thaw.enable = true;
-
-    # suites
-    suites.desktop.enable = true;
-
-    # write
-    write.obsidian.enable = true;
-
-    # development
-    dev.container.enable = true; # docker/orbstack
-    dev.ai.enable = true;
-    dev.ide.enable = true;
-    # dev.xcode.enable = true;
-    dev.dbclient.enable = true;
-
-    # tools
-    tools.cap.enable = false; # 录屏obs
-    tools.cherry-studio.enable = false;
-    tools.download.enable = true;
-    tools.gpt.enable = true;
-    tools.image.enable = true;
-    tools.music.enable = true;
-    tools.ntfs.enable = false;
-    tools.others.enable = true;
-    tools.rclone.enable = true;
-    tools.backup.enable = true;
-    tools.autoinputswitch.enable = true;
-    tools.remote-control.enable = true;
-
-    tools.virts.enable = false; # utm parallel
-
-    # social
-    social.feishu.enable = false;
-    social.telegram.enable = true;
-    social.wechat.enable = true;
-
-    # homelab
-    homelab.client.enable = true;
-
-    # network
-    network.fl-clash.enable = false;
-    network.loon.enable = true;
+    secrets.enable = true;
+    wm.manager = "omniwm";
   };
+  # 可选功能按需加入 imports，例如录屏 cap（OBS）
 
   homebrew = {
     onActivation = {

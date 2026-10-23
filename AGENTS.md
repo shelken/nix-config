@@ -4,11 +4,12 @@
 
 ## 布局
 
-- `modules/{base,darwin,nixos}`: 跨平台共享、macOS、Linux 配置
-- `home/`: Home Manager 配置，按平台 (`darwin`/`linux`) 划分
+- `modules/features/<分类>/<功能>`: 一个软件或服务一个功能，同时写 nix-darwin、NixOS、Home Manager 部分；结构规则见 `docs/adr/0004-dendritic-feature-modules.md`
+- `modules/profiles/`: 角色链 `core ⊂ tui ⊂ gui ⊂ desktop ⊂ workstation` 与附加角色 `homelab`
+- `modules/flake/`: flake-parts 胶水（`homeManager.<名>` 自动挂到同名系统模块）
 - `hosts/<hostname>/default.nix`: 机器配置，`.host-profile` 记录当前机器对应 flake 中的名字
 - `vars/`: 全局变量（用户名、邮箱等）
-- `lib/`: 自定义函数（`mylib.scanPaths`、`mylib.relativeToRoot` 等）
+- `lib/`: 自定义函数（`mylib.mkConfigFile`、`mylib.relativeToRoot` 等）
 - `_sources/`: nvfetcher 管理的非 nixpkgs 源
 - `secrets/`: 引用外部 secrets flake，通过 sops-nix 做秘密管理
 
@@ -23,4 +24,4 @@
 - 问题、规格与 Wayfinder 路线地图使用 GitHub Issues 管理，详见 `docs/agents/issue-tracker.md`
 - 根目录 `GLOSSARY.md` 记录共享领域知识，架构决策记录放在 `docs/adr/`，详见 `docs/agents/domain.md`
 - 创建、修改或测试机器特定定时任务时使用 `.agents/skills/create-task/`
-- 修改或新增 `home/base/gui/dev/ai/skills/` 下的技能前，先读该目录的 `README.md`，其中规定外部拷贝技能的来源记录
+- 修改或新增 `modules/features/ai/skills/` 下的技能前，先读该目录的 `README.md`，其中规定外部拷贝技能的来源记录

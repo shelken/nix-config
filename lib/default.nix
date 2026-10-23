@@ -276,18 +276,26 @@ rec {
     };
 
   # 根据 config.shelken.dotfiles.liveEdit 开关决定配置来源：
-  # - liveEdit = true（本机开发环境）：使用 mkOutOfStoreSymlink 软链至本地 ~/nix-config/<relPath>，支持免 rebuild 热加载
-  # - liveEdit = false（远程部署节点/默认）：解析为 relativeToRoot <relPath> 纯 Nix store 路径，保证闭包自包含与原子回滚
+  # - liveEdit = true（本机开发环境）：使用 mkOutOfStoreSymlink 软链至本地 ~/nix-config/<相对路径>，支持免 rebuild 热加载
+  # - liveEdit = false（远程部署节点/默认）：解析为仓库根下的纯 Nix store 路径，保证闭包自包含与原子回滚
+  # 参数是 Nix 路径字面量（如 ./aerospace.toml）：文件挪动后求值即报错，而非在 liveEdit 下留下悬空软链
   mkConfigLink =
-    config: relPath:
+    config: path:
+    let
+      root = toString (relativeToRoot ".");
+      abs = toString path;
+      relPath = lib.removePrefix "${root}/" abs;
+    in
+    assert lib.assertMsg (lib.hasPrefix "${root}/" abs) "mkConfigLink: ${abs} 不在仓库内";
+    assert lib.assertMsg (builtins.pathExists path) "mkConfigLink: ${relPath} 不存在";
     if config.shelken.dotfiles.liveEdit or false then
       config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/nix-config/${relPath}"
     else
       "${relativeToRoot "."}/${relPath}";
 
-  # 生成标准 Home Manager 文件配置项：{ source = mkConfigLink config relPath; force = true; }
-  mkConfigFile = config: relPath: {
-    source = mkConfigLink config relPath;
+  # 生成标准 Home Manager 文件配置项：{ source = mkConfigLink config path; force = true; }
+  mkConfigFile = config: path: {
+    source = mkConfigLink config path;
     force = true;
   };
 }

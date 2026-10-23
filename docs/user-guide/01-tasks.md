@@ -68,12 +68,12 @@ task log loon
 
 ```bash
 hosts/mio/tasks/loon.nix # 机器专属：每 2h 清理 Loon 日志（root）
-modules/darwin/tasks/gc.nix # 全设备默认：每天 3:15 nix GC（root）
+modules/features/darwin/tasks/_global/nix-gc.nix # 全设备默认：每天 3:15 nix GC（root）
 ```
 
 - 机器专属任务：放 `hosts/<host>/tasks/`
-- 全设备通用任务：放 `modules/darwin/tasks/`
+- 全设备通用任务：放 `modules/features/darwin/tasks/_global/`
 
 ## 边界
 
-此模型只覆盖「定时跑一段脚本」。需要复杂生命周期或 policy 配置的重型服务仍走常规 module，例如 `home/darwin/tasks/kopia/`
+此模型只覆盖「定时跑一段脚本」。需要复杂生命周期或 policy 配置的重型服务仍走常规 module，例如 `modules/features/backup/_kopia/`

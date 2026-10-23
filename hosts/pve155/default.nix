@@ -1,4 +1,4 @@
-{ username, ... }:
+{ self, username, ... }:
 #############################################################
 #
 #  PVE 155
@@ -6,6 +6,7 @@
 #############################################################
 {
   imports = [
+    self.modules.nixos.core
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
   ];

@@ -22,7 +22,7 @@ aerospace-clean:
 
 aerospace-test:
     just aerospace-clean
-    @ln -s {{ justfile_directory() }}/home/darwin/wm/aerospace/aerospace.toml $HOME/.config/aerospace/aerospace.toml
+    @ln -s {{ justfile_directory() }}/modules/features/wm/aerospace/aerospace.toml $HOME/.config/aerospace/aerospace.toml
     @aerospace reload-config
 
 # git add all
@@ -296,12 +296,12 @@ view:
 # 调试wez
 wez-test:
     @rm -f $HOME/.config/wezterm/wezterm.lua
-    @ln -s {{ justfile_directory() }}/home/apps/wezterm/wezterm.lua $HOME/.config/wezterm/wezterm.lua
+    @ln -s {{ justfile_directory() }}/modules/features/terminal/wezterm/wezterm.lua $HOME/.config/wezterm/wezterm.lua
 
 
 # 同步 magpie 模型能力差集到 omp models.yml
 mp-sync:
-    @{{ justfile_directory() }}/home/base/gui/dev/ai/omp/sync-mp-models.sh
+    @{{ justfile_directory() }}/modules/features/ai/omp/sync-mp-models.sh
 # 清除历史；默认`3d`; 三天前
 [linux]
 wipe duration="3d":

@@ -1,0 +1,37 @@
+# Otty — 对齐 kitty 手感（modules/features/terminal/kitty）
+# 字体由 vars/default.nix 注入，修改后执行 `just hm`
+# CLI `otty config reload` 与快捷键 reload 目前不可靠；构建后用
+# Settings → Advanced → Config File → Reload Config，或命令面板 "Reload Config"
+
+# Font
+font-family = "@monospace@"
+font-size = 14
+
+# Theme
+theme = "Catppuccin Mocha"
+theme-dark = "Catppuccin Mocha"
+auto-theme-dark-mode = true
+
+# Window / Transparency
+# background-opacity = 0.88 # 闪烁?
+window-layout = "sidebar-left"
+auto-hide-tab-bar = "auto"
+auto-hide-tabs-panel = "default"
+
+# Input
+macos-option-as-alt = true
+
+# Language / Launch
+language = "chinese"
+on-launch = "restore_session"
+
+# Shell / CLI
+omit-otty-prefix = true
+
+# Scrollback
+scrollback-lines = 50000
+
+# Keybinds — 与 kitty 对齐
+keybind = cmd+left_bracket=previous_tab
+keybind = cmd+right_bracket=next_tab
+keybind = cmd+ctrl+comma=reload_config

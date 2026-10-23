@@ -10,7 +10,7 @@ description: 获取外部skill
 ## 流程
 
 1. 用户提供关于skill的链接，通常情况下是个github repo
-2. 阅读相关代码 `nvfetcher.toml` `home/base/gui/dev/ai/skill.nix`
+2. 阅读相关代码 `nvfetcher.toml` `modules/features/ai/skill.nix`
 3. 在 nvfetcher.toml 添加 skill（按字母顺序），更新
    `nvfetcher -c nvfetcher.toml -f '^{the_skill_you_add}$'`
 4. 在 skill.nix 添加引用，按字母顺序
@@ -19,7 +19,7 @@ description: 获取外部skill
 
 ## 补充 cli
 
-当 skill 中涉及到cli的安装的时候，且当前 `home/base/gui/dev/ai/cli.nix`
+当 skill 中涉及到cli的安装的时候，且当前 `modules/features/ai/cli.nix`
 中没有定义相关的`cli`，那么应该引入
 
 1. 先检查nixpkgs是否已经有提到的cli工具，`nix-search-tv print | grep {cmd-cli-name}`，如果有**优先**使用nix来源，在

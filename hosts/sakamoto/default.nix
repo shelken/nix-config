@@ -1,23 +1,19 @@
-_:
+{ self, ... }:
 let
   hostname = "sakamoto";
 in
 {
+  imports = with self.modules.darwin; [
+    desktop
+    homelab
+    virts
+  ];
+
   networking.hostName = hostname;
   networking.computerName = hostname;
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
-    dev.container.enable = true; # docker
-
-    homelab.server.enable = true;
-
-    network.fl-clash.enable = true;
-
-    suites.desktop.enable = true;
-
-    tools.virts.enable = true;
-
-    wm.aerospace.enable = true;
+    secrets.enable = true;
   };
   # homebrew = {
   #   onActivation = {

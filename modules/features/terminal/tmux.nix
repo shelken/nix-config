@@ -1,0 +1,47 @@
+# tmux：会话与状态栏配置
+# 可选功能，需要时主机 imports = [ self.modules.darwin.tmux ]（HM 部分随同名挂接）
+{
+  flake.modules.homeManager.tmux =
+    { lib, pkgs, ... }:
+    let
+      baseConf = builtins.readFile (pkgs.dot-tmux + "/tmux.conf");
+    in
+    {
+      programs.tmux = {
+        enable = true;
+        keyMode = "vi"; # emacs or vi
+        clock24 = true;
+        mouse = true;
+        newSession = true; # Automatically spawn a session if trying to attach and none are running.
+        terminal = "tmux-256color";
+        disableConfirmationPrompt = true; # Disable confirmation prompt before killing a pane or window
+        baseIndex = 1;
+        plugins = with pkgs; [
+          { plugin = tmuxPlugins.sensible; }
+          { plugin = tmuxPlugins.yank; }
+          { plugin = tmuxPlugins.resurrect; }
+          { plugin = tmuxPlugins.vim-tmux-navigator; }
+          {
+            plugin = tmuxPlugins.catppuccin;
+            extraConfig = ''
+              # 左下样式
+              set -g @catppuccin_window_left_separator "█"
+              set -g @catppuccin_window_right_separator "█"
+              set -g @catppuccin_window_number_position "right"
+              set -g @catppuccin_window_middle_separator "█"
+              # 右侧状态栏
+              set -g @catppuccin_status_modules_right "application session host date_time"
+              set -g @catppuccin_status_left_separator  ""
+              set -g @catppuccin_status_right_separator " "
+              set -g @catppuccin_status_fill "all"
+              set -g @catppuccin_status_connect_separator "yes"
+            '';
+          }
+        ];
+        extraConfig = lib.concatStrings [
+          baseConf
+          "# my nix extraConfig for tmux\n"
+        ];
+      };
+    };
+}

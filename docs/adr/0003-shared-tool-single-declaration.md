@@ -20,7 +20,7 @@
 宿主工具集合大于等于沙箱，两边清单不要求相等，也不要求版本严格相同，只要求「都有」。获取现状的方式：
 
 ```bash
-rg -n 'home.packages|globalConfig.tools|programs\.[a-z-]+\.enable' home/base/gui/dev
+rg -n 'home.packages|globalConfig.tools|programs\.[a-z-]+\.enable' modules/features
 ```
 
 ## 决策

@@ -29,8 +29,8 @@
   outputs =
     inputs@{
       self,
-      nixpkgs,
       secrets,
+      flake-parts,
       ...
     }:
     let
@@ -71,57 +71,42 @@
           type = "nixos";
           system = "x86_64-linux";
           nixos-modules = map mylib.relativeToRoot [
-            "modules/nixos/server.nix"
             "hosts/pve155"
-            # "modules/nixos/hyprland.nix"
-          ];
-          home-modules = map mylib.relativeToRoot [
-            "home/linux/core.nix"
+            # 可选功能按需加入 imports，例如 Hyprland（仓库默认桌面是 niri）：
+            # self.modules.nixos.hyprland
           ];
         };
         pve156 = mkHost {
           type = "nixos";
           system = "x86_64-linux";
           nixos-modules = map mylib.relativeToRoot [
-            "modules/nixos/server.nix"
             "hosts/pve156"
-          ];
-          home-modules = map mylib.relativeToRoot [
-            "home/linux/core.nix"
           ];
         };
         arm-test-1 = mkHost {
           type = "nixos";
           system = "aarch64-linux";
           nixos-modules = map mylib.relativeToRoot [
-            "modules/nixos/desktop.nix"
             "hosts/vm/arm-test-1"
           ];
           home-modules = map mylib.relativeToRoot [
-            "home/linux/gui.nix"
             "hosts/vm/arm-test-1/home.nix"
           ];
         };
         work-test = mkHost {
           type = "nixos";
           system = "x86_64-linux";
-          nixos-modules = map mylib.relativeToRoot [
-            "modules/nixos/server.nix"
-          ];
-          home-modules = map mylib.relativeToRoot [
-            "home/linux/tui.nix"
-          ];
+          # 无硬件配置的求值测试机，不建 hosts 目录：calcUniformSchedule 按 hosts/ 目录数排定备份时段
+          nixos-modules = [ self.modules.nixos.tui ];
         };
         yuuko = mkHost {
           type = "darwin";
           system = "aarch64-darwin";
           deploy = true;
           darwin-modules = map mylib.relativeToRoot [
-            "modules/darwin"
             "hosts/yuuko"
           ];
           home-modules = map mylib.relativeToRoot [
-            "home/darwin"
             "hosts/yuuko/home.nix"
           ];
         };
@@ -130,11 +115,9 @@
           system = "aarch64-darwin";
           deploy = true;
           darwin-modules = map mylib.relativeToRoot [
-            "modules/darwin"
             "hosts/sakamoto"
           ];
           home-modules = map mylib.relativeToRoot [
-            "home/darwin"
             "hosts/sakamoto/home.nix"
           ];
         };
@@ -142,11 +125,9 @@
           type = "darwin";
           system = "aarch64-darwin";
           darwin-modules = map mylib.relativeToRoot [
-            "modules/darwin"
             "hosts/mio"
           ];
           home-modules = map mylib.relativeToRoot [
-            "home/darwin"
             "hosts/mio/home.nix"
           ];
         };
@@ -155,11 +136,9 @@
           system = "aarch64-darwin";
           deploy = true;
           darwin-modules = map mylib.relativeToRoot [
-            "modules/darwin"
             "hosts/ling"
           ];
           home-modules = map mylib.relativeToRoot [
-            "home/darwin"
             "hosts/ling/home.nix"
           ];
         };
@@ -167,113 +146,123 @@
 
       darwinHosts = lib.filterAttrs (_: v: v.type == "darwin") hosts;
       nixosHosts = lib.filterAttrs (_: v: v.type == "nixos") hosts;
-      homeHosts = lib.filterAttrs (_: v: v ? "home-modules") hosts;
 
       deployHosts = lib.filterAttrs (_: v: v.deploy or false) hosts;
+    in
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      # 同名即同一功能：一个功能的 darwin / homeManager / nixos 部分写在同一文件或同一目录；
+      # 路径含 /_ 的文件不自动导入，用于数据或私有片段
+      imports = [
+        flake-parts.flakeModules.modules
+        (inputs.import-tree [
+          ./modules/flake
+          ./modules/features
+          ./modules/profiles
+        ])
+      ];
 
-      allSystemAbove = [
+      systems = [
         "x86_64-linux"
         "aarch64-linux"
         "aarch64-darwin"
       ];
-      forAllSystems = func: (nixpkgs.lib.genAttrs allSystemAbove func);
-    in
-    {
-      nixosConfigurations = lib.mapAttrs (_: v: mylib.nixosSystem v) nixosHosts;
-      darwinConfigurations = lib.mapAttrs (_: v: mylib.macosSystem v) darwinHosts;
-      # Home 不是第二套配置，只导出系统结果中已经求值的 Home 子配置：
-      # config 指向它，activationPackage 指向同一个 derivation，
-      # 供 `nh home build/switch -c <host>` 读取（nh 走 config.home.activationPackage）。
-      homeConfigurations = lib.mapAttrs (
-        name: host:
-        let
-          systemConfig =
-            if host.type == "darwin" then
-              self.darwinConfigurations.${name}
-            else if host.type == "nixos" then
-              self.nixosConfigurations.${name}
-            else
-              throw "Unsupported Home host type: ${host.type}";
 
-          hm = systemConfig.config.home-manager.users.${myvars.username};
+      flake = {
+        nixosConfigurations = lib.mapAttrs (_: v: mylib.nixosSystem v) nixosHosts;
+        darwinConfigurations = lib.mapAttrs (_: v: mylib.macosSystem v) darwinHosts;
+        # Home 不是第二套配置，只导出系统结果中已经求值的 Home 子配置：
+        # config 指向它，activationPackage 指向同一个 derivation，
+        # 供 `nh home build/switch -c <host>` 读取（nh 走 config.home.activationPackage）。
+        homeConfigurations = lib.mapAttrs (
+          name: host:
+          let
+            systemConfig =
+              if host.type == "darwin" then
+                self.darwinConfigurations.${name}
+              else if host.type == "nixos" then
+                self.nixosConfigurations.${name}
+              else
+                throw "Unsupported Home host type: ${host.type}";
 
-          # 与上游 homeManagerConfiguration 等价的断言/告警检查，避免请求 Home 时静默跳过失败断言
-          failed = map (x: x.message) (lib.filter (x: !x.assertion) hm.assertions);
-          checkedHome =
-            if failed != [ ] then
-              throw ''
-                Failed assertions:
-                ${lib.concatStringsSep "\n" (map (x: "- ${x}") failed)}''
-            else
-              lib.foldr (warning: result: builtins.trace "warning: ${warning}" result) hm hm.warnings;
-        in
-        {
-          config = checkedHome;
-          activationPackage = checkedHome.home.activationPackage;
-        }
-      ) homeHosts;
+            hm = systemConfig.config.home-manager.users.${myvars.username};
 
-      # deploy-rs 远程部署：hosts 中标记 `deploy = true`（或 attrset 透传参数）的主机自动生成节点
-      deploy = {
-        nodes = lib.mapAttrs (
-          name: v:
-          mylib.deployNode {
-            deploy-rs = inputs.deploy-rs;
-            inherit name;
-            configuration =
-              if v.type == "darwin" then self.darwinConfigurations.${name} else self.nixosConfigurations.${name};
-            inherit (v) type system;
-            extra = if builtins.isAttrs v.deploy then v.deploy else { };
+            # 与上游 homeManagerConfiguration 等价的断言/告警检查，避免请求 Home 时静默跳过失败断言
+            failed = map (x: x.message) (lib.filter (x: !x.assertion) hm.assertions);
+            checkedHome =
+              if failed != [ ] then
+                throw ''
+                  Failed assertions:
+                  ${lib.concatStringsSep "\n" (map (x: "- ${x}") failed)}''
+              else
+                lib.foldr (warning: result: builtins.trace "warning: ${warning}" result) hm hm.warnings;
+          in
+          {
+            config = checkedHome;
+            activationPackage = checkedHome.home.activationPackage;
           }
-        ) deployHosts;
+        ) hosts;
+
+        # deploy-rs 远程部署：hosts 中标记 `deploy = true`（或 attrset 透传参数）的主机自动生成节点
+        deploy = {
+          nodes = lib.mapAttrs (
+            name: v:
+            mylib.deployNode {
+              deploy-rs = inputs.deploy-rs;
+              inherit name;
+              configuration =
+                if v.type == "darwin" then self.darwinConfigurations.${name} else self.nixosConfigurations.${name};
+              inherit (v) type system;
+              extra = if builtins.isAttrs v.deploy then v.deploy else { };
+            }
+          ) deployHosts;
+        };
       };
 
-      checks = forAllSystems (
-        system:
+      perSystem =
         {
-          #ref: https://devenv.sh/?q=git-hooks.hooks
-          pre-commit-check = inputs.git-hooks.lib.${system}.run {
-            src = ./.;
-            hooks = {
-              #NOTE 目前不支持配置垂直对其
-              nixfmt = {
-                enable = true;
-                settings.width = 100;
+          config,
+          pkgs,
+          system,
+          ...
+        }:
+        {
+          checks = {
+            #ref: https://devenv.sh/?q=git-hooks.hooks
+            pre-commit-check = inputs.git-hooks.lib.${system}.run {
+              src = ./.;
+              hooks = {
+                #NOTE 目前不支持配置垂直对其
+                nixfmt = {
+                  enable = true;
+                  settings.width = 100;
+                };
+                typos = {
+                  enable = true;
+                  settings = {
+                    write = true; # Automatically fix typos
+                    configPath = "./.typos.toml"; # relative to the flake root
+                  };
+                }; # Source code spell checker
+                prettier = {
+                  enable = true;
+                  settings = {
+                    write = true; # Automatically format files
+                    configPath = "./.prettierrc.yaml"; # relative to the flake root
+                  };
+                }; # 主要用于文档检查
+                # deadnix.enable = true; # detect unused variable bindings in `*.nix`
+                # statix.enable = true; # lints and suggestions for Nix code(auto suggestions)
               };
-              typos = {
-                enable = true;
-                settings = {
-                  write = true; # Automatically fix typos
-                  configPath = "./.typos.toml"; # relative to the flake root
-                };
-              }; # Source code spell checker
-              prettier = {
-                enable = true;
-                settings = {
-                  write = true; # Automatically format files
-                  configPath = "./.prettierrc.yaml"; # relative to the flake root
-                };
-              }; # 主要用于文档检查
-              # deadnix.enable = true; # detect unused variable bindings in `*.nix`
-              # statix.enable = true; # lints and suggestions for Nix code(auto suggestions)
             };
-          };
-          # deploy-rs 部署配置校验（schema/激活脚本检查）；
-          # 只在原生系统启用，跨系统会让 nix flake check 尝试交叉构建
-        }
-        // lib.optionalAttrs (system == "aarch64-darwin") (
-          inputs.deploy-rs.lib.${system}.deployChecks self.deploy
-        )
-      );
+            # deploy-rs 部署配置校验（schema/激活脚本检查）；
+            # 只在原生系统启用，跨系统会让 nix flake check 尝试交叉构建
+          }
+          // lib.optionalAttrs (system == "aarch64-darwin") (
+            inputs.deploy-rs.lib.${system}.deployChecks self.deploy
+          );
 
-      # Development Shells
-      devShells = forAllSystems (
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-        in
-        {
-          default = pkgs.mkShellNoCC {
+          # Development Shells
+          devShells.default = pkgs.mkShellNoCC {
             packages = with pkgs; [
               # fix https://discourse.nixos.org/t/non-interactive-bash-errors-from-flake-nix-mkshell/33310
               bashInteractive
@@ -296,18 +285,23 @@
             ];
             name = "dots";
             shellHook = ''
-              ${self.checks.${system}.pre-commit-check.shellHook}
+              ${config.checks.pre-commit-check.shellHook}
             '';
           };
-        }
-      );
 
-      # nixfmt-tree: treefmt 包装,支持目录参数;裸 nixfmt 传目录已被 Nix 标记 deprecated
-      formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.nixfmt-tree);
+          # nixfmt-tree: treefmt 包装,支持目录参数;裸 nixfmt 传目录已被 Nix 标记 deprecated
+          formatter = pkgs.nixfmt-tree;
+        };
     };
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    flake-parts = {
+      url = "github:hercules-ci/flake-parts";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
+    };
+    # 递归导入 modules/{flake,features,profiles} 下的 flake-parts 模块（路径含 /_ 的忽略）
+    import-tree.url = "github:denful/import-tree";
     # 保留上游 nixpkgs pin，让 OMP 与 Linux 工具复用同一份构建缓存
     llm-agents.url = "github:numtide/llm-agents.nix";
     # 与 nixpkgs 同分支却独立锁定，只会漂移出第二份源码树；收敛为别名

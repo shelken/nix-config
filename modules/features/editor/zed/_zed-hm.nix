@@ -1,0 +1,348 @@
+{
+  config,
+  lib,
+  pkgs,
+  mylib,
+  myvars,
+  ...
+}:
+let
+  themeName = myvars.catppuccin.displayName;
+  snippetFiles = builtins.attrNames (
+    lib.filterAttrs (name: type: type == "regular" && lib.strings.hasSuffix ".json" name) (
+      builtins.readDir ./snippets
+    )
+  );
+  snippetLinks = lib.listToAttrs (
+    map (name: {
+      name = ".config/zed/snippets/${name}";
+      value = mylib.mkConfigFile config (./snippets + "/${name}");
+    }) snippetFiles
+  );
+in
+{
+  catppuccin.zed.enable = false;
+  # zed 的 nix 扩展不带 LSP 二进制, 从 PATH 取 nixd(依赖归属: 谁用谁声明)
+  home.packages = [ pkgs.nixd ];
+  home.file = snippetLinks;
+  home.shellAliases = {
+    zed = "sec-run zed";
+  };
+  programs.zed-editor = {
+    enable = true;
+    package = null; # homebrew
+    mutableUserSettings = true;
+    mutableUserKeymaps = true;
+    # 注意：
+    # 列表不要直接传入，会直接覆盖
+    userSettings = {
+      # Zed settings
+      #
+      # For information on how to configure Zed, see the Zed
+      # documentation: https://zed.dev/docs/configuring-zed
+      #
+      # To see all of Zed's default settings without changing your
+      # custom settings, run `zed: open default settings` from the
+      # command palette (cmd-shift-p / ctrl-shift-p)
+
+      file_scan_exclusions = [
+        "..."
+        "**/node_modules"
+        "**/target"
+        "**/dist"
+        "**/coverage"
+        "**/.next"
+        "**/.turbo"
+        "**/.venv"
+        "**/__pycache__"
+        "**/.pytest_cache"
+        "**/.mypy_cache"
+        "**/.ruff_cache"
+        "**/.gradle"
+        "**/.direnv"
+        "**/agent/git"
+        "**/agent/npm"
+        "**/agent/sessions"
+        "**/agent/cache"
+        "**/agent/logs"
+        "**/agent/tmp"
+        "**/agent-subagent/sessions"
+        "**/agent-subagent/cache-parent"
+      ];
+
+      completions = {
+        words_min_length = 2;
+      };
+      agent = {
+        play_sound_when_agent_done = "always";
+
+        tool_permissions = {
+          default = "allow";
+        };
+
+        # model_parameters = [
+        #   # 代码生成/数学解题      0.0
+        #   # 数据抽取/分析        1.0
+        #   # 通用对话            1.3
+        #   # 翻译                1.3
+        #   # 创意类写作/诗歌创作  1.5
+        #   # {
+        #   #   provider = "deepseek";
+        #   #   temperature = 0.0;
+        #   # }
+        # ];
+      };
+
+      git_panel = {
+        tree_view = true;
+        sort_by = "path";
+      };
+
+      icon_theme = {
+        mode = "system";
+        light = themeName;
+        dark = themeName;
+      };
+
+      # ssh_connections = [
+      # ];
+
+      ui_font_family = myvars.fontFamilies.cjkMonospace;
+      buffer_font_family = myvars.fontFamilies.monospace;
+      buffer_font_fallbacks = [ myvars.fontFamilies.cjkMonospace ];
+
+      terminal = {
+        font_family = myvars.fontFamilies.monospace;
+        font_fallbacks = [ myvars.fontFamilies.cjkMonospace ];
+        option_as_meta = true;
+      };
+
+      telemetry = {
+        diagnostics = false;
+        metrics = false;
+      };
+
+      # proxy = "http://127.0.0.1:7890";
+
+      git = {
+        inline_blame = {
+          enabled = true;
+        };
+      };
+
+      base_keymap = "VSCode";
+
+      status_bar = {
+        "experimental.show" = true;
+      };
+
+      minimap = {
+        show = "auto";
+      };
+
+      hover_popover_enabled = true;
+      autosave = "on_focus_change";
+
+      linked_edits = true;
+      tab_size = 2;
+
+      theme = {
+        mode = "system";
+        light = themeName;
+        dark = themeName;
+      };
+
+      # agent_servers = {
+      #   "claude-acp" = {
+      #     type = "registry";
+      #     env = {
+      #       CLAUDE_CODE_EXECUTABLE = "/opt/homebrew/bin/claude";
+      #     };
+      #   };
+
+      #   # opencode = {
+      #   #   type = "custom";
+      #   #   command = "/opt/homebrew/bin/opencode";
+      #   #   args = [ "acp" ];
+      #   # };
+
+      #   "codex-acp" = {
+      #     default_config_options = {
+      #       mode = "full-access";
+      #     };
+      #     type = "registry";
+      #   };
+
+      #   # kimi = {
+      #   #   type = "custom";
+      #   #   command = "kimi";
+      #   #   args = [ "acp" ];
+      #   #   env = { };
+      #   # };
+      # };
+
+      languages = {
+        Nix = {
+          formatter = {
+            external = {
+              command = "nixfmt";
+              arguments = [ "--width=100" ];
+            };
+          };
+          language_servers = [
+            "nixd"
+            "!nil"
+          ];
+        };
+
+        "Shell Script" = {
+          tab_size = 4;
+        };
+
+        TOML = {
+          formatter = {
+            external = {
+              command = "taplo";
+              arguments = [
+                "format"
+                "-"
+              ];
+            };
+          };
+        };
+
+        YAML = {
+          format_on_save = "off";
+        };
+      };
+
+      lsp = {
+        "nixd" = {
+          settings = {
+            # ponytail: 默认 4 个 worker 各自全量展开 nixpkgs,16G 内存吃不消;补全变慢再调回
+            eval.workers = 1;
+          };
+        };
+        "yaml-language-server" = {
+          settings = {
+            yaml = {
+              schemas = {
+                # 为特定的 YAML 文件类型指定 schema
+              };
+              completion = true;
+              hover = true;
+              validate = true;
+            };
+          };
+        };
+      };
+
+      auto_install_extensions = {
+        ansible = true;
+        basher = true;
+        caddyfile = true;
+        catppuccin = true;
+        "catppuccin-icons" = true;
+        "color-highlight" = true;
+        csv = true;
+        "docker-compose" = false; # https://github.com/zed-industries/zed/issues/12122#issuecomment-2613014716
+        dockerfile = true;
+        env = true;
+        "git-firefly" = true;
+        html = true;
+        ini = true;
+        json5 = true;
+        just = true;
+        log = true;
+        lua = true;
+        make = true;
+        "markdown-oxide" = true;
+        "mcp-server-context7" = true;
+        "mcp-server-exa-search" = true;
+        mermaid = true;
+        nginx = true;
+        nix = true;
+        ruby = true;
+        sql = true;
+        swift = true;
+        terraform = false;
+        toml = true;
+        wakatime = true;
+        xml = true;
+      };
+
+      inlay_hints = {
+        enabled = true;
+        show_type_hints = true;
+        show_parameter_hints = true;
+        show_other_hints = true;
+      };
+    };
+
+    userKeymaps = [
+      {
+        context = "AgentPanel";
+        bindings = {
+          "cmd-1" = "project_panel::ToggleFocus";
+          "cmd-e" = "workspace::FocusCenterPane";
+        };
+      }
+      {
+        context = "Editor";
+        bindings = {
+          "cmd-g b" = "git::Blame";
+          "ctrl-tab" = "editor::ShowCompletions";
+        };
+      }
+      {
+        context = "GitPanel";
+        bindings = {
+          "cmd-shift-k" = "git::Push";
+        };
+      }
+      {
+        context = "Workspace";
+        bindings = {
+          "cmd-`" = "agent::ToggleFocus";
+          "cmd-1" = "project_panel::Toggle";
+          "cmd-2" = "git_panel::Toggle";
+          "cmd-3" = "terminal_panel::Toggle";
+        };
+      }
+      {
+        context = "Terminal";
+        unbind = {
+          "shift-up" = "terminal::ScrollLineUp";
+        };
+      }
+      {
+        context = "Terminal";
+        unbind = {
+          "shift-down" = "terminal::ScrollLineDown";
+        };
+      }
+      # for projects:open recent
+      {
+        context = "Terminal";
+        unbind = {
+          "ctrl-r" = [
+            "terminal::SendKeystroke"
+            "ctrl-r"
+          ];
+        };
+      }
+      {
+        context = "GitPanel";
+        unbind = {
+          "cmd-1" = "git_panel::ActivateChangesTab";
+        };
+      }
+      {
+        context = "GitPanel";
+        unbind = {
+          "cmd-2" = "git_panel::ActivateHistoryTab";
+        };
+      }
+    ];
+  };
+}

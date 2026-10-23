@@ -1,0 +1,36 @@
+# ssh：客户端配置
+{ config, ... }:
+{
+  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.ssh ];
+
+  flake.modules.homeManager.ssh =
+    { myvars, ... }:
+    {
+      programs.ssh = {
+        enable = true;
+        enableDefaultConfig = false;
+        settings = {
+          "*" = {
+            forwardAgent = false;
+            addKeysToAgent = "yes";
+            UseKeychain = "yes";
+            # 变更原因：Home Manager 的 raw SSH `SetEnv` 选项要求 attrset，生成 `SetEnv TERM="..."`。
+            SetEnv = {
+              TERM = "xterm-256color";
+            };
+          };
+        };
+        extraConfig = ''
+          Host github.com
+            User git
+            HostName ssh.github.com
+            Port 443
+          ${myvars.networking.ssh.extraConfig}
+        '';
+        # 用户特定的需要额外加的host
+        includes = [
+          "~/.ssh/specific"
+        ];
+      };
+    };
+}
