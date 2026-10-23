@@ -234,8 +234,7 @@ let
 
   localTopLevelSkillDirs = builtins.attrNames (lib.filterAttrs isLocalGroupedSkill localSkillEntries);
 
-  mkLocalSkillSource =
-    relativePath: mylib.mkConfigLink config "home/base/gui/dev/ai/skills/${relativePath}";
+  mkLocalSkillSource = relativePath: mylib.mkConfigLink config (./skills + "/${relativePath}");
 
   localGroupedSkillSources = builtins.listToAttrs (
     map (name: {

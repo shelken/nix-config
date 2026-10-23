@@ -9,7 +9,7 @@ let
   cfg = config.shelken.dev.ai;
 
   # 软链仓库内文件，仓库中直接编辑即生效
-  link = rel: mylib.mkConfigFile config "home/base/gui/dev/ai/auto-model-prompts/${rel}";
+  link = rel: mylib.mkConfigFile config (./. + "/${rel}");
 
   # matcher -> 仓库内源文件；matcher 由 pi-auto-model-prompts 按模型 ID 匹配，别名共用一个源
   matchers = {

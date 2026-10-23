@@ -23,7 +23,7 @@ in
     };
 
     xdg.configFile = {
-      "omniwm/settings.toml" = mylib.mkConfigFile config "home/darwin/wm/omniwm/settings.toml";
+      "omniwm/settings.toml" = mylib.mkConfigFile config ./omniwm/settings.toml;
     };
   };
 }

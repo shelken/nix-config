@@ -10,7 +10,7 @@ let
   cfg = config.shelken.dev.ai;
 
   # 软链仓库内文件，仓库中直接编辑即生效
-  linkOmp = rel: mylib.mkConfigFile config "home/base/gui/dev/ai/omp/${rel}";
+  linkOmp = rel: mylib.mkConfigFile config (./. + "/${rel}");
 
   # 扩展目录内除 *.test.ts 外的 .ts 逐个软链；目录内还含测试与 AGENTS.md，不能整目录软链
   extensionFiles = builtins.attrNames (
@@ -50,7 +50,7 @@ in
       # 模型配置: provider 清单 + 自定义模型 (apiKey 为环境变量名, OMP resolveConfigValue 先查 env 后降级字面量)
       ".omp/agent/models.yml" = linkOmp "models.yml";
       ".omp/agent/context-prune/settings.json" =
-        mylib.mkConfigFile config "home/base/gui/dev/ai/pi/configs/context-prune.json";
+        mylib.mkConfigFile config ../pi/configs/context-prune.json;
       # ".omp/agent/mcp.json" = linkOmp "mcp.json";
     }
     // extensionLinks;

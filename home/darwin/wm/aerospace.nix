@@ -28,7 +28,7 @@ in
   config = mkIf cfg.enable {
     home.packages = map writeShellBin scripts;
     xdg.configFile = {
-      "aerospace/aerospace.toml" = mylib.mkConfigFile config "home/darwin/wm/aerospace/aerospace.toml";
+      "aerospace/aerospace.toml" = mylib.mkConfigFile config ./aerospace/aerospace.toml;
     };
   };
 }

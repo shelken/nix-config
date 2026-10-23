@@ -32,9 +32,9 @@
   ];
 
   xdg.configFile = {
-    "yazi/yazi.toml" = mylib.mkConfigFile config "home/base/core/yazi/yazi.toml";
-    "yazi/keymap.toml" = mylib.mkConfigFile config "home/base/core/yazi/keymap.toml";
-    "yazi/vfs.toml" = mylib.mkConfigFile config "home/base/core/yazi/vfs.toml";
-    "yazi/init.lua" = mylib.mkConfigFile config "home/base/core/yazi/init.lua";
+    "yazi/yazi.toml" = mylib.mkConfigFile config ./yazi.toml;
+    "yazi/keymap.toml" = mylib.mkConfigFile config ./keymap.toml;
+    "yazi/vfs.toml" = mylib.mkConfigFile config ./vfs.toml;
+    "yazi/init.lua" = mylib.mkConfigFile config ./init.lua;
   };
 }

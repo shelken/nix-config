@@ -61,7 +61,7 @@ let
   agentsLinks = builtins.listToAttrs (
     map (target: {
       name = "${target.targetPath}/${target.fileName}";
-      value = mylib.mkConfigFile config "home/base/gui/dev/ai/_agents.md";
+      value = mylib.mkConfigFile config ./_agents.md;
     }) (if cfg.agentsTargets == [ ] then defaultAgentsTargets else cfg.agentsTargets)
   );
 in

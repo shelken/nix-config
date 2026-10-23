@@ -6,8 +6,8 @@
   ...
 }:
 let
-  linkPi = rel: mylib.mkConfigFile config "home/base/gui/dev/ai/pi/${rel}";
-  linkPiConfig = rel: mylib.mkConfigFile config "home/base/gui/dev/ai/pi/configs/${rel}";
+  linkPi = rel: mylib.mkConfigFile config (./. + "/${rel}");
+  linkPiConfig = rel: mylib.mkConfigFile config (./configs + "/${rel}");
   jsonFormat = pkgs.formats.json { };
   readYaml = mylib.readYaml pkgs;
 
@@ -94,8 +94,7 @@ in
       source = generatedModels;
       force = true;
     };
-    ".pi/agent/permissions.yaml" =
-      mylib.mkConfigFile config "home/base/gui/dev/ai/omp/permissions.yaml";
+    ".pi/agent/permissions.yaml" = mylib.mkConfigFile config ../omp/permissions.yaml;
 
     ".pi/agent/caveman.json" = linkPiConfig "caveman.json";
     ".pi/agent/context-prune/settings.json" = linkPiConfig "context-prune.json";
@@ -104,7 +103,7 @@ in
     ".pi/agent/extensions/pi-vision-handoff.json" = linkPiConfig "pi-vision-handoff.json";
     ".pi/agent/extensions/trae/config.json" = linkPiConfig "trae.json";
     ".pi/agent/extensions/subdir-context.ts" =
-      mylib.mkConfigFile config "home/base/gui/dev/ai/omp/extensions/subdir-context.ts";
+      mylib.mkConfigFile config ../omp/extensions/subdir-context.ts;
   };
 
   programs.zsh.initContent = shellInit;

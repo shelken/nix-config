@@ -39,9 +39,9 @@ in
 
     # computer-use / spawn-subagent 与 skills 同源，软链到工作树源码即时生效
     home.file.".local/bin/computer-use" =
-      mylib.mkConfigFile config "home/base/gui/dev/ai/skills/computer-use-best-practice/scripts/computer-use.ts";
+      mylib.mkConfigFile config ./skills/computer-use-best-practice/scripts/computer-use.ts;
     home.file.".local/bin/spawn-subagent" =
-      mylib.mkConfigFile config "home/base/gui/dev/ai/skills/subagent-policy/spawn-subagent";
+      mylib.mkConfigFile config ./skills/subagent-policy/spawn-subagent;
 
     home.packages = [
       ctx7

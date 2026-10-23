@@ -16,7 +16,7 @@ let
   snippetLinks = lib.listToAttrs (
     map (name: {
       name = ".config/zed/snippets/${name}";
-      value = mylib.mkConfigFile config "home/base/gui/dev/zed/snippets/${name}";
+      value = mylib.mkConfigFile config (./snippets + "/${name}");
     }) snippetFiles
   );
 in
