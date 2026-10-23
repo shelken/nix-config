@@ -2,9 +2,9 @@
 # NixOS 桌面机（gui / tui 之上的图形层）→ nixos.gui
 { config, ... }:
 {
-  flake.modules.nixos.gui.imports = [ config.flake.modules.nixos.desktop ];
+  flake.modules.nixos.gui.imports = [ config.flake.modules.nixos.desktop-session ];
 
-  flake.modules.nixos.desktop =
+  flake.modules.nixos.desktop-session =
     {
       lib,
       pkgs,

@@ -1,11 +1,9 @@
 # cli：gh-dash 配置、gitlab cli、comma、nix-search-tv、timeout 等终端工具
 {
-  myvars,
   pkgs,
   ...
 }:
 {
-  home.homeDirectory = "/Users/${myvars.username}";
   programs.gh-dash.enable = true; # catppuccin 主题经 autoEnable 注入
   # 仅收编与 v4.25.2 内置默认有差异的项；其余交给 gh-dash 内置默认
   programs.gh-dash.settings = {

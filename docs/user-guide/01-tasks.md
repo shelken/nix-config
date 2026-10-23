@@ -68,11 +68,11 @@ task log loon
 
 ```bash
 hosts/mio/tasks/loon.nix # 机器专属：每 2h 清理 Loon 日志（root）
-modules/features/darwin/tasks/_gc.nix # 全设备默认：每天 3:15 nix GC（root）
+modules/features/darwin/tasks/_global/nix-gc.nix # 全设备默认：每天 3:15 nix GC（root）
 ```
 
 - 机器专属任务：放 `hosts/<host>/tasks/`
-- 全设备通用任务：放 `modules/features/darwin/tasks/`
+- 全设备通用任务：放 `modules/features/darwin/tasks/_global/`
 
 ## 边界
 
