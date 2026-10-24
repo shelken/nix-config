@@ -1,0 +1,33 @@
+# 工具补齐
+
+`sb sync` 把登记的 mise 工具和 OMP 插件补齐到沙箱，只补缺，多个 sync 同时执行时排队；Agent 在上下文里不能自己装工具
+
+## Sub-features
+
+- `sync-noop` 工具已齐时不下载，共用层大小不变
+- `sync-serial` 两个 sync 同时启动时串行完成，都成功
+- `sync-private` 私有插件经 `GITHUB_TOKEN` clone 安装
+- `sync-tools` 登记的 Nix 与 mise 工具在上下文内可用
+- `ctx-no-install` 上下文内 `mise use -g` 失败且不写配置
+
+## How to get to it (user POV)
+
+- 宿主运行 `sb sync`
+- 新建主 VM 时自动执行一次
+
+## Driving it with verify.sh
+
+Preconditions:
+
+- 首次启动已完成
+
+- **重复 sync。** 取 `du -sk ~/Data/sandboxes/mise/aarch64-linux`，运行 `$V run sync1 -- $V sb sync & $V run sync2 -- $V sb sync & wait`，再取一次 `du`。两份 stderr 或 stdout 含「所有 mise 工具均已安装，本次不发起任何安装」，两个 `rc` 为 `0`，两次 `du` 相同
+- **工具可用。** 运行 `$V run tools -- $V sb run bash -c 'for c in rg fd jq gh node python3 uv omp pi codex claude bun mise git; do printf "%s " $c; $c --version 2>&1 | head -1; done'`。每行都有版本号，没有空行
+- **私有插件。** 运行 `$V msb exec sb-main -- bash -c 'cd /data/omp/plugins/node_modules && find -L pi-trae-provider pi-zed-provider -type f | wc -l'`。数量远大于 0（实测 125 与 5752 个文件）
+- **上下文内不能装工具。** 运行 `$V run ctx-install -- $V sb run bash -c 'mise use -g yq@4.44.3; echo rc=$?; cat /data/mise/config.toml'`。输出含 `Read-only file system` 与 `rc=1`，配置文件不存在
+
+## Gotchas
+
+- `sb sync` 写真实共用层；不要为了测试引入新工具
+- 私有插件 clone 失败只打警告且 `rc` 仍为 `0`，必须看插件目录内容
+- guest 里的插件 `package.json` 把私有依赖改写为 `file:/root/.omp/plugins/.git-vendor/…`，这是设计

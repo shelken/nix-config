@@ -84,12 +84,8 @@
       };
       home.shellAliases.pi = "sec-run pi";
 
-      programs.mise.globalConfig.tools."npm:@earendil-works/pi-coding-agent" = {
-        version = "latest";
-        minimum_release_age = "0h";
-      };
-
-      home.file = {
+      # pi 安装已迁入共享工具登记表（modules/features/ai/tools.nix 的 pi 条目）
+      shelken.dev.tools.pi.files = {
         ".pi/agent/settings.json" = linkPi "settings.json";
         ".pi/agent/keybindings.json" = linkPi "keybindings.json";
         ".pi/agent/models.json" = {

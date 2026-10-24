@@ -330,6 +330,11 @@
       };
       config = {
         home.file = allSkillLinks;
+        # skills 进共享工具登记表（与 agents 文档同机制）：宿主照常，沙箱经 files 拿到
+        shelken.dev.tools.agent-common.package = null;
+        shelken.dev.tools.agent-common.files = lib.filterAttrs (
+          name: _: lib.hasPrefix ".agents/" name
+        ) allSkillLinks;
 
         # 手动命令
         # bunx skills update

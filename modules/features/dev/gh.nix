@@ -6,10 +6,8 @@
   flake.modules.homeManager.gh =
     { pkgs, ... }:
     {
-      programs.gh = {
-        enable = true;
-        gitCredentialHelper.enable = false;
-      };
+      # gh 本体由共享工具登记表提供（shelken.dev.tools，ADR 0003）；
+      # 凭据 helper 配置保留在此，与 gh 二进制的来源解耦
       home.packages = with pkgs; [
         gh-markdown-preview
       ];

@@ -37,8 +37,7 @@
         # ts
         pnpm
 
-        # python
-        uv # python 管理（uvx）
+        # python: uv、nodejs 由共享工具登记表提供（shelken.dev.tools，ADR 0003）
 
         # nix
         nh # Yet another nix cli helper
@@ -49,6 +48,8 @@
       ];
 
       programs.npm.enable = true;
+      # nodejs 由共享工具登记表提供（shelken.dev.tools），避免重复安装
+      programs.npm.package = null;
       programs.npm.settings = {
         prefix = "\${HOME}/.npm-global";
         # registry = "https://registry.npmmirror.com";

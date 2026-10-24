@@ -1,0 +1,48 @@
+# Agent 沙箱主 VM 能力上限配置 (sb.yaml)
+# 本文件声明主 VM (sb-main) 的能力上限。
+# 挂载根目录在 guest 内的路径与宿主保持绝对一致。
+
+image: "ubuntu"
+cpus: 4
+memory: "8G"
+
+# 命名数据卷（用于 /data，ext4 disk）
+volume:
+  name: "sb-main-data"
+  size: "8G"
+
+# 挂载根目录清单（宿主与 guest 内路径保持绝对一致）
+mount_roots:
+  - "${HOME}/Code"
+  - "${HOME}/nix-config"
+  - "${HOME}/.herdr/worktrees"
+
+# 网络上限规则（公网 + DNS + 宿主端口 + 家庭网段）
+network:
+  policy: "public"
+  allow:
+    - "public"
+    - "dns"
+    - "host:tcp:3425"
+    - "host:tcp:8080"
+    - "192.168.69.46"
+    # - "192.168.69.60"
+  # 所有执行上下文默认放行的私网 IP:端口（IP 须在上面的 allow 内）：家里的模型服务
+  default_grant:
+    - "192.168.69.46:443"
+
+# Secret 全局声明（受保护凭据及允许的目标域名/IP）
+secrets:
+  GITHUB_TOKEN:
+    allow:
+      - "github.com"
+      - "api.github.com"
+  CPA_PI_API_KEY:
+    allow:
+      - "cpa.int.ooooo.space"
+  COMMANDCODE_API_KEY:
+    allow:
+      - "commandcode.int.ooooo.space"
+  WX_PI_API_KEY:
+    allow:
+      - "chatapi.weixin.qq.com"
