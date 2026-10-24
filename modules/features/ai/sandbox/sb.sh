@@ -200,8 +200,9 @@ generate_msb_config() {
   # 供 get_config_fingerprint 在计算指纹时识别并规范化该挂载条目
   SB_MISE_HOST_DIR_REAL="$mise_real"
 
+  # default_grant 是上下文级授权，不进 VM 配置，也就不影响上限指纹
   local network_json
-  network_json="$(jq -c '.network // {"policy": "public", "allow": ["public", "dns"]}' <<< "$raw_json")"
+  network_json="$(jq -c '(.network // {"policy": "public", "allow": ["public", "dns"]}) | del(.default_grant)' <<< "$raw_json")"
 
   local secrets_json
   secrets_json="$(jq -c '.secrets // {}' <<< "$raw_json")"
@@ -659,6 +660,25 @@ resolve_and_validate_plan() {
     if [[ ${#verified_paths[@]} -gt 0 ]]; then
       paths_json="$(printf '%s\n' "${verified_paths[@]}" | jq -s .)"
     fi
+  fi
+
+  # 4d. 上限声明的所有上下文默认放行的私网 IP:端口（如家里的模型服务），
+  # IP 必须已在 network.allow 上限内；与项目声明的目标合并
+  local -a default_grants=()
+  while IFS= read -r grant; do
+    [[ -n "$grant" ]] || continue
+    if [[ ! "$grant" =~ ^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+):[0-9]+$ ]]; then
+      echo "[-] 错误: sb.yaml network.default_grant 只接受 IP:端口，收到: $grant" >&2
+      return 1
+    fi
+    if ! jq -e --arg ip "${BASH_REMATCH[1]}" '(.network.allow // []) | index($ip)' <<< "$ceiling_json" >/dev/null; then
+      echo "[-] 错误: sb.yaml network.default_grant 的 $grant 不在 network.allow 上限内" >&2
+      return 1
+    fi
+    default_grants+=("$grant")
+  done < <(jq -r '.network.default_grant[]? // empty' <<< "$ceiling_json")
+  if [[ ${#default_grants[@]} -gt 0 ]]; then
+    network_json="$(printf '%s\n' "${default_grants[@]}" | jq -R . | jq -s --argjson proj "$network_json" '$proj + . | unique')"
   fi
 
   # 5. 提取默认授权目标 default_allow (非家庭网段项目，如 host:tcp:*)

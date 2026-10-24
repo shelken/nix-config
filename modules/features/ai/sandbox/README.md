@@ -8,6 +8,7 @@
 - [ADR 0003](../../../../docs/adr/0003-shared-tool-single-declaration.md)：共享工具单一声明
 - [ADR 0005](../../../../docs/adr/0005-shared-mise-install-layer.md)：共用 mise 安装层
 - [ADR 0006](../../../../docs/adr/0006-sandbox-razor.md)：删除附加 VM、待升级登记与忙时 sync
+- [ADR 0007](../../../../docs/adr/0007-sandbox-default-grant.md)：所有上下文默认放行的私网端口（家里的模型服务）
 
 由 `shelken.dev.ai.sandbox.enable` 控制，默认关闭
 
@@ -54,6 +55,7 @@ flowchart LR
 | `volume.name` / `volume.size` | `sb-main-data` / `8G` | 挂到 `/data` 的 ext4 数据卷，不存在时自动创建 |
 | `mount_roots` | 无 | 挂载根，支持 `~`、`${HOME}`；先解析符号链接，guest 内路径与宿主一致 |
 | `network.allow` | `public`、`dns` | 另可写 `host:tcp:<端口>` 与私网 IP（精确匹配，不支持 CIDR） |
+| `network.default_grant` | 无 | 所有上下文默认放行的私网 `IP:端口`，IP 须在 `network.allow` 内；不进 VM 配置，改了不触发重建 |
 | `secrets` | 无 | `变量名: { allow: [域名或 IP] }`，真实值由宿主 `sec-run` 注入 |
 
 ### 授权：项目 `.sandbox.yaml`
@@ -85,7 +87,7 @@ sequenceDiagram
   G->>G: 退出：删网络资源与上下文目录
 ```
 
-- **视图**：bubblewrap 映射到 UID 1000，只读绑定 `/usr`、`/etc`、`/nix/store`、共用 mise 层与配置目录；可写绑定 `/data`、项目根、额外路径与 `/imports`。`/run` 是 tmpfs，上下文看不到 `/run/sandbox/contexts` 里其他上下文的 imports
+- **视图**：bubblewrap 映射到 UID 1000，只读绑定 `/usr`、`/etc`、`/nix/store`、`/.msb/tls`（msb CA，`NODE_EXTRA_CA_CERTS` 指向这里，缺失时 OMP 的模型发现全部失败）、共用 mise 层与配置目录；可写绑定 `/data`、项目根、额外路径与 `/imports`。`/run` 是 tmpfs，上下文看不到 `/run/sandbox/contexts` 里其他上下文的 imports。launcher 预先创建 `/data/xdg/*/omp`，OMP 只在这些目录存在时才把数据库放到 `/data`
 - **网络**：每个槽位一个 `/30` 子网（`10.200.x.y`），独立 netns 与 veth，NAT 出口。地址池 64 个，即单台主 VM 最多 64 个并发上下文
 - **并发**：清扫、选槽、发布 `meta.json` 在 guest 内一把 flock 下串行；网络资源按唯一槽位命名，不会互相覆盖。cleanup 只删 `meta.json` 归属本进程的资源
 - **复制窗口**：宿主复制 imports 期间目录还没有 `meta.json`，靠 `starting` 标记保护：120 秒宽限内清扫跳过它，忙碌计数也算上它。复制失败或宿主中断时宿主删除该目录
@@ -97,7 +99,7 @@ sequenceDiagram
 
 1. DNS（guest `/etc/resolv.conf` 中的 nameserver，53 端口）
 2. `sb.yaml` 中的 `host:tcp:<端口>`
-3. 项目声明的私网目标
+3. `network.default_grant` 与项目声明的私网目标
 4. 拒绝 `10/8`、`172.16/12`、`192.168/16`、`100.64/10`、`169.254/16`
 5. 其余公网放行（含 fake-ip 段 `198.18/15`）
 
