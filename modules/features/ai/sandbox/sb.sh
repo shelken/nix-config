@@ -103,6 +103,7 @@ sb down              停止主 VM
 sb rm [--force]       删除主 VM，保留数据卷；有运行中上下文时拒绝，--force 强制删除
 sb sync              补齐沙箱内的 mise 工具与 OMP 插件 (幂等，只装缺失项；宿主写锁串行化)
 sb status [--json]   查看主 VM 状态、规格、能力上限指纹一致性与缺失工具
+sb plan [--json]     显示当前项目解析后的授权：挂载、导入、放行的私网目标 (不创建 VM，被拒绝时先看它)
 sb run [-t] CMD…     在当前项目执行上下文内运行命令 (TTY 自适应)
 sb shell             进入当前项目执行上下文的交互式 Bash shell
 sb volume …          命名卷管理 (原生透传至 msb volume)
@@ -901,6 +902,27 @@ VM 规格: cpus=$cpus, memory=$memory
 运行状态: $busy
 缺失工具: $missing_tools_str
 EOF
+    fi
+    ;;
+
+  plan)
+    # 只解析并校验当前项目的授权，不创建 VM，也不启动上下文
+    plan_json="$(resolve_and_validate_plan "$(pwd -P)" "$YAML_FILE")"
+    if [[ "${1:-}" == "--json" || "${1:-}" == "-j" ]]; then
+      jq . <<< "$plan_json"
+    else
+      default_grants_json="$(yq -o=json '.network.default_grant // []' "$YAML_FILE")"
+      jq -r --argjson dg "$default_grants_json" '
+        def section(t; a): t, (if (a | length) == 0 then "  无" else (a[] | "  " + .) end);
+        .project_root as $pr
+        | (.git_common_dir // "") as $gcd
+        | "项目根: \($pr)",
+          (if $gcd != "" and $gcd != $pr and ($gcd | startswith($pr + "/") | not) then "git common dir: \($gcd)" else empty end),
+          section("额外路径:"; .paths | map(.path + (if .readonly then "（只读）" else "" end))),
+          section("导入文件:"; .imports | map(.src + " → " + .target)),
+          section("放行的私网目标:"; .network | map(. as $t | $t + (if ($dg | index($t)) != null then "（sb.yaml 默认放行）" else "（项目声明）" end))),
+          section("放行的宿主端口:"; .default_allow)
+      ' <<< "$plan_json"
     fi
     ;;
 
