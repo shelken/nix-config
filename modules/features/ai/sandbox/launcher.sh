@@ -355,12 +355,15 @@ BWRAP_ARGS=(
   --tmpfs /tmp
   --tmpfs /run
   --ro-bind /nix/store /nix/store
+  # msb 设置的 NODE_EXTRA_CA_CERTS 指向这里；路径缺失时 OMP 的模型发现全部失败
+  --ro-bind-try /.msb/tls /.msb/tls
 )
 
 # 共享可写状态卷 /data
 if [[ -d /data ]]; then
   BWRAP_ARGS+=(--bind /data /data)
-  mkdir -p /data/xdg/data /data/xdg/state /data/xdg/cache /data/xdg/config /data/mise /data/omp/plugins /data/xdg/data/mise/shims
+  # OMP 只在 $XDG_*_HOME/omp 已存在时使用 XDG 路径，否则回落到只读的 ~/.omp/agent 而无法建库
+  mkdir -p /data/xdg/data/omp /data/xdg/state/omp /data/xdg/cache/omp /data/xdg/config /data/mise /data/omp/plugins /data/xdg/data/mise/shims
 fi
 
 # 宿主共用 mise 目录（ADR 0005）：执行上下文内只读，安装仅经 sb sync
