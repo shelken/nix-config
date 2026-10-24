@@ -147,7 +147,7 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 
 mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-linux`（`SB_MISE_HOST_DIR`，首次使用自动创建），挂到所有 VM 的 `/opt/sandbox-mise`，新 VM 不必重新下载。mise 的 state、shims 与用户层配置 `/data/mise/config.toml` 留在各 VM 数据卷
 
-上下文对共用层只读，并设 `MISE_AUTO_INSTALL=0`，Agent 无法在沙箱内安装工具
+上下文对共用层只读，并设 `MISE_AUTO_INSTALL=0`，Agent 无法在沙箱内安装工具。launcher 还设 `MISE_OFFLINE=1`：上下文里 mise 不发网络请求，项目 `mise.toml` 里写 `latest` 的工具解析不出版本，只给一条警告，不再每次启动白等超时（实测 minio/mc 的版本列表约 14 MB，超过 mise 的超时，缓存写不进去）。`sb sync` 不在上下文里，不受影响
 
 ### `sb sync`
 

@@ -445,6 +445,10 @@ if [[ -f /run/sandbox-config/current/guest-env.sh ]]; then
   # shellcheck source=/dev/null
   source /run/sandbox-config/current/guest-env.sh
 fi
+# 上下文不能安装工具，联网解析项目 mise.toml 里的 latest 没有意义，反而每次启动都白等：
+# minio/mc 的版本列表约 14 MB，超过 mise 的超时，缓存写不进去，每次重试并刷警告。
+# 写在这里而不是 guest-env.sh：sb sync 也 source 它，但 sync 在上下文外，必须联网
+export MISE_OFFLINE=1
 # 依据参数形式分流：单字符串含复杂语法走 bash -c，多参数直接 exec
 if [[ $# -eq 0 ]]; then
   set -- bash
