@@ -44,7 +44,7 @@ flowchart LR
 
 ## 两层能力
 
-**能力上限**在主 VM 创建时固定：挂载根、网络、secret 都写进 msb 配置，运行中改不了。**能力授权**在每次启动上下文时由 launcher 授予，只能是上限的子集
+**能力上限**在主 VM 创建时固定：挂载根、VM 级网络策略、secret 都写进 msb 配置，运行中改不了。**能力授权**在每次启动上下文时由 launcher 授予：额外路径受挂载根约束；导入文件和私网目标没有上限，由用户用 `sb trust` 批准
 
 ### 上限：`sb.yaml`
 
@@ -54,22 +54,21 @@ flowchart LR
 | `cpus` / `memory` | `4` / `8G` | VM 规格 |
 | `volume.name` / `volume.size` | `sb-main-data` / `8G` | 挂到 `/data` 的 ext4 数据卷，不存在时自动创建 |
 | `mount_roots` | 无 | 挂载根，支持 `~`、`${HOME}`；先解析符号链接，guest 内路径与宿主一致 |
-| `import_sources` | 无 | `.sandbox.yaml` 的 `imports.src` 允许落在的宿主文件或目录，支持 `~`、`${HOME}`；先解析符号链接。不进 VM 配置，改了不触发重建 |
-| `network.allow` | `public`、`dns` | 另可写 `host:tcp:<端口>` 与私网 IP（精确匹配，不支持 CIDR） |
-| `network.default_grant` | 无 | 所有上下文默认放行的私网 `IP:端口`，IP 须在 `network.allow` 内；不进 VM 配置，改了不触发重建 |
+| `network.allow` | `public`、`dns` | VM 级网络策略（msb 规则语法）：`public`、`dns`、`private`、`host:tcp:<端口>`。`private` 整体放开私网，逐项限制由上下文内的 iptables 链完成；改它会改变上限指纹、触发重建 |
+| `network.default_grant` | 无 | 所有上下文默认放行的私网 `IP:端口`；不进 VM 配置，改了不触发重建 |
 | `secrets` | 无 | `变量名: { allow: [域名或 IP] }`，真实值由宿主 `sec-run` 注入 |
 
 ### 授权：项目 `.sandbox.yaml`
 
 | 字段 | 校验 | 落地方式 |
 | --- | --- | --- |
-| `imports` | 每项写 `src` 与 `target`；`src` 必须是存在的文件并落在 `import_sources` 内；`target` 以 `~/` 或 `/` 开头、不含 `..`、位于子目录内，且不在沙箱保留位置（系统目录、`/data`、`~/.omp`、`~/.agents`、`~/.pi`） | 宿主 `msb copy` 进 guest 的暂存目录，目标目录整体绑定为该暂存目录（目录形式，支持原子改名），退出删除，不写回 |
-| `network` | 必须出现在 `network.allow` | 上下文专有 iptables 链里先于私网拒绝规则放行；支持 `IP` 与 `IP:端口` |
+| `imports` | 每项写 `src` 与 `target`；`src` 必须是存在的宿主文件；`target` 以 `~/` 或 `/` 开头、不含 `..`、位于子目录内，且不在沙箱保留位置（系统目录、`/data`、`~/.omp`、`~/.agents`、`~/.pi`） | 宿主 `msb copy` 进 guest 的暂存目录，目标目录整体绑定为该暂存目录（目录形式，支持原子改名），退出删除，不写回 |
+| `network` | 只接受 `IP` 或 `IP:端口` | 上下文专有 iptables 链里先于私网拒绝规则放行 |
 | `paths` | 必须在 `mount_roots` 内 | 同路径绑定，`:ro` 或 `readonly: true` 为只读 |
 
 此外两项自动授权：项目根（git 仓库根，不在仓库内时取当前目录）可写绑定；worktree 的 git common dir 不在项目内时自动加绑，它不在挂载根内则拒绝启动
 
-Agent 改 `.sandbox.yaml` 最多在上限内扩权，并且下次启动才生效
+**批准**：项目有 `.sandbox.yaml` 时，`sb run`、`sb shell`、`omp-sb` 要求它已批准，否则直接报错并提示 `sb trust`，不弹提示、不等待输入。`sb trust` 对规范化内容（键排序、去注释，只改格式或注释不失效）算 SHA-256，记入 `$MSB_HOME/approvals/<哈希>`。批准只看内容、不看路径，所以同一份文件在所有 worktree 里只批准一次；文件一变（包括被 Agent 修改）就要重新批准。`sb plan` 显示批准状态。记录在宿主上，沙箱里的 `sb` 被宿主命令桩拒绝，Agent 批准不了自己
 
 ## 执行上下文
 
@@ -107,6 +106,12 @@ sequenceDiagram
 FORWARD 默认 DROP。公网只在 VM 级控制，不做上下文级限制
 
 secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符，请求发往该 secret 的 `allow` 目标时才换成真实值，token 不落盘。GitHub 的 `git@github.com:` remote 在 guest 内改写为 HTTPS，配合 `GITHUB_TOKEN` 占位符认证；不共享宿主 SSH 私钥
+
+### 已知局限
+
+- **私网在 VM 级是放开的。** 只有执行上下文内的进程受上下文链约束；不在上下文里运行的 guest 进程（`sb sync` 里的 mise 与 `bun install`、`msb exec` 进入的 root 进程）也能连私网。威胁模型只防 Agent 误操作，Agent 始终在上下文内，所以接受（ADR 0009）
+- **批准只覆盖 `.sandbox.yaml` 的内容。** `imports.src` 指向的宿主文件内容变了不需要重新批准；内容相同的 `.sandbox.yaml` 放在别处也视为已批准
+- **`sb trust` 不逐项确认。** 它直接记录批准，批准前要自己先看 `sb plan` 的清单
 
 ## 主 VM 生命周期
 
