@@ -54,6 +54,7 @@ flowchart LR
 | `cpus` / `memory` | `4` / `8G` | VM 规格 |
 | `volume.name` / `volume.size` | `sb-main-data` / `8G` | 挂到 `/data` 的 ext4 数据卷，不存在时自动创建 |
 | `mount_roots` | 无 | 挂载根，支持 `~`、`${HOME}`；先解析符号链接，guest 内路径与宿主一致 |
+| `import_sources` | 无 | `.sandbox.yaml` 的 `imports.src` 允许落在的宿主文件或目录，支持 `~`、`${HOME}`；先解析符号链接。不进 VM 配置，改了不触发重建 |
 | `network.allow` | `public`、`dns` | 另可写 `host:tcp:<端口>` 与私网 IP（精确匹配，不支持 CIDR） |
 | `network.default_grant` | 无 | 所有上下文默认放行的私网 `IP:端口`，IP 须在 `network.allow` 内；不进 VM 配置，改了不触发重建 |
 | `secrets` | 无 | `变量名: { allow: [域名或 IP] }`，真实值由宿主 `sec-run` 注入 |
@@ -62,7 +63,7 @@ flowchart LR
 
 | 字段 | 校验 | 落地方式 |
 | --- | --- | --- |
-| `imports` | 宿主文件必须存在 | 宿主 `msb copy` 进 guest，绑定为上下文的 `/imports`，退出删除，不写回 |
+| `imports` | 每项写 `src` 与 `target`；`src` 必须是存在的文件并落在 `import_sources` 内；`target` 以 `~/` 或 `/` 开头、不含 `..`、位于子目录内，且不在沙箱保留位置（系统目录、`/data`、`~/.omp`、`~/.agents`、`~/.pi`） | 宿主 `msb copy` 进 guest 的暂存目录，目标目录整体绑定为该暂存目录（目录形式，支持原子改名），退出删除，不写回 |
 | `network` | 必须出现在 `network.allow` | 上下文专有 iptables 链里先于私网拒绝规则放行；支持 `IP` 与 `IP:端口` |
 | `paths` | 必须在 `mount_roots` 内 | 同路径绑定，`:ro` 或 `readonly: true` 为只读 |
 
@@ -87,7 +88,7 @@ sequenceDiagram
   G->>G: 退出：删网络资源与上下文目录
 ```
 
-- **视图**：bubblewrap 映射到 UID 1000，只读绑定 `/usr`、`/etc`、`/nix/store`、`/.msb/tls`（msb CA，`NODE_EXTRA_CA_CERTS` 指向这里，缺失时 OMP 的模型发现全部失败）、共用 mise 层与配置目录；可写绑定 `/data`、项目根、额外路径与 `/imports`。`/run` 是 tmpfs，上下文看不到 `/run/sandbox/contexts` 里其他上下文的 imports。launcher 预先创建 `/data/xdg/*/omp`，OMP 只在这些目录存在时才把数据库放到 `/data`
+- **视图**：bubblewrap 映射到 UID 1000，只读绑定 `/usr`、`/etc`、`/nix/store`、`/.msb/tls`（msb CA，`NODE_EXTRA_CA_CERTS` 指向这里，缺失时 OMP 的模型发现全部失败）、共用 mise 层与配置目录；可写绑定 `/data`、项目根、额外路径与 imports 的目标目录（该目录在上下文里只剩导入的文件）。`/run` 是 tmpfs，上下文看不到 `/run/sandbox/contexts` 里其他上下文的 imports。launcher 预先创建 `/data/xdg/*/omp`，OMP 只在这些目录存在时才把数据库放到 `/data`
 - **网络**：每个槽位一个 `/30` 子网（`10.200.x.y`），独立 netns 与 veth，NAT 出口。地址池 64 个，即单台主 VM 最多 64 个并发上下文
 - **并发**：清扫、选槽、发布 `meta.json` 在 guest 内一把 flock 下串行；网络资源按唯一槽位命名，不会互相覆盖。cleanup 只删 `meta.json` 归属本进程的资源
 - **复制窗口**：宿主复制 imports 期间目录还没有 `meta.json`，靠 `starting` 标记保护：120 秒宽限内清扫跳过它，忙碌计数也算上它。复制失败或宿主中断时宿主删除该目录

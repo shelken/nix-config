@@ -17,6 +17,11 @@ mount_roots:
   - "${HOME}/nix-config"
   - "${HOME}/.herdr/worktrees"
 
+# 允许 .sandbox.yaml 的 imports 导入的宿主位置（文件或目录，支持 ~、${HOME}；先解析符号链接）
+# .sandbox.yaml 在项目仓库里，Agent 能改，所以导入来源必须在这里设上限
+import_sources:
+  - "${HOME}/.kube"
+
 # 网络上限规则（公网 + DNS + 宿主端口 + 家庭网段）
 network:
   policy: "public"
