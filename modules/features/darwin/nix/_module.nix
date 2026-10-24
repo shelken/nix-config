@@ -41,6 +41,7 @@
     # Linux 构建由 Determinate 的 Native Linux Builder 提供，这里不配 builders / extra-platforms：
     # external-builders 由 determinate-nixd 写入 /etc/nix/nix.conf，手写会绕过开通检查。
     # 不生效时看 `determinate-nixd version` 是否列出 native-linux-builder，没有就重新 `determinate-nixd auth login`
+    # 例外：主机导入 features/darwin/linux-builder 后，会在本文件末尾追加 builders，改走本机官方 builder
   '';
 
   # `nix.enable = false`（Determinate）时 nix-darwin 不接管 registry，

@@ -3,7 +3,10 @@ let
   hostname = "mio";
 in
 {
-  imports = [ self.modules.darwin.workstation ];
+  imports = [
+    self.modules.darwin.workstation
+    self.modules.darwin.linux-builder
+  ];
 
   networking.hostName = hostname;
   networking.computerName = hostname;
