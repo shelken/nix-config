@@ -119,7 +119,7 @@ secrets:
 | `volume.size` | string | 主数据卷初始容量，默认 `8G`（自动创建为 ext4 disk 命名卷） |
 | `mount_roots` | list[string] | 允许挂载的宿主根目录清单。支持 `~` 和 `${HOME}`，自动解析软链真实路径，guest 内路径与宿主保持绝对一致 |
 | `network.policy` | string | 网络默认策略，默认 `public` |
-| `network.allow` | list[string] | 网络上限放行规则，支持 `public`、`dns`、`host:tcp:<port>`、私网 IP 或 CIDR |
+| `network.allow` | list[string] | 网络上限放行规则，支持 `public`、`dns`、`host:tcp:<port>` 与私网 IP（精确地址等值匹配，不支持 CIDR 网段） |
 | `secrets` | map[string, object] | 全局受保护 secret 声明，映射环境变量名到允许放行的目标域名或 IP |
 
 ### 项目配置 (`.sandbox.yaml`)
@@ -165,7 +165,7 @@ paths:
 |---|---|
 | `sb up` | 确保主 VM `sb-main` 运行。首次自动创建数据卷与 VM；已存在且上限未变时直接复用；上限变化且 VM 空闲时自动重建（数据卷内容保留）；上限变化但 VM 忙碌时报错并给出运行中的上下文数 |
 | `sb down` | 停止主 VM |
-| `sb rm` | 删除主 VM，保留数据卷 |
+| `sb rm [--force]` | 删除主 VM，保留数据卷。有运行中上下文时拒绝并报运行中上下文数；`--force` 跳过检查强制删除（打断所有上下文） |
 | `sb sync [VM]` | 补齐沙箱内的 mise 工具与 OMP 插件（幂等，只装缺失项，不删除、不升级已有项） |
 | `sb status [--json]` | 查看主 VM 状态、规格、忙碌状态、能力上限指纹一致性与缺失工具列表 |
 | `sb volume …` | 原生命令数据卷管理（透传至 `msb volume`） |
@@ -247,7 +247,7 @@ bash modules/features/ai/sandbox/e2e/smoke.sh
 
 ## 配置、工作区与状态
 
-宿主 `~/Code` 映射到 `/workspace`，`~/nix-config` 按同一路径提供读写访问，供代码编辑及 Git 工作树公共目录使用。其他目录需在 YAML 中显式声明
+挂载根目录（默认含 `~/Code`、`~/nix-config`、`~/.herdr/worktrees`，见 `sb.yaml` 的 `mount_roots`）按同路径绑定进主 VM，guest 内路径与宿主绝对一致；worktree 的 git common dir 与项目声明的额外路径也按同路径挂载（common dir 落在挂载根之外时报错提示先扩 `mount_roots`）。新增目录必须先加入 `mount_roots`（需重建 VM 生效）
 
 OMP 配置位于只读 `/root/.omp/agent`，skills 与提示词位于只读 `/root/.agents`。sandbox 从已有 `home.file` 声明取得纯 store 配置，通过宿主 `~/.config/sandbox/current` 发布；guest 不跟随宿主 live-edit 软链。模型地址适配集中在 [default.nix](./default.nix)，其他 AI 模块不维护 sandbox 清单，宿主保持现有 live-edit 行为
 

@@ -6,6 +6,30 @@ export HOME="${HOME:-/root}"
 
 CONTEXTS_DIR="/run/sandbox/contexts"
 MAX_SLOTS=64
+# 宿主复制 imports 的时间窗保护：未超宽限的「启动中」目录视为存活（B）
+STARTUP_GRACE_SECS=120
+# 上下文目录归属锁：清扫、选槽、meta 发布必须在这把锁内完成（A）
+SLOT_LOCK="$CONTEXTS_DIR/.slot.lock"
+
+acquire_slot_lock() {
+  mkdir -p "$CONTEXTS_DIR"
+  exec 9>>"$SLOT_LOCK"
+  flock -w 30 9
+}
+
+release_slot_lock() {
+  flock -u 9 2>/dev/null || true
+  exec 9>&-
+}
+
+# 目录处于宿主复制 imports 阶段：存在 starting 标记且未超宽限
+is_starting() {
+  local dir="$1"
+  [[ -f "$dir/starting" ]] || return 1
+  local started
+  started="$(stat -c %Y "$dir/starting" 2>/dev/null || echo 0)"
+  [[ $(( $(date +%s) - started )) -lt $STARTUP_GRACE_SECS ]]
+}
 
 # 1. 残留清扫逻辑：检查所有已登记上下文，清理死进程残留；清理无归属的孤儿网络资源
 sweep_dead_contexts() {
@@ -30,6 +54,10 @@ sweep_dead_contexts() {
 
     local is_alive=0
     if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+      is_alive=1
+    fi
+    # 无 meta 的目录可能正被宿主复制 imports：宽限内视为存活（B）
+    if [[ "$is_alive" -eq 0 && ! -f "$meta" ]] && is_starting "$ctx_dir"; then
       is_alive=1
     fi
 
@@ -71,8 +99,8 @@ sweep_dead_contexts() {
     fi
   done
 
-  # 扫描并清理孤儿 veth 接口 (以 vth 开头但无对应登记)
-  for veth in $(ip -o link show 2>/dev/null | awk -F': ' '{print $2}' | grep -E '^vth[0-9]+$' || true); do
+  # 扫描并清理孤儿 veth 接口 (以 vth 开头但无对应登记)；veth 在 ip -o link 中带 @peer 后缀，先截断再匹配
+  for veth in $(ip -o link show 2>/dev/null | awk -F': ' '{sub(/@.*/, "", $2); print $2}' | grep -E '^vth[0-9]+$' || true); do
     local found=0
     for ctx_dir in "$CONTEXTS_DIR"/*; do
       [[ -d "$ctx_dir" ]] || continue
@@ -91,22 +119,27 @@ sweep_dead_contexts() {
   done
 }
 
-# 子命令 1: 检查活跃上下文数 (供宿主 sb status 与 is_vm_busy 调用)
 if [[ "${1:-}" == "--check-busy" ]]; then
+  acquire_slot_lock
   sweep_dead_contexts
   count=0
   if [[ -d "$CONTEXTS_DIR" ]]; then
     for ctx_dir in "$CONTEXTS_DIR"/*; do
       [[ -d "$ctx_dir" ]] || continue
-      count=$((count + 1))
+      # 启动中的目录在宽限内同样占用 VM，计入忙碌（B）
+      if [[ -f "$ctx_dir/meta.json" ]] || is_starting "$ctx_dir"; then
+        count=$((count + 1))
+      fi
     done
   fi
   echo "$count"
+  release_slot_lock
   exit 0
 fi
 
 # 子命令 2: 列出活跃上下文元数据
 if [[ "${1:-}" == "--list-contexts" ]]; then
+  acquire_slot_lock
   sweep_dead_contexts
   res="[]"
   items=()
@@ -123,6 +156,7 @@ if [[ "${1:-}" == "--list-contexts" ]]; then
     fi
   fi
   echo "$res"
+  release_slot_lock
   exit 0
 fi
 
@@ -137,12 +171,15 @@ PLAN_JSON="$2"
 CWD="$3"
 shift 3
 
-# 启动前先清扫残留
+# 启动临界区：死上下文清扫、选槽、meta.json 原子发布在同一把短期锁内串行，
+# 否则并发 launcher 会选中同一槽位，失败方的清理会误删另一上下文的
+# netns/veth/iptables（A）
+acquire_slot_lock
 sweep_dead_contexts
 
 mkdir -p "$CONTEXTS_DIR"
 
-# 2. 地址池与槽位分配 (找到最小未占用的 slot)
+# 2. Address pool and slot allocation (find the smallest unoccupied slot)
 declare -A USED_SLOTS=()
 for ctx_dir in "$CONTEXTS_DIR"/*; do
   [[ -d "$ctx_dir" ]] || continue
@@ -184,35 +221,48 @@ IMPORTS_DIR="$CURRENT_CTX_DIR/imports"
 mkdir -p "$IMPORTS_DIR"
 chmod 777 "$IMPORTS_DIR"
 
-# 3. 登记当前上下文元数据
-cat <<EOF > "$CURRENT_CTX_DIR/meta.json"
-{
-"id": "$CTX_ID",
-"slot": $SLOT,
-"pid": $$,
-"project_root": "$PROJECT_ROOT",
-"created_at": "$(date -Iseconds)",
-"ip": "$IP_GUEST",
-"veth_host": "$VETH_HOST",
-"veth_in": "$VETH_IN",
-"netns": "$NETNS",
-"chain": "$CHAIN"
-}
-EOF
+# 3. 登记当前上下文元数据：jq 生成（转义路径中的引号/换行，合法路径不产生
+# 损坏的 JSON），写临时文件后 mv 原子发布（D），并移除宿主侧「启动中」标记；
+# 此后目录所有权归属本 launcher（B）
+META_TMP="$CURRENT_CTX_DIR/meta.json.tmp"
+jq -n \
+  --arg id "$CTX_ID" \
+  --argjson slot "$SLOT" \
+  --argjson pid "$$" \
+  --arg project_root "$PROJECT_ROOT" \
+  --arg created_at "$(date -Iseconds)" \
+  --arg ip "$IP_GUEST" \
+  --arg veth_host "$VETH_HOST" \
+  --arg veth_in "$VETH_IN" \
+  --arg netns "$NETNS" \
+  --arg chain "$CHAIN" \
+  '{id: $id, slot: $slot, pid: $pid, project_root: $project_root, created_at: $created_at,
+    ip: $ip, veth_host: $veth_host, veth_in: $veth_in, netns: $netns, chain: $chain}' > "$META_TMP"
+mv "$META_TMP" "$CURRENT_CTX_DIR/meta.json"
+rm -f "$CURRENT_CTX_DIR/starting"
+release_slot_lock
 
 # 4. 退出清理钩子 (异常与正常退出均触发)
 cleanup() {
   local exit_code=$?
   trap - EXIT INT TERM HUP
 
-  # 删除 iptables 规则与专用链
-  iptables -D FORWARD -s "$IP_GUEST" -j "$CHAIN" 2>/dev/null || true
-  iptables -F "$CHAIN" 2>/dev/null || true
-  iptables -X "$CHAIN" 2>/dev/null || true
+  # 归属校验：只删除本次启动确实创建的资源（A）。槽位冲突时 meta 归属另一
+  # launcher，删除同名 netns/veth/chain 会拆掉另一个运行中的上下文
+  local owned=0
+  if [[ -f "$CURRENT_CTX_DIR/meta.json" ]] && [[ "$(jq -r '.pid // 0' "$CURRENT_CTX_DIR/meta.json" 2>/dev/null || echo 0)" == "$$" ]]; then
+    owned=1
+  fi
+  if [[ "$owned" -eq 1 ]]; then
+    # 删除 iptables 规则与专用链
+    iptables -D FORWARD -s "$IP_GUEST" -j "$CHAIN" 2>/dev/null || true
+    iptables -F "$CHAIN" 2>/dev/null || true
+    iptables -X "$CHAIN" 2>/dev/null || true
 
-  # 删除 veth 与 netns
-  ip link del "$VETH_HOST" 2>/dev/null || true
-  ip netns del "$NETNS" 2>/dev/null || true
+    # 删除 veth 与 netns
+    ip link del "$VETH_HOST" 2>/dev/null || true
+    ip netns del "$NETNS" 2>/dev/null || true
+  fi
 
   # 删除导入文件与登记目录
   rm -rf "$CURRENT_CTX_DIR"

@@ -99,7 +99,7 @@ usage() {
 用法:
 sb up                创建或启动主 VM (sb-main)，已运行且上限一致则复用，上限变化且空闲则重建
 sb down              停止主 VM
-sb rm                删除主 VM，保留数据卷
+sb rm [--force]       删除主 VM，保留数据卷；有运行中上下文时拒绝，--force 强制删除
 sb sync              补齐沙箱内的 mise 工具与 OMP 插件 (幂等，只装缺失项；宿主写锁串行化)
 sb status [--json]   查看主 VM 状态、规格、能力上限指纹一致性与缺失工具
 sb run [-t] CMD…     在当前项目执行上下文内运行命令 (TTY 自适应)
@@ -445,7 +445,7 @@ ensure_vm_locked() {
       fi
       echo "[sb] 检测到能力上限变化且主 VM $vm_name 空闲，正在重建 (保留数据盘 $vol_name)..." >&2
       "$MSB" stop "$vm_name" >/dev/null 2>&1 || true
-      "$MSB" rm --force "$vm_name" 2>/dev/null || true
+      "$MSB" rm --force "$vm_name" >/dev/null 2>&1 || true
       run_msb create "${create_args[@]}" >&2
       record_vm_state
       wait_for_vm_running "$vm_name"
@@ -459,7 +459,7 @@ ensure_vm_locked() {
     echo "[sb] 主 VM $vm_name 创建并启动成功" >&2
     # 首次创建自动补齐一次工具（ADR 0005 决策 8）；已持有生命周期锁，只补共用 mise 写锁
     echo "[sb] 首次创建自动执行 sb sync 补齐工具..." >&2
-    run_sync_with_mise_lock "$vm_name" || echo "[sb] 首次工具自动补齐未全部完成 (可稍后通过 sb sync 补齐)" >&2
+    run_sync_with_mise_lock "$vm_name" >&2 || echo "[sb] 首次工具自动补齐未全部完成 (可稍后通过 sb sync 补齐)" >&2
   fi
 
   rm -f "$tmp_cfg"
@@ -518,13 +518,27 @@ resolve_and_validate_plan() {
     return 1
   fi
 
-  # 3. Worktree 自动加绑 git common dir
+  # 3. Worktree 自动加绑 git common dir；不在挂载根内时无法透传给 guest，
+  # 必须显式报错而不是让 launcher 静默跳过绑定（上下文内 git 丢历史）
   local git_common_dir=""
   if git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     local cd_raw
     cd_raw="$(git -C "$cwd" rev-parse --git-common-dir 2>/dev/null || true)"
     if [[ -n "$cd_raw" ]]; then
       git_common_dir="$(cd "$cwd" && realpath "$cd_raw")"
+    fi
+  fi
+  if [[ -n "$git_common_dir" && "$git_common_dir" != "$project_root" && "$git_common_dir" != "$project_root"/* ]]; then
+    local gcd_allowed=0
+    for ar in "${allowed_roots[@]}"; do
+      if [[ "$git_common_dir" == "$ar" || "$git_common_dir" == "$ar"/* ]]; then
+        gcd_allowed=1
+        break
+      fi
+    done
+    if [[ "$gcd_allowed" -eq 0 ]]; then
+      echo "[-] 错误: worktree 的 git common dir $git_common_dir 超出沙箱能力上限 (未落在 sb.yaml mount_roots 挂载根内)，上下文内 git 将丢失历史，请先把该路径加入 mount_roots" >&2
+      return 1
     fi
   fi
 
@@ -694,14 +708,29 @@ case "$cmd" in
     ;;
 
   rm)
+    force=0
+    declare -a rm_args=()
+    for arg in "$@"; do
+      if [[ "$arg" == "--force" || "$arg" == "-f" ]]; then
+        force=1
+      else
+        rm_args+=("$arg")
+      fi
+    done
     # 删除操作与创建/启动/重建互斥（同一把生命周期锁）
     if ! acquire_sb_lock 300; then
       echo "[-] 错误: 主 VM sb-main 生命周期锁被其他进程长期持有，放弃本次删除" >&2
       exit 1
     fi
+    # 有运行中的执行上下文时拒绝直接删除，--force 才强制（避免一键打断所有 Agent）
+    if [[ "$force" -eq 0 ]] && is_vm_busy sb-main; then
+      active_count="$("$MSB" exec sb-main -- bash "$LAUNCHER" --check-busy 2>/dev/null || echo "?")"
+      echo "[-] 错误: 主 VM sb-main 有 ${active_count} 个执行上下文正在运行，拒绝删除。全部退出后重试，或用 sb rm --force 强制 (会打断所有上下文)" >&2
+      exit 1
+    fi
     echo "[sb] 正在删除主 VM sb-main (保留数据卷)..." >&2
     rm -f "$MSB_HOME/sandboxes/sb-main/ceiling.hash" 2>/dev/null || true
-    "$MSB" rm --force sb-main "$@"
+    "$MSB" rm --force sb-main "${rm_args[@]}"
     release_sb_lock
     ;;
 
@@ -866,21 +895,32 @@ EOF
     ensure_vm_locked
     release_sb_lock
 
-    # 复制导入文件（若声明）
+    # 复制导入文件（若声明）：先在 guest 登记「启动中」标记，宽限期内清扫与忙碌计数
+    # 都视该目录为占用（凭据复制窗口不被并发启动误删）；复制失败或宿主中断时由
+    # trap 回收整个上下文目录，凭据不在 guest 残留
     imports_count="$(jq -r '.imports | length' <<< "$plan_json")"
+    ctx_guest_dir="/run/sandbox/contexts/$ctx_id"
     if [[ "$imports_count" -gt 0 ]]; then
-      run_msb exec sb-main -- mkdir -p "/run/sandbox/contexts/$ctx_id/imports"
+      run_msb exec sb-main -- bash -c "mkdir -p '$ctx_guest_dir/imports' && touch '$ctx_guest_dir/starting'"
+      # shellcheck disable=SC2329  # 仅经 trap 间接调用
+      host_reclaim_ctx() {
+        run_msb exec sb-main -- rm -rf "$ctx_guest_dir" 2>/dev/null || true
+      }
+      trap host_reclaim_ctx EXIT INT TERM HUP
       while IFS= read -r imp; do
         [[ -n "$imp" ]] || continue
         src="$(jq -r .src <<< "$imp")"
         dest="$(jq -r .dest <<< "$imp")"
-        run_msb copy "$src" "sb-main:/run/sandbox/contexts/$ctx_id/imports/$dest"
+        run_msb copy "$src" "sb-main:$ctx_guest_dir/imports/$dest" >&2
       done < <(jq -c '.imports[]' <<< "$plan_json")
-      run_msb exec sb-main -- chmod -R 777 "/run/sandbox/contexts/$ctx_id/imports"
+      run_msb exec sb-main -- chmod -R 777 "$ctx_guest_dir/imports"
     fi
 
-    # 进入 launcher（sec-run 凭据注入由 run_msb 统一处理）
+    # 进入 launcher（sec-run 凭据注入由 run_msb 统一处理）；
+    # launcher 发布 meta 后目录所有权归 launcher，宿主回收 trap 解除
+    trap - EXIT INT TERM HUP
     run_code=0
+
     run_msb exec sb-main "${terminal[@]}" -- bash "$LAUNCHER" "$ctx_id" "$plan_json" "$current_cwd" "$@" || run_code=$?
 
     exit "$run_code"

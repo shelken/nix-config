@@ -41,5 +41,7 @@ missing_names="$(printf '%s' "$missing_json" | jq -r 'keys[]')" || {
   exit 3
 }
 while IFS= read -r t; do
+
   [[ -n "$t" ]] && printf 'missing\t%s\n' "$t"
 done <<< "$missing_names"
+exit 0

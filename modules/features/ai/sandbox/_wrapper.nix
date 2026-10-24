@@ -87,22 +87,6 @@ let
     [[ $# -gt 0 ]] || usage 1
     exec msb exec ${name} "''${terminal[@]}" "''${workdir[@]}" -- bash ${entrypoint} "$@"
   '';
-
-  ompSb = pkgs.writeShellScriptBin "omp-sb" ''
-    set -euo pipefail
-    ${sb}/bin/${name} up >&2
-    cwd=$(${sb}/bin/${name} inspect | ${pkgs.jq}/bin/jq -er --arg cwd "$(pwd -P)" '
-      .active_config.mounts
-      | map(select(.type == "Bind")
-          | select(.host as $host | $cwd == $host or ($cwd | startswith($host + "/"))))
-      | max_by(.host | length)
-      | if . == null then error("当前目录未共享给 ${name}: \($cwd)")
-        else . as $mount | $mount.guest + ($cwd | ltrimstr($mount.host)) end
-    ')
-    terminal=()
-    if [[ -t 0 && -t 1 ]]; then terminal=(-t); fi
-    exec ${sb}/bin/${name} exec "''${terminal[@]}" -w "$cwd" omp "$@"
-  '';
 in
-# sb-default 命令本身保留到单元 6，omp-sb 移至 sb.nix 新实现
+# sb-default 命令本身保留到单元 6；omp-sb 已由 _sb.nix 提供新实现
 sb

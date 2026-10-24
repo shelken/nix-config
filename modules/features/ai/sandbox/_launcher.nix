@@ -8,11 +8,12 @@ let
   tools = with linuxPkgs; [
     bashInteractive
     coreutils
+    util-linux
     bubblewrap
     iproute2
-    iptables
     jq
     gnused
+    iptables
     git
     curl
     ripgrep
