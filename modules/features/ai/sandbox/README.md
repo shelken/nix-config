@@ -1,260 +1,175 @@
-# Agent Sandbox
+# Agent 沙箱
 
-Home Manager 提供新一代 Agent 沙箱管理 CLI `sb`（主 VM `sb-main`，基于 ADR 0002 单主 VM 加执行上下文架构）以及兼容期并存的旧命令 `sb-default` 和 `omp-sb`。
+`sb` 与 `omp-sb` 让 Agent 在 Linux 虚拟机里运行，只看得到当前项目。本文讲机制；日常操作见 [用户指南](../../../../docs/user-guide/03-agent-sandbox.md)
 
-全局能力上限声明使用 [sb.yaml](./sb.yaml)，CLI 逻辑在 [sb.sh](./sb.sh)（由 [_sb.nix](_sb.nix) 注入路径并打包），guest 侧 launcher / sync / 状态查询分别在 [launcher.sh](./launcher.sh)（[_launcher.nix](_launcher.nix)）、[sync-guest.sh](./sync-guest.sh)、[guest-status.sh](./guest-status.sh)，生成配置在 [_generator.nix](_generator.nix)。旧版 VM 规格使用 [原生 msb YAML](./sb-default.yaml)，入口实现在 [_wrapper.nix](_wrapper.nix)（保留至单元 6 移除）。
+威胁模型只防 Agent 误操作（越界删除、误连其他项目的私网服务），不防恶意逃逸。决策依据：
 
-sandbox 不是 AI 配置的默认组成，由 `shelken.dev.ai.sandbox.enable` 单独控制，默认关闭。开启后安装 `sb`、`sb-default`、`omp-sb`，同时引入 Linux 平台的 agent 工具闭包与 `microsandbox` CLI；关闭时这些都不进入系统
+- [ADR 0002](../../../../docs/adr/0002-single-main-vm-execution-context.md)：单主 VM 加执行上下文
+- [ADR 0003](../../../../docs/adr/0003-shared-tool-single-declaration.md)：共享工具单一声明
+- [ADR 0005](../../../../docs/adr/0005-shared-mise-install-layer.md)：共用 mise 安装层
+- [ADR 0006](../../../../docs/adr/0006-sandbox-razor.md)：删除附加 VM、待升级登记与忙时 sync
 
-## 首次准备
+由 `shelken.dev.ai.sandbox.enable` 控制，默认关闭
 
-宿主需要已有 `msb` 和 `sec-run`。应用本仓库的 Home Manager 配置后，为 VM 创建独占 ext4 磁盘；下面的建卷命令只执行一次，不能省略 `--kind disk`；运行入口会拒绝用目录卷存放数据库
+## 架构
 
-```bash
-sb-default volume create sb-default-omp --kind disk --size 8G
-sb-default up
+```mermaid
+flowchart LR
+  subgraph 宿主
+    Y[sb.yaml 能力上限] --> S[sb CLI]
+    P[项目 .sandbox.yaml] --> S
+    T[shelken.dev.tools] --> G[生成器]
+    G --> C[~/.config/sandbox/current]
+    H[(~/Data/sandboxes/mise)]
+  end
+  subgraph M[主 VM sb-main]
+    L[launcher] --> X1[上下文 项目 A]
+    L --> X2[上下文 项目 B]
+    D[(/data 数据卷)]
+  end
+  S -- 创建/复用 --> M
+  S -- 执行计划 --> L
+  C -. 只读 .-> M
+  H -- /opt/sandbox-mise --> M
 ```
 
-`up` 在创建或启动 VM 时自动经 `sec-run` 建立 msb 原生 secret proxy；已运行时直接复用。Git 身份沿用现有 Home Manager 设置，GitHub 凭据助手由 sandbox 声明；GitHub 的 `git@github.com:` remote 在 guest 内转为 HTTPS，不需要手动登录或初始化 Git
+| 组件 | 文件 | 职责 |
+| --- | --- | --- |
+| 宿主 CLI | [sb.sh](./sb.sh)、[_sb.nix](./_sb.nix) | 读上限、解析项目计划、管理主 VM 生命周期、复制 imports、调用 launcher |
+| launcher | [launcher.sh](./launcher.sh)、[_launcher.nix](./_launcher.nix) | 在 guest 内以 root 建网络与 bubblewrap 视图，运行命令，退出清理 |
+| 生成器 | [_generator.nix](./_generator.nix)、[sync-guest.sh](./sync-guest.sh) | 由登记表生成 guest 环境、mise 配置、OMP 配置与 sync 脚本 |
+| 状态查询 | [guest-status.sh](./guest-status.sh) | 列出缺失的 mise 工具，供 `sb status` 使用 |
+| 能力上限 | [sb.yaml](./sb.yaml) | 部署到 `~/.config/sandbox/sb.yaml`，`SB_CONFIG` 可覆盖 |
 
-OMP 插件由 `sb sync` 按仓库 [OMP 插件清单](../omp/plugins/package.json) `bun install` 补齐（只补缺，不删除现有依赖）；sandbox 不挂载宿主插件目录
+## 两层能力
 
-## 日常运行
+**能力上限**在主 VM 创建时固定：挂载根、网络、secret 都写进 msb 配置，运行中改不了。**能力授权**在每次启动上下文时由 launcher 授予，只能是上限的子集
 
-在项目目录执行即可，VM 停止时自动启动，OMP 在对应的 guest 目录运行
+### 上限：`sb.yaml`
 
-```bash
-cd ~/Code/你的项目
-omp-sb
-omp-sb --model=mp/qcoder-cn/gmodel
-omp-sb -p --mode=json '使用 bash 执行 pwd，回复实际输出'
+| 字段 | 默认 | 说明 |
+| --- | --- | --- |
+| `image` | `ubuntu` | VM 镜像 |
+| `cpus` / `memory` | `4` / `8G` | VM 规格 |
+| `volume.name` / `volume.size` | `sb-main-data` / `8G` | 挂到 `/data` 的 ext4 数据卷，不存在时自动创建 |
+| `mount_roots` | 无 | 挂载根，支持 `~`、`${HOME}`；先解析符号链接，guest 内路径与宿主一致 |
+| `network.allow` | `public`、`dns` | 另可写 `host:tcp:<端口>` 与私网 IP（精确匹配，不支持 CIDR） |
+| `secrets` | 无 | `变量名: { allow: [域名或 IP] }`，真实值由宿主 `sec-run` 注入 |
+
+### 授权：项目 `.sandbox.yaml`
+
+| 字段 | 校验 | 落地方式 |
+| --- | --- | --- |
+| `imports` | 宿主文件必须存在 | 宿主 `msb copy` 进 guest，绑定为上下文的 `/imports`，退出删除，不写回 |
+| `network` | 必须出现在 `network.allow` | 上下文专有 iptables 链里先于私网拒绝规则放行；支持 `IP` 与 `IP:端口` |
+| `paths` | 必须在 `mount_roots` 内 | 同路径绑定，`:ro` 或 `readonly: true` 为只读 |
+
+此外两项自动授权：项目根（git 仓库根，不在仓库内时取当前目录）可写绑定；worktree 的 git common dir 不在项目内时自动加绑，它不在挂载根内则拒绝启动
+
+Agent 改 `.sandbox.yaml` 最多在上限内扩权，并且下次启动才生效
+
+## 执行上下文
+
+每次 `sb run`、`sb shell`、`omp-sb` 新建一个上下文，流程：
+
+```mermaid
+sequenceDiagram
+  participant H as 宿主 sb
+  participant G as guest launcher
+  H->>H: 生命周期锁内确保 sb-main 就绪，然后释放锁
+  H->>G: 有 imports 时建目录、打 starting 标记、逐个复制
+  H->>G: msb exec launcher（执行计划）
+  G->>G: 槽位锁内：清扫死上下文、选槽、原子发布 meta.json
+  G->>G: 建 netns、veth、iptables 链
+  G->>G: bubblewrap 运行命令
+  G->>G: 退出：删网络资源与上下文目录
 ```
 
-`omp-sb` 从运行中 VM 的挂载信息解析当前目录，交互终端自动分配 PTY，OMP 参数原样转发。当前目录必须已被 YAML 共享；未共享时明确报错，不会悄悄换到其他项目
+- **视图**：bubblewrap 映射到 UID 1000，只读绑定 `/usr`、`/etc`、`/nix/store`、共用 mise 层与配置目录；可写绑定 `/data`、项目根、额外路径与 `/imports`。`/run` 是 tmpfs，上下文看不到 `/run/sandbox/contexts` 里其他上下文的 imports
+- **网络**：每个槽位一个 `/30` 子网（`10.200.x.y`），独立 netns 与 veth，NAT 出口。地址池 64 个，即单台主 VM 最多 64 个并发上下文
+- **并发**：清扫、选槽、发布 `meta.json` 在 guest 内一把 flock 下串行；网络资源按唯一槽位命名，不会互相覆盖。cleanup 只删 `meta.json` 归属本进程的资源
+- **复制窗口**：宿主复制 imports 期间目录还没有 `meta.json`，靠 `starting` 标记保护：120 秒宽限内清扫跳过它，忙碌计数也算上它。复制失败或宿主中断时宿主删除该目录
+- **残留清扫**：每次启动、`sb status`、忙碌判断都会清理 PID 已死的上下文，以及没有登记的 `vth*` 接口
 
-查看配置中的模型与原始入口：
+## 网络与 secret
 
-```bash
-sb-default exec omp models --json
-sb-default exec -t omp
-sb-default exec -w /workspace bash -c 'pwd'
-```
+上下文专有链的规则顺序：
 
-模型服务须在当前网络可达，并支持所选模型。模型列表不代表凭据套餐允许使用全部模型
+1. DNS（guest `/etc/resolv.conf` 中的 nameserver，53 端口）
+2. `sb.yaml` 中的 `host:tcp:<端口>`
+3. 项目声明的私网目标
+4. 拒绝 `10/8`、`172.16/12`、`192.168/16`、`100.64/10`、`169.254/16`
+5. 其余公网放行（含 fake-ip 段 `198.18/15`）
 
-## 生命周期
+FORWARD 默认 DROP。公网只在 VM 级控制，不做上下文级限制
 
-| 命令 | 行为 |
-|---|---|
-| `sb-default up` | 创建或启动，已运行则复用 |
-| `sb-default exec [-t] [-w DIR] CMD…` | 注入工具环境后执行，非交互输出流式传递 |
-| `sb-default shell` | 进入交互 shell |
-| `sb-default status` | 查看状态 |
-| `sb-default down` | 停止，保留 VM 和命名卷 |
-| `sb-default rm` | 使用 msb 原生强制删除 VM，保留命名卷 |
+secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符，请求发往该 secret 的 `allow` 目标时才换成真实值，token 不落盘。GitHub 的 `git@github.com:` remote 在 guest 内改写为 HTTPS，配合 `GITHUB_TOKEN` 占位符认证；不共享宿主 SSH 私钥
 
-刷新启动凭据时执行 `down`、`up`。调整 CPU、挂载、网络等 VM 规格后，删除并重建 VM；日常 OMP 配置更新不执行 `rm`
+## 主 VM 生命周期
 
+`sb.yaml` 生成的 msb 配置做 SHA-256 得到上限指纹，记在 VM label 与 `$MSB_HOME/sandboxes/sb-main/ceiling.hash`。指纹里的共用 mise 挂载被规范化为占位符，宿主路径不影响指纹
 
-## 新一代主 VM 与 CLI (`sb`)
+| 情况 | 行为 |
+| --- | --- |
+| VM 不存在 | 创建数据卷与 VM，自动执行一次 `sb sync` |
+| 指纹一致 | 运行中直接复用，停止则启动 |
+| 指纹不一致且空闲 | 删除并按新上限重建，数据卷保留 |
+| 指纹不一致且有上下文在运行 | 报错并给出上下文数，不打断任何上下文，也不登记状态 |
 
-基于 [ADR 0002](../../../adr/0002-single-main-vm-execution-context.md)，所有日常执行上下文由单台主 VM `sb-main` 承载。
+创建、启动、重建、停止、删除都在宿主生命周期锁（`$MSB_HOME/locks`）内进行；锁只在 VM 就绪前持有，不阻塞上下文并发。`sb rm` 有上下文在运行时拒绝，`--force` 强制
 
-### 全局能力上限配置 (`sb.yaml`)
+## 工具
 
-用户唯一手写的配置文件，默认路径为 `~/.config/sandbox/sb.yaml`（可通过环境变量 `SB_CONFIG` 覆盖）。用户声明能力上限后，程序自动展开环境变量、解析宿主真实路径，生成底层 microsandbox 配置与上限指纹。
+### 共享工具登记表
 
-```yaml
-image: "ubuntu"
-cpus: 4
-memory: "8G"
+`shelken.dev.tools.<名字>` 只登记宿主与沙箱都需要的工具，接口在 [dev/tools.nix](../../dev/tools.nix)：
 
-# 命名数据卷（用于 /data，ext4 disk）
-volume:
-  name: "sb-main-data"
-  size: "8G"
+| 字段 | 说明 |
+| --- | --- |
+| `package` | nixpkgs 属性名，默认取登记名；与 `mise` 互斥 |
+| `mise` | mise 规格，版本字符串或属性集 |
+| `files` | 随工具进沙箱的配置文件，宿主照常作为 `home.file` |
+| `postInstall` | 宿主激活时与 `sb sync` 时各运行一次 |
 
-# 挂载根目录清单（宿主与 guest 内路径保持绝对一致）
-mount_roots:
-  - "${HOME}/Code"
-  - "${HOME}/nix-config"
-  - "${HOME}/.herdr/worktrees"
+条目在 [dev/tools-base.nix](../../dev/tools-base.nix)（rg、fd、jq、gh、node、python3、uv）与 [ai/tools.nix](../tools.nix)（omp、pi、codex、claude-code、bun）。宿主独有的工具不登记
 
-# 网络上限规则（公网 + DNS + 宿主端口 + 家庭网段）
-network:
-  policy: "public"
-  allow:
-    - "public"
-    - "dns"
-    - "host:tcp:3425"
-    - "host:tcp:8080"
-    - "192.168.69.46"
-    # - "192.168.69.60"
+生成器把 Nix 条目合成 guest PATH（来自 `/nix/store` 只读挂载），把 mise 条目写成 `/run/sandbox-config/current/mise.toml`。`sb`、`just`、`spawn-subagent`、`computer-use` 等宿主控制命令在 guest PATH 里是同名桩，调用时以非零码退出并说明原因（[shelken.dev.sandbox.hostCommands](../../dev/tools.nix)）
 
-# Secret 全局声明（受保护凭据及允许的目标域名/IP）
-secrets:
-  GITHUB_TOKEN:
-    allow:
-      - "github.com"
-      - "api.github.com"
-  CPA_PI_API_KEY:
-    allow:
-      - "cpa.int.ooooo.space"
-  COMMANDCODE_API_KEY:
-    allow:
-      - "commandcode.int.ooooo.space"
-  WX_PI_API_KEY:
-    allow:
-      - "chatapi.weixin.qq.com"
-```
+### 共用 mise 安装层
 
-#### 字段说明
+mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-linux`（`SB_MISE_HOST_DIR`，首次使用自动创建），挂到所有 VM 的 `/opt/sandbox-mise`，新 VM 不必重新下载。mise 的 state、shims 与用户层配置 `/data/mise/config.toml` 留在各 VM 数据卷
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `image` | string | VM 基础镜像，默认 `ubuntu` |
-| `cpus` | int | 分配给主 VM 的虚拟 CPU 核心数，默认 `4` |
-| `memory` | string | 主 VM 内存规格（如 `8G`、`4G`），默认 `8G` |
-| `volume.name` | string | 主数据卷名称，挂载至 guest 的 `/data`，默认 `sb-main-data` |
-| `volume.size` | string | 主数据卷初始容量，默认 `8G`（自动创建为 ext4 disk 命名卷） |
-| `mount_roots` | list[string] | 允许挂载的宿主根目录清单。支持 `~` 和 `${HOME}`，自动解析软链真实路径，guest 内路径与宿主保持绝对一致 |
-| `network.policy` | string | 网络默认策略，默认 `public` |
-| `network.allow` | list[string] | 网络上限放行规则，支持 `public`、`dns`、`host:tcp:<port>` 与私网 IP（精确地址等值匹配，不支持 CIDR 网段） |
-| `secrets` | map[string, object] | 全局受保护 secret 声明，映射环境变量名到允许放行的目标域名或 IP |
+上下文对共用层只读，并设 `MISE_AUTO_INSTALL=0`，Agent 无法在沙箱内安装工具
 
-### 项目配置 (`.sandbox.yaml`)
+### `sb sync`
 
-位于项目仓库根目录（若无则全部采用默认值）。遵循最小权限原则在全局能力上限内精确声明三类请求：
+在 VM 内（不在上下文内）运行 [sync-guest.sh](./sync-guest.sh)：
 
-```yaml
-# .sandbox.yaml 示例
+- 跨 VM 的写锁：共用目录下的 `.sync.lock`
+- `mise install` 只补缺，不升级、不删除；不区分 VM 忙闲
+- 运行各工具的 `postInstall`，其中 OMP 插件按 [package.json](../omp/plugins/package.json) 执行 `bun install --ignore-scripts`，只补缺。私有仓库用 `GITHUB_TOKEN` 占位符 clone，失败只警告。`node-pty` 因不跑安装脚本而不可用（ADR 0005 决策 11）
 
-# 1. 导入宿主文件：启动时只读复制进执行上下文的 /imports，可原子改名，退出自动删除，不写回宿主
-imports:
-  - src: "../fake-credentials/fake-token.json"
-    dst: fake-token.json
+## 配置与数据位置
 
-# 2. 私网网络目标：必须落在全局 sb.yaml 的 network.allow 上限内；未声明的项目无法访问私网
-network:
-  - "192.168.69.46"
+| 内容 | 位置 |
+| --- | --- |
+| 发布给 guest 的配置 | 宿主 `~/.config/sandbox/current`（Nix store 链接），guest `/run/sandbox-config/current` |
+| OMP 配置、skills | 上下文内只读 `/root/.omp/agent`、`/root/.agents` |
+| OMP 数据、会话、插件 | `/data/xdg/*/omp`、`/data/omp/plugins`，所有上下文共用一份 |
+| msb 运行数据 | `~/Data/sandboxes/msb`（`MSB_HOME`），镜像缓存 `~/.cache/microsandbox` |
 
-# 3. 额外项目外目录：必须落在全局 sb.yaml 的 mount_roots 范围内，默认可写，可逐项声明只读
-paths:
-  - path: "~/Code/shared-lib"
-    readonly: false
-  - path: "~/Code/readonly-docs"
-    readonly: true
-  - "~/Code/another-lib:ro"   # 支持 :ro 简写
-```
+配置发布后，复用中的 VM 新开的上下文即读到新配置，不改指纹，不触发重建。guest 不跟随宿主 live-edit 软链
 
-#### 网络授权分级（默认授权 vs 私网授权）
+## 测试
 
-在 `sb-main` 执行上下文内，网络规则在每个上下文专属的网络命名空间内由 iptables 精确按源地址控制：
-
-1. **默认授权项**（无需在 `.sandbox.yaml` 声明即全局可用）：
-   - **公网目标 (`public`)**：全网公共互联网地址与外部域名解析（通过 fake-ip 代理段 `198.18.0.0/15` 及公网 IP），直接放行；
-   - **DNS 解析 (`dns`)**：自动读取 guest 内 `/etc/resolv.conf` 的 nameserver（如 `172.16.0.5`）并放行 UDP/TCP 53；
-   - **宿主服务端口 (`host:tcp:<port>`)**：放行 `sb.yaml` 中允许的宿主开发端口（如 `host:tcp:3425`、`host:tcp:8080`），映射到 `host.microsandbox.internal` / 宿主网关。
-2. **私网受限目标**：
-   - 家庭网段与私网地址（`10.0.0.0/8`、`172.16.0.0/12`、`192.168.0.0/16`、`100.64.0.0/10`、`169.254.0.0/16`）默认全面拦截（REJECT）；
-   - 仅当项目在 `.sandbox.yaml` 中显式声明且目标落在 `sb.yaml` 上限内时，才会在该上下文专有链中优先放行。
-
-### `sb` 子命令与 `omp-sb`
-
-| 命令 | 说明 |
-|---|---|
-| `sb up` | 确保主 VM `sb-main` 运行。首次自动创建数据卷与 VM；已存在且上限未变时直接复用；上限变化且 VM 空闲时自动重建（数据卷内容保留）；上限变化但 VM 忙碌时报错并给出运行中的上下文数 |
-| `sb down` | 停止主 VM |
-| `sb rm [--force]` | 删除主 VM，保留数据卷。有运行中上下文时拒绝并报运行中上下文数；`--force` 跳过检查强制删除（打断所有上下文） |
-| `sb sync [VM]` | 补齐沙箱内的 mise 工具与 OMP 插件（幂等，只装缺失项，不删除、不升级已有项） |
-| `sb status [--json]` | 查看主 VM 状态、规格、忙碌状态、能力上限指纹一致性与缺失工具列表 |
-| `sb volume …` | 原生命令数据卷管理（透传至 `msb volume`） |
-| `sb run [-t] CMD…` | 在当前项目上下文内运行命令（TTY 自适应） |
-| `sb shell` | 交互式进入当前项目上下文的 Bash shell（自动分配 TTY） |
-| `omp-sb [参数…]` | 启动 OMP 会话。底层调用 `sb run omp "$@"`，在当前项目隔离上下文内运行 OMP |
-
-### 上限变化处理
-
-主 VM 创建时能力上限固定（[ADR 0006](../../../adr/0006-sandbox-razor.md)）：
-- **主 VM 空闲时变更上限**：若编辑了全局 `sb.yaml`，下一次执行 `sb up`、`sb run`、`sb shell` 或 `omp-sb` 时，自动销毁旧 VM 并按当前 `sb.yaml` 重新创建启动，持久化数据卷（`/data`）完整保留。
-- **主 VM 忙碌时变更上限**：运行中的上下文不受任何干扰，持续正常执行；新发起的启动命令直接报错，提示 `sb.yaml` 已变并给出运行中的上下文数，全部退出后再启动即按新上限重建。
-
-### 共享工具登记表 (`shelken.dev.tools`)
-
-根据 [ADR 0003](../../../adr/0003-shared-tool-single-declaration.md)，宿主与 Agent 沙箱共享的工具清单收敛为单一登记表，由 Option `shelken.dev.tools.<name>` 统一声明：
-
-```nix
-shelken.dev.tools = {
-  # 1. Nix 基础工具与运行时 (package 属性名，默认等于登记名)
-  rg.package = "ripgrep";
-  fd = { };
-  jq = { };
-  gh = { };
-  node.package = "nodejs";
-  python3 = { };
-  uv = { };
-
-  # 2. mise 共享工具 (与 package 互斥，指定版本或规则)
-  bun.mise = "1.4.2";
-  codex.mise = "0.160.1";
-  claude-code.mise = "2.1.304";
-  omp.mise = { name = "oh-my-pi"; version = "latest"; minimum_release_age = "0h"; };
-  pi.mise = { name = "npm:@earendil-works/pi-coding-agent"; version = "latest"; minimum_release_age = "0h"; };
-
-  # 3. 配置文件 (files) 与安装后脚本 (postInstall)
-  # 随工具进入沙箱发布目录，宿主照常作为 home.file；postInstall 在宿主激活和沙箱 sb sync 时分别执行
-};
-```
-
-### 工具补齐与两层 mise 配置 (`sb sync`)
-
-沙箱内的工具有两层来源：
-1. **只读层 (生成层)**：由沙箱生成器解析 `shelken.dev.tools`，Nix 包合成 `guestEnv` 进沙箱 PATH；mise 条目生成 `/run/sandbox-config/current/mise.toml` 作为系统只读层。
-2. **用户层 (可写层)**：位于 `/data/mise/config.toml`。Agent 在沙箱内可临时执行 `mise use -g <tool>` 安装新工具，记录在该文件中。所有执行上下文共享，且在 VM 删除重建后持久保留在数据卷中。
-
-### 共用安装层 (ADR 0005)
-
-mise 工具的安装产物与下载缓存不在各 VM 数据盘各存一份，而是放在宿主共用目录 `~/Data/sandboxes/mise/aarch64-linux`（`data/` 安装层 + `cache/` 下载缓存），挂进所有 VM 的固定 guest 路径 `/opt/sandbox-mise`：
-
-- **任何 VM 首启即有完整工具**：主 VM、一次性 e2e VM、保留的 `sb-default` 都消费同一份安装层，新 VM 不再重复下载。
-- **上下文内只读**：执行上下文（bubblewrap 内）对共用层只读绑定，并设置 `MISE_AUTO_INSTALL=0`；写入（安装）只经 `sb sync` 显式发生。
-- **每 VM 独立状态**：mise state、shims、可写用户层 config 仍归各 VM 数据盘。
-- **宿主写锁**：`sb sync` 经 flock（共用目录 `.sync.lock`）串行化，多 VM 并发 sync 安全。
-- **只补缺**：不删除、不升级、不重建依赖，不区分 VM 忙闲（ADR 0006）。
-- **上限指纹稳定**：指纹只含 guest 挂载声明（`/opt/sandbox-mise`），不含宿主真实路径；配置内容更新（如工具清单变化）发布到 `~/.config/sandbox/current` 后，复用中的 VM 新开上下文即可读到，不触发上限变化。
-
-`sb sync` 负责显式补齐未安装的 mise 工具与 OMP 插件：
-- **幂等执行**：仅安装缺失项，对已安装项不重新下载、不更改版本；共用的下载缓存不被清理。
-- **插件清单补齐**：OMP 插件按仓库 [package.json](../omp/plugins/package.json) 清单 `bun install` 补齐（只补缺，不删除现有依赖）；沙箱内手装的插件、已从清单删除的插件不会被自动清理，需要时用 `sb volume` 清理数据盘（ADR 0006）。
-- **插件凭据与私有仓库**：清单中的 `git+ssh://git@github.com/...` 源在 guest 内改写为 `https://github.com/...`，凭据由 `sb.yaml` 声明的 `GITHUB_TOKEN` secret 在网络边界替换为占位符 URL，token 不落盘、不进日志。clone 失败（如无有效凭据）只在 `sb sync` 输出中警告并继续（退出码仍为 0）；公开仓库即使无 token 也照常安装。插件状态不在 `sb status` 展示，结果只看 `sb sync` 输出。
-- **不执行依赖安装脚本**：`bun install --ignore-scripts`。`node-pty` 在 Linux 无预编译产物、安装脚本会回落 `node-gyp` 编译，补齐 C 工具链的闭包增量实测 1.3 GiB（超出预算），故不引入编译器；`node-pty` 仅供 plannotator 终端桥接，不影响插件加载（见 [ADR 0005 决策 11](../../../adr/0005-shared-mise-install-layer.md)）。
-- **开箱即用**：主 VM 首次全新创建时自动运行一次 `sb sync`；复用已有 VM 时 `sb run`/`sb shell`/`omp-sb` 不自动 sync。
-- **Bun 下载缓存共用**：OMP 插件安装的 Bun 缓存同样落在共用层（`/opt/sandbox-mise/cache/bun-cache`），跨 VM 复用。
-
-### 宿主控制命令防护
-
-根据 [ADR 0003 决策 12](../../../adr/0003-shared-tool-single-declaration.md)，对于仅属于宿主管理权限的命令（如 `sb`、`spawn-subagent`、`computer-use`、`just hm/sw`），沙箱生成器在 guest PATH 注入同名桩。沙箱内部进程调用这些命令时，会立即以非零状态码退出并明确给出拒绝原因，防止 Agent 反复无谓重试。
-
-## 端到端测试
-
-自动化端到端只保留隔离边界冒烟测试 [e2e/smoke.sh](./e2e/smoke.sh)：一次性隔离 `MSB_HOME` 中启动临时 VM，验证相邻项目不可见、未声明的私网目标不可达、secret 在网络边界被替换、worktree 内 `git status`/`git commit` 可用四项断言；其余端到端验证不维护自动化套件，在单元 6 切换时手动做一次
+[e2e/smoke.sh](./e2e/smoke.sh) 在一次性 `MSB_HOME` 中启动临时 VM，断言四项隔离边界：相邻项目不可见、未声明私网无应用层响应、secret 在出口被替换、worktree 内可提交
 
 ```bash
 bash modules/features/ai/sandbox/e2e/smoke.sh
 ```
 
-前置：宿主有 `msb`、ubuntu 镜像缓存与共用 mise 目录，且能访问公网（secret 断言请求 api.github.com）。默认现场构建 `sb`，可用 `SB_BIN=<sb路径>` 覆盖；共用 mise 目录只读挂载，测试不写入也不触发 `sb sync`
+需要宿主有 `msb`、ubuntu 镜像缓存、能访问公网与 Linux 构建器；默认现场构建 `sb`，可用 `SB_BIN` 指定。测试只读挂载共用 mise 层，不触发 `sb sync`
 
-## 配置、工作区与状态
+## 旧入口
 
-挂载根目录（默认含 `~/Code`、`~/nix-config`、`~/.herdr/worktrees`，见 `sb.yaml` 的 `mount_roots`）按同路径绑定进主 VM，guest 内路径与宿主绝对一致；worktree 的 git common dir 与项目声明的额外路径也按同路径挂载（common dir 落在挂载根之外时报错提示先扩 `mount_roots`）。新增目录必须先加入 `mount_roots`（需重建 VM 生效）
-
-OMP 配置位于只读 `/root/.omp/agent`，skills 与提示词位于只读 `/root/.agents`。sandbox 从已有 `home.file` 声明取得纯 store 配置，通过宿主 `~/.config/sandbox/current` 发布；guest 不跟随宿主 live-edit 软链。模型地址适配集中在 [default.nix](./default.nix)，其他 AI 模块不维护 sandbox 清单，宿主保持现有 live-edit 行为
-
-Home Manager 只管理 `~/.config/sandbox/current` 一个发布链接，配置内容留在 Nix store。VM 挂载其真实父目录，更新链接后同一 VM 中新启动的 OMP 可以读取新配置；运行中的 OMP 是否热重载取决于应用能力
-
-数据库、session、插件及其他 XDG 数据位于 `/data/xdg/data/omp`；状态与缓存分别位于 `/data/xdg/state/omp`、`/data/xdg/cache/omp`。`/data` 使用 VM 独占 ext4 卷，不与宿主或其他 VM 共写数据库
-
-msb 运行数据保存在 `~/Data/sandboxes/msb`，镜像缓存位于 `~/.cache/microsandbox`。两个命令显式读取 Nix store 中的原生配置，不依赖 `~/.microsandbox/config.json`。入口同时设置原生 `MSB_HOME`，TLS 证书保存在数据根的 `tls` 子目录。Home Manager 提供相同的 `MSB_HOME`、`MSB_CONFIG_PATH`，新开终端后直接使用原生 `msb` 也读取相同配置
-
-`/nix/store` 只读提供 Linux 工具，guest 不使用 apt 安装系统包。网络与 secret 目标以 YAML 为准；入口保留 msb 代理 CA 并供 Git 使用，不共享宿主 SSH 私钥
+`sb-default`（[sb-default.yaml](./sb-default.yaml)、[_wrapper.nix](./_wrapper.nix)）是上一代单 VM 入口，把 `~/Code` 挂到 `/workspace`，与 `sb` 并存，切换完成后删除
