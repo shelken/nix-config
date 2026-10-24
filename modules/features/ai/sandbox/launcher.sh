@@ -217,9 +217,8 @@ GIT_COMMON_DIR="$(jq -r '.git_common_dir // empty' <<< "$PLAN_JSON")"
 
 CURRENT_CTX_DIR="$CONTEXTS_DIR/$CTX_ID"
 mkdir -p "$CURRENT_CTX_DIR"
+# 宿主在复制 imports 时已建好该目录；没有 imports 时它不存在
 IMPORTS_DIR="$CURRENT_CTX_DIR/imports"
-mkdir -p "$IMPORTS_DIR"
-chmod 777 "$IMPORTS_DIR"
 
 # 3. 登记当前上下文元数据：jq 生成（转义路径中的引号/换行，合法路径不产生
 # 损坏的 JSON），写临时文件后 mv 原子发布（D），并移除宿主侧「启动中」标记；
@@ -389,8 +388,21 @@ if [[ -d /run/sandbox-config ]]; then
   fi
 fi
 
-# 导入文件目录以目录形式绑定至 /imports (支持原子改名，退出自动删除)
-BWRAP_ARGS+=(--bind "$IMPORTS_DIR" /imports)
+# 导入文件：每个目标目录绑定一份暂存目录（目录形式支持原子改名；退出自动删除）。
+# 目标目录会被整体遮住，所以不能落在系统目录或 launcher 自己铺设的配置链接上
+while IFS=$'\t' read -r stage dir; do
+  [[ -n "$stage" ]] || continue
+  dir="${dir/#\~/$HOME}"
+  case "$dir" in
+    "$HOME" | / | /usr | /usr/* | /bin | /bin/* | /lib | /lib/* | /lib64 | /lib64/* | /etc | /etc/* | \
+      /proc | /proc/* | /dev | /dev/* | /run | /run/* | /nix | /nix/* | /opt | /opt/* | /data | /data/* | \
+      /.msb | /.msb/* | "$HOME/.omp" | "$HOME/.omp/"* | "$HOME/.agents" | "$HOME/.agents/"* | "$HOME/.pi" | "$HOME/.pi/"*)
+      echo "[-] 错误: imports 的目标目录 $dir 是沙箱保留位置" >&2
+      exit 1
+      ;;
+  esac
+  BWRAP_ARGS+=(--bind "$IMPORTS_DIR/$stage" "$dir")
+done < <(jq -r '[.imports[]? | [.stage, .dir]] | unique[] | @tsv' <<< "$PLAN_JSON")
 
 # 绑定当前项目根目录 (相邻未绑定项目在视图中不可见)
 BWRAP_ARGS+=(--bind "$PROJECT_ROOT" "$PROJECT_ROOT")
@@ -433,8 +445,6 @@ if [[ -f /run/sandbox-config/current/guest-env.sh ]]; then
   # shellcheck source=/dev/null
   source /run/sandbox-config/current/guest-env.sh
 fi
-export SANDBOX_IMPORTS=/imports
-export IMPORTS_DIR=/imports
 # 依据参数形式分流：单字符串含复杂语法走 bash -c，多参数直接 exec
 if [[ $# -eq 0 ]]; then
   set -- bash

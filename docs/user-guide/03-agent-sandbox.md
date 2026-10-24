@@ -73,10 +73,10 @@ omp-sb
 在项目根目录写 `.sandbox.yaml`，下次启动生效：
 
 ```yaml
-# 把宿主文件复制进沙箱的 /imports
+# 把宿主文件复制进沙箱，src 必须在 sb.yaml 的 import_sources 内
 imports:
-  - src: ~/.config/my-app/token.json
-    dest: token.json
+  - src: ~/.kube/home-ops.yaml
+    target: ~/.kube/home-ops.yaml # 上下文里的路径，~ 是上下文的家目录
 
 # 允许访问家里的服务（必须在 sb.yaml 的 network.allow 里）
 network:
@@ -90,7 +90,7 @@ paths:
 
 | 字段      | 不写时                                            | 作用                                                              |
 | --------- | ------------------------------------------------- | ----------------------------------------------------------------- |
-| `imports` | 不导入                                            | 启动时复制，退出时删除；Agent 改了也不会写回宿主                  |
+| `imports` | 不导入                                            | 启动时复制到 `target`，退出时删除；Agent 改了也不会写回宿主。`target` 所在目录在上下文里只剩导入的文件 |
 | `network` | 私网全部拒绝（`sb.yaml` 的 `default_grant` 除外） | 只放行列出的私网 IP 或 `IP:端口`；公网、DNS、宿主开发端口一直可用 |
 | `paths`   | 只挂当前项目                                      | 额外挂载的目录，加 `:ro` 为只读                                   |
 
@@ -176,4 +176,5 @@ sb rm --force      # 强制删除，会打断所有 Agent
 | `worktree 的 git common dir … 超出沙箱能力上限` | worktree 的主仓库不在挂载根内 | 同上，把主仓库所在目录加进 `mount_roots`                       |
 | `sb.yaml 已变，主 VM 有 N 个执行上下文在运行`   | 改了上限但还有 Agent 在跑     | 退出这些 Agent 后重新启动                                      |
 | `.sandbox.yaml 中声明的导入文件不存在`          | `imports` 路径写错            | 相对路径以项目根为起点，`~` 表示家目录                         |
+| `导入文件 … 超出能力上限`                       | `src` 不在 `import_sources` 内 | 把所在目录加进 `sb.yaml` 的 `import_sources`                   |
 | 在沙箱里执行 `sb`、`just` 等命令被拒绝          | 这些命令只能在宿主上执行      | 回到宿主终端执行                                               |

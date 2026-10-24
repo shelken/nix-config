@@ -550,21 +550,38 @@ resolve_and_validate_plan() {
     local cfg_json
     cfg_json="$(yq -o=json '.' "$proj_cfg")"
 
-    # 4a. 校验 imports
+    # 4a. 校验 imports：src 必须落在 sb.yaml import_sources 内（.sandbox.yaml 在项目仓库里，
+    # Agent 能改，不设上限就能把任意宿主文件带进上下文）；target 是上下文内的路径
+    local -a allowed_import_roots=()
+    while IFS= read -r root_path; do
+      [[ -n "$root_path" ]] || continue
+      local expanded
+      expanded="$(expand_path "$root_path")"
+      if [[ -e "$expanded" ]]; then
+        allowed_import_roots+=("$(realpath "$expanded")")
+      fi
+    done < <(jq -r '(.import_sources // [])[]' <<< "$ceiling_json")
+
     local -a verified_imports=()
+    local target_form='^(~/|/)[^/]'
     while IFS= read -r item; do
       [[ -n "$item" ]] || continue
-      local src dest
-      if jq -e 'type == "string"' <<< "$item" >/dev/null 2>&1; then
-        src="$(jq -r . <<< "$item")"
-        dest="$(basename "$src")"
-      else
-        src="$(jq -r '.src // .path' <<< "$item")"
-        dest="$(jq -r '.dest // .dst // .name // empty' <<< "$item")"
-        if [[ -z "$dest" ]]; then dest="$(basename "$src")"; else dest="$(basename "$dest")"; fi
+      local src target rel
+      src="$(jq -r '.src? // empty' <<< "$item")"
+      target="$(jq -r '.target? // empty' <<< "$item")"
+      if [[ -z "$src" || -z "$target" ]]; then
+        echo "[-] 错误: .sandbox.yaml 的 imports 每项都要写 src 与 target，收到: $item" >&2
+        return 1
+      fi
+      # 目标目录会被暂存目录整体遮住，所以 target 不能直接位于 HOME 或 / 下
+      rel="${target#\~/}"
+      rel="${rel#/}"
+      if [[ ! "$target" =~ $target_form || "$target" == */ || "/$target/" == */../* || "$rel" != */* ]]; then
+        echo "[-] 错误: imports 的 target 必须以 ~/ 或 / 开头、不含 ..、位于某个子目录内（例如 ~/.kube/config），收到: $target" >&2
+        return 1
       fi
 
-      src="${src/#\~/$HOME}"
+      src="$(expand_path "$src")"
       if [[ "$src" != /* ]]; then
         src="$project_root/$src"
       fi
@@ -574,11 +591,34 @@ resolve_and_validate_plan() {
       fi
       local real_src
       real_src="$(realpath "$src")"
-      verified_imports+=("$(jq -n --arg src "$real_src" --arg dest "$dest" '{src: $src, dest: $dest}')")
+
+      local src_allowed=0
+      for ar in "${allowed_import_roots[@]}"; do
+        if [[ "$real_src" == "$ar" || "$real_src" == "$ar"/* ]]; then
+          src_allowed=1
+          break
+        fi
+      done
+      if [[ "$src_allowed" -eq 0 ]]; then
+        echo "[-] 错误: .sandbox.yaml 中声明的导入文件 $real_src 超出能力上限 (未落在 sb.yaml import_sources 内)" >&2
+        return 1
+      fi
+
+      verified_imports+=("$(jq -n --arg src "$real_src" --arg target "$target" '{src: $src, target: $target, dir: ($target | sub("/[^/]*$"; ""))}')")
     done < <(jq -c '.imports[]? // empty' <<< "$cfg_json")
 
+    # stage：同一目标目录的导入共用一个暂存目录，launcher 以目录形式绑定到该目录
     if [[ ${#verified_imports[@]} -gt 0 ]]; then
-      imports_json="$(printf '%s\n' "${verified_imports[@]}" | jq -s .)"
+      local imports_err
+      if ! imports_json="$(printf '%s\n' "${verified_imports[@]}" | jq -s '
+        (map(.target) | group_by(.) | map(select(length > 1)) | first) as $dup
+        | if $dup then error("imports 的 target 重复: \($dup[0])") else . end
+        | (map(.dir) | unique) as $dirs
+        | map(. as $i | $i + {stage: ($dirs | index($i.dir))})' 2>&1)"; then
+        imports_err="$imports_json"
+        echo "[-] 错误: ${imports_err#*): }" >&2
+        return 1
+      fi
     fi
 
     # 4b. 校验 network
@@ -918,7 +958,12 @@ EOF
     imports_count="$(jq -r '.imports | length' <<< "$plan_json")"
     ctx_guest_dir="/run/sandbox/contexts/$ctx_id"
     if [[ "$imports_count" -gt 0 ]]; then
-      run_msb exec sb-main -- bash -c "mkdir -p '$ctx_guest_dir/imports' && touch '$ctx_guest_dir/starting'"
+      stage_dirs=()
+      while IFS= read -r stage; do
+        stage_dirs+=("$ctx_guest_dir/imports/$stage")
+      done < <(jq -r '[.imports[].stage] | unique[]' <<< "$plan_json")
+      # shellcheck disable=SC2016  # 单引号脚本交给 guest 的 bash 展开
+      run_msb exec sb-main -- bash -c 'mkdir -p "${@:2}" && touch "$1"' _ "$ctx_guest_dir/starting" "${stage_dirs[@]}"
       # shellcheck disable=SC2329  # 仅经 trap 间接调用
       host_reclaim_ctx() {
         run_msb exec sb-main -- rm -rf "$ctx_guest_dir" 2>/dev/null || true
@@ -927,10 +972,12 @@ EOF
       while IFS= read -r imp; do
         [[ -n "$imp" ]] || continue
         src="$(jq -r .src <<< "$imp")"
-        dest="$(jq -r .dest <<< "$imp")"
-        run_msb copy "$src" "sb-main:$ctx_guest_dir/imports/$dest" >&2
+        target="$(jq -r .target <<< "$imp")"
+        stage="$(jq -r .stage <<< "$imp")"
+        run_msb copy "$src" "sb-main:$ctx_guest_dir/imports/$stage/${target##*/}" >&2
       done < <(jq -c '.imports[]' <<< "$plan_json")
-      run_msb exec sb-main -- chmod -R 777 "$ctx_guest_dir/imports"
+      # 属主是 guest root，进入上下文后映射为上下文用户；其他用户不可读
+      run_msb exec sb-main -- chmod -R u+rwX,go-rwx "$ctx_guest_dir/imports"
     fi
 
     # 进入 launcher（sec-run 凭据注入由 run_msb 统一处理）；

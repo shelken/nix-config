@@ -11,6 +11,8 @@
 - `host-stubs` 上下文内 `sb`、`just`、`spawn-subagent`、`computer-use` 被拒绝并说明原因
 - `grant-network` `.sandbox.yaml` 申请超出上限的私网目标时启动报错
 - `grant-default` `sb.yaml` 的 `default_grant` 对所有上下文生效，同机其他端口仍拦截
+- `import-target` `.sandbox.yaml` 的 `imports` 把宿主文件放到上下文内的 `target`：内容一致、可原子改名、改动不写回宿主、退出后 guest 内无残留
+- `import-reject` `src` 不在 `import_sources` 内、`target` 位于家目录或根目录直下、`target` 在保留位置时，启动报错
 
 ## How to get to it (user POV)
 
@@ -31,6 +33,8 @@ Preconditions:
 - **宿主命令桩。** 运行 `$V run stubs -- $V sb run bash -c 'for c in sb just spawn-subagent computer-use; do $c status; echo "$c rc=$?"; done'`。四个命令都是 `rc=1` 且给出原因
 - **默认放行。** 测试项目无 `.sandbox.yaml` 时运行 `$V run grant -- $V sb run bash -c 'curl -s -o /dev/null -m 5 -w "%{http_code}\n" https://cpa.int.ooooo.space/v1/models; curl -s -o /dev/null -m 5 -w "%{http_code}\n" http://192.168.69.46:80'`。第一行 `401`，第二行 `000`（宿主上同一地址返回 301）
 - **超出上限。** 在测试项目写 `network: ["192.168.69.60"]` 到 `.sandbox.yaml`，运行 `$V run grant-over -- $V sb run true`。`rc` 为 `1`，stderr 含「超出能力上限」；结束后删除该文件
+- **导入到目标路径。** 运行 `echo fake-kubeconfig > ~/.kube/sb-verify.yaml; shasum ~/.kube/sb-verify.yaml`，在测试项目写 `.sandbox.yaml`：`imports: [{src: ~/.kube/sb-verify.yaml, target: ~/.kube/sb-verify.yaml}]`。运行 `$V run import-target -- $V sb run bash -c 'cat ~/.kube/sb-verify.yaml; ls ~/.kube; stat -c "%a" ~/.kube/sb-verify.yaml; mv ~/.kube/sb-verify.yaml ~/.kube/t && mv ~/.kube/t ~/.kube/sb-verify.yaml && echo RENAME_OK; echo changed >> ~/.kube/sb-verify.yaml'`。输出依次为 `fake-kubeconfig`、只有 `sb-verify.yaml` 一项、`600`、`RENAME_OK`，`rc` 为 `0`；宿主文件的 `shasum` 不变；`$V msb exec sb-main -- ls /run/sandbox/contexts` 为空。结束后删除 `~/.kube/sb-verify.yaml` 与 `.sandbox.yaml`
+- **导入被拒绝。** 分别把 `.sandbox.yaml` 的 imports 写成 `src: /etc/hosts`（`target: ~/.kube/h`）、`target: ~/h`、`target: /etc/foo/h`（`src` 用上一条的文件），各运行一次 `$V run import-reject-<n> -- $V sb run true`。`rc` 都为 `1`，stderr 依次含「超出能力上限」、「位于某个子目录内」、「沙箱保留位置」；结束后删除 `.sandbox.yaml`
 
 ## Gotchas
 
