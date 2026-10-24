@@ -178,13 +178,13 @@ if [[ ! -e "$REPO_ROOT/flake.nix" ]]; then
   exit 1
 fi
 if [[ -z "${SB_BIN:-}" || ! -x "${SB_BIN:-}" ]]; then
+  # stderr 不并入：nix 会往 stderr 打设置提示，混进来会顶掉产物路径
   app_dir="$(nix build --no-link --print-out-paths \
-    "$REPO_ROOT#homeConfigurations.mio.config.home.activationPackage" 2>&1 | head -n 1 || true)"
+    "$REPO_ROOT#homeConfigurations.mio.config.home.activationPackage" || true)"
   if [[ -n "$app_dir" && -x "$app_dir/home-path/bin/sb" ]]; then
     SB_BIN="$(readlink -f "$app_dir/home-path/bin/sb")"
   else
-    echo "[-] 无法构建/定位 sb 产物 (可设置 SB_BIN 覆盖):" >&2
-    echo "$app_dir" >&2
+    echo "[-] 无法构建/定位 sb 产物 (可设置 SB_BIN 覆盖): ${app_dir:-无输出}" >&2
     exit 1
   fi
 fi

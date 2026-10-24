@@ -391,21 +391,21 @@ ensure_vm_locked() {
   local tmp_cfg
   tmp_cfg="$(mktemp "/tmp/sb-${vm_name}-XXXXXX.json")"
   # shellcheck disable=SC2064  # 需要展开当前 tmp_cfg
-  trap 'rm -f "$tmp_cfg"' EXIT INT TERM
+  trap "rm -f '$tmp_cfg'" EXIT INT TERM
 
   generate_msb_config "$yaml_file" "$tmp_cfg"
   local current_fp
   current_fp="$(get_config_fingerprint "$tmp_cfg")"
 
-  local vol_name
-  vol_name="$(jq -r '.volume.name // "sb-main-data"' "$tmp_cfg")"
-  local vol_size
-  vol_size="$(yq -o=json '.' "$yaml_file" | jq -r '.volume.size // "8G"')"
+  local ceiling_json vol_name vol_size
+  ceiling_json="$(yq -o=json '.' "$yaml_file")"
+  vol_name="$(jq -r '.volume.name // "sb-main-data"' <<< "$ceiling_json")"
+  vol_size="$(jq -r '.volume.size // "8G"' <<< "$ceiling_json")"
 
   # 确保数据卷卷存在（删除 VM 时保留，重新挂载即持久数据）
   if ! "$MSB" volume inspect "$vol_name" >/dev/null 2>&1; then
     echo "[sb] 数据卷 $vol_name 不存在，正在创建 (ext4 disk, 大小: $vol_size)..." >&2
-    "$MSB" volume create "$vol_name" --kind disk --size "$vol_size"
+    "$MSB" volume create "$vol_name" --kind disk --size "$vol_size" >&2
   fi
 
   # VM 创建后要落的状态：指纹与上限 YAML，供指纹比对与诊断
@@ -430,7 +430,7 @@ ensure_vm_locked() {
         echo "[sb] 主 VM $vm_name 正在运行且能力上限一致，复用现有 VM" >&2
       else
         echo "[sb] 主 VM $vm_name 已存在但处于停止状态，正在启动..." >&2
-        run_msb start "$vm_name"
+        run_msb start "$vm_name" >&2
         wait_for_vm_running "$vm_name"
         echo "[sb] 主 VM $vm_name 启动成功" >&2
       fi
@@ -446,14 +446,14 @@ ensure_vm_locked() {
       echo "[sb] 检测到能力上限变化且主 VM $vm_name 空闲，正在重建 (保留数据盘 $vol_name)..." >&2
       "$MSB" stop "$vm_name" >/dev/null 2>&1 || true
       "$MSB" rm --force "$vm_name" 2>/dev/null || true
-      run_msb create "${create_args[@]}"
+      run_msb create "${create_args[@]}" >&2
       record_vm_state
       wait_for_vm_running "$vm_name"
       echo "[sb] 主 VM $vm_name 重建完成并已启动" >&2
     fi
   else
     echo "[sb] 正在创建主 VM: $vm_name (上限指纹: ${current_fp:0:12})..." >&2
-    run_msb create "${create_args[@]}"
+    run_msb create "${create_args[@]}" >&2
     record_vm_state
     wait_for_vm_running "$vm_name"
     echo "[sb] 主 VM $vm_name 创建并启动成功" >&2
