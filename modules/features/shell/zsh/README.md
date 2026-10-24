@@ -5,7 +5,12 @@
 
 ## 特定配置
 
-`$HOME/.specific.zsh` 只在 `sec-run` 运行目标命令时按需 source，主终端默认不加载。用 `sec-env add|del|list` 维护其中的变量。
+`$HOME/.specific.zsh` 是凭据**覆盖层**（ADR 0010）：基座值来自仓库 `modules/features/secrets/secrets.nix` 的 `opSecretMap`（`op://` 引用，由 1Password 解析），覆盖层只放临时差异。`sec-run` 运行目标命令时把两者交给 `op run` 注入，主终端默认不加载。
+
+- 临时换值/切换备用账号：`sec-env add KEY "op://Personal/<条目>/credential"`
+- 回落到基座值：注释掉或 `sec-env del KEY`
+- 明文值允许但不推荐（迁移期兼容）
+- 长期换值直接改 1Password 条目，不动任何文件
 
 ## functions 函数列表
 

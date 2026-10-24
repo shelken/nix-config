@@ -41,6 +41,36 @@
       inherit (lib) mkIf;
       cfg = config.shelken.secrets;
 
+      # ─── 凭据基座与覆盖层（ADR 0010）───
+      # 基座：仓库内声明的 op:// 引用映射，注入文件只含引用不含明文，可安全进 nix store
+      opSecretMap = {
+        APIM_API_KEY = "Personal/APIM_API_KEY";
+        BRAVE_API_KEY = "Personal/BRAVE_API_KEY";
+        BRAVE_SEARCH_API_KEY = "Personal/BRAVE_SEARCH_API_KEY";
+        BWS_ACCESS_TOKEN = "Personal/BWS_ACCESS_TOKEN";
+        COMMANDCODE_API_KEY = "Personal/COMMANDCODE_API_KEY";
+        CONTEXT_API_KEY = "Personal/CONTEXT_API_KEY";
+        CPA_PI_API_KEY = "Personal/CPA_PI_API_KEY";
+        CPA_TOKEN = "Personal/CPA_TOKEN";
+        DEEPSEEK_API_KEY = "Personal/DEEPSEEK_API_KEY";
+        EXA_API_KEY = "Personal/EXA_API_KEY";
+        FIRECRAWL_API_KEY = "Personal/FIRECRAWL_API_KEY";
+        MNEMOPI_EMBEDDING_API_KEY = "Personal/MNEMOPI_EMBEDDING_API_KEY";
+        MODELSCOPE_API_KEY = "Personal/MODELSCOPE_API_KEY";
+        MODELSCOPE_API_TOKEN = "Personal/MODELSCOPE_API_TOKEN";
+        OMLX_API_KEY = "Personal/OMLX_API_KEY";
+        OPENCODE_API_KEY = "Personal/OPENCODE_API_KEY";
+        SANDVAULT_ARGS = "Personal/SANDVAULT_ARGS";
+        WX_PI_API_KEY = "Personal/WX_PI_API_KEY";
+      };
+
+      # 基座 env 文件：VAR=op://<vault>/<item>/credential，只含引用不含明文
+      opEnvBase = pkgs.writeText "op-secrets.env" (
+        lib.concatStringsSep "\n" (
+          lib.mapAttrsToList (var: ref: "${var}=op://${ref}/credential") opSecretMap
+        )
+      );
+
       secretEnvMap = {
         GITHUB_TOKEN = "github/cli-token"; # 目前task依赖
       };
@@ -69,13 +99,24 @@
         # 1. 注入 sops-nix 凭据
         ${shellInit}
 
-        # 2. 仅在运行目标命令时按需注入 ~/.specific.zsh，主终端默认完全不加载
+        # 2. op CLI 可用时经 op run 解析 op:// 引用：仓库基座在前、specific.zsh 覆盖层在后（同
+        # 名变量后者覆盖，# 注释临时停用，明文回退兼容）；无 op 的机器跳过整层
         SPECIFIC_ZSH="$HOME/.specific.zsh"
+        if command -v op >/dev/null 2>&1; then
+          typeset -a _op_env_files
+          _op_env_files=( --env-file="${opEnvBase}" )
+          if [[ -s "$SPECIFIC_ZSH" ]]; then
+            _op_env_files+=( --env-file="$SPECIFIC_ZSH" )
+          fi
+          exec op run "''${_op_env_files[@]}" -- "$@"
+        fi
+
+        # 3. 无 op 回退：仅 source specific.zsh（明文语法与 sec-env 写入格式一致）
         if [[ -s "$SPECIFIC_ZSH" ]]; then
           source "$SPECIFIC_ZSH"
         fi
 
-        # 3. 仅在 SEC_RUN_VERBOSE 环境变量存在时回显注入清单（输出至 stderr，不污染管道）
+        # 4. 仅在 SEC_RUN_VERBOSE 存在时回显注入清单（stderr，不污染管道）
         if [[ -n "''${SEC_RUN_VERBOSE:-}" ]]; then
           typeset -a _after_vars _new_vars
           _after_vars=( ''${(k)parameters[(R)*export*]} )
@@ -96,9 +137,12 @@
 
         usage() {
           echo "用法: sec-env <add|del|list> [参数...]"
-          echo "  sec-env add <KEY> [VALUE]  # 增加/更新变量（未提供 VALUE 时安全交互式输入）"
+          echo "  sec-env add <KEY> [VALUE]  # 增加/更新覆盖层变量；推荐 VALUE 用 op:// 引用"
+          echo "                            # （临时覆盖基座值或切换备用账号时）"
           echo "  sec-env del <KEY>          # 删除变量"
-          echo "  sec-env list               # 列出当前配置的所有变量名（只输出 Key，不泄露值）"
+          echo "  sec-env list               # 列出覆盖层变量名（只输出 Key，不泄露值）"
+          echo ""
+          echo "覆盖层文件: \$SPECIFIC_FILE（仅 sec-run 运行时经 op run 注入）"
           exit 1
         }
 
