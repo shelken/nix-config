@@ -179,7 +179,7 @@ sweep_dead_contexts
 
 mkdir -p "$CONTEXTS_DIR"
 
-# 2. Address pool and slot allocation (find the smallest unoccupied slot)
+# 2. 地址池与槽位分配 (找到最小未占用的 slot)
 declare -A USED_SLOTS=()
 for ctx_dir in "$CONTEXTS_DIR"/*; do
   [[ -d "$ctx_dir" ]] || continue

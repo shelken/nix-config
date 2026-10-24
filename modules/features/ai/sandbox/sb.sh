@@ -920,7 +920,6 @@ EOF
     # launcher 发布 meta 后目录所有权归 launcher，宿主回收 trap 解除
     trap - EXIT INT TERM HUP
     run_code=0
-
     run_msb exec sb-main "${terminal[@]}" -- bash "$LAUNCHER" "$ctx_id" "$plan_json" "$current_cwd" "$@" || run_code=$?
 
     exit "$run_code"
