@@ -143,7 +143,7 @@ git_host=(-c user.name=SmokeTest -c user.email=smoke@test.local)
   git worktree add -q "$WORKTREE" smoke-wt
 )
 
-# 全局能力上限: 允许 192.168.69.46（项目未声明则上下文仍拦截）；secret 只用假值
+# 全局上限: VM 级放开私网（上下文的 iptables 链仍按项目声明逐项拦截）；secret 只用假值
 TEST_YAML="$E2E_DIR/sb.yaml"
 cat > "$TEST_YAML" <<EOF
 image: "ubuntu"
@@ -159,7 +159,7 @@ network:
   allow:
     - "public"
     - "dns"
-    - "192.168.69.46"
+    - "private"
 secrets:
   MOCK_GITHUB_TOKEN:
     allow:
@@ -203,6 +203,9 @@ run_sb() {
     MOCK_GITHUB_TOKEN="ghp_smoke_fake_secret_placeholder" \
     "$SB_BIN" "$@"
 }
+
+# 项目 A 的 .sandbox.yaml 需要先批准；worktree 里是同一份内容，哈希相同，无需再批准
+(cd "$PROJ_A" && run_sb trust >/dev/null)
 
 # ------------------------------------------------------------------------------
 # 3. 四项隔离边界断言（任一失败即非零退出，EXIT trap 兜底清理）

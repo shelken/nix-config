@@ -17,22 +17,19 @@ mount_roots:
   - "${HOME}/nix-config"
   - "${HOME}/.herdr/worktrees"
 
-# 允许 .sandbox.yaml 的 imports 导入的宿主位置（文件或目录，支持 ~、${HOME}；先解析符号链接）
-# .sandbox.yaml 在项目仓库里，Agent 能改，所以导入来源必须在这里设上限
-import_sources:
-  - "${HOME}/.kube"
-
-# 网络上限规则（公网 + DNS + 宿主端口 + 家庭网段）
+# VM 级网络策略：公网 + DNS + 私网 + 宿主端口。私网在这一层整体放开，逐项限制由每个
+# 执行上下文自己的 iptables 链完成：只有 sb.yaml 的 default_grant 与已批准（sb trust）的
+# .sandbox.yaml 声明的目标才放行。不在上下文里运行的 guest 进程（如 sb sync）不受上下文链约束，
+# 也能连私网。改这一段会改变上限指纹、触发重建；授权的增减不会
 network:
   policy: "public"
   allow:
     - "public"
     - "dns"
+    - "private"
     - "host:tcp:3425"
     - "host:tcp:8080"
-    - "192.168.69.46"
-    # - "192.168.69.60"
-  # 所有执行上下文默认放行的私网 IP:端口（IP 须在上面的 allow 内）：家里的模型服务
+  # 所有执行上下文默认放行的私网 IP:端口：家里的模型服务
   default_grant:
     - "192.168.69.46:443"
 

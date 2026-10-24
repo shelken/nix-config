@@ -2,7 +2,7 @@
 
 日期: 2026-10-24
 状态: Accepted
-关联: 修订 [ADR 0002](0002-single-main-vm-execution-context.md) 决策 2「网络只放行项目声明的目标」
+关联: 修订 [ADR 0002](0002-single-main-vm-execution-context.md) 决策 2「网络只放行项目声明的目标」；「IP 必须在 `network.allow` 内」已被 [ADR 0009](0009-sandbox-trust-approval.md) 取消
 
 ## 背景
 
@@ -10,7 +10,7 @@
 
 ## 决策
 
-`sb.yaml` 新增 `network.default_grant`，列出所有执行上下文默认放行的私网目标，只接受 `IP:端口`，IP 必须已在 `network.allow` 上限内。当前只放行 `192.168.69.46:443`。
+`sb.yaml` 新增 `network.default_grant`，列出所有执行上下文默认放行的私网目标，只接受 `IP:端口`。当前只放行 `192.168.69.46:443`。
 
 - 范围按端口收窄：同一台机器的其他端口仍需项目声明
 - `default_grant` 是上下文级授权，不写进 VM 配置，不改变上限指纹，修改后下一个新上下文即生效，不触发重建

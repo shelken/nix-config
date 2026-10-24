@@ -103,7 +103,8 @@ sb down              停止主 VM
 sb rm [--force]       删除主 VM，保留数据卷；有运行中上下文时拒绝，--force 强制删除
 sb sync              补齐沙箱内的 mise 工具与 OMP 插件 (幂等，只装缺失项；宿主写锁串行化)
 sb status [--json]   查看主 VM 状态、规格、能力上限指纹一致性与缺失工具
-sb plan [--json]     显示当前项目解析后的授权：挂载、导入、放行的私网目标 (不创建 VM，被拒绝时先看它)
+sb plan [--json]     显示当前项目解析后的授权：挂载、导入、放行的私网目标与批准状态 (不创建 VM，被拒绝时先看它)
+sb trust             批准当前项目的 .sandbox.yaml (内容哈希变了要重新批准；未批准时 sb run 直接报错)
 sb run [-t] CMD…     在当前项目执行上下文内运行命令 (TTY 自适应)
 sb shell             进入当前项目执行上下文的交互式 Bash shell
 sb volume …          命名卷管理 (原生透传至 msb volume)
@@ -121,6 +122,46 @@ expand_path() {
   p="${p//$brace_home/$home}"
   p="${p//$plain_home/$home}"
   printf '%s\n' "$p"
+}
+
+# .sandbox.yaml 的批准记录按规范化内容的哈希保存，不看项目路径：同一份文件在所有 worktree 里只批准一次。
+# 记录放在 $MSB_HOME 下（宿主状态）；沙箱里的 sb 被宿主命令桩拒绝，Agent 批准不了自己
+SB_APPROVAL_DIR="$MSB_HOME/approvals"
+
+# 键排序、去注释后的哈希：只改格式或注释不使批准失效
+sandbox_cfg_hash() {
+  yq -o=json -I=0 'sort_keys(..)' "$1" | sha256sum | cut -d' ' -f1
+}
+
+# 输出 approved / unapproved / none（项目没有 .sandbox.yaml，不需要批准）
+approval_state() {
+  local cfg="$1/.sandbox.yaml"
+  if [[ ! -f "$cfg" ]]; then
+    echo none
+  elif [[ -f "$SB_APPROVAL_DIR/$(sandbox_cfg_hash "$cfg")" ]]; then
+    echo approved
+  else
+    echo unapproved
+  fi
+}
+
+# 把解析后的计划打印成清单（sb plan 与 sb trust 共用）
+print_plan() {
+  local plan_json="$1" state default_grants_json
+  state="$(approval_state "$(jq -r '.project_root' <<< "$plan_json")")"
+  default_grants_json="$(yq -o=json '.network.default_grant // []' "$YAML_FILE")"
+  jq -r --argjson dg "$default_grants_json" --arg state "$state" '
+    def section(t; a): t, (if (a | length) == 0 then "  无" else (a[] | "  " + .) end);
+    .project_root as $pr
+    | (.git_common_dir // "") as $gcd
+    | "项目根: \($pr)",
+      (if $gcd != "" and $gcd != $pr and ($gcd | startswith($pr + "/") | not) then "git common dir: \($gcd)" else empty end),
+      section("额外路径:"; .paths | map(.path + (if .readonly then "（只读）" else "" end))),
+      section("导入文件:"; .imports | map(.src + " → " + .target)),
+      section("放行的私网目标:"; .network | map(. as $t | $t + (if ($dg | index($t)) != null then "（sb.yaml 默认放行）" else "（项目声明）" end))),
+      section("放行的宿主端口:"; .default_allow),
+      "批准状态: \({approved: "已批准", unapproved: "未批准，确认以上内容后执行 sb trust", none: "无 .sandbox.yaml，不需要批准"}[$state])"
+  ' <<< "$plan_json"
 }
 
 # 从全局 YAML 声明转换为 msb 所需的配置 JSON
@@ -551,17 +592,7 @@ resolve_and_validate_plan() {
     local cfg_json
     cfg_json="$(yq -o=json '.' "$proj_cfg")"
 
-    # 4a. 校验 imports：src 必须落在 sb.yaml import_sources 内（.sandbox.yaml 在项目仓库里，
-    # Agent 能改，不设上限就能把任意宿主文件带进上下文）；target 是上下文内的路径
-    local -a allowed_import_roots=()
-    while IFS= read -r root_path; do
-      [[ -n "$root_path" ]] || continue
-      local expanded
-      expanded="$(expand_path "$root_path")"
-      if [[ -e "$expanded" ]]; then
-        allowed_import_roots+=("$(realpath "$expanded")")
-      fi
-    done < <(jq -r '(.import_sources // [])[]' <<< "$ceiling_json")
+    # 4a. 校验 imports：target 是上下文内的路径；src 是任意宿主文件，是否放行由 sb trust 的批准决定
 
     local -a verified_imports=()
     local target_form='^(~/|/)[^/]'
@@ -593,18 +624,6 @@ resolve_and_validate_plan() {
       local real_src
       real_src="$(realpath "$src")"
 
-      local src_allowed=0
-      for ar in "${allowed_import_roots[@]}"; do
-        if [[ "$real_src" == "$ar" || "$real_src" == "$ar"/* ]]; then
-          src_allowed=1
-          break
-        fi
-      done
-      if [[ "$src_allowed" -eq 0 ]]; then
-        echo "[-] 错误: .sandbox.yaml 中声明的导入文件 $real_src 超出能力上限 (未落在 sb.yaml import_sources 内)" >&2
-        return 1
-      fi
-
       verified_imports+=("$(jq -n --arg src "$real_src" --arg target "$target" '{src: $src, target: $target, dir: ($target | sub("/[^/]*$"; ""))}')")
     done < <(jq -c '.imports[]? // empty' <<< "$cfg_json")
 
@@ -622,26 +641,12 @@ resolve_and_validate_plan() {
       fi
     fi
 
-    # 4b. 校验 network
-    local -a allowed_net_targets=()
-    while IFS= read -r item; do
-      [[ -n "$item" ]] || continue
-      allowed_net_targets+=("$item")
-    done < <(jq -r '.network.allow[]? // empty' <<< "$ceiling_json")
-
+    # 4b. 校验 network 的写法；私网目标没有上限，是否放行由 sb trust 的批准决定
     local -a verified_network=()
     while IFS= read -r net_target; do
       [[ -n "$net_target" ]] || continue
-      local target_allowed=0
-      local target_ip="${net_target%:*}"
-      for an in "${allowed_net_targets[@]}"; do
-        if [[ "$net_target" == "$an" || "$target_ip" == "$an" ]]; then
-          target_allowed=1
-          break
-        fi
-      done
-      if [[ "$target_allowed" -eq 0 ]]; then
-        echo "[-] 错误: .sandbox.yaml 中声明的私网目标 $net_target 超出能力上限 (sb.yaml network.allow 未授权该目标)" >&2
+      if [[ ! "$net_target" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(:[0-9]+)?$ ]]; then
+        echo "[-] 错误: .sandbox.yaml 的 network 只接受 IP 或 IP:端口，收到: $net_target" >&2
         return 1
       fi
       verified_network+=("$net_target")
@@ -703,17 +708,12 @@ resolve_and_validate_plan() {
     fi
   fi
 
-  # 4d. 上限声明的所有上下文默认放行的私网 IP:端口（如家里的模型服务），
-  # IP 必须已在 network.allow 上限内；与项目声明的目标合并
+  # 4d. sb.yaml 声明的所有上下文默认放行的私网 IP:端口（如家里的模型服务），与项目声明的目标合并
   local -a default_grants=()
   while IFS= read -r grant; do
     [[ -n "$grant" ]] || continue
     if [[ ! "$grant" =~ ^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+):[0-9]+$ ]]; then
       echo "[-] 错误: sb.yaml network.default_grant 只接受 IP:端口，收到: $grant" >&2
-      return 1
-    fi
-    if ! jq -e --arg ip "${BASH_REMATCH[1]}" '(.network.allow // []) | index($ip)' <<< "$ceiling_json" >/dev/null; then
-      echo "[-] 错误: sb.yaml network.default_grant 的 $grant 不在 network.allow 上限内" >&2
       return 1
     fi
     default_grants+=("$grant")
@@ -909,21 +909,25 @@ EOF
     # 只解析并校验当前项目的授权，不创建 VM，也不启动上下文
     plan_json="$(resolve_and_validate_plan "$(pwd -P)" "$YAML_FILE")"
     if [[ "${1:-}" == "--json" || "${1:-}" == "-j" ]]; then
-      jq . <<< "$plan_json"
+      jq --arg a "$(approval_state "$(jq -r '.project_root' <<< "$plan_json")")" '. + {approval: $a}' <<< "$plan_json"
     else
-      default_grants_json="$(yq -o=json '.network.default_grant // []' "$YAML_FILE")"
-      jq -r --argjson dg "$default_grants_json" '
-        def section(t; a): t, (if (a | length) == 0 then "  无" else (a[] | "  " + .) end);
-        .project_root as $pr
-        | (.git_common_dir // "") as $gcd
-        | "项目根: \($pr)",
-          (if $gcd != "" and $gcd != $pr and ($gcd | startswith($pr + "/") | not) then "git common dir: \($gcd)" else empty end),
-          section("额外路径:"; .paths | map(.path + (if .readonly then "（只读）" else "" end))),
-          section("导入文件:"; .imports | map(.src + " → " + .target)),
-          section("放行的私网目标:"; .network | map(. as $t | $t + (if ($dg | index($t)) != null then "（sb.yaml 默认放行）" else "（项目声明）" end))),
-          section("放行的宿主端口:"; .default_allow)
-      ' <<< "$plan_json"
+      print_plan "$plan_json"
     fi
+    ;;
+
+  trust)
+    # 批准当前项目的 .sandbox.yaml；内容哈希变化后需要重新批准
+    plan_json="$(resolve_and_validate_plan "$(pwd -P)" "$YAML_FILE")"
+    project_root="$(jq -r '.project_root' <<< "$plan_json")"
+    if [[ ! -f "$project_root/.sandbox.yaml" ]]; then
+      echo "[sb] $project_root 没有 .sandbox.yaml，不需要批准"
+      exit 0
+    fi
+    cfg_hash="$(sandbox_cfg_hash "$project_root/.sandbox.yaml")"
+    mkdir -p "$SB_APPROVAL_DIR"
+    printf '%s\n%s\n' "$project_root" "$(date -Iseconds)" > "$SB_APPROVAL_DIR/$cfg_hash"
+    print_plan "$plan_json"
+    echo "[+] 已批准 $project_root/.sandbox.yaml (${cfg_hash:0:12})"
     ;;
 
   sync)
@@ -964,6 +968,10 @@ EOF
     current_cwd="$(pwd -P)"
     plan_json="$(resolve_and_validate_plan "$current_cwd" "$YAML_FILE")"
     project_root="$(jq -r '.project_root' <<< "$plan_json")"
+    if [[ "$(approval_state "$project_root")" == "unapproved" ]]; then
+      echo "[-] 错误: $project_root/.sandbox.yaml 未批准，或批准后已变更。先执行 sb plan 查看授权内容，确认后执行 sb trust" >&2
+      exit 1
+    fi
     ctx_id="ctx_$(date +%s)_$RANDOM"
 
     # 生命周期锁包住「检查指纹 → 必要时重建 → 启动 VM」，之后进入 launcher
