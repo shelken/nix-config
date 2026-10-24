@@ -21,8 +21,9 @@ DEFAULT_SANDBOX_CONFIG="@SANDBOX_CONFIG@"
 
 export MSB_CONFIG_PATH="${MSB_CONFIG_PATH:-$DEFAULT_MSB_CONFIG}"
 export MSB_HOME="${MSB_HOME:-$DEFAULT_MSB_HOME}"
-# 宿主共用 mise 目录真实路径（ADR 0005）；e2e 通过覆盖它把一次性 VM 挂到 harness 共用目录
-export SB_MISE_HOST_DIR="${SB_MISE_HOST_DIR:-/opt/sandbox-mise}"
+# 宿主共用 mise 目录真实路径（ADR 0005）；默认值与 default.nix 注入的一致，
+# 新开终端前环境变量尚未生效时也指向同一目录；e2e 覆盖它把一次性 VM 挂到 harness 共用目录
+export SB_MISE_HOST_DIR="${SB_MISE_HOST_DIR:-$HOME/Data/sandboxes/mise/aarch64-linux}"
 
 # ------------------------------------------------------------------
 # 主 VM 生命周期锁：跨进程互斥，锁目录固定在 $MSB_HOME/locks，
@@ -190,14 +191,10 @@ generate_msb_config() {
 
   # 宿主共用 mise 目录（ADR 0005）：挂进主 VM，guest 路径固定 /opt/sandbox-mise。
   # 上限指纹只含 guest 路径与读写属性，不含宿主真实路径。
-  # 宿主真实路径默认取环境变量 SB_MISE_HOST_DIR（由 default.nix 统一注入），
-  # e2e 一次性 VM 通过覆盖它指向 harness 共用目录，同样实现全 VM 共用。
-  local mise_real="${SB_MISE_HOST_DIR:-/opt/sandbox-mise}"
-  if [[ ! -d "$mise_real" ]]; then
-    echo "[-] 错误: 宿主共用 mise 目录不存在: $mise_real (可通过 SB_MISE_HOST_DIR 覆盖)" >&2
-    return 1
-  fi
-  mise_real="$(realpath "$mise_real")"
+  # 宿主真实路径取 SB_MISE_HOST_DIR；首次使用时目录还不存在，直接创建
+  mkdir -p "$SB_MISE_HOST_DIR"
+  local mise_real
+  mise_real="$(realpath "$SB_MISE_HOST_DIR")"
   local sb_mise_json
   sb_mise_json="$(printf '%s\n' "$mise_real:/opt/sandbox-mise:rw" | jq -R . | jq -s .)"
   # 供 get_config_fingerprint 在计算指纹时识别并规范化该挂载条目
@@ -340,7 +337,7 @@ exec_sync_guest() {
 run_sync_with_mise_lock() {
   local vm_name="$1"
   shift
-  local lock_dir="${SB_MISE_LOCK_DIR:-$HOME/Data/sandboxes/mise/aarch64-linux}"
+  local lock_dir="${SB_MISE_LOCK_DIR:-$SB_MISE_HOST_DIR}"
   mkdir -p "$lock_dir"
   local lock_file="$lock_dir/.sync.lock"
   exec 9>"$lock_file"
