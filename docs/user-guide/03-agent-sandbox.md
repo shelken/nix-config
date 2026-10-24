@@ -153,6 +153,28 @@ VM 规格: cpus=4, memory=8G
 
 `上限一致` 显示 `inconsistent` 表示 `sb.yaml` 已改、主 VM 还没重建；`缺失工具` 不为「无」时执行 `sb sync`
 
+### 看当前项目拿到了哪些授权
+
+在项目目录里执行，不会创建 VM，也不会启动 Agent：
+
+```bash
+sb plan
+```
+
+```
+项目根: /Users/me/Code/my-app
+额外路径:
+  无
+导入文件:
+  /Users/me/.kube/home-ops.yaml → ~/.kube/home-ops.yaml
+放行的私网目标:
+  192.168.69.46:443（sb.yaml 默认放行）
+放行的宿主端口:
+  host:tcp:3425
+```
+
+沙箱里连不上某个内网地址、读不到某个文件时，先看这里有没有列出。`.sandbox.yaml` 写错或超出上限时它会和启动一样报错
+
 ### 进沙箱看看
 
 ```bash
