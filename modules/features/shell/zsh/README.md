@@ -5,7 +5,7 @@
 
 ## 特定配置
 
-`$HOME/.specific.zsh` 是凭据**覆盖层**（ADR 0010）：基座值来自仓库 `modules/features/secrets/secrets.nix` 的 `opSecretMap`（`op://` 引用，由 1Password 解析），覆盖层只放临时差异。`sec-run` 运行目标命令时把两者交给 `op run` 注入，主终端默认不加载。
+`$HOME/.specific.zsh` 是凭据**覆盖层**：基座值来自仓库 `modules/features/secrets/secrets.nix` 的 `opSecretMap`（`op://` 引用，由 1Password 解析），覆盖层只放临时差异。`sec-run` 运行目标命令时把两者交给 `op run` 注入，主终端默认不加载。
 
 - 临时换值/切换备用账号：`sec-env add KEY "op://Personal/<条目>/credential"`
 - 回落到基座值：注释掉或 `sec-env del KEY`

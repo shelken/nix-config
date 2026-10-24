@@ -41,7 +41,7 @@
       inherit (lib) mkIf;
       cfg = config.shelken.secrets;
 
-      # ─── 凭据基座与覆盖层（ADR 0010）───
+      # ─── 凭据基座与覆盖层 ───
       # 基座：仓库内声明的 op:// 引用映射，注入文件只含引用不含明文，可安全进 nix store
       opSecretMap = {
         APIM_API_KEY = "Personal/APIM_API_KEY";
