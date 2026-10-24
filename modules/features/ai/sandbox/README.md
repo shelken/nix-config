@@ -172,6 +172,4 @@ bash modules/features/ai/sandbox/e2e/smoke.sh
 
 需要宿主有 `msb`、ubuntu 镜像缓存、能访问公网与 Linux 构建器；默认现场构建 `sb`，可用 `SB_BIN` 指定。测试只读挂载共用 mise 层，不触发 `sb sync`
 
-## 旧入口
-
-`sb-default`（[sb-default.yaml](./sb-default.yaml)、[_wrapper.nix](./_wrapper.nix)）是上一代单 VM 入口，把 `~/Code` 挂到 `/workspace`，与 `sb` 并存，切换完成后删除
+冒烟测试之外的行为验证（首次启动、OMP 调模型、sync、生命周期与授权）见项目技能 [verify-sandbox](../../../../.agents/skills/verify-sandbox/SKILL.md)

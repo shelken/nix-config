@@ -66,7 +66,7 @@ cmd_doctor() {
   check "已 setup：sb 可执行且受 GC root 保护" "test -x '$WORK/gen/home-path/bin/sb'"
   check "隔离配置已发布（含 sync-guest.sh）" "test -f '$WORK/sbcfg/current/sync-guest.sh'"
   check "测试项目在挂载根内" "test -d '$PROJ/.git'"
-  check "隔离 MSB_HOME 看不到日常 sb-default" "! iso_env '$MSB_BIN' ls 2>/dev/null | grep -q sb-default"
+  check "msb 配置的 home 指向隔离目录" "jq -e --arg h '$WORK/msb' '.home == \$h' '$WORK/msb.json'"
   check "Linux 构建器可用" "nix build --no-link --impure --expr '(builtins.getFlake \"nixpkgs\").legacyPackages.aarch64-linux.runCommand \"probe-\${toString builtins.currentTime}\" {} \"uname -m > \$out\"'"
   [[ "$ok" -eq 1 ]] || die "doctor 未通过，不要继续驱动"
 }

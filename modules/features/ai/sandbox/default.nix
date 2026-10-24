@@ -49,19 +49,6 @@
         inherit (generator) guestBinPath;
       };
 
-      sandbox = import ./_wrapper.nix {
-        inherit
-          pkgs
-          linuxPkgs
-          gitConfig
-          msbConfig
-          msbHome
-          ;
-        inherit sharedMiseDir;
-        name = "sb-default";
-        conf = ./sb-default.yaml;
-      };
-
       sb = import ./_sb.nix {
         inherit
           pkgs
@@ -106,10 +93,7 @@
           run ${generator.publishScript}
         '';
 
-        home.packages = [
-          sandbox
-          sb
-        ];
+        home.packages = [ sb ];
       };
     };
 }

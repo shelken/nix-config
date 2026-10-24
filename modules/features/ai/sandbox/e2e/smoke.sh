@@ -17,7 +17,7 @@
 #         默认现场构建 sb，可用 SB_BIN=<sb路径> 覆盖跳过构建。
 #
 # 硬约束（与被替换的旧 e2e 套件一致）:
-#   - 一次性 MSB_HOME（mktemp 后取真实路径），绝不触碰日常 VM sb-default；
+#   - 一次性 MSB_HOME（mktemp 后取真实路径），绝不触碰日常主 VM；
 #     绝不全局 export MSB_HOME，msb 只以单命令前缀执行。
 #   - 共用 mise 目录只挂载、绝不写入/移动/删除：SB_SANDBOX_CONFIG 指向空
 #     目录，首次建 VM 的自动 sb sync 因找不到 sync-guest.sh 而跳过（上下文
