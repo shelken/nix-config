@@ -24,7 +24,12 @@
       # 但 store 里的源文件是只读的，cp 在目标不存在时会连权限一起继承（444），
       # 导致 bun install 报 EACCES，故复制后必须显式补可写位。
       postInstall = ''
-        plugins="$HOME/.omp/plugins"
+        # 与 OMP 的解析一致：$XDG_DATA_HOME/omp 存在时插件在其下（沙箱），否则在 ~/.omp/plugins（宿主）
+        if [[ -n "''${XDG_DATA_HOME:-}" && -d "$XDG_DATA_HOME/omp" ]]; then
+          plugins="$XDG_DATA_HOME/omp/plugins"
+        else
+          plugins="$HOME/.omp/plugins"
+        fi
         mkdir -p "$plugins/node_modules"
         if [[ ! -f "$plugins/package.json" ]] || ! cmp -s ${./omp/plugins/package.json} "$plugins/package.json"; then
           cp -f ${./omp/plugins/package.json} "$plugins/package.json"

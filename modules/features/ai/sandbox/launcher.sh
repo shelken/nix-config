@@ -362,9 +362,7 @@ BWRAP_ARGS=(
 if [[ -d /data ]]; then
   BWRAP_ARGS+=(--bind /data /data)
   # OMP 只在 $XDG_*_HOME/omp 已存在时使用 XDG 路径，否则回落到只读的 ~/.omp/agent 而无法建库
-  mkdir -p /data/xdg/data/omp /data/xdg/state/omp /data/xdg/cache/omp /data/xdg/config /data/mise /data/omp/plugins /data/xdg/data/mise/shims
-  # 同理插件目录：XDG 生效后 OMP 读 $XDG_DATA_HOME/omp/plugins，安装位置 /data/omp/plugins 需链到这里
-  ln -sfn /data/omp/plugins /data/xdg/data/omp/plugins
+  mkdir -p /data/xdg/data/omp /data/xdg/state/omp /data/xdg/cache/omp /data/xdg/config /data/mise /data/xdg/data/mise/shims
 fi
 
 # 宿主共用 mise 目录：执行上下文内只读，安装仅经 sb sync
@@ -379,7 +377,6 @@ if [[ -d /run/sandbox-config ]]; then
     BWRAP_ARGS+=(
       --dir /root/.omp
       --symlink /run/sandbox-config/current/.omp/agent /root/.omp/agent
-      --symlink /data/omp/plugins /root/.omp/plugins
     )
   fi
   if [[ -e /run/sandbox-config/current/.agents ]]; then
