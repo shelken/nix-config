@@ -1,10 +1,7 @@
 {
   flake.modules.homeManager.ai =
     {
-      lib,
-      config,
       pkgs,
-      mylib,
       ...
     }:
     let
@@ -38,17 +35,6 @@
           enable = false; # use homebrew
         };
 
-        # computer-use / spawn-subagent 与 skills 同源，软链到工作树源码即时生效
-        home.file.".local/bin/computer-use" =
-          mylib.mkConfigFile config ./skills/computer-use-best-practice/scripts/computer-use.ts;
-        home.file.".local/bin/spawn-subagent" =
-          mylib.mkConfigFile config ./skills/subagent-policy/spawn-subagent;
-
-        shelken.dev.sandbox.hostCommands = {
-          computer-use = "computer-use 控制宿主 macOS 图形界面，沙箱内无法访问宿主窗口";
-          spawn-subagent = "spawn-subagent 在宿主终端 (Herdr/Kitty) 编排子代理，沙箱内无法访问宿主终端 multiplexer";
-        };
-
         home.packages = [
           ctx7
           deepwiki
@@ -59,6 +45,29 @@
           # twitter
           pkgs.imagemagick
         ];
+
+        # 需要较新版本、用 mise 管理更方便的 CLI
+        programs.mise.globalConfig.tools = {
+          # agent tools
+          herdr = "latest";
+          worktrunk = "0.79";
+          rtk = "0.50";
+          "github:lycorp-jp/sim-use" = "0.14"; # ios 模拟器控制
+
+          # agent client
+          # 需要保留的会定死版本
+          # codex = "latest";
+          # "npm:droid" = "latest";
+          antigravity-cli = "1.1.24";
+          # codex / claude-code 已迁入共享工具登记表（modules/features/ai/tools.nix）
+        };
+
+        programs.zsh.initContent = ''
+          # worktrunk (wt) shell integration
+          if command -v wt >/dev/null 2>&1; then
+            eval "$(wt config shell init zsh)"
+          fi
+        '';
       };
     };
 }
