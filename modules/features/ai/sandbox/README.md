@@ -73,7 +73,7 @@ flowchart LR
 | `mount_roots` | 无 | 挂载根，支持 `~`、`${HOME}`；先解析符号链接，guest 内路径与宿主一致 |
 | `network.allow` | `public`、`dns` | VM 级网络策略（msb 规则语法）：`public`、`dns`、`private`、`host:tcp:<端口>`。`private` 整体放开私网，逐项限制由上下文内的 iptables 链完成；改它会改变上限指纹、触发重建 |
 | `network.default_grant` | 无 | 所有上下文默认放行的私网 `IP:端口`；不进 VM 配置，改了不触发重建 |
-| `secrets` | 无 | `变量名: { allow: [域名或 IP] }`，真实值由宿主 `sec-run` 注入 |
+| `secrets` | 无 | `变量名: { allow: [域名或 IP], passthrough: [域名] }`，真实值由宿主 `sec-run` 注入；`allow` 是替换真实值的目标，`passthrough` 是占位符原样放行的目标（当前全部为 `*`，原因见「网络与 secret」）；改它会改变上限指纹、触发重建 |
 
 ### 授权：项目 `.sandbox.yaml`
 
@@ -123,6 +123,8 @@ sequenceDiagram
 FORWARD 默认 DROP。公网只在 VM 级控制，不做上下文级限制
 
 secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符，请求发往该 secret 的 `allow` 目标时才换成真实值，token 不落盘。GitHub 的 `git@github.com:` remote 在 guest 内改写为 HTTPS，配合 `GITHUB_TOKEN` 占位符认证；不共享宿主 SSH 私钥
+
+占位符本身也会进入对话：Agent 读到含 `$MSB_<名字>` 的文件或文档、执行 `env` 时，它就留在上下文里，随后每一轮请求体都带着它发往模型服务。msb 对发往 `allow` 之外目标的占位符默认拦截并切断连接，客户端看到的是首字节前的 `ECONNRESET`，`usage` 全为 0。所以 `sb.yaml` 给每个 secret 设 `passthrough: ["*"]`：占位符不含凭据，原样发到任何目标都不泄露，真实值仍只替换给 `allow` 里的目标。排查类似断连时，看宿主 `~/Data/sandboxes/msb/sandboxes/sb-main/logs/runtime.log` 里有无新增 `secret violation`
 
 ### 已知局限
 
