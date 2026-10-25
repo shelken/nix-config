@@ -33,18 +33,29 @@ network:
   default_grant:
     - "192.168.69.46:443"
 
-# Secret 全局声明（受保护凭据及允许的目标域名/IP）
+# Secret 全局声明：allow 是真实值的替换目标；passthrough 是占位符的放行目标
+# 占位符 $MSB_<名字> 一旦进入对话（读到含它的文件或文档、跑 env），就会随每轮请求体发往模型服务。
+# msb 对发往 allow 之外目标的占位符默认拦截并切断连接，表现为首字节前 ECONNRESET。
+# 占位符本身不含凭据，原样放行到任何目标不会泄露凭据；真实值仍只替换给 allow 里的目标
 secrets:
   GITHUB_TOKEN:
     allow:
       - "github.com"
       - "api.github.com"
+    passthrough:
+      - "*"
   CPA_PI_API_KEY:
     allow:
       - "cpa.int.ooooo.space"
+    passthrough:
+      - "*"
   COMMANDCODE_API_KEY:
     allow:
       - "commandcode.int.ooooo.space"
+    passthrough:
+      - "*"
   WX_PI_API_KEY:
     allow:
       - "chatapi.weixin.qq.com"
+    passthrough:
+      - "*"
