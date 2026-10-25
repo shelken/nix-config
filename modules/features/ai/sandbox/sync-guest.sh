@@ -53,9 +53,8 @@ if [[ -n "$ca_bundle" ]]; then
 fi
 
 # 确保 /data 与 /root 基础目录结构存在
-mkdir -p /data/mise /data/xdg/data/mise /data/xdg/cache/mise /data/xdg/config/mise "$MISE_SHIMS_DIR" /data/omp/plugins /root/.omp
+mkdir -p /data/mise /data/xdg/data/mise /data/xdg/cache/mise /data/xdg/config/mise "$MISE_SHIMS_DIR" /data/xdg/data/omp /root/.omp
 ln -sfn /run/sandbox-config/current/.omp/agent /root/.omp/agent 2>/dev/null || true
-ln -sfn /data/omp/plugins /root/.omp/plugins 2>/dev/null || true
 if [[ -e /run/sandbox-config/current/.pi ]]; then
   ln -sfn /run/sandbox-config/current/.pi /root/.pi 2>/dev/null || true
 fi
