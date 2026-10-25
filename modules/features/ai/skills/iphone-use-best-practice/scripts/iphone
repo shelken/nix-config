@@ -142,6 +142,8 @@ def raw(method, path, body=None, timeout=30):
         conn.request(method, path, json.dumps(body) if body is not None else None, {"Content-Type": "application/json"})
         resp = conn.getresponse()
         data = resp.read()
+    except socket.timeout:
+        raise Fail(f"WDA {timeout}s 内没有响应（WDA 仍在运行，多半是在读已被挂起的 App 的界面；稍等后重试）")
     except (ConnectionError, OSError) as e:
         raise Fail(f"WDA 未运行 ({e})。先运行 iphone up")
     finally:
@@ -302,15 +304,38 @@ def require_unlocked():
         raise Fail("手机处于锁屏。请用户本人解锁（密码、Face ID 由用户完成）。")
 
 
-def act(args, do):
-    """执行动作并输出前后差分。"""
+APP_STATES = {0: "未知", 1: "未运行", 2: "后台挂起", 3: "后台运行", 4: "前台"}
+HOME_SETTLE_MS = 2500  # 不知道旧 App 是谁时的兜底等待
+
+
+def app_state(bundle):
+    return sess("POST", "/wda/apps/state", {"bundleId": bundle}, timeout=5)
+
+
+def wait_left_foreground(bundle, timeout=10):
+    """回主屏后太早取树，WDA 会去读刚被系统挂起的旧 App，卡满约 60s 才返回。
+    等旧 App 离开前台再取树（约 0.9s，实测 8/8 不卡）。信号不能用 activeAppInfo：它在这个窗口里会卡住（实测 2/8）。"""
+    end = time.time() + timeout
+    while time.time() < end and app_state(bundle) == 4:
+        time.sleep(0.1)
+
+
+def act(args, do, leaves_app=False):
+    """执行动作并输出前后差分。leaves_app: 动作会把前台 App 切走（回主屏）。"""
     require_unlocked()
     old = load_last() if LAST.exists() else {"app": "?", "nodes": []}
+    # 只有动作前确认旧 App 确实在前台，才能用「离开前台」当信号；快照可能是过期的
+    leaving = old["app"] if leaves_app and old["app"] not in ("?", "com.apple.springboard") and app_state(old["app"]) == 4 else None
     do()
     if getattr(args, "no_observe", False):
         print("ok")
         return
-    time.sleep(args.wait / 1000)
+    if args.wait is not None:
+        time.sleep(args.wait / 1000)
+    elif leaving:
+        wait_left_foreground(leaving)
+    else:
+        time.sleep((HOME_SETTLE_MS if leaves_app else 500) / 1000)
     print("\n".join(diff(old, snapshot_now())))
 
 
@@ -1232,12 +1257,21 @@ def cmd_type(a):
 def cmd_key(a):
     keys = {"return": "\n", "delete": "\u0008"}
     if a.name == "home":
-        return act(a, lambda: wda("POST", "/wda/homescreen", {}))
+        return act(a, lambda: wda("POST", "/wda/homescreen", {}), leaves_app=True)
     act(a, lambda: sess("POST", "/wda/keys", {"value": [keys[a.name]]}))
 
 
 def cmd_home(a):
-    act(a, lambda: wda("POST", "/wda/homescreen", {}))
+    act(a, lambda: wda("POST", "/wda/homescreen", {}), leaves_app=True)
+
+
+def cmd_app(a):
+    if a.bundle:
+        st = app_state(a.bundle)
+        print(f"{a.bundle}: {APP_STATES.get(st, st)}")
+        return
+    info = wda("GET", "/wda/activeAppInfo", timeout=5) or {}
+    print(f"前台: {info.get('bundleId')} (pid {info.get('pid')})")
 
 
 def cmd_scroll(a):
@@ -1933,7 +1967,7 @@ def main():
         sp.set_defaults(fn=fn)
         if observe:
             sp.add_argument("--no-observe", action="store_true", help="动作后不输出树差分")
-            sp.add_argument("--wait", type=int, default=500, help="动作后等待界面稳定的毫秒数，默认 500")
+            sp.add_argument("--wait", type=int, default=None, help="动作后等待界面稳定的毫秒数，默认 500；home 默认等旧 App 离开前台")
         return sp
 
     sp = add("init", cmd_init, "写配置；只必填 --bundle，换设备时重新运行")
@@ -1974,6 +2008,8 @@ def main():
     sp = add("key", cmd_key, "按键", observe=True)
     sp.add_argument("name", choices=["return", "delete", "home"])
     add("home", cmd_home, "回主屏幕", observe=True)
+    sp = add("app", cmd_app, "前台 App；给 bundle id 则查该 App 的运行状态（未运行/后台挂起/后台运行/前台）")
+    sp.add_argument("bundle", nargs="?")
     sp = add("scroll", cmd_scroll, "滚动：down 表示看后面的内容", observe=True)
     sp.add_argument("direction", choices=["down", "up", "left", "right"])
     sp.add_argument("target", nargs="?", metavar="tN")

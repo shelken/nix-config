@@ -61,6 +61,8 @@ iphone key return
 iphone scroll down                    # down = 看后面的内容；可加 tN 指定滚动区域
 iphone home
 iphone open https://example.com        # URL 或 App scheme；prefs:root=… 需先 iphone setup-shortcut
+iphone app                           # 前台 App 与 pid（不读界面树）
+iphone app com.apple.Preferences     # 某个 App 的状态：未运行 / 后台挂起 / 后台运行 / 前台
 ```
 
 不知道 bundle id：`iphone home` → `iphone find <App 名>` → `iphone tap tN`。
