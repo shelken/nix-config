@@ -22,5 +22,6 @@
 - 执行任何 nix 操作（eval/build）前，确保自己新增或删除的文件已被 git 跟踪
 - 新增或调整软件配置前，先读 `docs/agents/software-config.md`
 - 根目录 `GLOSSARY.md` 记录共享领域知识，架构决策记录放在 `docs/adr/`
+- `docs/adr/` 只放与 nix、本仓库、dotconfig 有关的决策；具体软件或脚本的设计放在其代码目录的 `README.md`
 - 创建、修改或测试机器特定定时任务时使用 `.agents/skills/create-task/`
 - 修改或新增 `modules/features/ai/skills/` 下的技能前，先读该目录的 `README.md`，其中规定外部拷贝技能的来源记录
