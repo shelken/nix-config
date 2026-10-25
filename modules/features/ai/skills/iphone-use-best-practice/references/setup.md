@@ -8,13 +8,13 @@
 
 - iPhone 用 USB 连接、解锁、信任此电脑，由用户本人完成
 - go-ios（命令 `ios`）在 PATH 里，由 nix 提供，声明在 `modules/features/ai/host-commands/iphone.nix`。`iphone` 不会自己装。Xcode 路径本身不调用它
-- 写配置，只有 `--bundle` 必填
+- 首次配置，只有 `--bundle` 必填（它无法探测）；手机的 UDID 不用写
 
 ```bash
 iphone init --bundle <全局唯一的 bundle id，如 com.example.wda>
 ```
 
-只接一台手机时自动取它的 UDID，接了多台用 `--udid` 指定。换手机或换 bundle id 要重新运行（先 `iphone down`），旧的签名产物会被删掉，`up` 会重新签名。
+首次配置时只接一台手机就自动取它的 UDID，接了多台用 `--udid` 指定。**换手机不用重新运行 `init`**：直接 `iphone up`，配置里的手机不在 USB 上且 USB 上恰好一台时自动换过去，并清掉旧的签名产物；USB 上有多台时报错，用 `iphone up --udid <UDID>` 指定。只有换 bundle id 才需要再运行 `init`（先 `iphone down`）。
 
 ### 我属于哪条路径
 
@@ -164,8 +164,8 @@ plumesign 的账号令牌与私钥在 `~/.config/PlumeImpactor/`，不在上面�
 |---|---|
 | `尚未配置` | 先做首次配置的 `iphone init --bundle ...` |
 | `iPhone 没有通过 USB 连接`、`没有 USB 设备` | 接数据线、解锁、信任此电脑 |
-| `有多台 USB 设备` | `iphone init --udid <UDID>` 指定其一 |
-| `WDA 还在运行。先 iphone down` | 换设备前先 `iphone down`，再 `iphone init` |
+| `配置的手机不在 USB 上，而 USB 上有多台` | `iphone up --udid <UDID>` 指定其一，配置会随之更新 |
+| `WDA 还在运行。先 iphone down` | 只在 `iphone init` 时出现（换 bundle id）：先 `iphone down` 再 `iphone init`。换手机用 `iphone up`，不会出现 |
 | `没有可用的安装路径` | 三条路径都不满足。按报错里 Xcode、plumesign、SideStore 各一行补齐其一，见「首次配置」 |
 | `手机系统 ... 低于下限` | 官方 Runner 装不上，先升级手机系统 |
 | `缺 go-ios`、`缺 rcodesign`、`缺 plumesign` | 按报错里的安装方式装。nix 与 mise 的声明在 `modules/features/ai/host-commands/iphone.nix`，`iphone` 不会自己装 |

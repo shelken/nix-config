@@ -967,8 +967,42 @@ def up_xcode(cfg, a):
 
 # ---------- 子命令 ----------
 
+def save_config(old, udid, bundle, team):
+    if udid != old.get("udid") or bundle != old.get("bundle_id"):
+        # 旧的签名只含旧设备或旧 bundle id；删掉后 up 会自动重新签名
+        shutil.rmtree(RUNNER, ignore_errors=True)
+        shutil.rmtree(SIGNED, ignore_errors=True)
+        (CLI / "session").unlink(missing_ok=True)
+    cfg = {"device_port": 8100, **old, "udid": udid, "bundle_id": bundle}
+    for k in ("local_port", "source_dir"):
+        cfg.pop(k, None)  # 都已不再使用
+    if team:
+        cfg["team_id"] = team
+    CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
+    return cfg
+
+
+def pick_device(cfg, want=None):
+    """up 用哪台手机。--udid 指定的优先；否则配置里的在 USB 上就用它；不在，USB 上恰好一台就换到它，没有或多台就报错。
+    换设备会写回配置并清掉旧签名，不用再单独运行 init。"""
+    if want is None and usb_device(cfg["udid"]):
+        return cfg
+    if want is None:
+        devs = usb_devices()
+        if not devs:
+            raise Fail("iPhone 没有通过 USB 连接。接上数据线并解锁。")
+        if len(devs) > 1:
+            raise Fail("配置的手机不在 USB 上，而 USB 上有多台: " + ", ".join(d[1] for d in devs) + "。用 iphone up --udid <其一> 指定")
+        want = devs[0][1]
+    if want == cfg["udid"]:
+        return cfg
+    print(f"换设备: {cfg['udid']} → {want}", flush=True)
+    stop_wda()  # 旧手机的 Runner 进程留着没用，也会挡住新设备
+    return save_config(cfg, want, cfg["bundle_id"], None)
+
+
 def cmd_init(a):
-    """首次配置，也用于换设备：沿用已有配置里的 bundle、team 和其他键。只有 --bundle 必填，--team 只有走 Xcode 路径才要。"""
+    """首次配置，或换 bundle id：沿用已有配置里的 team 和其他键。只有 --bundle 必填，--team 只有走 Xcode 路径才要。换手机不用它，up 会自动换。"""
     HOME.mkdir(parents=True, exist_ok=True)
     old = json.loads(CFG.read_text()) if CFG.exists() else {}
     if pid_alive():
@@ -985,17 +1019,7 @@ def cmd_init(a):
         if len(devs) > 1:
             raise Fail("有多台 USB 设备，用 --udid 指定其一: " + ", ".join(d[1] for d in devs))
         udid = devs[0][1]
-    if udid != old.get("udid") or bundle != old.get("bundle_id"):
-        # 旧的签名只含旧设备或旧 bundle id；删掉后 up 会自动重新签名
-        shutil.rmtree(RUNNER, ignore_errors=True)
-        shutil.rmtree(SIGNED, ignore_errors=True)
-        (CLI / "session").unlink(missing_ok=True)
-    cfg = {"device_port": 8100, **old, "udid": udid, "bundle_id": bundle}
-    for k in ("local_port", "source_dir"):
-        cfg.pop(k, None)  # 都已不再使用
-    if team:
-        cfg["team_id"] = team
-    CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
+    save_config(old, udid, bundle, team)
     print(f"已写入 {CFG}（设备 {udid}）\n下一步: iphone up（自动选路）")
     if not team:
         print("只有走 Xcode 路径才需要 Team ID；到时 iphone init --team <TeamID> 补上")
@@ -1029,7 +1053,7 @@ def finish_up(a):
 
 
 def cmd_up(a):
-    cfg = config()
+    cfg = pick_device(config(), a.udid)
     need_usb(cfg)
     if a.restart:
         stop_wda()
@@ -2026,10 +2050,10 @@ def selftest():
     # 已装 Runner 起不来（比如账号证书被吊销，本地副本却没到期）：up 仍要走一轮签名安装，且只有一轮
     signs, launches = [], []
     pf = FakeP(installed="com.x.y.runner", start=False, plume="")
-    with patched(config=lambda: c4, need_usb=lambda c: (7, "U"), need_tool=lambda n: None, Probes=lambda timeout: pf,
+    with patched(config=lambda: c4, usb_device=lambda u: (7, "U"), need_usb=lambda c: (7, "U"), need_tool=lambda n: None, Probes=lambda timeout: pf,
                  install_plumesign=lambda c, d: signs.append(d), finish_up=lambda a: None,
                  launch_runwda=lambda c, timeout, rid: launches.append(rid)):
-        quiet(cmd_up, argparse.Namespace(restart=False, timeout=5))
+        quiet(cmd_up, argparse.Namespace(restart=False, timeout=5, udid=None))
     assert pf.started == ["com.x.y.runner"] and signs == [7] and launches == ["com.x.y.runner"], (pf.started, signs, launches)
 
     # DDI 在启动 runwda 之前准备：准备失败时不会启动进程
@@ -2064,6 +2088,20 @@ def selftest():
             c2 = json.loads(CFG.read_text())
             assert c2["team_id"] == "TEAM1" and c2["bundle_id"] == "com.x.y"
             require_team(c2)
+
+            # up 选设备：配置里的在 USB 上就用它；不在则换到唯一一台；多台或没有就报错；--udid 优先
+            cur, saved, stopped = c2, [], []
+            old = {**cur, "udid": "OLD"}
+            fake = {"save_config": lambda o, u, b, tm: saved.append(u) or {**o, "udid": u}, "stop_wda": lambda: stopped.append(1)}
+            with patched(usb_device=lambda u: (1, u) if u == "U1" else None, **fake):
+                assert pick_device(cur) is cur and not saved
+                with patched(usb_devices=lambda: [(2, "U1")]):
+                    assert pick_device(old)["udid"] == "U1" and saved == ["U1"] and stopped == [1]
+                with patched(usb_devices=lambda: [(2, "U1"), (3, "U9")]):
+                    expect_fail(lambda: pick_device(old), "U1", "U9", "--udid")
+                with patched(usb_devices=lambda: []):
+                    expect_fail(lambda: pick_device(old), "USB")
+                assert pick_device(cur, "U9")["udid"] == "U9" and saved == ["U1", "U9"]
     print("selftest ok")
 
 
@@ -2079,13 +2117,14 @@ def main():
             sp.add_argument("--wait", type=int, default=None, help="动作后等待界面稳定的毫秒数，默认 500；home 默认等旧 App 离开前台")
         return sp
 
-    sp = add("init", cmd_init, "写配置；只必填 --bundle，换设备时重新运行")
+    sp = add("init", cmd_init, "首次配置；只必填 --bundle。换手机不用它，iphone up 会自动换")
     sp.add_argument("--bundle", help="全局唯一的 bundle id，如 com.example.wda；首次必填，已有配置时可省略")
     sp.add_argument("--team", help="Apple Team ID；只有走 Xcode 路径才需要")
     sp.add_argument("--udid", help="手机 UDID；省略时用唯一一台 USB 设备")
     add("renew", cmd_renew, "对当前路径强制重新签名并安装（免费证书 7 天过期后用）")
     sp = add("up", cmd_up, "按本机条件自动选路，把 Runner 装上手机并启动，等待就绪；证书过期时自动重签")
     sp.add_argument("--restart", action="store_true")
+    sp.add_argument("--udid", help="用这台手机（换设备时用；省略时配置里的不在 USB 上则自动换到唯一一台）")
     sp.add_argument("--timeout", type=int, default=120)
     sp.add_argument("--no-keep-awake", action="store_true", help="不把自动锁定改为永不")
     sp = add("down", cmd_down, "停止由本 CLI 启动的 WDA，并把自动锁定恢复为 3 分钟")
