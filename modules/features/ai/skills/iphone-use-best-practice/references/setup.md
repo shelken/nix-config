@@ -95,7 +95,7 @@ iphone up
 另外：
 
 - 两遍签名复用同一个证书，账号上的证书数不变（实测）
-- 最后一步在不支持的设备上会多花约 130 秒，只警告不失败，可用 `iphone up --no-keep-awake` 跳过，见「已知限制」
+- 最后一步在没装中转快捷指令的 iOS 15 上约 17 秒后只警告、不失败，可用 `iphone up --no-keep-awake` 跳过，见「已知限制」
 - 之后 `up` 发现手机已装 Runner 且证书未过期，直接启动，只要几秒
 - 证书 7 天过期，`up` 自动重签；剩余天数看 `iphone status` 的「证书」一行
 - Runner 的 bundle id 是 `<bundle id>.runner`，与 Xcode 路径的后缀不同
@@ -186,7 +186,7 @@ plumesign 的账号令牌与私钥在 `~/.config/PlumeImpactor/`，不在上面�
 - plumesign 路径申请新证书超过账号上限时，不询问直接吊销现有证书；实测观测到的免费账号上限是 2。要用不与其他侧载工具共用的 Apple ID
 - plumesign 路径只在 iOS 15.6.1 上验证。iOS 17 及以上的设备，go-ios 需要 tunnel，没有验证，这类设备走 Xcode 路径
 - Xcode 路径在改造后没有在真机重新验证，SideStore 路径从未在设备上跑过
-- 自动锁定的界面点击回退在 iOS 15.6.1 上失败：报「设置里没找到 Button com.apple.settings.displayAndBrightness」，`up` 只警告不失败，但这一步耗时约 130 秒。实测的手机没装中转快捷指令，走的就是这条回退，原因未查明。`iphone up --no-keep-awake` 可以跳过
+- iOS 15.6.1 的设置页没有 `com.apple.settings.*` 标识，行的 `name` 只是本地化文字，所以按标识找行的界面点击回退用不了。没装中转快捷指令时，自动锁定约 17 秒后报「这台手机的设置页没有稳定标识」，`up` 只警告不失败（原先要滚动搜索约 116 秒才报「设置里没找到 Button …」）。WDA 直接打开 `prefs:` 在 iOS 15.6.1 上请求返回成功，但设置不会打开。装了中转快捷指令后能否直达、到达自动锁定页后选项行能否点中，都未验证（选项行同样没有标识）。`iphone up --no-keep-awake` 可以跳过
 - `launch` 只认 bundle id。`xcrun devicectl device info apps` 实测只列出 5 个开发者签名的 App，不含 App Store 的 App，所以 CLI 不提供按名称启动。
 - 自绘界面、部分游戏的 AX 树为空，用 `shot` 加坐标点击。
 - WDA 直接打开 `prefs:` / `settings-navigation:` 会被系统拒绝（iOS 27.0.1，`LSApplicationWorkspaceErrorDomain 115`）；`App-prefs:` 带页面路径会落到「App」页。但快捷指令的「打开 URL」动作能打开 `prefs:root=DISPLAY&path=AUTOLOCK`，WDA 又能打开 `shortcuts://run-shortcut?name=…`，所以经快捷指令可一步直达任意设置页。

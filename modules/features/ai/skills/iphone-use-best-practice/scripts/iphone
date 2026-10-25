@@ -1351,9 +1351,28 @@ def cmd_shortcut_link(a):
     print(RELAY_URL)
 
 
+def _settings_ids(nodes):
+    """设置页有没有 com.apple.settings.* 标识：True 有；False 页面已加载却没有（iOS 15.6.1 实测，行的 name 只是本地化文字）；
+    None 页面还没加载好。按标识找行在 False 时必然落空，不必再滚动搜索。"""
+    if any((n.get("name") or "").startswith("com.apple.settings.") for n in nodes):
+        return True
+    return False if sum(n["type"] == "Cell" for n in nodes) >= 3 else None
+
+
 def _autolock_via_ui():
     sess("POST", "/wda/apps/activate", {"bundleId": SETTINGS}, timeout=45)
     time.sleep(0.8)
+    end = time.time() + 8
+    while time.time() < end:
+        try:
+            state = _settings_ids(snapshot_now()["nodes"])
+        except Fail:
+            state = None
+        if state is False:
+            raise Fail("这台手机的设置页没有稳定标识（iOS 15 实测），界面点击回退用不了；装中转快捷指令后可直达：iphone shortcut-link")
+        if state:
+            break
+        time.sleep(0.5)
     for kind, name, scrolls in (("Button", "com.apple.settings.displayAndBrightness", 8), ("Cell", "AUTOLOCK", 3)):
         _tap_node(_find_scrolling(kind, name, scrolls)[1])
         time.sleep(0.7)
@@ -1525,6 +1544,10 @@ def selftest():
     d = diff(old, new)
     assert "+ t2 Switch \"Wi-Fi\" [0,0,1,1]" in d and any(l.startswith("- TextField") for l in d), d
     assert diff(old, old)[0].startswith("observe: 树无变化")
+    # iOS 15 的设置页没有 com.apple.settings.* 标识，只有本地化文字；页面已加载却没有标识就该立刻放弃，不能滚动搜索
+    assert _settings_ids([{"type": "Cell", "label": t, "rect": [0, 0, 1, 1]} for t in "abc"]) is False
+    assert _settings_ids([]) is None
+    assert _settings_ids([{"type": "Button", "name": "com.apple.settings.displayAndBrightness", "rect": [0, 0, 1, 1]}]) is True
     # 本进程启动的子进程被终止后是僵尸；pid_alive 必须把它当作已退出，stop_wda 不能抛 EPERM
     import tempfile
     g, saved = globals(), (PIDFILE, CLI)
