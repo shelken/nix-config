@@ -106,7 +106,7 @@ iphone up
 另外：
 
 - 两遍签名复用同一个证书，账号上的证书数不变（实测）
-- 最后一步在没装中转快捷指令的 iOS 15 上约 17 秒后只警告、不失败，可用 `iphone up --no-keep-awake` 跳过，见「已知限制」
+- 最后一步：已装中转快捷指令时，iOS 15 经 Safari 运行它，约 15 秒；没装时 iOS 15 的界面点击用不了，只警告、不失败。都可用 `iphone up --no-keep-awake` 跳过，见「已知限制」
 - 之后 `up` 发现手机已装 Runner 且证书未过期，直接启动，只要几秒
 - 证书 7 天过期，`up` 自动重签；剩余天数看 `iphone status` 的「证书」一行
 - Runner 的 bundle id 是 `<bundle id>.runner`，与 Xcode 路径的后缀不同
@@ -123,7 +123,7 @@ iphone up
 
 ### 中转快捷指令（每台手机装一次）
 
-WDA 直接打开 `prefs:` 会被系统拒绝，只有「快捷指令」里的「打开 URL」能打开。`iphone open <url>` 先直接打开，被拒（115）时转给中转快捷指令；`autolock`、`up`、`down` 靠它一步直达自动锁定页（约 6 秒）。
+WDA 直接打开 `prefs:` 会被系统拒绝，只有「快捷指令」里的「打开 URL」能打开。`iphone open <url>` 先直接打开，被拒（115）时转给中转快捷指令；`autolock`、`up`、`down` 靠它一步直达自动锁定页（约 6 秒）。**iOS 16.4 以下 WDA 的 `/url` 不可用**：它改用 Siri 语音识别说「Open {url}」，会唤醒 Siri，不会跳转，也不会运行快捷指令（iOS 15.6.1 实测，带 `bundleId` 的分支同样不支持）。CLI 读 `/status` 的系统版本，这时改在 Safari 地址栏输入链接，再点确认框「在“快捷指令”中打开此页面？」的放行按钮（做法来自 appium/appium#14996；iOS 15.6.1 实测能运行中转快捷指令，`autolock` 约 15 秒）。确认框的按钮名是本地化文字、没有语言无关的标识，所以按结构取：框里只有两个按钮，树顺序取消在前、放行在后，点最后一个。只在英文界面的 iOS 15.6.1 上验证过，从右到左的语言未验证。
 
 这是首次配置的一步，由用户做一次；之后 CLI **假定已装**，不逐次检查。没装或没跑通时 `autolock` 回退界面点击（约 20 秒，较不稳）并提示一次。`iphone init` 结束时会打印这两条命令：
 
@@ -197,7 +197,8 @@ plumesign 的账号令牌与私钥在 `~/.config/PlumeImpactor/`，不在上面�
 - plumesign 路径申请新证书超过账号上限时，不询问直接吊销现有证书；实测观测到的免费账号上限是 2。要用不与其他侧载工具共用的 Apple ID
 - plumesign 路径只在 iOS 15.6.1 上验证。iOS 17 及以上的设备，go-ios 需要 tunnel，没有验证，这类设备走 Xcode 路径
 - Xcode 路径在改造后没有在真机重新验证，SideStore 路径从未在设备上跑过
-- iOS 15.6.1 的设置页没有 `com.apple.settings.*` 标识，行的 `name` 只是本地化文字，所以按标识找行的界面点击回退用不了。没装中转快捷指令时，自动锁定约 17 秒后报「这台手机的设置页没有稳定标识」，`up` 只警告不失败（原先要滚动搜索约 116 秒才报「设置里没找到 Button …」）。WDA 直接打开 `prefs:` 在 iOS 15.6.1 上请求返回成功，但设置不会打开。装了中转快捷指令后能否直达、到达自动锁定页后选项行能否点中，都未验证（选项行同样没有标识）。`iphone up --no-keep-awake` 可以跳过
+- iOS 15.6.1 的设置页没有 `com.apple.settings.*` 标识，行的 `name` 是本地化文字（「3 minutes」「Never」），所以按标识找行的界面点击回退用不了；自动锁定页的选项行因此在名字对不上时按固定的 7 行顺序取（30 秒、1–5 分钟、永不）。装了中转快捷指令后 `autolock` 在 iOS 15.6.1 上实测可用（经 Safari，3 分钟与永不互相切换，各约 15 秒）；没装时报「这台手机的设置页没有稳定标识」，`up` 只警告不失败。WDA 直接打开 `prefs:` 在 iOS 15.6.1 上请求返回成功，但设置不会打开（实为 Siri 回退）。iOS 16.0–16.3 未验证。`iphone up --no-keep-awake` 可以跳过
+- iOS 16.4 以下经 Safari 运行中转快捷指令时（iOS 15.6.1 实测）：键盘输入偶尔多出字符（见过 `namUe`），封装输完会读回地址栏核对，不一致就清空并放慢重输；点地址栏中心会命中「隐私报告」弹层，所以点输入框右端；Safari 里残留的提示框或编辑态会让后面的输入落空，每次先清掉。键盘事件在没有输入框获得焦点时会让 WDA 卡死，只能 `iphone up --restart` 恢复，所以封装发键盘输入前一定先确认输入框已存在。设置 App 处于「后台挂起」时 `terminate` 会卡满 60 秒，这类旧系统上 `autolock` 不再终止它
 - `launch` 只认 bundle id。`xcrun devicectl device info apps` 实测只列出 5 个开发者签名的 App，不含 App Store 的 App，所以 CLI 不提供按名称启动。
 - 自绘界面、部分游戏的 AX 树为空，用 `shot` 加坐标点击。
 - WDA 直接打开 `prefs:` / `settings-navigation:` 会被系统拒绝（iOS 27.0.1，`LSApplicationWorkspaceErrorDomain 115`）；`App-prefs:` 带页面路径会落到「App」页。但快捷指令的「打开 URL」动作能打开 `prefs:root=DISPLAY&path=AUTOLOCK`，WDA 又能打开 `shortcuts://run-shortcut?name=…`，所以经快捷指令可一步直达任意设置页。

@@ -1370,21 +1370,99 @@ def _find_scrolling(kind, name, scrolls):
     raise Fail(f"设置里没找到 {kind} {name}（iOS 版本或语言变了？）")
 
 
-def _wait_node(kind, name, timeout):
-    """页面切换瞬间 /source 可能报 404（旧 App 已不在），重试到超时。"""
+AUTOLOCK_URL = "prefs:root=DISPLAY&path=AUTOLOCK"
+
+
+WDA_URL_MIN_IOS = (16, 4)
+SAFARI = "com.apple.mobilesafari"
+
+
+def wda_url_ok_in(version):
+    """WDA 的 /url 在 iOS 16.4 以下改用 Siri 语音识别说「Open {url}」：会唤醒 Siri，不会跳转，也不会运行快捷指令（iOS 15.6.1 实测）。
+    带 bundleId 的分支同样不支持。版本读不出来时按支持处理。"""
+    nums = [int(x) for x in re.findall(r"\d+", version)[:2]]
+    return not nums or tuple(nums + [0] * (2 - len(nums))) >= WDA_URL_MIN_IOS
+
+
+def wda_url_ok():
+    v = str(((wda("GET", "/status", timeout=5) or {}).get("os") or {}).get("version", ""))
+    return wda_url_ok_in(v)
+
+
+def _wait_any(pick, timeout, what):
+    """反复取树，pick(nodes) 返回节点就结束。页面切换瞬间 /source 可能报错，吞掉重试。"""
     end, last = time.time() + timeout, None
     while time.time() < end:
         try:
-            n = next((n for n in snapshot_now()["nodes"] if n["type"] == kind and n.get("name") == name), None)
+            n = pick(snapshot_now()["nodes"])
         except Fail as e:
             last, n = e, None
         if n:
             return n
         time.sleep(0.5)
-    raise Fail(f"{timeout}s 内没出现 {kind} {name}" + (f"（最后错误: {last}）" if last else ""))
+    raise Fail(f"{timeout}s 内没出现{what}" + (f"（最后错误: {last}）" if last else ""))
 
 
-AUTOLOCK_URL = "prefs:root=DISPLAY&path=AUTOLOCK"
+def _safari_dialog_buttons(nodes):
+    d = next((n for n in nodes if n.get("name") == "SFDialogView"), None)
+    if not d:
+        return None
+    dx, dy, dw, dh = d["rect"]
+    return [n for n in nodes if n["type"] == "Button" and dx <= n["rect"][0] <= dx + dw and dy <= n["rect"][1] <= dy + dh]
+
+
+def _reset_safari_bar():
+    """上一次中断会在 Safari 里留下提示框（如「地址无效」）或地址栏编辑态，后面的输入就全落空。
+    有对话框就点第一个按钮（单按钮提示是确定，确认框是取消），地址栏在编辑态就点取消。"""
+    for _ in range(3):
+        nodes = snapshot_now()["nodes"]
+        buttons = _safari_dialog_buttons(nodes)
+        cancel = next((n for n in nodes if n.get("name") == "CancelBarItemButton"), None)
+        if buttons:
+            _tap_node(buttons[0])
+        elif cancel:
+            _tap_node(cancel)
+        else:
+            return
+        time.sleep(0.8)
+
+
+def open_url_via_safari(url):
+    """WDA /url 不可用的系统（16.4 以下）改在 Safari 地址栏输入：非 http 的 scheme 会弹「在“X”中打开此页面？」，点放行按钮。
+    这是 Appium 维护者给的做法（appium/appium#14996），iOS 15.6.1 实测能运行快捷指令。"""
+    sess("POST", "/wda/apps/activate", {"bundleId": SAFARI}, timeout=45)
+    _reset_safari_bar()
+    url_field = lambda nodes: next((n for n in nodes if n["type"] == "TextField" and n.get("name") == "URL"), None)
+    for attempt in range(4):  # 进不了输入态就再点（最多点 3 次）；不能直接发键盘输入，没有焦点时 WDA 会卡死，只能重启
+        nodes = _wait_any(lambda ns: ns, 8, "Safari 界面")
+        if url_field(nodes):
+            break
+        if attempt == 3:
+            raise Fail("点了 Safari 地址栏，但没有进入输入状态；用 iphone shot 确认")
+        bar = next((n for n in nodes if n["type"] == "TextField" and n.get("name") == "TabBarItemTitle"), None)
+        if bar:  # 点右端：点中心会命中隐私报告等弹层（iOS 15.6.1 实测），同 type --clear 的约定
+            x, y, w, h = bar["rect"]
+            sess("POST", "/wda/tap", {"x": x + w - 3, "y": y + h / 2})
+        time.sleep(1.2)
+    for rate in (30, 10, 5):  # 键盘合成偶尔多出字符（iOS 15.6.1 实测 namUe），输完读回核对，不一致就清空，放慢再输
+        clear = next((n for n in snapshot_now()["nodes"] if n.get("name") == "ClearTextButton"), None)
+        if clear:  # 输入框里有内容才有这个按钮；AX 报出的值不一定是全文，按长度退格会留下残余
+            _tap_node(clear)
+            time.sleep(0.3)
+        for i in range(0, len(url), 200):
+            sess("POST", "/wda/keys", {"value": [url[i:i + 200]], "frequency": rate}, timeout=60)
+        typed = url_field(snapshot_now()["nodes"])
+        if typed and typed.get("value") == url:
+            break
+    else:
+        raise Fail("Safari 地址栏里的内容和要输入的链接一直对不上；用 iphone shot 确认")
+    sess("POST", "/wda/keys", {"value": ["\n"]})
+
+    def open_button(nodes):
+        """确认框的按钮名是本地化文字，没有语言无关的标识；结构固定：两个按钮，树顺序「取消」在前、「打开」在后（iOS 15.6.1 实测）。"""
+        buttons = _safari_dialog_buttons(nodes)
+        return buttons[-1] if buttons and len(buttons) == 2 else None
+    _tap_node(_wait_any(open_button, 8, "Safari 的「在 App 中打开」确认框"))
 
 
 def relay_name():
@@ -1428,32 +1506,57 @@ def _autolock_via_ui():
         time.sleep(0.7)
 
 
+AUTOLOCK_ORDER = [30, 60, 120, 180, 240, 300, -1]  # 页面上从上到下的选项
+
+
+def _autolock_row(nodes, seconds):
+    """iOS 16+ 选项行的 name 就是秒数；iOS 15 是本地化文字（「3 minutes」「Never」），这时按固定的 7 行顺序取。"""
+    row = next((n for n in nodes if n["type"] == "Cell" and n.get("name") == str(seconds)), None)
+    if row:
+        return row
+    cells = [n for n in nodes if n["type"] == "Cell"]
+    return cells[AUTOLOCK_ORDER.index(seconds)] if len(cells) == len(AUTOLOCK_ORDER) else None
+
+
+def _close_settings():
+    """结束设置 App。没在运行就不用终止。「后台挂起」时 WDA 的 terminate 会卡满 60s（日志 Failed to terminate … state is still
+    Running Background Suspended），WDA 单线程，后面的请求全排在它后面，客户端超时也没用（iOS 15.6.1 实测），
+    所以在 WDA /url 不可用的旧系统上不终止；更新的系统没有这个证据，保持原来的终止行为。"""
+    state = app_state(SETTINGS)
+    if state == 1 or (state == 2 and not wda_url_ok()):
+        return
+    try:
+        sess("POST", "/wda/apps/terminate", {"bundleId": SETTINGS})
+    except Fail:
+        pass
+
+
 def set_autolock(seconds):
     """WDA 直接开 prefs: 会被拒（iOS 27，错误 115），所以假定手机已装中转快捷指令（iphone setup-shortcut），
-    经它一步直达自动锁定页；没跑通才回退 UI：设置 → 显示与亮度 → 自动锁定。"""
+    经它一步直达自动锁定页；没跑通才回退 UI：设置 → 显示与亮度 → 自动锁定。16.4 以下 open_url 改经 Safari 地址栏。"""
     require_unlocked()
-    sess("POST", "/wda/apps/terminate", {"bundleId": SETTINGS})
+    _close_settings()
     wda("POST", "/wda/homescreen", {})
     time.sleep(0.8)
     try:
         try:
             open_url(AUTOLOCK_URL, direct=False)
-            _wait_node("Cell", str(seconds), 10)
-        except Fail:
-            print("中转快捷指令没跑通，改走界面点击（每台手机要先装一次，见 iphone shortcut-link）", file=sys.stderr)
+            _wait_any(lambda nodes: _autolock_row(nodes, seconds), 10, "自动锁定选项")
+        except Fail as e:
+            print(f"中转快捷指令没跑通（{e}），改走界面点击（每台手机要先装一次，见 iphone shortcut-link）", file=sys.stderr)
             _autolock_via_ui()
-        s, row = _find_scrolling("Cell", str(seconds), 0)
-        _tap_node(row)
+        time.sleep(0.3)  # 等列表停稳再取坐标
+        _tap_node(_wait_any(lambda nodes: _autolock_row(nodes, seconds), 10, "自动锁定选项"))
         time.sleep(0.7)
-        s = snapshot_now()
-        row = next((n for n in s["nodes"] if n["type"] == "Cell" and n.get("name") == str(seconds)), None)
-        check = next((n for n in s["nodes"] if n["type"] == "Button" and n.get("label") == "checkmark"), None)
+        nodes = snapshot_now()["nodes"]
+        row = _autolock_row(nodes, seconds)
+        check = next((n for n in nodes if n["type"] == "Button" and n.get("label") == "checkmark"), None)
         if not (row and check and row["rect"][1] <= check["rect"][1] < row["rect"][1] + row["rect"][3]):
             raise Fail("点了选项，但没有在该行看到对勾；用 iphone shot 确认")
         print(f"自动锁定已设为 {text_of(row)}")
     finally:
         try:
-            sess("POST", "/wda/apps/terminate", {"bundleId": SETTINGS})
+            _close_settings()
             wda("POST", "/wda/homescreen", {})
         except Fail:
             pass
@@ -1474,7 +1577,11 @@ def open_url(url, direct=True, relay=None):
             if "115" not in str(e):
                 raise
     name = relay or relay_name()
-    sess("POST", "/url", {"url": f"shortcuts://run-shortcut?name={quote(name)}&input=text&text={quote(url)}"}, timeout=30)
+    link = f"shortcuts://run-shortcut?name={quote(name)}&input=text&text={quote(url)}"
+    if wda_url_ok():
+        sess("POST", "/url", {"url": link}, timeout=30)
+    else:
+        open_url_via_safari(link)
 
 
 def cmd_open(a):
@@ -1598,6 +1705,8 @@ def selftest():
     assert _settings_ids([{"type": "Cell", "label": t, "rect": [0, 0, 1, 1]} for t in "abc"]) is False
     assert _settings_ids([]) is None
     assert _settings_ids([{"type": "Button", "name": "com.apple.settings.displayAndBrightness", "rect": [0, 0, 1, 1]}]) is True
+    # 16.4 以下 WDA 的 /url 走 Siri；边界是 16.4
+    assert [wda_url_ok_in(v) for v in ("15.6.1", "16.3.1", "16.4", "17.0", "16", "")] == [False, False, True, True, False, True]
     # status 要说的是手机上已装 Runner 的来源，不是「现在重装会走哪条路」：来源由 bundle id 判断
     demo = {"bundle_id": "com.x.wda"}
     assert runner_kind("com.x.wda.runner", demo) == "plumesign" and runner_kind("com.x.wda.xctrunner", demo) == "xcode"

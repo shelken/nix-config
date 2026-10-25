@@ -85,14 +85,14 @@ iphone shot                           # 目视兜底
 
 | 命令 | 作用 |
 |---|---|
-| `iphone up` | 按本机条件自动选路（Xcode / plumesign / SideStore），把官方 Runner 装上手机并启动，等待就绪；证书过期自动重签；随后把自动锁定设为「永不」（中转快捷指令约 6 秒，界面点击约 20 秒；设置失败只警告，`up` 仍算成功）。SideStore 路径（未验证）只把 IPA 推到手机，要用户手动安装，不启动 WDA |
+| `iphone up` | 按本机条件自动选路（Xcode / plumesign / SideStore），把官方 Runner 装上手机并启动，等待就绪；证书过期自动重签；随后把自动锁定设为「永不」（中转快捷指令约 6 秒，iOS 16.4 以下经 Safari 约 15 秒，界面点击约 20 秒；设置失败只警告，`up` 仍算成功）。SideStore 路径（未验证）只把 IPA 推到手机，要用户手动安装，不启动 WDA |
 | `iphone down` | 把自动锁定恢复为 3 分钟，再停止由本 CLI 启动的 WDA |
-| `iphone autolock never\|30\|60\|120\|180\|240\|300` | 手动设置自动锁定（秒）；经中转快捷指令直达，没跑通回退界面点击（较不稳）。中转快捷指令是首次配置，见 references/setup.md |
+| `iphone autolock never\|30\|60\|120\|180\|240\|300` | 手动设置自动锁定（秒）；经中转快捷指令直达，没跑通回退界面点击（较不稳）。iOS 16.4 以下经 Safari 地址栏运行它。中转快捷指令是首次配置，见 references/setup.md |
 | `iphone renew` | 对当前路径强制重新签名并安装。免费账号证书 7 天过期，`status` 显示剩余天数 |
 | `iphone status` | 设备、WDA、锁屏、前台 App、已装 Runner 的来源与证书（没装时显示 `iphone up` 会走哪条路） |
 
 `up` 与 `down` 都可加 `--no-keep-awake` 跳过自动锁定的修改。
 
-iOS 15 的设置页没有稳定标识，没装中转快捷指令时自动锁定的界面点击回退用不了，`up` 约 17 秒后只警告不失败（iOS 15.6.1 实测），见 [references/setup.md](references/setup.md) 的已知限制
+iOS 16.4 以下 WDA 的 `/url` 只会唤醒 Siri，CLI 自动改在 Safari 地址栏打开链接并点确认框（iOS 15.6.1 实测 `autolock` 可用）。iOS 15 的设置页没有稳定标识，没装中转快捷指令时自动锁定的界面点击回退用不了，`up` 只警告不失败，见 [references/setup.md](references/setup.md) 的已知限制
 
 任务结束后用 `iphone down`，让手机恢复 3 分钟自动锁定；连续多个任务之间保持 WDA 运行即可。`down` 时手机已锁屏则恢复会失败，命令会提示，需要用户手动改回。
