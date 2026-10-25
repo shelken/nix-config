@@ -11,6 +11,7 @@
     "pi-trae-provider": "git+ssh://git@github.com/shelken/pi-trae-provider.git#main",
     "pi-zed-provider": "git+ssh://git@github.com/shelken/pi-zed-provider.git#main",
     "pi-commandcode-provider": "npm:pi-commandcode-provider",
+    "pi-intercom": "npm:pi-intercom@0.17.1",
     "@shelken/pi-sounds": "npm:@shelken/pi-sounds@0.1.0"
   }
 }
