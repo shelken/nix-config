@@ -365,7 +365,7 @@ if [[ -d /data ]]; then
   mkdir -p /data/xdg/data/omp /data/xdg/state/omp /data/xdg/cache/omp /data/xdg/config /data/mise /data/omp/plugins /data/xdg/data/mise/shims
 fi
 
-# 宿主共用 mise 目录（ADR 0005）：执行上下文内只读，安装仅经 sb sync
+# 宿主共用 mise 目录：执行上下文内只读，安装仅经 sb sync
 if [[ -d /opt/sandbox-mise ]]; then
   BWRAP_ARGS+=(--ro-bind /opt/sandbox-mise /opt/sandbox-mise)
 fi
@@ -436,7 +436,7 @@ else
 fi
 
 # 8. 环境变量与命令执行
-# 唯一来源：/run/sandbox-config/current/guest-env.sh（generator 单一生成，ADR 0005 决策 5）。
+# 唯一来源：/run/sandbox-config/current/guest-env.sh（generator 单一生成）。
 # 这里不再维护第二份回退：缺少该文件说明 VM 未挂载生成配置，
 # 此时 PATH 只有基础工具（未声明任何共享工具），行为与单元 2 一次性 VM 一致。
 export GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt

@@ -4,7 +4,7 @@
 
 ## 状态
 
-已采纳 (Accepted)，尚未实现
+已采纳 (Accepted)，已实现。决策 9、11 中「手装插件在下次 `sb sync` 时被清理」已被替代：`sb sync` 永远只补缺，见 [沙箱 README](../../modules/features/ai/sandbox/README.md)「设计决策」
 
 ## 背景与问题
 

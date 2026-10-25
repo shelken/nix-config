@@ -2,7 +2,7 @@
 """iphone: 通过 WebDriverAgent (WDA) 读取并操作 USB 连接的真实 iPhone。
 
 只依赖标准库。HTTP 直接走 usbmuxd，不需要端口转发进程。
-iphone up 按本机条件自动选路，把官方 Runner 装上手机并启动；用户不选路径（docs/adr/0010）:
+iphone up 按本机条件自动选路，把官方 Runner 装上手机并启动；用户不选路径（设计见 ../README.md）:
   已就绪 / 已装 Runner 直接起 / Xcode / plumesign / SideStore（未验证）
 iphone 只下载固定版本并校验过的官方 Runner，不下载也不安装 go-ios、rcodesign、plumesign。
 子命令: iphone --help
@@ -616,7 +616,7 @@ def build_ipa(app, ipa):
                 z.write(p, f"Payload/{app.name}/{p.relative_to(app).as_posix()}")
 
 
-# ---------- 路径探测（顺序与理由见 ADR 0010） ----------
+# ---------- 路径探测（顺序与理由见 ../README.md） ----------
 
 ROUTE_NAMES = {"ready": "已就绪", "installed": "已装 Runner", "xcode": "Xcode", "plumesign": "plumesign",
                "sidestore": "SideStore（未验证）"}

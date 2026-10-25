@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 环境唯一来源：generator 生成的 guest-env.sh（ADR 0005 决策 5）。
+# 环境唯一来源：generator 生成的 guest-env.sh。
 # 该文件缺失说明 VM 未挂载生成配置，也就没有工具清单可补 —— 直接报错，不再维护第二份回退。
 if [[ ! -f /run/sandbox-config/current/guest-env.sh ]]; then
   echo "[-] 错误: 沙箱内缺少 /run/sandbox-config/current/guest-env.sh，无法确定工具环境" >&2
@@ -66,7 +66,7 @@ fi
 # 沙箱内插件安装失败必须传给 sb sync；宿主激活的容忍策略不受影响
 export SB_POSTINSTALL_STRICT=1
 
-# 1. 补齐 mise 工具 (幂等：已安装的不重新下载、不升级；永远只补缺，ADR 0006 决策 4)
+# 1. 补齐 mise 工具 (幂等：已安装的不重新下载、不升级；永远只补缺)
 # 先精确查出缺失规格再逐个安装：mise ls --missing 失败必须让 sync 非零退出，
 # 不能用 2>/dev/null … || true 吞掉后按空缺失列表继续 —— 那会把「查询失败」伪装成「全部已装」
 echo "[sb sync] 1. 补齐 mise 工具清单..."

@@ -10,7 +10,7 @@
     {
       # iphone 与 plumesign 只适用 macOS，Linux 主机不导入这组配置
       config = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
-        # iphone 与 skills 同源，软链到工作树源码即时生效（ADR 0010）
+        # iphone 与 skills 同源，软链到工作树源码即时生效
         home.file.".local/bin/iphone" =
           mylib.mkConfigFile config ../skills/iphone-use-best-practice/scripts/iphone;
 

@@ -2,13 +2,7 @@
 
 `sb` 与 `omp-sb` 让 Agent 在 Linux 虚拟机里运行，只看得到当前项目。本文讲机制；日常操作见 [用户指南](../../../../docs/user-guide/03-agent-sandbox.md)
 
-威胁模型只防 Agent 误操作（越界删除、误连其他项目的私网服务），不防恶意逃逸。决策依据：
-
-- [ADR 0002](../../../../docs/adr/0002-single-main-vm-execution-context.md)：单主 VM 加执行上下文
-- [ADR 0003](../../../../docs/adr/0003-shared-tool-single-declaration.md)：共享工具单一声明
-- [ADR 0005](../../../../docs/adr/0005-shared-mise-install-layer.md)：共用 mise 安装层
-- [ADR 0006](../../../../docs/adr/0006-sandbox-razor.md)：删除附加 VM、待升级登记与忙时 sync
-- [ADR 0007](../../../../docs/adr/0007-sandbox-default-grant.md)：所有上下文默认放行的私网端口（家里的模型服务）
+威胁模型只防 Agent 误操作（越界删除、误连其他项目的私网服务），不防恶意逃逸。设计原因见文末「设计决策」；共享工具登记表的决策见 [ADR 0003](../../../../docs/adr/0003-shared-tool-single-declaration.md)
 
 由 `shelken.dev.ai.sandbox.enable` 控制，默认关闭
 
@@ -109,7 +103,7 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 
 ### 已知局限
 
-- **私网在 VM 级是放开的。** 只有执行上下文内的进程受上下文链约束；不在上下文里运行的 guest 进程（`sb sync` 里的 mise 与 `bun install`、`msb exec` 进入的 root 进程）也能连私网。威胁模型只防 Agent 误操作，Agent 始终在上下文内，所以接受（ADR 0009）
+- **私网在 VM 级是放开的。** 只有执行上下文内的进程受上下文链约束；不在上下文里运行的 guest 进程（`sb sync` 里的 mise 与 `bun install`、`msb exec` 进入的 root 进程）也能连私网。威胁模型只防 Agent 误操作，Agent 始终在上下文内，所以接受
 - **批准只覆盖 `.sandbox.yaml` 的内容。** `imports.src` 指向的宿主文件内容变了不需要重新批准；内容相同的 `.sandbox.yaml` 放在别处也视为已批准
 - **`sb trust` 不逐项确认。** 它直接记录批准，批准前要自己先看 `sb plan` 的清单
 
@@ -155,7 +149,7 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 
 - 跨 VM 的写锁：共用目录下的 `.sync.lock`
 - `mise install` 只补缺，不升级、不删除；不区分 VM 忙闲
-- 运行各工具的 `postInstall`，其中 OMP 插件按 [package.json](../omp/plugins/package.json) 执行 `bun install --ignore-scripts`，只补缺。私有仓库用 `GITHUB_TOKEN` 占位符 clone，失败只警告。`node-pty` 因不跑安装脚本而不可用（ADR 0005 决策 11）
+- 运行各工具的 `postInstall`，其中 OMP 插件按 [package.json](../omp/plugins/package.json) 执行 `bun install --ignore-scripts`，只补缺。私有仓库用 `GITHUB_TOKEN` 占位符 clone，失败只警告。`node-pty` 因不跑安装脚本而不可用，原因见「设计决策」
 
 ## 配置与数据位置
 
@@ -167,6 +161,133 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 | msb 运行数据 | `~/Data/sandboxes/msb`（`MSB_HOME`），镜像缓存 `~/.cache/microsandbox` |
 
 配置发布后，复用中的 VM 新开的上下文即读到新配置，不改指纹，不触发重建。guest 不跟随宿主 live-edit 软链
+
+## 设计决策
+
+每节记录为什么这样设计、考虑过的替代方案和代价。机制本身见上文各节
+
+### 一台主 VM 承载所有执行上下文
+
+日常习惯是多个 OMP 同时在不同项目运行。每个项目一台 VM，内存成本高、管理也更复杂；把整个 `~/Code` 可写挂载给一台 VM，Agent 又能误删其他项目。microsandbox 0.7.7 的挂载、网络规则和 secret 在 VM 创建时固定，运行中修改要重启，会打断同一 VM 内其他 OMP。复现：
+
+```bash
+msb modify --help
+PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
+```
+
+所以只有一台主 VM，每次启动新建一个执行上下文，同项目可并存多个，启动新上下文不影响已运行的上下文。OMP 数据、工具和缓存在所有上下文内共用一份可写状态，与宿主多个 OMP 共用一份 XDG 数据的语义一致
+
+考虑过的替代方案：
+
+- **每个项目或每个 OMP 一台 VM**：并发 4 个时启动后宿主内存约 2.8 至 2.9 GB，比单 VM 多约 1.1 GB，还要管理多台 VM
+- **单活动槽位，切换项目时替换 VM**：会打断其他项目正在运行的 OMP
+- **私网项目使用单独 VM**：每个上下文独立网络命名空间已能在主 VM 内按项目精确放行私网目标
+- **guest 内按 UID 过滤网络**：guest 内核缺少 iptables `owner` 匹配模块，做不到
+- **VM 级挂载凭据目录**：新增目录要重建 VM；运行时复制不需要，并保证宿主文件不被写回
+- **项目配置放宿主集中目录**：Agent 无法修改，但新项目要在另一处登记。现在 Agent 改仓库内的 `.sandbox.yaml`，下次启动前必须由用户重新批准
+
+代价：
+
+- launcher 是唯一的隔离执行者。launcher 缺陷或内核逃逸会暴露整个能力上限，所以上限必须是可接受的最坏情况
+- 公网只在 VM 级控制，不做上下文级限制；按项目精确控制只覆盖私网目标
+- 同一主 VM 内某个上下文耗尽内存，可能波及其他上下文
+- 资源与隔离实测记录见 wiki 页面 `microsandbox-concurrency-resource-cost`
+
+### 不做附加 VM、待升级登记和破坏性 sync
+
+宿主 CLI 一度增长到约 1300 行，四轮审查的问题大多集中在三处：附加 VM 的并发生命周期（同时首次进入、最后退出撞上新进入、各自数据盘与 shims）、主 VM 忙时的待升级登记、`sb sync` 的忙闲两套模式及其与生命周期的竞态。日常使用是多个项目、多个 Agent 同进同一台主 VM，这些机制都不在这条主路径上，所以不做：
+
+- 不提供单项目专用 VM。所有执行上下文都在主 VM，隔离由执行上下文提供
+- 能力上限变化时，主 VM 空闲则下一次启动自动重建；仍有执行上下文则报错并给出上下文数，不登记待升级
+- 只用一把宿主生命周期锁，只包住「检查上限指纹、必要时重建、启动 VM」。不做宿主侧预约，忙闲只看 guest 内 launcher 的上下文登记
+- `sb sync` 永远只补缺，不区分忙闲，不删除、不重建插件依赖，因此不需要判断忙闲，也不需要生命周期锁
+- `sb status` 只报告缺失的 mise 工具，不报告插件安装状态
+
+代价：
+
+- 主 VM 忙时，某项目需要超出当前上限的能力，只能等主 VM 空闲后重建
+- `sb status` 不显示待升级，也不显示插件是否装全；插件结果只看 `sb sync` 输出
+- 沙箱里手装的插件、或已从清单删除的插件不会被自动清掉，需要时用 `sb volume` 清理数据盘
+- 改了 `sb.yaml` 且两个 Agent 在同一两秒内启动时，后启动的上下文可能在启动阶段被重建打断，重新启动即可
+- 忙时 `sb sync` 可能在运行中的 OMP 底下更新插件文件；插件已加载进内存，风险低
+
+### 项目授权由宿主侧批准决定，私网在 VM 级整体放开
+
+最初 `sb.yaml` 的 `network.allow` 逐项列出项目可申请的私网 IP，并写进 msb 的 VM 配置。这带来两个问题：
+
+1. 改授权就要重建主 VM，而重建要求没有 Agent 在运行，日常同时开着多个 Agent 时几乎总被挡住
+2. 上限是全局的。一个 IP 放进 `allow` 后，任何项目的 `.sandbox.yaml` 都能申请，而它在仓库里，Agent 改了就在下次启动生效
+
+实测 msb 的 `allow` 支持 `private` 目标组：只写 `public` 时，对内网 kube-apiserver 的明文 HTTP 请求被拒绝连接，加上 `private` 后收到应用层的 `400 Bad Request`。而每个执行上下文的 iptables 链本来就按源地址逐项限制私网目标（[launcher.sh](./launcher.sh)），VM 级逐项列 IP 是重复的一层。
+
+所以 VM 级放开私网，逐项限制只由上下文内的 iptables 链完成；导入文件和私网目标不设上限，是否放行由 `sb trust` 的批准决定。`paths` 仍受 `mount_roots` 限制，因为挂载是 VM 级的，同样计入批准。批准记录在宿主上，Agent 批准不了自己
+
+考虑过的替代方案：
+
+- **保留逐项上限，只放宽重建条件**：不改变信任模型，Agent 改文件仍然自动扩权
+- **批准按路径加哈希**：同一份文件在每个 worktree 里都要重新批准，没有收益
+- **交互式提示**：在后台、脚本、自动开 Agent 的场景会卡住
+- **宿主侧项目授权文件（不进仓库）**：原本为公开仓库不能写内网 IP 设计，核实后仓库已大量包含内网 IP，这个理由不成立，需要时再加
+
+代价：
+
+- 改授权（新增一个 IP、换一个导入文件）不再触发 VM 重建，也不被运行中的 Agent 挡住
+- 批准不覆盖 `imports.src` 指向的宿主文件的内容变化
+- 改 `network.allow` 的 VM 级策略仍会改变上限指纹、触发一次重建
+- 不在上下文里运行的 guest 进程也能连私网，见「已知局限」
+
+### 默认放行模型服务的私网端口
+
+家里的模型服务（`cpa.int.ooooo.space`、`commandcode.int.ooooo.space`）都解析到私网 `192.168.69.46`。执行上下文默认拒绝全部私网，每个项目都要在 `.sandbox.yaml` 声明这个 IP，OMP 才能调用模型；不声明时默认模型请求反复重试，表现为卡住。模型服务是每个 Agent 都要用的基础依赖，不属于某个项目
+
+所以 `sb.yaml` 的 `network.default_grant` 列出所有上下文默认放行的私网目标，只接受 `IP:端口`，当前只放行 `192.168.69.46:443`。范围按端口收窄，同一台机器的其他端口仍需项目声明。它是上下文级授权，不写进 VM 配置、不改变上限指纹，修改后下一个新上下文即生效
+
+考虑过的替代方案：
+
+- **按 IP 整体默认放行**：配置更简单，但所有项目都能访问该机器上的全部服务
+- **保持每个项目声明**：不改代码，但每个新项目都要先写 `.sandbox.yaml` 才能用 OMP
+
+### 导入文件按目标目录绑定
+
+原来 `imports` 只能把文件放到上下文内的 `/imports/<文件名>`。home-ops 这类项目用 mise 把 `KUBECONFIG` 固定为 `$HOME/.kube/home-ops.yaml`，工具只认这个路径，所以没法用
+
+所以每项写 `src` 与 `target`。同一目标目录的导入共用一个暂存目录，launcher 把它整体绑定到该目录，不做单文件绑定，否则上下文内的原子改名会报 `Device or resource busy`（实测）。保留位置不能做目标目录：家目录本身、`/`、系统目录、`/data`、`/run`、`/.msb`，以及 launcher 铺设配置链接的 `~/.omp`、`~/.agents`、`~/.pi`；同一个 `target` 不能重复。导入文件在上下文内只对上下文用户可读写（`600`）
+
+不做：
+
+- OAuth 登录态不导入。OMP 的登录态在 `agent.db`，位于共享的 `/data/xdg/data/omp`，在沙箱里登录一次即可持久化并被所有项目共用
+- 不写回宿主。上下文内的修改随上下文退出丢弃
+
+考虑过的替代方案：
+
+- **单文件绑定**：目录遮蔽的副作用消失，但原子改名失败
+- **把凭据放进 `/data` 持久化**：`/data` 绑进所有上下文，项目凭据会对其他项目可见
+
+代价：目标目录在上下文里只剩导入的文件
+
+### 共用 mise 安装层
+
+主 VM 数据盘坏掉重建、一次性 e2e VM 启动时，mise 工具（bun、codex、oh-my-pi 等）和 OMP 插件都要重新下载安装，下载量大、耗时长。另外，若把宿主真实路径直接写进 VM 挂载配置，路径变化（如用户名、目录调整）会改变上限指纹，让复用中的 VM 被判定「上限不一致」而重建
+
+所以：
+
+- 宿主只有一个共用目录，取真实物理路径（非符号链接）；msb 解析符号链接后仍指向同一目录
+- 所有 VM 一律把它挂到 `/opt/sandbox-mise`。上限指纹只含 guest 侧声明 `/opt/sandbox-mise:rw`，不含宿主真实路径，宿主路径变化不触发重建
+- 共用的只有安装产物与下载缓存；mise 的 `state`、`shims` 与可写用户层配置仍归各 VM 数据盘
+- guest 环境变量只有一个来源 `/run/sandbox-config/current/guest-env.sh`，由生成器生成，`sb sync`、执行上下文、legacy 入口统一 source
+- `sb sync` 在宿主侧经 flock（共用目录下的 `.sync.lock`）串行化，多 VM 并发 sync 不交叉写安装层
+- sync 不清理下载缓存，共用的下载缓存是资产
+- 主 VM 首次创建后自动 sync 一次；`sb run`、`sb shell`、`omp-sb` 复用已有 VM 时不自动 sync
+- OMP 插件在 guest 内按仓库清单完整重放。带 GitHub 有效凭据时，`git+ssh://git@github.com/...` 源改写为 `https://github.com/...`，凭据经 `GIT_CONFIG_GLOBAL` 的 `insteadOf` 指向占位符 URL `$MSB_GITHUB_TOKEN`（由 `sb.yaml` 的 `secrets` 声明，msb 在网络边界替换），token 不落盘、不进日志、不进进程参数
+- 私有插件能装就装：VM 本地 `.git-vendor` 已有同一依赖且 ref 一致时直接复用；否则对该 git 源做一次禁交互的浅 clone（`GIT_TERMINAL_PROMPT=0`、`--depth 1`，带 ref 时 `--branch`），以 `file:` 依赖安装。clone 失败只在 `sb sync` 输出中警告，不区分原因，退出码不受影响
+- 不执行依赖安装脚本（`bun install --ignore-scripts`）：`node-pty`（`@plannotator/webtui` 的依赖）在 Linux 无预编译产物，安装脚本回落 `node-gyp rebuild`，需要 C 工具链。实测补齐 gcc-wrapper 的闭包增量 1.3 GiB（gcc-wrapper 370 MiB、binutils 121 MiB、isl/mpfr/mpc/gcc 等），远超 200 MiB 预算，所以不引入编译器。`node-pty` 只供 plannotator 的终端桥接，不参与插件加载。将来确需本地终端桥接，再单独评估工具链预算
+
+代价：
+
+- 共用安装层损坏影响所有 VM，用 `sb sync` 重装自愈
+- 宿主目录体积随工具增长（约 1 至 2 GB 量级）
+- 无凭据环境下私有插件不可用，只在 `sb sync` 输出中提示
+- `node-pty` 的原生桥接在沙箱内不可用
 
 ## 测试
 

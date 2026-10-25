@@ -11,7 +11,7 @@
     }:
     let
       msbHome = "${config.home.homeDirectory}/Data/sandboxes/msb";
-      # 宿主共用 Linux mise 目录（ADR 0005）：data 与 cache 分离，guest 侧固定挂到 /opt/sandbox-mise
+      # 宿主共用 Linux mise 目录：data 与 cache 分离，guest 侧固定挂到 /opt/sandbox-mise
       sharedMiseDir = "${config.home.homeDirectory}/Data/sandboxes/mise/aarch64-linux";
       msbConfig = (pkgs.formats.json { }).generate "microsandbox-config.json" {
         version = 1;
@@ -77,7 +77,7 @@
           MSB_CONFIG_PATH = "${msbConfig}";
           # sb sync 宿主写锁目录（共用 mise 层）
           SB_MISE_LOCK_DIR = sharedMiseDir;
-          # generate_msb_config 注入共用挂载时读取的宿主真实路径（ADR 0005）
+          # generate_msb_config 注入共用挂载时读取的宿主真实路径
           SB_MISE_HOST_DIR = sharedMiseDir;
         };
         home.file.".config/sandbox/sb.yaml".source = ./sb.yaml;

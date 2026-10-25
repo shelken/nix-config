@@ -5,7 +5,7 @@
 ## 目录结构
 
 - `<name>/SKILL.md`: 一个技能，目录名与 frontmatter 的 `name` 一致
-- `<name>/README.md`: 仅外部拷贝并改过的技能才有，记录上游来源与差异
+- `<name>/README.md`: 可选；自研技能写设计决策，外部拷贝并改过的技能记录上游来源与差异
 - `../skill.nix`: 声明外部技能来源与部署目标，外部来源由仓库根目录的 `nvfetcher.toml` 锁定
 
 ## 外部拷贝技能的来源记录
@@ -20,7 +20,7 @@
 列出现有的外部拷贝技能
 
 ```bash
-ls */README.md
+grep -l '与上游的差异' */README.md
 ```
 
 ### 确定导入 commit

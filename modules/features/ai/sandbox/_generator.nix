@@ -148,7 +148,7 @@ let
     export XDG_CACHE_HOME=/data/xdg/cache
     export XDG_CONFIG_HOME=/data/xdg/config
     if [[ -d /opt/sandbox-mise/data ]]; then
-      # 宿主共用 mise 安装目录（ADR 0005）：所有 VM 共享同一份 installs/downloads
+      # 宿主共用 mise 安装目录：所有 VM 共享同一份 installs/downloads
       export MISE_DATA_DIR=/opt/sandbox-mise/data
       export MISE_CACHE_DIR=/data/xdg/cache/mise
     else
@@ -160,7 +160,7 @@ let
     export MISE_SHIMS_DIR=/data/xdg/data/mise/shims
     export MISE_SYSTEM_CONFIG_FILE=/run/sandbox-config/current/mise.toml
     export MISE_GLOBAL_CONFIG_FILE=/data/mise/config.toml
-    # Bun 下载缓存共用（ADR 0005）：落到共用 mise 层 cache 下的 bun-cache
+    # Bun 下载缓存共用：落到共用 mise 层 cache 下的 bun-cache
     if [[ -d /opt/sandbox-mise ]]; then
       export SB_BUN_CACHE_DIR=/opt/sandbox-mise/cache/bun-cache
       mkdir -p "$SB_BUN_CACHE_DIR" 2>/dev/null || true

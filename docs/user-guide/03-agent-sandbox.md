@@ -2,7 +2,7 @@
 
 让 OMP 在一台 Linux 虚拟机里干活：它只看得到当前项目，访问不了家里其他服务，`rm -rf` 删不到别的仓库。宿主 macOS 不受影响
 
-机制和配置字段见 [沙箱 README](../../modules/features/ai/sandbox/README.md)，设计原因见 [ADR 0002](../adr/0002-single-main-vm-execution-context.md)
+机制和配置字段见 [沙箱 README](../../modules/features/ai/sandbox/README.md)，设计原因见其中的「设计决策」
 
 ## 先认识三个词
 
