@@ -98,12 +98,14 @@
         ' "$plugins/package.json" > "$plugins/package.json.install"
         mv "$plugins/package.json.install" "$plugins/package.json"
 
-        # 沙箱 sync 之外（宿主激活）容忍整体失败，避免打断日常开关机；
+        # 沙箱 sync 之外（宿主激活）容忍整体失败，避免打断日常开关机，但必须出声：
+        # 静默吞错会掩盖"找不到 bun"这类环境问题，导致清单与安装长期不一致。
         # 沙箱 sync 设置 SB_POSTINSTALL_STRICT=1，失败必须传给 sb sync
         if [ -n "''${SB_POSTINSTALL_STRICT:-}" ]; then
           BUN_INSTALL_CACHE_DIR="$bunCache" bun install --cwd "$plugins" --ignore-scripts --silent
         else
-          BUN_INSTALL_CACHE_DIR="$bunCache" bun install --cwd "$plugins" --ignore-scripts --silent 2>/dev/null || true
+          BUN_INSTALL_CACHE_DIR="$bunCache" bun install --cwd "$plugins" --ignore-scripts --silent \
+            || echo "[!] 警告: omp 插件安装失败，插件目录可能与清单不一致: $plugins" >&2
         fi
       '';
     };

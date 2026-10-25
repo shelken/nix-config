@@ -123,7 +123,8 @@
               lib.optional (tool.postInstall != null && tool.postInstall != "") {
                 name = "tool-postInstall-${name}";
                 value = lib.hm.dag.entryAfter [ "writeBoundary" "sops-nix" ] ''
-                  # 只注入辅助工具；bun 统一由 mise 提供（ADR 0003 单一来源），不把 Nix Bun 带进闭包
+                  # HM 的 activate 把 PATH 重置成自己的工具链，不继承用户 shell；mise 的 PATH hook 随之丢失。
+                  # gh/git 由 Nix 注入；bun 等 mise 工具（ADR 0003 单一来源，不把 Nix Bun 带进闭包）经 shims 目录解析
                   export PATH="${
                     lib.makeBinPath (
                       with pkgs;
@@ -132,7 +133,7 @@
                         git
                       ]
                     )
-                  }:$PATH"
+                  }:$HOME/.local/share/mise/shims:$PATH"
                   ${tool.postInstall}
                 '';
               }
