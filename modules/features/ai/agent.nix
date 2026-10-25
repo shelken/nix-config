@@ -66,6 +66,9 @@
           value = mylib.mkConfigFile config ./_agents.md;
         }) (if cfg.agentsTargets == [ ] then defaultAgentsTargets else cfg.agentsTargets)
       );
+
+      # 沙箱只消费 omp 与 pi 的用户级配置（launcher 挂载 ~/.omp、~/.pi），其余是宿主独有工具
+      ownedBy = dir: lib.filterAttrs (name: _: lib.hasPrefix "${dir}/" name) agentsLinks;
     in
     {
       options.shelken.dev.ai = {
@@ -109,11 +112,9 @@
 
       config = {
         home.file = agentsLinks;
-        # agents 文档进共享工具登记表：宿主照常作为 home.file，沙箱经 files 拿到同一批链接
-        shelken.dev.tools.agent-common.package = null;
-        shelken.dev.tools.agent-common.files = lib.filterAttrs (
-          name: _: lib.hasPrefix ".agents/" name
-        ) agentsLinks;
+        # agents 文档随所属工具登记（ADR 0003）：宿主照常作为 home.file，沙箱经该工具的 files 拿到同一份链接
+        shelken.dev.tools.omp.files = ownedBy ".omp";
+        shelken.dev.tools.pi.files = ownedBy ".pi";
       };
     };
 }

@@ -29,13 +29,18 @@
         name = ".agents/AGENTS.${matcher}.md";
         value = link "${file}.md";
       }) matchers;
+
+      files = promptLinks // {
+        # 插件配置与 prompt 同源，宿主无关（.pi / .omp 各读各的旧路径已废弃）
+        ".agents/pi-auto-model-prompts/config.json" = link "config.json";
+      };
     in
     {
       config = {
-        home.file = promptLinks // {
-          # 插件配置与 prompt 同源，宿主无关（.pi / .omp 各读各的旧路径已废弃）
-          ".agents/pi-auto-model-prompts/config.json" = link "config.json";
-        };
+        home.file = files;
+        # 进共享工具登记表：沙箱发布通道只认 shelken.dev.tools.<名>.files
+        shelken.dev.tools.agent-common.package = null;
+        shelken.dev.tools.agent-common.files = files;
       };
     };
 }
