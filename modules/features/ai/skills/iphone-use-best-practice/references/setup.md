@@ -76,7 +76,7 @@ chmod -R go-rwx ~/.config/PlumeImpactor
 
 - 不要加 `-p`，密码和验证码在终端里输入
 - plumesign 把账号令牌明文存在 `~/.config/PlumeImpactor`，所以登录后要收紧权限
-- 登录经第三方 anisette 服务器，范围与风险见 ADR 0010「已知限制与风险」
+- 登录经第三方 anisette 服务器，范围与风险见 ADR 0010「后果」
 
 然后：
 
@@ -88,7 +88,7 @@ iphone up
 
 - 下载固定版本的官方 Runner 并校验 sha256，一次性
 - 手机没挂载开发者磁盘镜像时，由 go-ios 下载并挂载，首次较慢
-- 第一遍 plumesign 签主 app（不带设备），rcodesign 补签 `.xctest`，第二遍 plumesign 签名并安装。补签的原因见 ADR 0010 决策 5
+- 第一遍 plumesign 签主 app（不带设备），rcodesign 补签 `.xctest`，第二遍 plumesign 签名并安装。补签的原因见 ADR 0010「后果」
 - 用 go-ios 启动 Runner，等待 WDA 就绪
 - 把自动锁定改为「永不」
 
@@ -108,7 +108,7 @@ iphone up
 
 用户需要手动做一步：在手机上打开 SideStore，添加这个 IPA 并安装。之后签名与刷新由 SideStore 管理，`iphone` 不记录过期时间。装好后运行 `iphone status` 确认 WDA 是否可用。
 
-风险：网上有报告称 SideStore 重签会移除导入 app 的 `.xctest`，若属实装出的 Runner 起不来。出处与现状见 ADR 0010「已知限制与风险」。
+风险：网上有报告称 SideStore 重签会移除导入 app 的 `.xctest`，若属实装出的 Runner 起不来。出处与现状见 ADR 0010「后果」。
 
 ### 中转快捷指令（每台手机装一次）
 

@@ -616,7 +616,7 @@ def build_ipa(app, ipa):
                 z.write(p, f"Payload/{app.name}/{p.relative_to(app).as_posix()}")
 
 
-# ---------- 路径探测（ADR 0010 决策 3 的 7 行表） ----------
+# ---------- 路径探测（顺序与理由见 ADR 0010） ----------
 
 ROUTE_NAMES = {"ready": "已就绪", "installed": "已装 Runner", "xcode": "Xcode", "plumesign": "plumesign",
                "sidestore": "SideStore（未验证）"}
@@ -728,7 +728,7 @@ def no_route_text(plume_why):
 
 
 def install_route(cfg, p):
-    """路径表第 3 到 7 行：该用哪条路把 Runner 装上手机。renew 与 status 也用它。"""
+    """已就绪、已装 Runner 之后的探测：该用哪条路把 Runner 装上手机。renew 与 status 也用它。"""
     have, floor = p.device_version(cfg), p.min_os()
     if have and floor and vtuple(have) < vtuple(floor):
         raise Fail(f"手机系统 {have} 低于下限 {floor}，官方 Runner 装不上。先升级手机系统")
@@ -746,7 +746,7 @@ def install_route(cfg, p):
 
 
 def choose_route(cfg, p):
-    """路径表自上而下探测，开头打印一行「路径: 名称」。第 2 行（已装 Runner）会真的去启动。"""
+    """路径表自上而下探测，开头打印一行「路径: 名称」。已装 Runner 这一档会真的去启动。"""
     if p.ready():
         print(f"路径: {ROUTE_NAMES['ready']}")
         return "ready"
@@ -1751,7 +1751,7 @@ def selftest():
             assert days_left(kept) is None
         assert days_left(t / "nothing") is None
 
-    # 7 行路径表：每一行都用注入的假探测走一遍
+    # 路径表：每一档都用注入的假探测走一遍
     class FakeP:
         def __init__(self, **kw):
             self.v = {"ready": False, "installed": None, "start": True, "version": "15.6.1", "floor": "15.0",
@@ -1794,23 +1794,23 @@ def selftest():
         r, buf = quiet(choose_route, c3, p)
         return r, buf.splitlines(), p.calls
 
-    r, lines, calls = route(ready=True, installed="b.runner", xcode=True)  # 1 已就绪：后面的探测都不跑
+    r, lines, calls = route(ready=True, installed="b.runner", xcode=True)  # 已就绪：后面的探测都不跑
     assert r == "ready" and lines == ["路径: 已就绪"] and calls == ["ready"], (r, lines, calls)
-    r, lines, calls = route(installed="b.runner")  # 2 已装 Runner 且能起
+    r, lines, calls = route(installed="b.runner")  # 已装 Runner 且能起
     assert r == "installed" and lines == ["路径: 已装 Runner"] and "xcode" not in calls, (r, lines, calls)
-    r, lines, calls = route(installed="b.runner", start=False, xcode=True)  # 2 起不来：继续往下
+    r, lines, calls = route(installed="b.runner", start=False, xcode=True)  # 已装但起不来：继续往下
     assert r == "xcode" and lines[0] == "路径: 已装 Runner" and lines[-1] == "路径: Xcode", lines
-    expect_fail(lambda: route(version="14.8", xcode=True, plume="", side=True), "14.8", "15.0")  # 3 系统低于下限，Xcode 也不行
+    expect_fail(lambda: route(version="14.8", xcode=True, plume="", side=True), "14.8", "15.0")  # 系统低于下限，Xcode 也不行
     assert route(version=None, xcode=True)[0] == "xcode"  # 读不到版本：跳过下限
-    r, lines, calls = route(xcode=True, plume="", side=True)  # 4 Xcode 优先于后面
+    r, lines, calls = route(xcode=True, plume="", side=True)  # Xcode 优先于后面
     assert r == "xcode" and "plume" not in calls and lines == ["路径: Xcode"], (r, lines, calls)
-    r, lines, calls = route(plume="", side=True)  # 5 plumesign
+    r, lines, calls = route(plume="", side=True)  # plumesign
     assert r == "plumesign" and "side" not in calls and lines == ["路径: plumesign"], (r, lines, calls)
-    r, lines, calls = route(plume="缺 plumesign", side=True)  # 6 SideStore
+    r, lines, calls = route(plume="缺 plumesign", side=True)  # SideStore
     assert r == "sidestore" and "未验证" in lines[-1], (r, lines)
-    expect_fail(lambda: route(plume="缺 plumesign"), "Xcode", "plumesign", "SideStore")  # 7 都不满足：列出方案
+    expect_fail(lambda: route(plume="缺 plumesign"), "Xcode", "plumesign", "SideStore")  # 都不满足：列出方案
 
-    # iOS 17 及以上：第 2、5、6 行都不可用，在碰 plumesign 与 SideStore 之前就报错；Xcode 照常
+    # iOS 17 及以上：已装直启、plumesign、SideStore 都不可用，在碰 plumesign 与 SideStore 之前就报错；Xcode 照常
     p17 = FakeP(version="17.2", installed="b.runner", plume="", side=True)
     expect_fail(lambda: quiet(choose_route, c3, p17), "iOS 17 及以上需要 Xcode 路径", "tunnel", "Xcode")
     assert not {"installed", "start", "plume", "side"} & set(p17.calls) and not p17.started, p17.calls
