@@ -1,5 +1,5 @@
 # 共享工具登记表：接口声明与宿主生成器（ADR 0003）
-# 接口会被 ai（omp/pi/codex 等）等多个功能写入，按「接口放 core」（ADR 0004 决策 7）
+# 接口会被 ai（omp/pi/codex 等）等多个功能写入，按「接口放 core」（ADR 0004）
 # 挂到 darwin/nixos 的 core；第一批 Nix 条目在 tools-base.nix。
 {
   config,
@@ -123,7 +123,7 @@
               lib.optional (tool.postInstall != null && tool.postInstall != "") {
                 name = "tool-postInstall-${name}";
                 value = lib.hm.dag.entryAfter [ "writeBoundary" "sops-nix" ] ''
-                  # 只注入辅助工具；bun 统一由 mise 提供（ADR 0003 决策 5 单一来源），不把 Nix Bun 带进闭包
+                  # 只注入辅助工具；bun 统一由 mise 提供（ADR 0003 单一来源），不把 Nix Bun 带进闭包
                   export PATH="${
                     lib.makeBinPath (
                       with pkgs;

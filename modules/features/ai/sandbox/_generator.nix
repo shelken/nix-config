@@ -11,7 +11,7 @@ let
   toolsCfg = config.shelken.dev.tools;
   hostCommandsCfg = config.shelken.dev.sandbox.hostCommands or { };
 
-  # 沙箱基础环境 (ADR 0003 决策 7: bash, coreutils, curl, git, mise, bubblewrap, iproute2, iptables; plus jq, gnused, findutils, gawk)
+  # 沙箱基础环境（不登记为共享工具，理由见 ADR 0003）: bash, coreutils, curl, git, mise, bubblewrap, iproute2, iptables; plus jq, gnused, findutils, gawk
   baseTools = with linuxPkgs; [
     bashInteractive
     coreutils
