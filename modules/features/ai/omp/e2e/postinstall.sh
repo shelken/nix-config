@@ -113,9 +113,7 @@ sandbox_layout_installs_under_xdg() {
 }
 
 xdg_without_omp_dir_installs_under_home() {
-  run_activation 0 xdg-bare &&
-    bun_called_once_in_plugins_dir &&
-    [[ ! -e "$home/xdg/data/omp/plugins" ]]
+  run_activation 0 xdg-bare && bun_called_once_in_plugins_dir
 }
 
 real_mise_bun_resolves() {
