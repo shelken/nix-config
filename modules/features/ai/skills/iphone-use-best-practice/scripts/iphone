@@ -1050,6 +1050,16 @@ def stop_wda():
     print("WDA 已停止")
 
 
+def runner_kind(rid, cfg):
+    """手机上已装 Runner 的来源，由 bundle id 判断：<bundle>.runner 是 plumesign，<bundle>.xctrunner 是 Xcode，
+    其余带官方前缀的是 SideStore 重签（后缀未验证）。没有 Runner 返回 None。"""
+    if rid == runner_id(cfg):
+        return "plumesign"
+    if rid == cfg["bundle_id"] + ".xctrunner":
+        return "xcode"
+    return "sidestore" if rid else None
+
+
 def cert_line(route):
     if route == "sidestore":
         return "证书: 由 SideStore 管理"
@@ -1073,13 +1083,19 @@ def cmd_status(a):
     if not dev:
         print("路径: 接上 USB 才能探测")
         return 1
+    p = Probes(fetch=False)
+    rid = p.runner_installed(cfg)
+    kind = runner_kind(rid, cfg)
+    if kind:
+        print(f"Runner: 已装，{ROUTE_NAMES[kind]} 签名（{rid}）")
+        print(cert_line(kind))
+        return 0 if ok else 1
     try:
-        route = install_route(cfg, Probes(fetch=False))
+        route = install_route(cfg, p)
     except Fail:
-        print("路径: 没有可用路径（iphone up 会报错并列出方案）")
+        print("Runner: 未装；没有可用的安装路径（iphone up 会报错并列出方案）")
     else:
-        print(f"路径: {ROUTE_NAMES[route]}")
-        print(cert_line(route))
+        print(f"Runner: 未装；iphone up 会走: {ROUTE_NAMES[route]}")
     return 0 if ok else 1
 
 
@@ -1548,6 +1564,10 @@ def selftest():
     assert _settings_ids([{"type": "Cell", "label": t, "rect": [0, 0, 1, 1]} for t in "abc"]) is False
     assert _settings_ids([]) is None
     assert _settings_ids([{"type": "Button", "name": "com.apple.settings.displayAndBrightness", "rect": [0, 0, 1, 1]}]) is True
+    # status 要说的是手机上已装 Runner 的来源，不是「现在重装会走哪条路」：来源由 bundle id 判断
+    demo = {"bundle_id": "com.x.wda"}
+    assert runner_kind("com.x.wda.runner", demo) == "plumesign" and runner_kind("com.x.wda.xctrunner", demo) == "xcode"
+    assert runner_kind(OFFICIAL_RUNNER_ID + ".ABC123", demo) == "sidestore" and runner_kind(None, demo) is None
     # 本进程启动的子进程被终止后是僵尸；pid_alive 必须把它当作已退出，stop_wda 不能抛 EPERM
     import tempfile
     g, saved = globals(), (PIDFILE, CLI)

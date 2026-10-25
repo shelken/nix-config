@@ -22,15 +22,26 @@ iphone init --bundle <全局唯一的 bundle id，如 com.example.wda>
 iphone status
 ```
 
-看输出里的「路径」一行。自上而下探测，前面的满足就不看后面的：
+看输出里的「Runner」一行。
 
-| `路径:` 的值 | 含义 | 需要什么 |
+手机上已经装了 Runner 时，它说的是**已装 Runner 的来源**（按 bundle id 判断），不是重装会走哪条路，与本机有没有装 plumesign 等工具无关：
+
+| `Runner:` 的值 | 含义 |
+|---|---|
+| `已装，plumesign 签名` | bundle id 以 `.runner` 结尾，证书剩余天数读本机的签名副本 |
+| `已装，Xcode 签名` | bundle id 以 `.xctrunner` 结尾 |
+| `已装，SideStore（未验证） 签名` | 带官方前缀的其他 id，证书由 SideStore 管理 |
+
+没装 Runner 时，它说的是 `iphone up` **会走**哪条路。自上而下探测，前面的满足就不看后面的：
+
+| `iphone up 会走:` 的值 | 含义 | 需要什么 |
 |---|---|---|
 | `Xcode` | 本机 Xcode 认得这台手机 | 见「Xcode 路径」 |
 | `plumesign` | Xcode 不行，plumesign 与 rcodesign 可用且 plumesign 已登录 | 见「plumesign 路径」 |
 | `SideStore（未验证）` | 前两条都不行，手机上有 SideStore | 见「SideStore 路径」 |
-| `没有可用路径` | 三条都不满足 | 运行 `iphone up`，报错会列出每条路径缺什么 |
-| `接上 USB 才能探测` | 手机没连上 | 接线并解锁 |
+| `没有可用的安装路径` | 三条都不满足 | 运行 `iphone up`，报错会列出每条路径缺什么 |
+
+手机没连上时显示 `路径: 接上 USB 才能探测`，接线并解锁。
 
 `iphone up` 开头也会打印「路径」一行，另有两个值：`已就绪`（WDA 已在运行）和 `已装 Runner`（手机上已有 Runner，直接启动）。这两种不需要再装。
 

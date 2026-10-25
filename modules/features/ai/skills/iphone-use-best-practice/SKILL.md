@@ -87,7 +87,7 @@ iphone shot                           # 目视兜底
 | `iphone down` | 把自动锁定恢复为 3 分钟，再停止由本 CLI 启动的 WDA |
 | `iphone autolock never\|30\|60\|120\|180\|240\|300` | 手动设置自动锁定（秒）；经中转快捷指令直达，没跑通回退界面点击（较不稳）。中转快捷指令是首次配置，见 references/setup.md |
 | `iphone renew` | 对当前路径强制重新签名并安装。免费账号证书 7 天过期，`status` 显示剩余天数 |
-| `iphone status` | 设备、WDA、锁屏、前台 App、安装路径、证书 |
+| `iphone status` | 设备、WDA、锁屏、前台 App、已装 Runner 的来源与证书（没装时显示 `iphone up` 会走哪条路） |
 
 `up` 与 `down` 都可加 `--no-keep-awake` 跳过自动锁定的修改。
 
