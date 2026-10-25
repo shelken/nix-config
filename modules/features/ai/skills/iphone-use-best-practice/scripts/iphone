@@ -2,9 +2,13 @@
 """iphone: 通过 WebDriverAgent (WDA) 读取并操作 USB 连接的真实 iPhone。
 
 只依赖标准库。HTTP 直接走 usbmuxd，不需要端口转发进程。
+iphone up 按本机条件自动选路，把官方 Runner 装上手机并启动；用户不选路径（docs/adr/0010）:
+  已就绪 / 已装 Runner 直接起 / Xcode / plumesign / SideStore（未验证）
+iphone 只下载固定版本并校验过的官方 Runner，不下载也不安装 go-ios、rcodesign、plumesign。
 子命令: iphone --help
 """
 import argparse
+import hashlib
 import http.client
 import json
 import os
@@ -13,13 +17,31 @@ import re
 import shutil
 import signal
 import socket
+import stat
 import struct
 import subprocess
 import sys
+import tempfile
 import time
+import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+import zipfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+# ---------- 固定依赖：版本只在这里改 ----------
+WDA_RELEASE_TAG = "v16.15.3"
+WDA_RUNNER_URL = f"https://github.com/appium/WebDriverAgent/releases/download/{WDA_RELEASE_TAG}/WebDriverAgentRunner-Runner.zip"
+WDA_RUNNER_SHA256 = "2176793538d902f6b1e61291e9997f68d306541f222ea715d256a7c6ce9d4fc5"
+WDA_COMMIT = "02cb92f0e93c8b021443bcbb8eeb80932c113220"  # appium/WebDriverAgent 的 v16.15.3，Xcode 路径编译这一版
+WDA_REPO = "https://github.com/appium/WebDriverAgent.git"
+PLUMESIGN_MISE = "github:khcrysalis/Impactor"  # 仅用于缺失时的安装提示，iphone 不安装它
+PLUMESIGN_VERSION = "2.7.2"
+SIDESTORE_ID = "com.SideStore.SideStore"  # 手机上有该前缀的 App 即视为装了 SideStore
+RUNNER_APP = "WebDriverAgentRunner-Runner.app"
+XCTEST_CONFIG = "WebDriverAgentRunner.xctest"
+OFFICIAL_RUNNER_ID = "com.facebook.WebDriverAgentRunner.xctrunner"  # 官方 Runner 的原始 bundle id
+GOIOS_TUNNEL_MIN_OS = 17  # go-ios 在该系统及以上的 XCTest 会话需要 tunnel，本项目未验证；这类设备只走 Xcode 路径
 
 HOME = Path(os.environ.get("IPHONE_HOME", "~/.local/share/iphone-use")).expanduser()
 CFG = HOME / "config.json"
@@ -27,10 +49,17 @@ CLI = HOME / "cli"
 LAST = CLI / "last.json"
 PIDFILE = CLI / "wda.pid"
 UPLOG = CLI / "up.log"
+TOOLLOG = CLI / "tools.log"
 SHOTS = CLI / "shots"
-DERIVED = HOME / "derived_data"
-RUNNER = DERIVED / "Build/Products/Debug-iphoneos/WebDriverAgentRunner-Runner.app"
-WDA_COMMIT = "d17782422d55ff1e5e0ceb74eb1fd509cc0c35b6"  # appium/WebDriverAgent 16.14.0
+ARTIFACTS = HOME / "artifacts"
+OFFICIAL = ARTIFACTS / f"wda-{WDA_RELEASE_TAG}"  # 校验后原样解包的官方 Runner，不原地签名
+SIGNED = ARTIFACTS / "signed"  # plumesign 路径签好的副本
+IMAGES = ARTIFACTS / "images"  # go-ios 的开发者磁盘镜像
+XCODE = HOME / "xcode"  # 仅 Xcode 路径
+DERIVED = XCODE / "derived_data"
+SOURCE = XCODE / "WebDriverAgent"
+RUNNER = DERIVED / "Build/Products/Debug-iphoneos" / RUNNER_APP  # Xcode 路径的产物
+PLUME_KEYS = Path("~/.config/PlumeImpactor/keys").expanduser()
 MAX_NODES = 200
 KEEP_EMPTY = {"Alert", "Sheet", "TextField", "SecureTextField", "TextView", "SearchField", "Switch"}
 CONTAINERS = {"Application", "Window", "CollectionView", "Table", "ScrollView", "NavigationBar"}  # 容器本身不可操作，子节点已单独列出
@@ -50,7 +79,7 @@ def config():
     try:
         return json.loads(CFG.read_text())
     except FileNotFoundError:
-        raise Fail("尚未配置。先运行 iphone init --team <TeamID> --bundle <唯一bundleId>")
+        raise Fail("尚未配置。先运行 iphone init --bundle <唯一bundleId>")
 
 
 # ---------- usbmux 传输 ----------
@@ -300,28 +329,62 @@ def resolve_point(target):
 
 # ---------- 证书与进程 ----------
 
-def profile_expiry():
-    f = RUNNER / "embedded.mobileprovision"
+def _decode_profile(f):
+    out = subprocess.run(["security", "cms", "-D", "-i", str(f)], capture_output=True)
+    return None if out.returncode else out.stdout
+
+
+def profile_expiry(app=None):
+    """读 App 里 embedded.mobileprovision 的到期时间；Xcode 路径看 RUNNER，plumesign 路径看 signed_app()。"""
+    f = (app or RUNNER) / "embedded.mobileprovision"
     if not f.exists():
         return None
-    out = subprocess.run(["security", "cms", "-D", "-i", str(f)], capture_output=True)
-    if out.returncode:
+    data = _decode_profile(f)
+    if data is None:
         return None
-    return plistlib.loads(out.stdout)["ExpirationDate"].replace(tzinfo=timezone.utc)
+    return plistlib.loads(data)["ExpirationDate"].replace(tzinfo=timezone.utc)
 
 
-def days_left():
-    exp = profile_expiry()
+def days_left(app=None):
+    exp = profile_expiry(app)
     return None if exp is None else (exp - datetime.now(timezone.utc)).total_seconds() / 86400
 
 
+def signed_app():
+    return SIGNED / RUNNER_APP
+
+
+
 def xcode_cmd(cfg, action):
-    return ["xcodebuild", "-project", str(Path(cfg["source_dir"]) / "WebDriverAgent.xcodeproj"),
+    return ["xcodebuild", "-project", str(SOURCE / "WebDriverAgent.xcodeproj"),
             "-scheme", "WebDriverAgentRunner", "-configuration", "Debug", "-destination", "id=" + cfg["udid"],
             "-derivedDataPath", str(DERIVED), "-allowProvisioningUpdates",
             "DEVELOPMENT_TEAM=" + cfg["team_id"], "CODE_SIGN_STYLE=Automatic",
             "CODE_SIGN_IDENTITY=Apple Development", "PRODUCT_BUNDLE_IDENTIFIER=" + cfg["bundle_id"],
             "USE_PORT=" + str(cfg.get("device_port", 8100)), action]
+
+
+def runner_id(cfg):
+    """plumesign 路径的 Runner bundle id；Xcode 路径是 <bundle_id>.xctrunner，两条路径不共用同名 App ID。"""
+    return cfg["bundle_id"] + ".runner"
+
+
+def find_runner(apps, cfg):
+    """手机上已装 Runner 的 bundle id，没有则 None。候选按序: plumesign 路径、Xcode 路径、官方 id 前缀。
+    前缀对应 SideStore 路径：SideStore 重签后是否给 id 加后缀未验证。"""
+    ids = [a.get("CFBundleIdentifier") for a in apps]
+    for cand in (runner_id(cfg), cfg["bundle_id"] + ".xctrunner"):
+        if cand in ids:
+            return cand
+    return next((i for i in ids if isinstance(i, str) and i.startswith(OFFICIAL_RUNNER_ID)), None)
+
+
+def runwda_cmd(cfg, rid):
+    cmd = ["ios", "runwda", f"--bundleid={rid}", f"--testrunnerbundleid={rid}", f"--xctestconfig={XCTEST_CONFIG}",
+           f"--udid={cfg['udid']}", f"--log-output={CLI / 'wda.log'}"]
+    if cfg.get("device_port", 8100) != 8100:
+        cmd.append(f"--env=USE_PORT={cfg['device_port']}")
+    return cmd
 
 
 def ready():
@@ -332,12 +395,13 @@ def ready():
 
 
 def pid_alive():
+    """pidfile 里是 xcodebuild 或 ios runwda 进程（都由 up 以独立会话启动），两者同样处理。"""
     try:
         pid = int(PIDFILE.read_text())
     except (FileNotFoundError, ValueError):
         return None
     try:
-        # up 自己启动的 xcodebuild 退出后是僵尸，kill(pid, 0) 仍成功、再发信号还会 EPERM；先回收
+        # up 自己启动的进程退出后是僵尸，kill(pid, 0) 仍成功、再发信号还会 EPERM；先回收
         if os.waitpid(pid, os.WNOHANG)[0] == pid:
             return None
     except ChildProcessError:
@@ -349,7 +413,7 @@ def pid_alive():
     return pid
 
 
-LOG_HINTS = [
+LOG_HINTS = [  # 只用于 Xcode 路径的 xcodebuild 日志
     (r"Unlock .* to Continue", "手机锁屏，等待用户解锁（xcodebuild 会继续等）", False),
     (r"Developer App Certificate is not trusted",
      "手机没信任开发者证书：设置 → 通用 → VPN 与设备管理 → 开发者 App → 信任，然后重新 iphone up", True),
@@ -359,49 +423,499 @@ LOG_HINTS = [
     (r"Testing failed", "xcodebuild 测试失败，见 " + str(UPLOG), True),
 ]
 
-
-# ---------- 子命令 ----------
-
-def cmd_init(a):
-    """首次配置，也用于换设备：沿用已有配置里的 team、bundle 和其他键。"""
-    HOME.mkdir(parents=True, exist_ok=True)
-    old = json.loads(CFG.read_text()) if CFG.exists() else {}
-    if pid_alive():
-        raise Fail("WDA 还在运行。先 iphone down（会把旧手机的自动锁定恢复为 3 分钟），再换设备")
-    team, bundle = a.team or old.get("team_id"), a.bundle or old.get("bundle_id")
-    if not (team and bundle):
-        raise Fail("首次配置需要 --team 和 --bundle")
-    udid = a.udid
-    if not udid:
-        devs = usb_devices()
-        if not devs:
-            raise Fail("没有 USB 设备。接上并解锁 iPhone，或用 --udid 指定")
-        if len(devs) > 1:
-            raise Fail("有多台 USB 设备，用 --udid 指定其一: " + ", ".join(d[1] for d in devs))
-        udid = devs[0][1]
-    src = Path(a.source or old.get("source_dir") or HOME / "runtime/WebDriverAgent").expanduser()
-    if not (src / "WebDriverAgent.xcodeproj").exists():
-        src.mkdir(parents=True, exist_ok=True)
-        for c in (["git", "init", "-q"], ["git", "remote", "add", "origin", "https://github.com/appium/WebDriverAgent.git"],
-                  ["git", "fetch", "-q", "--depth", "1", "origin", WDA_COMMIT], ["git", "checkout", "-q", "--detach", "FETCH_HEAD"]):
-            subprocess.run(c, cwd=src, check=True)
-    if udid != old.get("udid"):
-        # 旧构建的描述文件只含旧设备；删掉后 up 会自动 renew，为新设备重新签名
-        shutil.rmtree(RUNNER, ignore_errors=True)
-        (CLI / "session").unlink(missing_ok=True)
-    cfg = {"local_port": 18100, "device_port": 8100, **old,
-           "udid": udid, "team_id": team, "bundle_id": bundle, "source_dir": str(src)}
-    CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
-    print(f"已写入 {CFG}（设备 {udid}）\n下一步: iphone up")
-    print(relay_notice())
+RUNWDA_HINTS = [  # ios runwda 日志
+    (r"(?i)PasswordProtected|device is locked", "手机锁屏，请用户本人解锁", False),
+    (r"(?i)broken pipe", "Runner 启动后立刻退出，多半是 .xctest 没签好。运行 iphone renew 重新签名", True),
+]
+RUNWDA_STALL = "WDA 还没就绪。手机若锁屏请解锁，WDA 要解锁后才就绪"
 
 
-def cmd_renew(a):
-    cfg = config()
+# ---------- 外部工具与错误翻译 ----------
+
+TOOL_HELP = {
+    "ios": "缺 go-ios（命令 ios）。用 nix 装，iphone 不会自己装",
+    "rcodesign": "缺 rcodesign。用 nix 装，iphone 不会自己装",
+    "plumesign": f"缺 plumesign。用 mise 装 {PLUMESIGN_MISE} {PLUMESIGN_VERSION}，iphone 不会自己装",
+}
+LOGIN_HELP = ("plumesign 没登录。你本人在终端运行 plumesign account login -u <邮箱>（密码与验证码自己输入）；"
+              "登录后运行 chmod -R go-rwx ~/.config/PlumeImpactor，让令牌只有你能读")
+REVOKED_HELP = ("同账号上其他侧载工具的证书已被吊销，这是证书上限导致的（免费账号最多 2 个开发证书）。"
+                "plumesign 路径要用不与其他侧载工具共享的 Apple ID。不要反复重试")
+TOOL_ERRORS = [
+    (r"Revoked certificate", REVOKED_HELP),
+    (r"(?i)anisette.*(fail|error|unreach|time.?out|refused|unavailable|connect)"
+     r"|(fail|error|unreach|time.?out|refused|unavailable|connect).*anisette",
+     "anisette 服务器不可用（plumesign 经第三方服务器登录）。检查网络，稍后重试"),
+    (r"(?i)device is locked|PasswordProtected", "手机锁屏，请用户本人解锁后重试"),
+]
+
+
+def need_tool(name):
+    if not shutil.which(name):
+        raise Fail(TOOL_HELP[name])
+
+
+def tool_hint(out):
+    return next((msg for pattern, msg in TOOL_ERRORS if re.search(pattern, out)), "")
+
+
+def run_tool(cmd, check=True):
+    """完整输出落 cli/tools.log，屏幕上只给翻译后的短提示。"""
+    if cmd[0] in TOOL_HELP:
+        need_tool(cmd[0])
     CLI.mkdir(parents=True, exist_ok=True)
-    print("构建并重新签名 WDA（首次约几分钟）...", flush=True)
+    try:
+        r = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True, errors="replace", timeout=900)
+    except FileNotFoundError:
+        raise Fail(f"找不到命令 {cmd[0]}")
+    except subprocess.TimeoutExpired:
+        raise Fail(f"{cmd[0]} 超过 15 分钟没结束，已放弃")
+    out = r.stdout + r.stderr
+    with open(TOOLLOG, "a") as f:
+        f.write(f"$ {' '.join(cmd)}\n{out}\n")
+    if r.returncode == 0 and "Revoked certificate" in out:
+        print("注意: " + REVOKED_HELP, file=sys.stderr)  # plumesign 超限时直接吊销现有证书，成功了也要说
+    if r.returncode and check:
+        last = " | ".join([l.strip() for l in out.splitlines() if l.strip()][-3:])
+        raise Fail(f"{cmd[0]} 失败: {tool_hint(out) or last}\n完整输出: {TOOLLOG}")
+    return out
+
+
+def ios_values(text):
+    """go-ios 的 stdout 混有 JSON 日志行和 WARN。只取能解析的 JSON 行（以 [ { \" 开头），丢掉带 level 与 msg 的日志行。"""
+    vals = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line[0] not in '[{"':
+            continue
+        try:
+            v = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(v, dict) and "level" in v and "msg" in v:
+            continue
+        vals.append(v)
+    return vals
+
+
+def image_mounted(text):
+    """ios image list 把结果写成日志：没挂载时 msg 是 none，挂载了则每个镜像一行 signature。"""
+    for line in text.splitlines():
+        msg = line.strip()
+        try:
+            v = json.loads(msg)
+            if isinstance(v, dict) and "msg" in v:
+                msg = str(v["msg"])
+        except ValueError:
+            pass
+        if "signature" in msg.lower() or re.fullmatch(r"[0-9a-f]{16,}", msg):
+            return True
+    return False
+
+
+def vtuple(v):
+    return tuple(int(x) for x in re.findall(r"\d+", v))
+
+
+def need_usb(cfg):
+    dev = usb_device(cfg["udid"])
+    if not dev:
+        raise Fail("iPhone 没有通过 USB 连接。接上数据线并解锁。")
+    return dev
+
+
+def require_team(cfg):
+    if not cfg.get("team_id"):
+        raise Fail("Xcode 路径需要 Team ID：iphone init --team <TeamID>")
+
+
+# ---------- 官方 Runner：下载、校验、解包 ----------
+
+def download_file(url, dest):
+    req = urllib.request.Request(url, headers={"User-Agent": "iphone-cli"})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r, open(dest, "wb") as f:
+            shutil.copyfileobj(r, f)
+    except OSError as e:
+        dest.unlink(missing_ok=True)
+        raise Fail(f"下载 Runner 失败: {e}。检查网络后重试")
+
+
+def unpack_runner(zpath, sha256, dest):
+    """sha256 通过才打开 zip；拒绝越界路径与符号链接（zip-slip）。解到 .part 再改名，失败不留半成品。"""
+    h = hashlib.sha256()
+    with open(zpath, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    if h.hexdigest() != sha256:
+        raise Fail(f"Runner 的 sha256 不符，已拒绝解包。\n  期望 {sha256}\n  实际 {h.hexdigest()}")
+    part = dest.with_name(dest.name + ".part")
+    shutil.rmtree(part, ignore_errors=True)
+    part.mkdir(parents=True)
+    root = part.resolve()
+    try:
+        with zipfile.ZipFile(zpath) as z:
+            for info in z.infolist():
+                target = (part / info.filename).resolve()
+                if target != root and root not in target.parents:
+                    raise Fail(f"zip 里有越界路径 {info.filename!r}，已拒绝")
+                mode = info.external_attr >> 16
+                if stat.S_ISLNK(mode):
+                    raise Fail(f"zip 里有符号链接 {info.filename!r}，已拒绝")
+                if info.is_dir():
+                    target.mkdir(parents=True, exist_ok=True)
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with z.open(info) as src, open(target, "wb") as out:
+                    shutil.copyfileobj(src, out)
+                if mode:
+                    os.chmod(target, mode & 0o777)
+        if not (part / RUNNER_APP).is_dir():
+            raise Fail(f"zip 里没有 {RUNNER_APP}")
+    except BaseException:
+        shutil.rmtree(part, ignore_errors=True)
+        raise
+    shutil.rmtree(dest, ignore_errors=True)
+    part.rename(dest)
+
+
+def fetch_runner():
+    app = OFFICIAL / RUNNER_APP
+    if app.is_dir():
+        return app
+    ARTIFACTS.mkdir(parents=True, exist_ok=True)
+    zpath = ARTIFACTS / f"wda-{WDA_RELEASE_TAG}.zip"
+    print(f"下载官方 Runner {WDA_RELEASE_TAG}（一次性）...", flush=True)
+    download_file(WDA_RUNNER_URL, zpath)
+    try:
+        unpack_runner(zpath, WDA_RUNNER_SHA256, OFFICIAL)
+    finally:
+        zpath.unlink(missing_ok=True)
+    return app
+
+
+def runner_min_os(app):
+    """设备系统下限：Runner 与 .xctest 两个 Info.plist 的 MinimumOSVersion 取最大值。"""
+    plists = [app / "Info.plist", *sorted(app.glob("PlugIns/*.xctest/Info.plist"))]
+    if len(plists) < 2:
+        raise Fail("Runner 包里没有 PlugIns 下的 .xctest")
+    found = []
+    for f in plists:
+        try:
+            found.append(str(plistlib.loads(f.read_bytes())["MinimumOSVersion"]))
+        except (OSError, KeyError, ValueError):
+            raise Fail(f"读不到 {f.relative_to(app)} 的 MinimumOSVersion")
+    return max(found, key=vtuple)
+
+
+def build_ipa(app, ipa):
+    ipa.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(ipa, "w", zipfile.ZIP_DEFLATED) as z:
+        for p in sorted(app.rglob("*")):
+            if p.is_file():
+                z.write(p, f"Payload/{app.name}/{p.relative_to(app).as_posix()}")
+
+
+# ---------- 路径探测（顺序与理由见 ADR 0010） ----------
+
+ROUTE_NAMES = {"ready": "已就绪", "installed": "已装 Runner", "xcode": "Xcode", "plumesign": "plumesign",
+               "sidestore": "SideStore（未验证）"}
+
+
+def devicectl_serves(doc, udid):
+    """Xcode 可服务该设备：devicectl 列出的物理设备里有这个 UDID。不比较版本号。"""
+    devs = (doc.get("result") or {}).get("devices") or []
+    return any((d.get("hardwareProperties") or {}).get("reality") == "physical"
+               and (d.get("hardwareProperties") or {}).get("udid") == udid for d in devs)
+
+
+def account_listed(text):
+    return "Saved accounts:" in text and "No accounts found" not in text
+
+
+def sidestore_id(apps):
+    return next((a["CFBundleIdentifier"] for a in apps if str(a.get("CFBundleIdentifier", "")).startswith(SIDESTORE_ID)), None)
+
+
+class Probes:
+    """路径表用到的探测。每个方法对应一个条件；selftest 用假数据的对象替换它。"""
+
+    def __init__(self, timeout=120, fetch=True):
+        self.timeout, self.fetch, self._apps, self._ver = timeout, fetch, None, None
+
+    def ready(self):
+        return ready()
+
+    def apps(self, cfg):
+        if self._apps is None:
+            self._apps = []
+            if shutil.which("ios"):
+                try:
+                    for v in ios_values(run_tool(["ios", "apps", "--all", f"--udid={cfg['udid']}"])):
+                        if isinstance(v, list):
+                            self._apps = [x for x in v if isinstance(x, dict)]
+                except Fail:
+                    pass
+        return self._apps
+
+    def runner_installed(self, cfg):
+        return find_runner(self.apps(cfg), cfg)
+
+    def start(self, cfg, rid):
+        d = days_left(signed_app()) if rid == runner_id(cfg) else None
+        if d is not None and d <= 0:
+            print("已装的 Runner 证书已过期，需要重新签名", flush=True)
+            return False
+        try:
+            launch_runwda(cfg, self.timeout, rid)
+        except Fail as e:
+            print(f"已装的 Runner 没起来: {e}", flush=True)
+            return False
+        return True
+
+    def device_version(self, cfg):
+        """没有 go-ios 或读不到时返回 None，跳过系统检查（Xcode 路径不依赖 go-ios）。"""
+        if self._ver is not None:
+            return self._ver or None
+        v = None
+        if shutil.which("ios"):
+            try:
+                out = run_tool(["ios", "lockdown", "get", "ProductVersion", f"--udid={cfg['udid']}"])
+            except Fail:
+                out = ""
+            v = next((v for v in ios_values(out) if isinstance(v, str) and re.fullmatch(r"\d+(\.\d+)*", v)), None)
+            if v is None:
+                print("没读到手机系统版本，跳过系统检查", file=sys.stderr)
+        self._ver = v or ""
+        return v
+
+    def min_os(self):
+        if not self.fetch and not (OFFICIAL / RUNNER_APP).is_dir():
+            return None  # status 不下载；还没解包就不知道下限
+        return runner_min_os(fetch_runner())
+
+    def xcode_serves(self, cfg):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "devices.json"
+            try:
+                r = subprocess.run(["xcrun", "devicectl", "list", "devices", "--json-output", str(out)],
+                                   capture_output=True, timeout=60)
+                return r.returncode == 0 and devicectl_serves(json.loads(out.read_text()), cfg["udid"])
+            except (OSError, subprocess.TimeoutExpired, ValueError):
+                return False  # 没有完整 Xcode 时命令失败，按「否」
+
+    def plumesign_state(self):
+        """空串表示 plumesign 路径可用；否则是不可用的原因（含怎么补）。"""
+        missing = [TOOL_HELP[t] for t in ("plumesign", "rcodesign") if not shutil.which(t)]
+        if missing:
+            return "；".join(missing)
+        try:
+            r = subprocess.run(["plumesign", "account", "list"], stdin=subprocess.DEVNULL, capture_output=True,
+                               text=True, errors="replace", timeout=30)
+        except (OSError, subprocess.TimeoutExpired):
+            return LOGIN_HELP
+        return "" if account_listed(r.stdout + r.stderr) else LOGIN_HELP
+
+    def sidestore(self, cfg):
+        return sidestore_id(self.apps(cfg)) is not None
+
+
+def no_route_text(plume_why):
+    return ("没有可用的安装路径。任选其一:\n"
+            "  Xcode: 本机装完整 Xcode，且它认得这台手机（系统太旧的手机通常不行）\n"
+            f"  plumesign: {plume_why}\n"
+            "  SideStore: 在手机上装 SideStore（未验证）")
+
+
+def install_route(cfg, p):
+    """已就绪、已装 Runner 之后的探测：该用哪条路把 Runner 装上手机。renew 与 status 也用它。"""
+    have, floor = p.device_version(cfg), p.min_os()
+    if have and floor and vtuple(have) < vtuple(floor):
+        raise Fail(f"手机系统 {have} 低于下限 {floor}，官方 Runner 装不上。先升级手机系统")
+    if p.xcode_serves(cfg):
+        return "xcode"
+    if have and vtuple(have) >= (GOIOS_TUNNEL_MIN_OS,):
+        raise Fail(f"iOS {GOIOS_TUNNEL_MIN_OS} 及以上需要 Xcode 路径（go-ios 需要 tunnel，未验证）。\n"
+                   "Xcode 要满足: 本机装完整 Xcode；xcrun devicectl list devices 里能看到这台手机；已 iphone init --team <TeamID>")
+    why = p.plumesign_state()
+    if not why:
+        return "plumesign"
+    if p.sidestore(cfg):
+        return "sidestore"
+    raise Fail(no_route_text(why))
+
+
+def choose_route(cfg, p):
+    """路径表自上而下探测，开头打印一行「路径: 名称」。已装 Runner 这一档会真的去启动。"""
+    if p.ready():
+        print(f"路径: {ROUTE_NAMES['ready']}")
+        return "ready"
+    have = p.device_version(cfg)
+    rid = None if have and vtuple(have) >= (GOIOS_TUNNEL_MIN_OS,) else p.runner_installed(cfg)
+    if rid:
+        print(f"路径: {ROUTE_NAMES['installed']}", flush=True)
+        if p.start(cfg, rid):
+            return "installed"
+        print("继续往下探测", flush=True)
+    route = install_route(cfg, p)
+    print(f"路径: {ROUTE_NAMES[route]}", flush=True)
+    return route
+
+
+# ---------- 启动与签名 ----------
+
+def wait_ready(proc, what, timeout, hints, stall=None):
+    """轮询 ready()；日志里命中 hints 就提示或中止；进程提前退出或超时则报错。"""
+    told, start = set(), time.time()
+    while time.time() - start < timeout:
+        if ready():
+            return
+        text = UPLOG.read_text(errors="replace")
+        for pattern, msg, fatal in hints:
+            if re.search(pattern, text):
+                if fatal:
+                    stop_wda()
+                    raise Fail(msg)
+                if msg not in told:
+                    print(msg, flush=True)
+                    told.add(msg)
+        if proc.poll() is not None:
+            raise Fail(f"{what} 已退出，见 {UPLOG}")
+        if stall and stall not in told and time.time() - start > 20:
+            print(stall, flush=True)
+            told.add(stall)
+        time.sleep(2)
+    stop_wda()
+    raise Fail(f"{timeout}s 内 WDA 没就绪，见 {UPLOG}")
+
+
+def launch_runwda(cfg, timeout, rid):
+    """ios runwda 是前台常驻进程：独立会话启动、写 pidfile、轮询就绪。DDI 在这里准备，已装直启与 plumesign 路径共用。"""
+    need_tool("ios")
+    ensure_ddi(cfg)
+    CLI.mkdir(parents=True, exist_ok=True)
+    with open(UPLOG, "w") as log:
+        proc = subprocess.Popen(runwda_cmd(cfg, rid), stdout=log, stderr=subprocess.STDOUT,
+                                stdin=subprocess.DEVNULL, start_new_session=True)
+    PIDFILE.write_text(str(proc.pid))
+    wait_ready(proc, "ios runwda", timeout, RUNWDA_HINTS, RUNWDA_STALL)
+
+
+def ensure_ddi(cfg):
+    out = run_tool(["ios", "image", "list", f"--udid={cfg['udid']}"], check=False)
+    if image_mounted(out):
+        return
+    print("挂载开发者磁盘镜像（go-ios 会下载，首次较慢）...", flush=True)
+    IMAGES.mkdir(parents=True, exist_ok=True)
+    run_tool(["ios", "image", "auto", f"--basedir={IMAGES}", f"--udid={cfg['udid']}"])
+
+
+def extract_signing_pems(app, tmp, run):
+    """不读 accounts.json（含令牌）：证书取自已签名的主程序，私钥按证书 OU（TeamID）定位。"""
+    exe = app / plistlib.loads((app / "Info.plist").read_bytes())["CFBundleExecutable"]
+    run(["codesign", "-d", f"--extract-certificates={tmp / 'cert'}", str(exe)])
+    der = tmp / "cert0"
+    if not der.exists():
+        raise Fail("没能从主程序取到签名证书，第一遍 plumesign 可能没生效")
+    pem = tmp / "cert.pem"
+    run(["openssl", "x509", "-inform", "der", "-in", str(der), "-out", str(pem)])
+    m = re.search(r"\bOU\s*=\s*([A-Za-z0-9]+)", run(["openssl", "x509", "-in", str(pem), "-noout", "-subject"]))
+    if not m:
+        raise Fail("签名证书里没有 OU（TeamID），定位不到私钥")
+    key = PLUME_KEYS / m.group(1) / "key.pem"
+    if not key.exists():
+        raise Fail("找不到 plumesign 的私钥 ~/.config/PlumeImpactor/keys/<TeamID>/key.pem")
+    return pem, key
+
+
+def sign_runner(cfg, device_id, run=None):
+    """官方 Runner 复制一份到临时位置，签完装上手机，成品留在 artifacts/signed/。
+    顺序不能变：plumesign 不签 .xctest，必须先让 plumesign 建好证书并签主 app，
+    再用 rcodesign 补签 .xctest，最后第二遍 plumesign 把 .xctest 一并封进主 app 并安装。
+    plumesign 的 --udid 比较的是 usbmuxd 的数字 DeviceID，不是 UDID。
+    每次调用 plumesign 都可能向 Apple 申请证书（超限会吊销别的证书），所以不循环、不重试。"""
+    run = run or run_tool
+    rid = runner_id(cfg)
+    official = fetch_runner()
+    with tempfile.TemporaryDirectory(prefix="iphone-sign-") as tmp:
+        tmp = Path(tmp)
+        app = tmp / RUNNER_APP
+        shutil.copytree(official, app, symlinks=True)
+        xctests = sorted(app.glob("PlugIns/*.xctest"))
+        if not xctests:
+            raise Fail("Runner 包里没有 PlugIns 下的 .xctest")
+        print("签名 Runner：第一遍，主 app（不带设备）...", flush=True)
+        run(["plumesign", "sign", "--apple-id", "--custom-identifier", rid, "--package", str(app)])
+        pem, key = extract_signing_pems(app, tmp, run)
+        print("补签 .xctest...", flush=True)
+        for x in xctests:
+            run(["rcodesign", "sign", "--pem-file", str(pem), "--pem-file", str(key), str(x)])
+        print("签名并安装：第二遍...", flush=True)
+        run(["plumesign", "sign", "--apple-id", "--register-and-install", "--udid", str(device_id),
+             "--custom-identifier", rid, "--package", str(app)])
+        shutil.rmtree(SIGNED, ignore_errors=True)
+        SIGNED.mkdir(parents=True)
+        shutil.copytree(app, signed_app(), symlinks=True)
+    return signed_app()
+
+
+def install_plumesign(cfg, device_id):
+    TOOLLOG.unlink(missing_ok=True)
+    d = days_left(sign_runner(cfg, device_id))
+    print(f"已签名并安装，证书剩余 {d:.1f} 天" if d is not None
+          else "已签名并安装（没读到 embedded.mobileprovision，过期时间未知）")
+
+
+def up_plumesign(cfg, a):
+    for t in ("ios", "plumesign", "rcodesign"):
+        need_tool(t)
+    install_plumesign(cfg, need_usb(cfg)[0])  # 进到这条路径就是要签名并安装；失败直接报错，不重试
+    launch_runwda(cfg, a.timeout, runner_id(cfg))
+
+
+def up_sidestore(cfg, p):
+    """未验证：IPA 推到 SideStore 的 Documents，之后由用户在 SideStore 里安装并自行管理。"""
+    need_tool("ios")
+    sid = sidestore_id(p.apps(cfg))
+    ipa = ARTIFACTS / f"WebDriverAgentRunner-{WDA_RELEASE_TAG}.ipa"
+    build_ipa(fetch_runner(), ipa)
+    run_tool(["ios", "fsync", f"--app={sid}", "push", f"--srcPath={ipa}", f"--dstPath=Documents/{ipa.name}",
+              f"--udid={cfg['udid']}"])
+    print(f"SideStore 路径（未验证）：已把 {ipa.name} 推到 SideStore 的 Documents。\n"
+          "手机上接着做:\n"
+          "  1. 打开 SideStore，添加这个 IPA 并安装\n"
+          "  2. 之后签名与刷新由 SideStore 管理\n"
+          f"装好后运行 iphone status 确认 WDA 是否可用。iphone up 会把 bundle id 以 {OFFICIAL_RUNNER_ID} 开头的 App 当作已装的 Runner 直接启动"
+          "（SideStore 是否给 id 加后缀未验证）。\n"
+          "风险: 有报告称 SideStore 重签会移除 .xctest，若属实 Runner 起不来。")
+
+
+# ---------- Xcode 路径 ----------
+
+def ensure_source():
+    """WDA 源码只有 Xcode 路径需要，所以延后到这里才拉。"""
+    if (SOURCE / "WebDriverAgent.xcodeproj").exists():
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=SOURCE, capture_output=True, text=True).stdout.strip()
+        if head == WDA_COMMIT:
+            return
+    if not shutil.which("git"):
+        raise Fail("Xcode 路径要用 git 拉 WDA 源码，没找到 git")
+    print("拉取 WDA 源码（固定版本）...", flush=True)
+    SOURCE.mkdir(parents=True, exist_ok=True)
+    if not (SOURCE / ".git").exists():
+        subprocess.run(["git", "init", "-q"], cwd=SOURCE, check=True)
+        subprocess.run(["git", "remote", "add", "origin", WDA_REPO], cwd=SOURCE, check=True)
+    for c in (["git", "fetch", "-q", "--depth", "1", "origin", WDA_COMMIT], ["git", "checkout", "-q", "--detach", "FETCH_HEAD"]):
+        subprocess.run(c, cwd=SOURCE, check=True)
+
+
+def xcode_build(cfg):
+    require_team(cfg)
+    ensure_source()
+    CLI.mkdir(parents=True, exist_ok=True)
+    print("构建并签名 WDA（首次约几分钟）...", flush=True)
     with open(CLI / "build.log", "w") as log:
-        rc = subprocess.run(xcode_cmd(cfg, "build-for-testing"), stdout=log, stderr=subprocess.STDOUT, cwd=cfg["source_dir"]).returncode
+        rc = subprocess.run(xcode_cmd(cfg, "build-for-testing"), stdout=log, stderr=subprocess.STDOUT, cwd=SOURCE).returncode
     text = (CLI / "build.log").read_text()
     if rc:
         errs = [l for l in text.splitlines() if "error:" in l][-5:]
@@ -411,49 +925,100 @@ def cmd_renew(a):
     print(f"构建成功，证书剩余 {d:.1f} 天" if d is not None else "构建成功")
 
 
-def cmd_up(a):
-    if ready() and not a.restart:
-        print("WDA 已就绪")
-        return
-    cfg = config()
-    if not usb_device(cfg["udid"]):
-        raise Fail("iPhone 没有通过 USB 连接。接上数据线并解锁。")
-    if a.restart:
-        stop_wda()
+def up_xcode(cfg, a):
+    require_team(cfg)
     d = days_left()
     if d is None or d <= 0:
-        print("没有可用构建或证书已过期，先 renew", flush=True)
-        cmd_renew(a)
+        print("没有可用构建或证书已过期，先构建并签名", flush=True)
+        xcode_build(cfg)
+    ensure_source()
     CLI.mkdir(parents=True, exist_ok=True)
-    log = open(UPLOG, "w")
-    proc = subprocess.Popen(xcode_cmd(cfg, "test-without-building"), stdout=log, stderr=subprocess.STDOUT,
-                            stdin=subprocess.DEVNULL, cwd=cfg["source_dir"], start_new_session=True)
+    with open(UPLOG, "w") as log:
+        proc = subprocess.Popen(xcode_cmd(cfg, "test-without-building"), stdout=log, stderr=subprocess.STDOUT,
+                                stdin=subprocess.DEVNULL, cwd=SOURCE, start_new_session=True)
     PIDFILE.write_text(str(proc.pid))
-    told = False
-    deadline = time.time() + a.timeout
-    while time.time() < deadline:
-        if ready():
-            print("WDA 已就绪")
-            if not a.no_keep_awake:
-                try:
-                    set_autolock(AUTOLOCK_NEVER)
-                except Fail as e:  # 常亮只是附加功能，不能让 WDA 已就绪的 up 失败
-                    print(f"警告: 没能把自动锁定改为永不（{e}）。可手动改，或 iphone autolock never", file=sys.stderr)
-            return
-        text = UPLOG.read_text(errors="replace")
-        for pattern, msg, fatal in LOG_HINTS:
-            if re.search(pattern, text):
-                if fatal:
-                    stop_wda()
-                    raise Fail(msg)
-                if not told:
-                    print(msg, flush=True)
-                    told = True
-        if proc.poll() is not None:
-            raise Fail(f"xcodebuild 已退出，见 {UPLOG}")
-        time.sleep(2)
-    stop_wda()
-    raise Fail(f"{a.timeout}s 内 WDA 没就绪，见 {UPLOG}")
+    wait_ready(proc, "xcodebuild", a.timeout, LOG_HINTS)
+
+
+# ---------- 子命令 ----------
+
+def cmd_init(a):
+    """首次配置，也用于换设备：沿用已有配置里的 bundle、team 和其他键。只有 --bundle 必填，--team 只有走 Xcode 路径才要。"""
+    HOME.mkdir(parents=True, exist_ok=True)
+    old = json.loads(CFG.read_text()) if CFG.exists() else {}
+    if pid_alive():
+        raise Fail("WDA 还在运行。先 iphone down（会把旧手机的自动锁定恢复为 3 分钟），再换设备")
+    bundle = a.bundle or old.get("bundle_id")
+    if not bundle:
+        raise Fail("首次配置需要 --bundle <全局唯一的 bundle id，如 com.example.wda>")
+    team = a.team or old.get("team_id")
+    udid = a.udid
+    if not udid:
+        devs = usb_devices()
+        if not devs:
+            raise Fail("没有 USB 设备。接上并解锁 iPhone，或用 --udid 指定")
+        if len(devs) > 1:
+            raise Fail("有多台 USB 设备，用 --udid 指定其一: " + ", ".join(d[1] for d in devs))
+        udid = devs[0][1]
+    if udid != old.get("udid") or bundle != old.get("bundle_id"):
+        # 旧的签名只含旧设备或旧 bundle id；删掉后 up 会自动重新签名
+        shutil.rmtree(RUNNER, ignore_errors=True)
+        shutil.rmtree(SIGNED, ignore_errors=True)
+        (CLI / "session").unlink(missing_ok=True)
+    cfg = {"device_port": 8100, **old, "udid": udid, "bundle_id": bundle}
+    for k in ("local_port", "source_dir"):
+        cfg.pop(k, None)  # 都已不再使用
+    if team:
+        cfg["team_id"] = team
+    CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
+    print(f"已写入 {CFG}（设备 {udid}）\n下一步: iphone up（自动选路）")
+    if not team:
+        print("只有走 Xcode 路径才需要 Team ID；到时 iphone init --team <TeamID> 补上")
+    print(relay_notice())
+
+
+def cmd_renew(a):
+    """对当前路径强制重新签名并安装。"""
+    cfg = config()
+    dev = need_usb(cfg)
+    p = Probes()
+    route = install_route(cfg, p)
+    print(f"路径: {ROUTE_NAMES[route]}", flush=True)
+    if route == "xcode":
+        xcode_build(cfg)
+    elif route == "plumesign":
+        for t in ("ios", "plumesign", "rcodesign"):
+            need_tool(t)
+        install_plumesign(cfg, dev[0])
+    else:
+        up_sidestore(cfg, p)
+
+
+def finish_up(a):
+    print("WDA 已就绪")
+    if not a.no_keep_awake:
+        try:
+            set_autolock(AUTOLOCK_NEVER)
+        except Fail as e:  # 常亮只是附加功能，不能让 WDA 已就绪的 up 失败
+            print(f"警告: 没能把自动锁定改为永不（{e}）。可手动改，或 iphone autolock never", file=sys.stderr)
+
+
+def cmd_up(a):
+    cfg = config()
+    need_usb(cfg)
+    if a.restart:
+        stop_wda()
+    p = Probes(a.timeout)
+    route = choose_route(cfg, p)
+    if route == "ready":
+        return
+    if route == "sidestore":
+        return up_sidestore(cfg, p)
+    if route == "xcode":
+        up_xcode(cfg, a)
+    elif route == "plumesign":
+        up_plumesign(cfg, a)
+    finish_up(a)  # "installed" 已在探测时由 runwda 启动
 
 
 def cmd_down(a):
@@ -485,6 +1050,17 @@ def stop_wda():
     print("WDA 已停止")
 
 
+def cert_line(route):
+    if route == "sidestore":
+        return "证书: 由 SideStore 管理"
+    app, miss = (signed_app(), "无签名副本，iphone up 会自动签名并安装") if route == "plumesign" \
+        else (RUNNER, "无构建，iphone up 会自动构建并签名")
+    d = days_left(app)
+    if d is None:
+        return "证书: " + miss
+    return f"证书: 剩余 {d:.1f} 天（免费账号 7 天，过期后 iphone up 会自动重签）" if d > 0 else "证书: 已过期，iphone up 会自动重签"
+
+
 def cmd_status(a):
     cfg = config()
     dev = usb_device(cfg["udid"])
@@ -494,8 +1070,16 @@ def cmd_status(a):
     if ok:
         print(f"锁屏: {'是' if wda('GET', '/wda/locked') else '否'}")
         print(f"前台: {(wda('GET', '/wda/activeAppInfo') or {}).get('bundleId')}")
-    d = days_left()
-    print("证书: " + ("无构建" if d is None else f"剩余 {d:.1f} 天（免费账号 7 天，过期后 iphone up 会自动重签）" if d > 0 else "已过期，iphone up 会自动重签"))
+    if not dev:
+        print("路径: 接上 USB 才能探测")
+        return 1
+    try:
+        route = install_route(cfg, Probes(fetch=False))
+    except Fail:
+        print("路径: 没有可用路径（iphone up 会报错并列出方案）")
+    else:
+        print(f"路径: {ROUTE_NAMES[route]}")
+        print(cert_line(route))
     return 0 if ok else 1
 
 
@@ -1027,6 +1611,273 @@ def selftest():
             raise AssertionError("位置一直在变时不该点击")
     finally:
         g["snapshot_now"], g["sess"], g["act"], g["require_unlocked"], g["time"] = saved
+    # ---------- 安装路径：下载校验、系统下限、路径表、plumesign 流程、过期、init ----------
+    import contextlib
+    import io
+
+    @contextlib.contextmanager
+    def patched(**kw):
+        before = {k: g[k] for k in kw}
+        g.update(kw)
+        try:
+            yield
+        finally:
+            g.update(before)
+
+    def expect_fail(fn, *words):
+        try:
+            fn()
+        except Fail as e:
+            assert all(w in str(e) for w in words), (words, str(e))
+            return
+        raise AssertionError(f"应该报错并含 {words}")
+
+    def quiet(fn, *args, **kw):
+        with contextlib.redirect_stdout(io.StringIO()) as buf:
+            r = fn(*args, **kw)
+        return r, buf.getvalue()
+
+    def make_zip(path, members):
+        with zipfile.ZipFile(path, "w") as z:
+            for name, data, mode in members:
+                zi = zipfile.ZipInfo(name)
+                zi.external_attr = (0o100000 | mode) << 16
+                z.writestr(zi, data)
+
+    def fake_app(root, main_min, xctest_min):
+        fa = root / RUNNER_APP
+        (fa / "PlugIns/WebDriverAgentRunner.xctest").mkdir(parents=True)
+        (fa / "Info.plist").write_bytes(plistlib.dumps({"CFBundleExecutable": "WebDriverAgentRunner-Runner", "MinimumOSVersion": main_min}))
+        (fa / "PlugIns/WebDriverAgentRunner.xctest/Info.plist").write_bytes(plistlib.dumps({"MinimumOSVersion": xctest_min}))
+        (fa / "WebDriverAgentRunner-Runner").write_bytes(b"bin")
+        (fa / "WebDriverAgentRunner-Runner").chmod(0o755)
+        return fa
+
+    # 文本解析与错误翻译
+    assert ios_values('{"level":"info","msg":"x"}\nWARN y\n["a"]\n"15.6.1"\n[{"CFBundleIdentifier":"b.runner"}]\n') == \
+        [["a"], "15.6.1", [{"CFBundleIdentifier": "b.runner"}]]  # 日志行与 WARN 被丢掉，只留结果
+    assert not image_mounted('{"level":"info","msg":"none"}') and image_mounted('{"level":"info","msg":"image signature","signature":"ab"}')
+    assert "吊销" in tool_hint("x Revoked certificate y") and "anisette" in tool_hint("anisette server error: connection refused")
+    assert "锁屏" in tool_hint("failed: PasswordProtected") and tool_hint("fine") == ""
+    doc = {"result": {"devices": [{"hardwareProperties": {"reality": "physical", "udid": "U1"}},
+                                  {"hardwareProperties": {"reality": "virtual", "udid": "U3"}},
+                                  {"hardwareProperties": {"reality": "physical", "ecid": 1}}]}}
+    assert devicectl_serves(doc, "U1") and not devicectl_serves(doc, "U2") and not devicectl_serves(doc, "U3")
+    assert account_listed("Saved accounts:\n x") and not account_listed("No accounts found")
+    assert sidestore_id([{"CFBundleIdentifier": SIDESTORE_ID + ".ABC"}]) and sidestore_id([{"CFBundleIdentifier": "x"}]) is None
+
+    with tempfile.TemporaryDirectory() as t:
+        t = Path(t)
+        # sha256 不符：拒绝，且不解包（连 zip 都不打开）
+        good, evil = t / "good.zip", t / "evil.zip"
+        make_zip(good, [(f"{RUNNER_APP}/Info.plist", b"x", 0o644), (f"{RUNNER_APP}/run", b"bin", 0o755)])
+        make_zip(evil, [("../evil", b"x", 0o644), (f"{RUNNER_APP}/Info.plist", b"x", 0o644)])
+
+        class NoZip:
+            class ZipFile:
+                def __init__(self, *a, **k):
+                    raise AssertionError("sha256 不符后不该解包")
+
+        with patched(zipfile=NoZip):
+            expect_fail(lambda: unpack_runner(good, "0" * 64, t / "bad"), "sha256")
+        assert not (t / "bad").exists() and not (t / "bad.part").exists()
+        unpack_runner(good, hashlib.sha256(good.read_bytes()).hexdigest(), t / "ok")
+        assert (t / "ok" / RUNNER_APP / "run").stat().st_mode & 0o111 and not (t / "ok.part").exists()  # 可执行位保留
+        expect_fail(lambda: unpack_runner(evil, hashlib.sha256(evil.read_bytes()).hexdigest(), t / "slip"), "越界")  # zip-slip
+        assert not (t / "evil").exists() and not (t / "slip").exists() and not (t / "slip.part").exists()
+        with patched(ARTIFACTS=t / "art", OFFICIAL=t / "art" / "official",
+                     download_file=lambda url, dest: dest.write_bytes(b"not the runner")):
+            expect_fail(lambda: quiet(fetch_runner), "sha256")  # 下载到的内容与固定的哈希不符
+        assert not (t / "art" / "official").exists() and not list((t / "art").glob("*.zip"))
+
+        # 设备系统下限 = 两个组件 MinimumOSVersion 的最大值（按数字比较）
+        assert runner_min_os(fake_app(t / "a1", "13.0", "15.0")) == "15.0"
+        assert runner_min_os(fake_app(t / "a2", "16.4", "15.0")) == "16.4"
+        assert runner_min_os(fake_app(t / "a3", "9.3", "10.0")) == "10.0"
+        (t / "a4" / RUNNER_APP).mkdir(parents=True)
+        (t / "a4" / RUNNER_APP / "Info.plist").write_bytes(plistlib.dumps({"MinimumOSVersion": "13.0"}))
+        expect_fail(lambda: runner_min_os(t / "a4" / RUNNER_APP), "xctest")
+
+        # IPA：Payload/<app>/...，权限保留
+        build_ipa(t / "a1" / RUNNER_APP, t / "r.ipa")
+        with zipfile.ZipFile(t / "r.ipa") as z:
+            ent = {i.filename: i for i in z.infolist()}
+        run_ent = ent[f"Payload/{RUNNER_APP}/WebDriverAgentRunner-Runner"]
+        assert f"Payload/{RUNNER_APP}/Info.plist" in ent and (run_ent.external_attr >> 16) & 0o111
+
+        # plumesign 流程：DeviceID 而不是 UDID；补签在第二遍之前；原样解包的目录不被改动；成品留在 signed/
+        official = fake_app(t / "off", "13.0", "15.0")
+        (t / "keys" / "TEAM123").mkdir(parents=True)
+        (t / "keys" / "TEAM123" / "key.pem").write_text("KEY")
+        c1 = {"udid": "00008030-ABCDEF", "bundle_id": "com.example.wda"}
+        cmds = []
+
+        def fake_run(cmd, check=True):
+            cmds.append(list(cmd))
+            if cmd[0] == "codesign":
+                Path(cmd[2].split("=", 1)[1] + "0").write_bytes(b"der")
+            elif cmd[0] == "openssl" and "-out" in cmd:
+                Path(cmd[cmd.index("-out") + 1]).write_text("PEM")
+            elif cmd[0] == "openssl":
+                return "subject=UID=u, CN=Apple Development: a (b), OU=TEAM123, O=n, C=US"
+            elif cmd[0] == "plumesign" and "--register-and-install" in cmd:
+                (Path(cmd[cmd.index("--package") + 1]) / "embedded.mobileprovision").write_bytes(b"p")
+            return ""
+
+        with patched(SIGNED=t / "signed", PLUME_KEYS=t / "keys", fetch_runner=lambda: official):
+            kept, _ = quiet(sign_runner, c1, 7, run=fake_run)
+        assert [c[0] for c in cmds] == ["plumesign", "codesign", "openssl", "openssl", "rcodesign", "plumesign"], cmds
+        first, rc, second = cmds[0], cmds[4], cmds[5]
+        assert "--register-and-install" not in first and "--udid" not in first  # 第一遍不带设备
+        assert second[second.index("--udid") + 1] == "7" and "00008030-ABCDEF" not in " ".join(second)  # DeviceID，不是 UDID
+        assert second[second.index("--custom-identifier") + 1] == "com.example.wda.runner" and "--register-and-install" in second
+        pkg = second[second.index("--package") + 1]
+        assert pkg == first[first.index("--package") + 1] and Path(pkg) != official  # 都签同一份临时副本
+        assert rc.count("--pem-file") == 2 and str(t / "keys" / "TEAM123" / "key.pem") in rc  # 按证书 OU 找到私钥
+        assert rc[-1].startswith(pkg) and rc[-1].endswith(".xctest") and str(official) not in " ".join(rc)  # 补签的是副本里的 xctest
+        assert not list(official.rglob("embedded.mobileprovision"))  # 官方解包目录原样
+        assert kept == t / "signed" / RUNNER_APP and (kept / "embedded.mobileprovision").exists()
+
+        # 过期读取：profile 里的 ExpirationDate；没有文件或解不开都是 None
+        def profile(days):
+            exp = (datetime.now(timezone.utc) + timedelta(days=days)).replace(tzinfo=None)
+            return lambda f: plistlib.dumps({"ExpirationDate": exp})
+
+        with patched(_decode_profile=profile(3)):
+            assert 2.9 < days_left(kept) < 3.1
+        with patched(_decode_profile=profile(-1)):
+            assert days_left(kept) < 0
+        with patched(_decode_profile=lambda f: None):
+            assert days_left(kept) is None
+        assert days_left(t / "nothing") is None
+
+    # 路径表：每一档都用注入的假探测走一遍
+    class FakeP:
+        def __init__(self, **kw):
+            self.v = {"ready": False, "installed": None, "start": True, "version": "15.6.1", "floor": "15.0",
+                      "xcode": False, "plume": "", "side": False, **kw}
+            self.calls, self.started = [], []
+
+        def _a(self, name):
+            self.calls.append(name)
+            return self.v[name]
+
+        def ready(self):
+            return self._a("ready")
+
+        def runner_installed(self, cfg):
+            return self._a("installed")
+
+        def start(self, cfg, rid):
+            self.started.append(rid)
+            return self._a("start")
+
+        def device_version(self, cfg):
+            return self._a("version")
+
+        def min_os(self):
+            return self._a("floor")
+
+        def xcode_serves(self, cfg):
+            return self._a("xcode")
+
+        def plumesign_state(self):
+            return self._a("plume")
+
+        def sidestore(self, cfg):
+            return self._a("side")
+
+    c3 = {"udid": "U", "bundle_id": "b"}
+
+    def route(**kw):
+        p = FakeP(**kw)
+        r, buf = quiet(choose_route, c3, p)
+        return r, buf.splitlines(), p.calls
+
+    r, lines, calls = route(ready=True, installed="b.runner", xcode=True)  # 已就绪：后面的探测都不跑
+    assert r == "ready" and lines == ["路径: 已就绪"] and calls == ["ready"], (r, lines, calls)
+    r, lines, calls = route(installed="b.runner")  # 已装 Runner 且能起
+    assert r == "installed" and lines == ["路径: 已装 Runner"] and "xcode" not in calls, (r, lines, calls)
+    r, lines, calls = route(installed="b.runner", start=False, xcode=True)  # 已装但起不来：继续往下
+    assert r == "xcode" and lines[0] == "路径: 已装 Runner" and lines[-1] == "路径: Xcode", lines
+    expect_fail(lambda: route(version="14.8", xcode=True, plume="", side=True), "14.8", "15.0")  # 系统低于下限，Xcode 也不行
+    assert route(version=None, xcode=True)[0] == "xcode"  # 读不到版本：跳过下限
+    r, lines, calls = route(xcode=True, plume="", side=True)  # Xcode 优先于后面
+    assert r == "xcode" and "plume" not in calls and lines == ["路径: Xcode"], (r, lines, calls)
+    r, lines, calls = route(plume="", side=True)  # plumesign
+    assert r == "plumesign" and "side" not in calls and lines == ["路径: plumesign"], (r, lines, calls)
+    r, lines, calls = route(plume="缺 plumesign", side=True)  # SideStore
+    assert r == "sidestore" and "未验证" in lines[-1], (r, lines)
+    expect_fail(lambda: route(plume="缺 plumesign"), "Xcode", "plumesign", "SideStore")  # 都不满足：列出方案
+
+    # iOS 17 及以上：已装直启、plumesign、SideStore 都不可用，在碰 plumesign 与 SideStore 之前就报错；Xcode 照常
+    p17 = FakeP(version="17.2", installed="b.runner", plume="", side=True)
+    expect_fail(lambda: quiet(choose_route, c3, p17), "iOS 17 及以上需要 Xcode 路径", "tunnel", "Xcode")
+    assert not {"installed", "start", "plume", "side"} & set(p17.calls) and not p17.started, p17.calls
+    assert route(version="17.2", installed="b.runner", xcode=True)[0] == "xcode"
+    assert route(version="16.7", installed="b.runner")[0] == "installed"
+
+    # 已装 Runner 的识别：三种候选各自命中，前缀对应 SideStore 路径（id 后缀未验证）；runwda 用匹配到的 id
+    c4 = {"udid": "U", "bundle_id": "com.x.y"}
+
+    def apps_of(*ids):
+        return [{"CFBundleIdentifier": i} for i in ids]
+
+    sidestore_rid = OFFICIAL_RUNNER_ID + ".ABC123"
+    assert find_runner(apps_of("a", "com.x.y.runner"), c4) == "com.x.y.runner"
+    assert find_runner(apps_of("com.x.y.xctrunner"), c4) == "com.x.y.xctrunner"
+    assert find_runner(apps_of("a", sidestore_rid), c4) == sidestore_rid
+    assert find_runner(apps_of(sidestore_rid, "com.x.y.xctrunner", "com.x.y.runner"), c4) == "com.x.y.runner"
+    assert find_runner(apps_of(sidestore_rid, "com.x.y.xctrunner"), c4) == "com.x.y.xctrunner"
+    assert find_runner(apps_of("com.other"), c4) is None and find_runner([], c4) is None
+    probes = Probes()
+    probes._apps = apps_of(sidestore_rid)
+    assert probes.runner_installed(c4) == sidestore_rid
+    for rid in ("com.x.y.runner", "com.x.y.xctrunner", sidestore_rid):
+        cmd = runwda_cmd(c4, rid)
+        assert cmd[:2] == ["ios", "runwda"] and f"--bundleid={rid}" in cmd and f"--testrunnerbundleid={rid}" in cmd, cmd
+
+    # 已装 Runner 起不来（比如账号证书被吊销，本地副本却没到期）：up 仍要走一轮签名安装，且只有一轮
+    signs, launches = [], []
+    pf = FakeP(installed="com.x.y.runner", start=False, plume="")
+    with patched(config=lambda: c4, need_usb=lambda c: (7, "U"), need_tool=lambda n: None, Probes=lambda timeout: pf,
+                 install_plumesign=lambda c, d: signs.append(d), finish_up=lambda a: None,
+                 launch_runwda=lambda c, timeout, rid: launches.append(rid)):
+        quiet(cmd_up, argparse.Namespace(restart=False, timeout=5))
+    assert pf.started == ["com.x.y.runner"] and signs == [7] and launches == ["com.x.y.runner"], (pf.started, signs, launches)
+
+    # DDI 在启动 runwda 之前准备：准备失败时不会启动进程
+    with tempfile.TemporaryDirectory() as t:
+        def no_ddi(c):
+            raise Fail("ddi")
+
+        with patched(CLI=Path(t), PIDFILE=Path(t) / "wda.pid", UPLOG=Path(t) / "up.log", need_tool=lambda n: None, ensure_ddi=no_ddi):
+            expect_fail(lambda: launch_runwda(c4, 5, "com.x.y.runner"), "ddi")
+        assert not (Path(t) / "wda.pid").exists()
+
+    # init：只必填 --bundle；--udid 缺失按设备数报错；--team 只在走 Xcode 路径时要
+    with tempfile.TemporaryDirectory() as t:
+        t = Path(t)
+
+        def ns(**kw):
+            return argparse.Namespace(**{"team": None, "bundle": None, "udid": None, **kw})
+
+        with patched(HOME=t, CFG=t / "config.json", CLI=t / "cli", PIDFILE=t / "cli" / "wda.pid",
+                     RUNNER=t / "r", SIGNED=t / "s", usb_devices=lambda: []):
+            expect_fail(lambda: cmd_init(ns(udid="U1")), "--bundle")
+            expect_fail(lambda: cmd_init(ns(bundle="com.x.y")), "--udid")
+            with patched(usb_devices=lambda: [(1, "A"), (2, "B")]):
+                expect_fail(lambda: cmd_init(ns(bundle="com.x.y")), "--udid", "A", "B")
+            quiet(cmd_init, ns(bundle="com.x.y", udid="U1"))
+            c2 = json.loads(CFG.read_text())
+            assert c2["udid"] == "U1" and c2["bundle_id"] == "com.x.y" and "team_id" not in c2
+            assert "source_dir" not in c2 and "local_port" not in c2
+            expect_fail(lambda: require_team(c2), "--team")
+            with patched(usb_devices=lambda: [(1, "U1")]):
+                quiet(cmd_init, ns(team="TEAM1"))  # 沿用已有 bundle；udid 取唯一一台
+            c2 = json.loads(CFG.read_text())
+            assert c2["team_id"] == "TEAM1" and c2["bundle_id"] == "com.x.y"
+            require_team(c2)
     print("selftest ok")
 
 
@@ -1042,13 +1893,12 @@ def main():
             sp.add_argument("--wait", type=int, default=500, help="动作后等待界面稳定的毫秒数，默认 500")
         return sp
 
-    sp = add("init", cmd_init, "写配置并拉取固定版本 WDA 源码")
-    sp.add_argument("--team", help="Apple Team ID；已有配置时可省略")
-    sp.add_argument("--bundle", help="全局唯一的 bundle id，如 com.example.wda；已有配置时可省略")
-    sp.add_argument("--udid")
-    sp.add_argument("--source")
-    add("renew", cmd_renew, "构建并重新签名 WDA（免费证书 7 天过期后用）")
-    sp = add("up", cmd_up, "启动 WDA（必要时自动重签），等待就绪")
+    sp = add("init", cmd_init, "写配置；只必填 --bundle，换设备时重新运行")
+    sp.add_argument("--bundle", help="全局唯一的 bundle id，如 com.example.wda；首次必填，已有配置时可省略")
+    sp.add_argument("--team", help="Apple Team ID；只有走 Xcode 路径才需要")
+    sp.add_argument("--udid", help="手机 UDID；省略时用唯一一台 USB 设备")
+    add("renew", cmd_renew, "对当前路径强制重新签名并安装（免费证书 7 天过期后用）")
+    sp = add("up", cmd_up, "按本机条件自动选路，把 Runner 装上手机并启动，等待就绪；证书过期时自动重签")
     sp.add_argument("--restart", action="store_true")
     sp.add_argument("--timeout", type=int, default=120)
     sp.add_argument("--no-keep-awake", action="store_true", help="不把自动锁定改为永不")
@@ -1056,7 +1906,7 @@ def main():
     sp.add_argument("--no-keep-awake", action="store_true", help="不恢复自动锁定")
     sp = add("autolock", cmd_autolock, "设置自动锁定时间（走设置 App 的 UI）")
     sp.add_argument("value", choices=list(AUTOLOCK_CHOICES), help="never 或秒数 30/60/120/180/240/300")
-    add("status", cmd_status, "设备、WDA、锁屏、前台 App、证书剩余天数")
+    add("status", cmd_status, "设备、WDA、安装路径、锁屏、前台 App、证书剩余天数")
     sp = add("snapshot", cmd_snapshot, "读界面树（带 tN 元素 token）")
     sp.add_argument("--max", type=int, default=MAX_NODES)
     sp.add_argument("--full", action="store_true", help="标签不截断（读长帖、长消息）")

@@ -31,9 +31,10 @@ iphone status
 
 判据：`WDA: 就绪`、`锁屏: 否`。
 
-- `WDA: 未运行` → `iphone up`（自动检查证书，过期则重签，等待就绪）。
-- `设备: 未通过 USB 连接` → 请用户接数据线并解锁。
-- `up` 或其他命令报错时，按报错里的提示做；需要更多信息读 [references/setup.md](references/setup.md)。
+- `WDA: 未运行` → `iphone up`（按本机条件自动选路，必要时下载、签名并安装 Runner，等待就绪）。第一次约 2 分钟，等它跑完
+- `设备: 未通过 USB 连接` → 请用户接数据线并解锁
+- `尚未配置` 或 `没有可用的安装路径` → 首次配置，读 [references/setup.md](references/setup.md)。Apple ID 登录、密码、验证码只能用户本人做
+- `up` 或其他命令报错时，按报错里的提示做；需要更多信息读 [references/setup.md](references/setup.md)
 
 ### 2. 读界面
 
@@ -82,12 +83,14 @@ iphone shot                           # 目视兜底
 
 | 命令 | 作用 |
 |---|---|
-| `iphone up` | 启动 WDA（后台进程），等待就绪；证书过期自动 `renew`；随后把自动锁定设为「永不」（中转快捷指令约 6 秒，界面点击约 20 秒；设置失败只警告，`up` 仍算成功） |
+| `iphone up` | 按本机条件自动选路（Xcode / plumesign / SideStore），把官方 Runner 装上手机并启动，等待就绪；证书过期自动重签；随后把自动锁定设为「永不」（中转快捷指令约 6 秒，界面点击约 20 秒；设置失败只警告，`up` 仍算成功）。SideStore 路径（未验证）只把 IPA 推到手机，要用户手动安装，不启动 WDA |
 | `iphone down` | 把自动锁定恢复为 3 分钟，再停止由本 CLI 启动的 WDA |
 | `iphone autolock never\|30\|60\|120\|180\|240\|300` | 手动设置自动锁定（秒）；经中转快捷指令直达，没跑通回退界面点击（较不稳）。中转快捷指令是首次配置，见 references/setup.md |
-| `iphone renew` | 重新构建并签名。免费账号证书 7 天过期，`status` 显示剩余天数 |
-| `iphone status` | 设备、WDA、锁屏、前台 App、证书 |
+| `iphone renew` | 对当前路径强制重新签名并安装。免费账号证书 7 天过期，`status` 显示剩余天数 |
+| `iphone status` | 设备、WDA、锁屏、前台 App、安装路径、证书 |
 
 `up` 与 `down` 都可加 `--no-keep-awake` 跳过自动锁定的修改。
+
+旧系统上界面点击回退可能失败并多耗约 130 秒（iOS 15.6.1 实测，`up` 只警告不失败），见 [references/setup.md](references/setup.md) 的已知限制
 
 任务结束后用 `iphone down`，让手机恢复 3 分钟自动锁定；连续多个任务之间保持 WDA 运行即可。`down` 时手机已锁屏则恢复会失败，命令会提示，需要用户手动改回。

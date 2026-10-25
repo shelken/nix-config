@@ -12,6 +12,7 @@ extend-ignore-re = [
   "Deactive",
   "Pn",
   "imput",    # helium
+  "(?i)udid", # Apple 设备标识，不是 UUID 的拼写错误
 
   # catppuccin theme colors
   "11111b",
