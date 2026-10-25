@@ -10,9 +10,6 @@
           trusted = true;
         }
       ];
-      brews = [
-        "media-control" # computer-use 控制
-      ];
       casks = [
         # "ollama-app"
         "stablyai/orca/orca"
