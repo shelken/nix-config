@@ -91,6 +91,6 @@ iphone shot                           # 目视兜底
 
 `up` 与 `down` 都可加 `--no-keep-awake` 跳过自动锁定的修改。
 
-旧系统上界面点击回退可能失败并多耗约 130 秒（iOS 15.6.1 实测，`up` 只警告不失败），见 [references/setup.md](references/setup.md) 的已知限制
+iOS 15 的设置页没有稳定标识，没装中转快捷指令时自动锁定的界面点击回退用不了，`up` 约 17 秒后只警告不失败（iOS 15.6.1 实测），见 [references/setup.md](references/setup.md) 的已知限制
 
 任务结束后用 `iphone down`，让手机恢复 3 分钟自动锁定；连续多个任务之间保持 WDA 运行即可。`down` 时手机已锁屏则恢复会失败，命令会提示，需要用户手动改回。
