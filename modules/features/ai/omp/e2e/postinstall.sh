@@ -14,6 +14,9 @@
 #      每个 git 依赖改写成 file: 指向 .git-vendor，不多不少
 #   3. bun 失败时激活仍返回 0，但必须打印警告（失败不得静默）
 #   4. 真实 HOME 下，激活 PATH 能解析到 mise 提供的真实 bun（只读，不安装）
+#   5. 沙箱布局（XDG_DATA_HOME/omp 存在）：插件装到 $XDG_DATA_HOME/omp/plugins，
+#      不碰 ~/.omp/plugins（过去恒装到后者，OMP 读前者，沙箱内零插件）；
+#      XDG_DATA_HOME 已设但 omp 目录不存在（宿主）：仍装到 ~/.omp/plugins
 #
 # 运行方式（仓库根目录执行）:
 #   bash modules/features/ai/omp/e2e/postinstall.sh
@@ -46,9 +49,19 @@ check() { # check <描述> <命令...>
   if "$@"; then echo "PASS $desc"; else echo "FAIL $desc"; fails=$((fails + 1)); fi
 }
 
-# 在隔离 HOME 里跑一次激活；$1 = 替身 bun 的退出码。输出落 $home/out，返回激活的退出码
+# 在隔离 HOME 里跑一次激活；$1 = 替身 bun 的退出码；$2 = 布局：
+#   空        宿主：不设 XDG_DATA_HOME
+#   xdg       沙箱：XDG_DATA_HOME 已设且 $XDG_DATA_HOME/omp 已存在
+#   xdg-bare  XDG_DATA_HOME 已设但 $XDG_DATA_HOME/omp 不存在（本机宿主的真实状态）
+# 输出落 $home/out，插件目录落 $plugins，返回激活的退出码
 run_activation() {
-  home="$work/home-$1"
+  home="$work/home-$1${2:+-$2}"
+  if [[ "${2:-}" == xdg ]]; then
+    plugins="$home/xdg/data/omp/plugins"
+    mkdir -p "$home/xdg/data/omp"
+  else
+    plugins="$home/.omp/plugins"
+  fi
   mkdir -p "$home/.local/share/mise/shims"
   cat > "$home/.local/share/mise/shims/bun" <<'STUB'
 #!/bin/sh
@@ -60,17 +73,16 @@ STUB
   jq -r '.dependencies | to_entries[] | select(.value | test("^(git\\+|git@|ssh://)"))
          | [.key, (.value | capture("#(?<r>.+)$").r)] | @tsv' "$manifest" |
     while IFS=$'\t' read -r name ref; do
-      mkdir -p "$home/.omp/plugins/.git-vendor/$name"
-      printf '%s\n' "$ref" > "$home/.omp/plugins/.git-vendor/$name/.ref"
+      mkdir -p "$plugins/.git-vendor/$name"
+      printf '%s\n' "$ref" > "$plugins/.git-vendor/$name/.ref"
     done
   { header; block; } > "$home/activation.sh"
   # env -i：不继承用户的 XDG_DATA_HOME 等变量，否则激活会落到真实插件目录
-  env -i HOME="$home" STUB_BUN_RC="$1" PATH=/nix/var/nix/profiles/default/bin:/usr/bin:/bin \
+  env -i HOME="$home" ${2:+XDG_DATA_HOME="$home/xdg/data"} STUB_BUN_RC="$1" PATH=/nix/var/nix/profiles/default/bin:/usr/bin:/bin \
     "$hm_bash" "$home/activation.sh" > "$home/out" 2>&1
 }
 
 installed_manifest_matches_repo() {
-  local plugins="$home/.omp/plugins"
   jq -e --slurpfile got "$plugins/package.json" --arg vendor "$plugins/.git-vendor" '
     .dependencies as $want
     | $got[0].dependencies as $have
@@ -84,13 +96,26 @@ installed_manifest_matches_repo() {
 
 bun_called_once_in_plugins_dir() {
   [[ "$(wc -l < "$home/bun.calls")" -eq 1 ]] &&
-    grep -q -- "--cwd $home/.omp/plugins .*--ignore-scripts" "$home/bun.calls"
+    grep -q -- "--cwd $plugins .*--ignore-scripts" "$home/bun.calls"
 }
 
 activation_warns_and_continues() {
   local rc=0
   run_activation 1 || rc=$?
   [[ "$rc" -eq 0 ]] && [[ -s "$home/bun.calls" ]] && grep -q '警告' "$home/out"
+}
+
+sandbox_layout_installs_under_xdg() {
+  run_activation 0 xdg &&
+    bun_called_once_in_plugins_dir &&
+    installed_manifest_matches_repo &&
+    [[ ! -e "$home/.omp/plugins" ]]
+}
+
+xdg_without_omp_dir_installs_under_home() {
+  run_activation 0 xdg-bare &&
+    bun_called_once_in_plugins_dir &&
+    [[ ! -e "$home/xdg/data/omp/plugins" ]]
 }
 
 real_mise_bun_resolves() {
@@ -103,6 +128,8 @@ check "激活成功退出" run_activation 0
 check "bun 以隔离插件目录为 --cwd、带 --ignore-scripts 被调用一次" bun_called_once_in_plugins_dir
 check "落盘的 package.json 与仓库清单一致（npm 原样，git 改 file:）" installed_manifest_matches_repo
 check "bun 失败时激活返回 0 且打印警告" activation_warns_and_continues
+check "沙箱布局：插件装到 \$XDG_DATA_HOME/omp/plugins，不碰 ~/.omp/plugins" sandbox_layout_installs_under_xdg
+check "XDG_DATA_HOME 已设但无 omp 目录：仍装到 ~/.omp/plugins" xdg_without_omp_dir_installs_under_home
 check "真实 HOME：激活 PATH 能解析到 mise 的 bun" real_mise_bun_resolves
 
 if [[ "$fails" -ne 0 ]]; then echo "$fails 项失败"; exit 1; fi
