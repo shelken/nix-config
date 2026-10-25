@@ -183,6 +183,8 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 | OMP 数据、会话、插件 | `/data/xdg/*/omp`（插件在 `/data/xdg/data/omp/plugins`），所有上下文共用一份 |
 | msb 运行数据 | `~/Data/sandboxes/msb`（`MSB_HOME`），镜像缓存 `~/.cache/microsandbox` |
 
+旧数据卷上的 `/data/omp/plugins`（约 800 MB）不再使用，不会自动清理，确认后可手动删除；`sb sync` 会在新位置重建，需要重新 clone 私有插件仓库并安装 npm 包
+
 配置发布后，复用中的 VM 新开的上下文即读到新配置，不改指纹，不触发重建。guest 不跟随宿主 live-edit 软链
 
 ## 设计决策

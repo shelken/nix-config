@@ -25,6 +25,7 @@
       # 导致 bun install 报 EACCES，故复制后必须显式补可写位。
       postInstall = ''
         # 与 OMP 的解析一致：$XDG_DATA_HOME/omp 存在时插件在其下（沙箱），否则在 ~/.omp/plugins（宿主）
+        # 判据来源：@oh-my-pi/pi-utils 的 getPluginsDir() → DirResolver；OMP 改判据时这里要跟着改
         if [[ -n "''${XDG_DATA_HOME:-}" && -d "$XDG_DATA_HOME/omp" ]]; then
           plugins="$XDG_DATA_HOME/omp/plugins"
         else

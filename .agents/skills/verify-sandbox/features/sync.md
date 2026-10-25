@@ -24,7 +24,7 @@ Preconditions:
 
 - **重复 sync。** 取 `du -sk ~/Data/sandboxes/mise/aarch64-linux`，运行 `$V run sync1 -- $V sb sync & $V run sync2 -- $V sb sync & wait`，再取一次 `du`。两份 stderr 或 stdout 含「所有 mise 工具均已安装，本次不发起任何安装」，两个 `rc` 为 `0`，两次 `du` 相同
 - **工具可用。** 运行 `$V run tools -- $V sb run bash -c 'for c in rg fd jq gh node python3 uv omp pi codex claude bun mise git; do printf "%s " $c; $c --version 2>&1 | head -1; done'`。每行都有版本号，没有空行
-- **私有插件。** 运行 `$V msb exec sb-main -- bash -c 'cd /data/omp/plugins/node_modules && find -L pi-trae-provider pi-zed-provider -type f | wc -l'`。数量远大于 0（实测 125 与 5752 个文件）
+- **私有插件。** 运行 `$V msb exec sb-main -- bash -c 'cd /data/xdg/data/omp/plugins/node_modules && find -L pi-trae-provider pi-zed-provider -type f | wc -l'`。数量远大于 0（实测 125 与 5752 个文件）
 - **上下文内不能装工具。** 运行 `$V run ctx-install -- $V sb run bash -c 'mise use -g yq@4.44.3; echo rc=$?; cat /data/mise/config.toml'`。输出含 `Read-only file system` 与 `rc=1`，配置文件不存在
 - **上下文内 mise 不联网。** 在测试项目写 `mise.toml`：`[tools]` 下 `mc = "latest"`，运行 `$V run ctx-offline -- $V sb run env MISE_TRUSTED_CONFIG_PATHS="$PROJ" omp --model=cpa/gpt-5.6-luna -p '只回复 OK'`。`rc` 为 `0`，stdout 为 `OK`，stderr 不含「timed out」；对照旧行为每次多花 4 到 5 秒并刷两行超时警告。结束后删除 `mise.toml`
 
@@ -32,4 +32,4 @@ Preconditions:
 
 - `sb sync` 写真实共用层；不要为了测试引入新工具
 - 私有插件 clone 失败只打警告且 `rc` 仍为 `0`，必须看插件目录内容
-- guest 里的插件 `package.json` 把私有依赖改写为 `file:/root/.omp/plugins/.git-vendor/…`，这是设计
+- guest 里的插件 `package.json` 把私有依赖改写为 `file:/data/xdg/data/omp/plugins/.git-vendor/…`，这是设计
