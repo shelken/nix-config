@@ -124,7 +124,9 @@ FORWARD 默认 DROP。公网只在 VM 级控制，不做上下文级限制
 
 secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符，请求发往该 secret 的 `allow` 目标时才换成真实值，token 不落盘。GitHub 的 `git@github.com:` remote 在 guest 内改写为 HTTPS，配合 `GITHUB_TOKEN` 占位符认证；不共享宿主 SSH 私钥
 
-占位符本身也会进入对话：Agent 读到含 `$MSB_<名字>` 的文件或文档、执行 `env` 时，它就留在上下文里，随后每一轮请求体都带着它发往模型服务。msb 对发往 `allow` 之外目标的占位符默认拦截并切断连接，客户端看到的是首字节前的 `ECONNRESET`，`usage` 全为 0。所以 `sb.yaml` 给每个 secret 设 `passthrough: ["*"]`：占位符不含凭据，原样发到任何目标都不泄露，真实值仍只替换给 `allow` 里的目标。排查类似断连时，看宿主 `~/Data/sandboxes/msb/sandboxes/sb-main/logs/runtime.log` 里有无新增 `secret violation`
+占位符本身也会进入对话：Agent 读到含 `$MSB_<名字>` 的文件或文档、执行 `env` 时，它就留在上下文里，随后每一轮请求体都带着它发往模型服务。msb 对发往 `allow` 之外目标的占位符默认拦截并切断连接，客户端看到的是首字节前的 `ECONNRESET`，`usage` 全为 0。所以 `sb.yaml` 给每个 secret 设 `passthrough: ["*"]`：占位符原样发往任何目标，**凭据**不会泄露，真实值仍只替换给 `allow` 里的目标
+
+这只保证连接不断，不保证占位符不外传：它是稳定的明文字符串，会随请求离开本机，被模型服务和中间方记录，模型也可能把它回显到输出。`passthrough` 生效后 msb 不再产生 `secret violation`，宿主 `runtime.log` 也就不能再用来发现占位符进了对话；要确认，在会话 jsonl 或 `~/Data/sandboxes/msb/sandboxes/sb-main/logs/exec.log` 里 grep `$MSB_`
 
 ### 已知局限
 
