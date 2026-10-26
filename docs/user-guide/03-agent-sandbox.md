@@ -40,6 +40,8 @@ omp-sb --model=cpa/gpt-5.6-luna -p '只回复 OK'
 
 家里的模型服务（`192.168.69.46:443`）由 `sb.yaml` 的 `network.default_grant` 对所有项目默认放行，不需要在项目里声明
 
+沙箱里也能用 pi：`sb run pi …`。新数据卷上第一次启动会自己装 packages，约 1 分钟，之后不再装。cpa、mp 的模型要先被发现一次才能用 `--model` 指定，所以新数据卷上先不带 `--model` 跑一次 `sb run pi -p '只回复 OK'`（会因 Zed 未登录报错退出，属预期），之后 `sb run pi --model cpa/… -p …` 才找得到模型。同时首次启动多个 pi 可能失败，根因未查：先单独启一个等装完
+
 项目必须位于挂载根内（默认 `~/Code`、`~/nix-config`、`~/.herdr/worktrees`），否则启动时报错
 
 ## 场景二：同时开多个 Agent

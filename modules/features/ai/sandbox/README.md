@@ -342,6 +342,33 @@ PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 
 已知局限：经 `/data` 后备路径可以把可写根本身改名（如 `mv /data/home/.pi /data/home/.pi-gone`）。声明配置的挂载钉着原目录，上下文视图不变，下次启动 launcher 重新建可写根，所以不是绕过；但数据卷上会留下改名后的孤儿目录。不做自动清理，无法区分用户故意改名与残留
 
+### pi 在上下文里自己装 packages
+
+pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就当场装：npm 源装到 `~/.pi/agent/npm`，git 源 clone 到 `~/.pi/agent/git/<host>/<path>`，再装依赖；已装好的第二次启动不再安装。`shelken/pi-extensions` 里 `@plannotator/pi-extension` 经 `@plannotator/webtui` 依赖 `node-pty`，bun 默认跑它的安装脚本；`node-pty` 没有 linux-arm64 预编译产物，脚本回落 `node-gyp`，guest 没有，退出码 127，所以原来首启必然失败。实测同一份 pi-extensions：普通 `bun install` 报 `node-gyp: command not found`；带下面的 `--config` 则装完 287 个包、没有 `build/`
+
+所以：
+
+- 生成器给沙箱发布一份改写过的 `settings.json`，只把 `npmCommand` 改成 `["bun", "--config=/run/sandbox-config/current/pi-bunfig.toml"]`；`pi-bunfig.toml` 只在发布目录里，内容是 `[install] ignoreScripts = true`。宿主 `settings.json` 不变
+- 只作用于 pi 装包。项目在上下文里自己的 `bun install` 照常跑安装脚本，所以不用 `$XDG_CONFIG_HOME/.bunfig.toml` 这类全局配置；bun 不认 `npm_config_ignore_scripts`、`BUN_INSTALL_IGNORE_SCRIPTS` 环境变量（在 guest 里实测，脚本照跑）
+- 包落在可写根里，属于运行状态，所有上下文共用。不变量 6 管的是共用 mise 安装层，不涉及这里
+- `pi-dynamic-models` 的开关（`~/.pi/agent/extensions/pi-dynamic-models/config.json`）由 Nix 声明。cpa、mp 等 provider 在 `models.json` 里没有模型，只靠它向网关发现
+
+考虑过的替代方案：
+
+- **在 `sb sync` 里装**：sync 在上下文外，看到的 `~/.pi/agent` 是只读发布目录，要么复刻 launcher 的挂载视图，要么照抄 pi 的安装布局；而且 pi 启动时缺包仍会自己装，运行时忽略安装脚本还是要做
+- **`PI_OFFLINE=1` 跳过装包**：同时关掉模型发现，cpa 等 provider 的模型全部找不到
+
+代价：
+
+- 新数据卷上 pi 首启要装全部 packages，实测约 49 秒（含启动上下文；这次调用以 `Model … not found` 退出，包已装好）；之后不再安装
+- 模型发现发生在会话开始之后，晚于 `-p` 解析 `--model`。冷缓存（新数据卷，或 `~/.pi/agent/cache` 被清）下 `pi -p --model cpa/…` 报 `not found`，失败在会话开始之前，不写发现缓存。预热：不带 `--model` 运行一次 `pi -p`，会话开始即写 `~/.pi/agent/cache/provider-models`；pi 回退到第一个可用模型 `zed/…`，未登录 Zed 而报错、退出码 1，这是预期。缓存写好后，所有上下文里显式 `--model cpa/…` 都能用。cpa、mp 在 `models.json` 里只有 `modelOverrides`，没有 `models`，所以只能靠发现；不把 `modelOverrides` 静态化成 `models`（会让约 50 个模型退化成 128k/16k/仅文本，宿主也受影响）
+- `node-pty` 的原生桥接在 pi 里同样不可用
+
+已知限制，根因未查，也没有加 timeout、重试等绕过：
+
+- **同时首启多个 pi 可能失败。** 前任实测过并发首启失败率很高，这批数据没有复核，原因没有查。新数据卷上先单独启动一个 pi、等约 40 秒装完，再并发使用；装完之后的并发没有单独验证
+- **预热步骤偶发卡住。** 前任报告把「预热 + 对话」串在一条 `sb run bash -c` 里时整体 400 秒超时过 1 次，之后同命令 3 次未复现。本次验证在新数据卷的首次预热里也遇到 1 次，跑满 `timeout 150` 被杀，之后 13 轮（每轮先清发现缓存）未复现。验证命令照常带 `timeout`
+
 ### 共用 mise 安装层
 
 主 VM 数据盘坏掉重建、一次性 e2e VM 启动时，mise 工具（bun、codex、oh-my-pi 等）和 OMP 插件都要重新下载安装，下载量大、耗时长。另外，若把宿主真实路径直接写进 VM 挂载配置，路径变化（如用户名、目录调整）会改变上限指纹，让复用中的 VM 被判定「上限不一致」而重建
@@ -357,14 +384,14 @@ PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 - 主 VM 首次创建后自动 sync 一次；`sb run`、`sb shell`、`omp-sb` 复用已有 VM 时不自动 sync
 - OMP 插件在 guest 内按仓库清单完整重放。带 GitHub 有效凭据时，`git+ssh://git@github.com/...` 源改写为 `https://github.com/...`，凭据经 `GIT_CONFIG_GLOBAL` 的 `insteadOf` 指向占位符 URL `$MSB_GITHUB_TOKEN`（由 `sb.yaml` 的 `secrets` 声明，msb 在网络边界替换），token 不落盘、不进日志、不进进程参数
 - 私有插件能装就装：VM 本地 `.git-vendor` 已有同一依赖且 ref 一致时直接复用；否则对该 git 源做一次禁交互的浅 clone（`GIT_TERMINAL_PROMPT=0`、`--depth 1`，带 ref 时 `--branch`），以 `file:` 依赖安装。clone 失败只在 `sb sync` 输出中警告，不区分原因，退出码不受影响
-- 不执行依赖安装脚本（`bun install --ignore-scripts`）：`node-pty`（`@plannotator/webtui` 的依赖）在 Linux 无预编译产物，安装脚本回落 `node-gyp rebuild`，需要 C 工具链。实测补齐 gcc-wrapper 的闭包增量 1.3 GiB（gcc-wrapper 370 MiB、binutils 121 MiB、isl/mpfr/mpc/gcc 等），远超 200 MiB 预算，所以不引入编译器。`node-pty` 只供 plannotator 的终端桥接，不参与插件加载。将来确需本地终端桥接，再单独评估工具链预算
+- 不执行依赖安装脚本（`bun install --ignore-scripts`）：`node-pty`（`@plannotator/webtui` 的依赖）在 Linux 无预编译产物，安装脚本回落 `node-gyp rebuild`，需要 C 工具链。实测补齐 gcc-wrapper 的闭包增量 1.3 GiB（gcc-wrapper 370 MiB、binutils 121 MiB、isl/mpfr/mpc/gcc 等），远超 200 MiB 预算，所以不引入编译器。`node-pty` 只供 plannotator 的终端桥接，不参与插件加载。将来确需本地终端桥接，再单独评估工具链预算。pi 自己装 packages 时同样跳过安装脚本，见上一节
 
 代价：
 
 - 共用安装层损坏影响所有 VM，用 `sb sync` 重装自愈
 - 宿主目录体积随工具增长（约 1 至 2 GB 量级）
 - 无凭据环境下私有插件不可用，只在 `sb sync` 输出中提示
-- `node-pty` 的原生桥接在沙箱内不可用
+- `node-pty` 的原生桥接在沙箱内不可用（OMP 与 pi 都是）
 
 ## 测试
 
