@@ -156,8 +156,8 @@
     in
     {
       config = {
-        home.file.".omp/agent/agents".source = ompAgentsDir;
-        home.file.".pi/agent/agents" = {
+        shelken.dev.tools.omp.files.".omp/agent/agents".source = ompAgentsDir;
+        shelken.dev.tools.pi.files.".pi/agent/agents" = {
           source = piAgentsDir;
           force = true;
         };

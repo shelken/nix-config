@@ -12,7 +12,7 @@ let
   accent = palette.${config.catppuccin.accent};
 in
 {
-  home.file.".pi/agent/themes/catppuccin.json".source =
+  shelken.dev.tools.pi.files.".pi/agent/themes/catppuccin.json".source =
     (pkgs.formats.json { }).generate "pi-theme.json"
       {
         name = "catppuccin";
