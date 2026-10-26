@@ -77,7 +77,7 @@ flowchart LR
 | `mount_roots` | 无 | 挂载根，支持 `~`、`${HOME}`；先解析符号链接，guest 内路径与宿主一致 |
 | `network.allow` | `public`、`dns` | VM 级网络策略（msb 规则语法）：`public`、`dns`、`private`、`host:tcp:<端口>`。`private` 整体放开私网，逐项限制由上下文内的 iptables 链完成；改它会改变上限指纹、触发重建 |
 | `network.default_grant` | 无 | 所有上下文默认放行的私网 `IP:端口`；不进 VM 配置，改了不触发重建 |
-| `secrets` | 无 | `变量名: { allow: [域名或 IP], passthrough: [域名] }`，真实值由宿主 `sec-run` 注入；`allow` 是替换真实值的目标，`passthrough` 是占位符原样放行的目标（当前全部为 `*`，原因见「网络与 secret」）；改它会改变上限指纹、触发重建 |
+| `secrets` | 无 | `变量名: { allow: [域名或 IP], passthrough: [域名] }`，真实值只在 VM 创建与启动时由宿主 `sec-run` 注入（msb 在启动时读宿主环境变量），`exec`、`copy` 不注入，所以日常 `sb run` 不触发 `op run` 与 1Password 授权弹窗；`allow` 是替换真实值的目标，`passthrough` 是占位符原样放行的目标（当前全部为 `*`，原因见「网络与 secret」）；改它会改变上限指纹、触发重建 |
 
 ### 授权：项目 `.sandbox.yaml`
 
