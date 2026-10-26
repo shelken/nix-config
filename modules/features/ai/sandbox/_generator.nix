@@ -219,6 +219,13 @@ let
     lib.concatStringsSep "\n" (map (e: e.target) configEntries) + "\n"
   );
 
+  # 可写根清单（相对 $HOME，一行一个）：launcher 的唯一来源，与 declared-paths 同版本发布
+  writableRoots = pkgs.writeText "writable-roots" (
+    lib.concatMapStrings (r: "${r}\n") (
+      lib.unique (lib.sort lib.lessThan config.shelken.dev.sandbox.writableRoots)
+    )
+  );
+
   # 生成沙箱发布目录配置 (挂载到 /run/sandbox-config)
   rawSandboxConfig = pkgs.linkFarm "sandbox-config-inner" (
     [
@@ -241,6 +248,10 @@ let
       {
         name = "declared-paths";
         path = declaredPaths;
+      }
+      {
+        name = "writable-roots";
+        path = writableRoots;
       }
     ]
     ++ (map (e: {
@@ -288,6 +299,7 @@ let
     ln -sfn ${syncGuestScript} "$tmp/sync-guest.sh"
     ln -sfn ${postInstallList} "$tmp/postinstall-tools"
     ln -sfn ${declaredPaths} "$tmp/declared-paths"
+    ln -sfn ${writableRoots} "$tmp/writable-roots"
     mv "$tmp" "$dst"
     # 原子切换：软链先就位为 current.new，再同目录 rename 覆盖 current（无空窗）
     ln -sfn "$version" "$cfg_root/current.new"

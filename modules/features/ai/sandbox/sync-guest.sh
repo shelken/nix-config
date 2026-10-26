@@ -52,15 +52,15 @@ if [[ -n "$ca_bundle" ]]; then
   export GIT_SSL_CAINFO="$ca_bundle"
 fi
 
-# 确保 /data 与 /root 基础目录结构存在
-mkdir -p /data/mise /data/xdg/data/mise /data/xdg/cache/mise /data/xdg/config/mise "$MISE_SHIMS_DIR" /data/xdg/data/omp /root/.omp
-ln -sfn /run/sandbox-config/current/.omp/agent /root/.omp/agent 2>/dev/null || true
-if [[ -e /run/sandbox-config/current/.pi ]]; then
-  ln -sfn /run/sandbox-config/current/.pi /root/.pi 2>/dev/null || true
-fi
-if [[ -e /run/sandbox-config/current/.agents ]]; then
-  ln -sfn /run/sandbox-config/current/.agents /root/.agents 2>/dev/null || true
-fi
+# 确保 /data 基础目录结构存在
+mkdir -p /data/mise /data/xdg/data/mise /data/xdg/cache/mise /data/xdg/config/mise "$MISE_SHIMS_DIR" /data/xdg/data/omp
+# 上下文外（sb sync、msb exec）看到的配置：每个可写根在 /root 下指向只读发布目录。
+# 根清单与 launcher 同源（发布目录的 writable-roots）；本脚本随同一版本发布，清单必然存在
+while IFS= read -r root; do
+  [[ -n "$root" ]] || continue
+  mkdir -p "$(dirname "/root/$root")"
+  ln -sfn "/run/sandbox-config/current/$root" "/root/$root" 2>/dev/null || true
+done < /run/sandbox-config/current/writable-roots
 
 # 沙箱内插件安装失败必须传给 sb sync；宿主激活的容忍策略不受影响
 export SB_POSTINSTALL_STRICT=1

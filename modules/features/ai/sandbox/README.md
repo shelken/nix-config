@@ -188,14 +188,14 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 
 | 内容 | 位置 |
 | --- | --- |
-| 发布给 guest 的配置 | 宿主 `~/.config/sandbox/current`（Nix store 链接），guest `/run/sandbox-config/current`；声明配置清单在同一版本目录的 `declared-paths` |
+| 发布给 guest 的配置 | 宿主 `~/.config/sandbox/current`（Nix store 链接），guest `/run/sandbox-config/current`；声明配置清单 `declared-paths` 与可写根清单 `writable-roots` 在同一版本目录 |
 | OMP、pi 配置与 skills | 上下文内 `/root/.omp/agent`、`/root/.pi/agent`、`/root/.agents`，整体可写，落在数据卷 `/data/home/` 下，所有上下文共用；其中声明配置逐项只读挂载 |
 | `.config/<X>` 声明配置 | 上下文内 `$XDG_CONFIG_HOME/<X>`（`/data/xdg/config/<X>`），只读挂载；沙箱里没有 `/root/.config` |
 | OMP 数据、会话、插件 | `/data/xdg/*/omp`（插件在 `/data/xdg/data/omp/plugins`），所有上下文共用一份 |
 | 其他运行状态（pi-fff 数据库、intercom 运行目录、插件自己的设置等） | 留在工具默认位置，例如 `/root/.pi/agent/fff`，落在可写根里，所有上下文共用 |
 | msb 运行数据 | `~/Data/sandboxes/msb`（`MSB_HOME`），镜像缓存 `~/.cache/microsandbox` |
 
-可写根与数据卷的对应：
+可写根由登记表 `shelken.dev.sandbox.writableRoots` 声明（omp、pi、skills 各自声明自己的根，相对 `$HOME`），经发布目录的 `writable-roots` 交给 launcher；launcher 自己不带任何路径，数据卷位置固定为 `/data/home/<相对根>`。新增或删除根只改 Nix。构建期 assertion 要求：根是 `$HOME` 下的相对路径、互不嵌套，且每个 `shelken.dev.tools.*.files` 目标落在某个根下或在 `.config/` 下。当前的对应：
 
 | 上下文内路径 | 数据卷位置 | 用途 |
 | --- | --- | --- |
@@ -208,7 +208,7 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 
 配置发布后，复用中的 VM 新开的上下文即读到新配置，不改指纹，不触发重建。运行中的上下文继续读启动时的版本：发布脚本保留旧版本 7 天，只清理更早的。guest 不跟随宿主 live-edit 软链
 
-上下文外（`sb sync`、`msb exec`）的 `/root/.omp/agent`、`/root/.pi`、`/root/.agents` 是指向只读发布目录的符号链接，看不到上下文里的可写根。上下文布局只由 launcher 负责，改它不改指纹。其中 `/root/.agents` 由 `sb.sh` 的 VM 级 patch 建立，进上限指纹，只服务上下文外；上下文内 launcher 用 tmpfs 整体遮住 `/root`，不受它影响
+上下文外（`sb sync`、`msb exec`）的 `/root/.omp/agent`、`/root/.pi/agent`、`/root/.agents` 是指向只读发布目录的符号链接（`sync-guest.sh` 按 `writable-roots` 逐项建立），看不到上下文里的可写根。上下文布局只由 launcher 负责，改它不改指纹。其中 `/root/.agents` 另由 `sb.sh` 的 VM 级 patch 建立，进上限指纹，只服务上下文外；上下文内 launcher 用 tmpfs 整体遮住 `/root`，不受它影响
 
 ## 设计决策
 
@@ -321,7 +321,7 @@ PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 
 - 挂载单元就是发布清单的每一项：文件项绑文件，目录项（如 `.agents/skills/<名>`、`.omp/agent/agents`）绑整个目录。同目录里别人放的文件可写，`extensions/` 这类目录因此可以混放
 - launcher 只解析一次 `current`，清单与挂载源来自同一版本目录；源缺失直接报错并指出路径，不跳过
-- 嵌套声明项的祖先目录（如 `extensions/`、`intercom/`、`/data/xdg/config/<X>`），以及 `/root`、`/root/.omp`、`/root/.pi`，也都做成挂载点。内核只拒绝改名挂载点本身，改名普通祖先会把下面的只读挂载一起移走，原位置就能建出可写的同名替身（实测，经上下文路径或 `/data` 后备路径都成立）。做成挂载点后改名一律 `Device or resource busy`
+- 嵌套声明项的祖先目录（如 `extensions/`、`intercom/`、`/data/xdg/config/<X>`），以及 `/root` 和各根的上层目录（由 `writable-roots` 推出，如 `/root/.omp`、`/root/.pi`），也都做成挂载点。内核只拒绝改名挂载点本身，改名普通祖先会把下面的只读挂载一起移走，原位置就能建出可写的同名替身（实测，经上下文路径或 `/data` 后备路径都成立）。做成挂载点后改名一律 `Device or resource busy`。`imports` 的目标也不得落在这些挂载点或根下，同样由清单推出
 - 挂载点在数据卷上留下空文件或空目录占位。声明从文件改成目录（或反过来）时，旧占位会让 bwrap 报 `Destination is not a file` 而起不来。launcher 在启动锁内检查：类型不符的空占位，没有别的上下文在运行时删除；有别的上下文时报错，占位是它们的挂载点，类型要变就等全部退出后再整理；非空内容一律报错，不自动删，里面可能是别的上下文的运行状态
 - 发布脚本保留旧版本 7 天。挂载钉住启动时的版本目录，立即删除旧版本会让运行中的上下文读不到复制来的条目（live-edit 主机上的 `settings.json`、`AGENTS.md` 等，实测）
 
@@ -329,6 +329,8 @@ PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 
 - **整目录只读**：即原来的做法，插件写状态全部失败
 - **符号链接农场**：可写目录里逐项链接到发布目录。插件 unlink 或原子替换就能把链接换成普通文件，只读只是约定
+- **根的清单写在 launcher 里**：同一份知识在 Nix 与 shell 各有一份，还要在 tmpfs 挂载点、`imports` 保留位置、`sync-guest.sh` 里各抄一遍，新增根时漏一处就留下可改名的祖先目录
+- **从 `files` 目标路径推断根**：`.agents/x`、`.omp/agent/x`、`.config/x` 的根深度不一致，只能把规则硬编码，等于换个地方写死
 - **持久化整个 HOME**：最省事，但 `/root` 其余部分也会跨上下文共用，`.sandbox.yaml` 的 `imports` 隔离失效
 
 代价：

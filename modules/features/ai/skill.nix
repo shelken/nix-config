@@ -335,6 +335,7 @@
         shelken.dev.tools.agent-common.files = lib.filterAttrs (
           name: _: lib.hasPrefix ".agents/" name
         ) allSkillLinks;
+        shelken.dev.sandbox.writableRoots = [ ".agents" ];
 
         # 手动命令
         # bunx skills update

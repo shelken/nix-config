@@ -119,13 +119,10 @@ sweep_dead_contexts() {
   done
 }
 
-# 可写根：agent 配置目录整体落在数据盘、所有上下文共用；其中 Nix 声明的路径再逐项只读挂载
-# 上下文路径 -> 数据盘后备目录
-declare -A AGENT_ROOTS=(
-  ["$HOME/.omp/agent"]=/data/home/.omp/agent
-  ["$HOME/.pi/agent"]=/data/home/.pi/agent
-  ["$HOME/.agents"]=/data/home/.agents
-)
+# 可写根：agent 配置目录整体落在数据盘、所有上下文共用；其中 Nix 声明的路径再逐项只读挂载。
+# 根的清单来自发布目录的 writable-roots（登记表 shelken.dev.sandbox.writableRoots），
+# launcher 自己不带任何路径，只按固定规则映射到数据盘：$HOME/<相对根> -> /data/home/<相对根>
+declare -A AGENT_ROOTS=()
 
 # 上下文路径 -> 数据盘上的同一位置（挂载点占位所在）。.config/<X> 映射到 $XDG_CONFIG_HOME/<X>
 declared_dst() {
@@ -146,7 +143,7 @@ backing_of() {
   echo "$p"
 }
 
-# 挂载根：上下文路径所在的可写根，或 /data
+# 挂载根：上下文路径所在的可写根，或 /data（XDG 配置落点）；都不是则失败，调用方报错
 mount_root_of() {
   local p="$1" root
   for root in "${!AGENT_ROOTS[@]}"; do
@@ -155,6 +152,7 @@ mount_root_of() {
       return
     fi
   done
+  [[ "$p" == /data/* ]] || return 1
   echo /data
 }
 
@@ -183,25 +181,65 @@ resolve_conflict() {
   exit 1
 }
 
-# 声明配置布局（启动锁内调用）：校验并整理数据盘上的落点，生成挂载参数 DECLARED_ARGS。
-# 嵌套声明项的祖先目录也要变成挂载点：内核只拒绝改名挂载点本身，
-# 改名普通祖先会把下面的只读挂载一起移走，原位置就能建出可写的同名替身
-DECLARED_ARGS=()
-prepare_declared_layout() {
-  local others="$1" cfg list t dst src want root p a
-  local -a ancestors=() binds=()
-  for root in "${!AGENT_ROOTS[@]}"; do
-    mkdir -p "${AGENT_ROOTS[$root]}"
+# 布局结果：bwrap 参数，以及需要变成挂载点的目录（导入目标不得落在其下）
+LAYOUT_ARGS=()
+MOUNT_POINTS=()
+
+# 是否落在 launcher 自己铺设的 agent 配置布局上（挂载点目录或可写根）
+is_agent_layout_path() {
+  local d="$1" p
+  for p in "${MOUNT_POINTS[@]}" "${!AGENT_ROOTS[@]}"; do
+    if [[ "$d" == "$p" || "$d" == "$p/"* ]]; then
+      return 0
+    fi
   done
+  return 1
+}
+
+# 发布目录在而清单缺失，说明发布目录来自旧版本；静默放行会让上下文没有任何声明配置和只读保护
+require_published() {
+  if [[ ! -f "$1" ]]; then
+    echo "[-] 错误: 发布目录缺少清单：$1（发布目录来自旧版本，重新发布配置后重试：just hm）" >&2
+    exit 1
+  fi
+}
+
+# agent 配置布局（启动锁内调用）：读发布清单，整理数据盘上的落点，生成 LAYOUT_ARGS：
+# tmpfs $HOME -> 根的上层目录（tmpfs）-> 可写根（数据盘）-> 声明配置的祖先目录 -> 声明配置逐项只读。
+# 上层目录与祖先目录都要变成挂载点：内核只拒绝改名挂载点本身，
+# 改名普通祖先会把下面的挂载一起移走，原位置就能建出可写的同名替身
+prepare_declared_layout() {
+  local others="$1" cfg list roots_file rel t dst src want root p a
+  local -a ancestors=() binds=() uppers=()
   [[ -e /run/sandbox-config/current ]] || return 0
   # 只解析一次 current：清单与挂载源来自同一版本，宿主中途重新发布也不会错位
   cfg="$(readlink -f /run/sandbox-config/current)"
   list="$cfg/declared-paths"
-  # 发布目录在而清单缺失，说明发布目录来自旧版本；静默放行会让上下文没有任何声明配置和只读保护
-  if [[ ! -f "$list" ]]; then
-    echo "[-] 错误: 发布目录缺少声明配置清单：$list（发布目录来自旧版本，重新发布配置后重试：just hm）" >&2
-    exit 1
-  fi
+  roots_file="$cfg/writable-roots"
+  require_published "$list"
+  require_published "$roots_file"
+
+  LAYOUT_ARGS+=(--tmpfs "$HOME")
+  while IFS= read -r rel; do
+    [[ -n "$rel" ]] || continue
+    root="$HOME/$rel"
+    AGENT_ROOTS["$root"]="/data/home/$rel"
+    mkdir -p "${AGENT_ROOTS[$root]}"
+    p="${root%/*}"
+    while [[ "$p" == "$HOME/"* ]]; do
+      uppers+=("$p")
+      p="${p%/*}"
+    done
+  done < "$roots_file"
+  # 父目录排在子目录前面：C 排序下前缀先于其延伸
+  while IFS= read -r p; do
+    [[ -n "$p" ]] || continue
+    MOUNT_POINTS+=("$p")
+    LAYOUT_ARGS+=(--dir "$p" --tmpfs "$p")
+  done < <(printf '%s\n' "${uppers[@]}" | LC_ALL=C sort -u)
+  for root in "${!AGENT_ROOTS[@]}"; do
+    LAYOUT_ARGS+=(--bind "${AGENT_ROOTS[$root]}" "$root")
+  done
 
   while IFS= read -r t; do
     [[ -n "$t" ]] || continue
@@ -211,7 +249,10 @@ prepare_declared_layout() {
       exit 1
     fi
     dst="$(declared_dst "$t")"
-    root="$(mount_root_of "$dst")"
+    if ! root="$(mount_root_of "$dst")"; then
+      echo "[-] 错误: 声明配置 $t 不在任何可写根或 .config/ 下（发布清单不一致，重新发布配置后重试：just hm）" >&2
+      exit 1
+    fi
     p="$(dirname "$dst")"
     while [[ "$p" != "$root" && "$p" != / ]]; do
       ancestors+=("$p")
@@ -227,7 +268,6 @@ prepare_declared_layout() {
     binds+=(--ro-bind "$src" "$dst")
   done < "$list"
 
-  # 父目录排在子目录前面：C 排序下前缀先于其延伸
   while IFS= read -r p; do
     [[ -n "$p" ]] || continue
     a="$(backing_of "$p")"
@@ -235,9 +275,9 @@ prepare_declared_layout() {
       resolve_conflict "$a" "目录" "$others"
     fi
     mkdir -p "$a"
-    DECLARED_ARGS+=(--bind "$a" "$p")
+    LAYOUT_ARGS+=(--bind "$a" "$p")
   done < <(printf '%s\n' "${ancestors[@]}" | LC_ALL=C sort -u)
-  DECLARED_ARGS+=("${binds[@]}")
+  LAYOUT_ARGS+=("${binds[@]}")
 }
 
 if [[ "${1:-}" == "--check-busy" ]]; then
@@ -507,14 +547,9 @@ if [[ -d /run/sandbox-config ]]; then
   BWRAP_ARGS+=(--ro-bind /run/sandbox-config /run/sandbox-config)
 fi
 
-# agent 配置目录：可写根整体落数据盘，声明配置逐项只读挂载在上面。
-# /root 及可写根的上层目录用 tmpfs 变成挂载点，防止被改名后换掉整个视图；
+# agent 配置布局（tmpfs 挂载点、可写根、声明配置）全部由 prepare_declared_layout 按发布清单生成。
 # 必须排在 imports 之前，否则后铺的 tmpfs 会遮住 imports 落在 ~ 下的目标
-BWRAP_ARGS+=(--tmpfs "$HOME" --dir "$HOME/.omp" --tmpfs "$HOME/.omp" --dir "$HOME/.pi" --tmpfs "$HOME/.pi")
-for root in "${!AGENT_ROOTS[@]}"; do
-  BWRAP_ARGS+=(--bind "${AGENT_ROOTS[$root]}" "$root")
-done
-BWRAP_ARGS+=("${DECLARED_ARGS[@]}")
+BWRAP_ARGS+=("${LAYOUT_ARGS[@]}")
 
 # 导入文件：每个目标目录绑定一份暂存目录（目录形式支持原子改名；退出自动删除）。
 # 目标目录会被整体遮住，所以不能落在系统目录或 launcher 自己铺设的 agent 配置目录上
@@ -524,11 +559,15 @@ while IFS=$'\t' read -r stage dir; do
   case "$dir" in
     "$HOME" | / | /usr | /usr/* | /bin | /bin/* | /lib | /lib/* | /lib64 | /lib64/* | /etc | /etc/* | \
       /proc | /proc/* | /dev | /dev/* | /run | /run/* | /nix | /nix/* | /opt | /opt/* | /data | /data/* | \
-      /.msb | /.msb/* | "$HOME/.omp" | "$HOME/.omp/"* | "$HOME/.agents" | "$HOME/.agents/"* | "$HOME/.pi" | "$HOME/.pi/"*)
+      /.msb | /.msb/*)
       echo "[-] 错误: imports 的目标目录 $dir 是沙箱保留位置" >&2
       exit 1
       ;;
   esac
+  if is_agent_layout_path "$dir"; then
+    echo "[-] 错误: imports 的目标目录 $dir 是沙箱保留位置" >&2
+    exit 1
+  fi
   BWRAP_ARGS+=(--bind "$IMPORTS_DIR/$stage" "$dir")
 done < <(jq -r '[.imports[]? | [.stage, .dir]] | unique[] | @tsv' <<< "$PLAN_JSON")
 
