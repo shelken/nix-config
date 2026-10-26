@@ -185,6 +185,7 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 | 发布给 guest 的配置 | 宿主 `~/.config/sandbox/current`（Nix store 链接），guest `/run/sandbox-config/current` |
 | OMP 配置、skills | 上下文内只读 `/root/.omp/agent`、`/root/.agents` |
 | OMP 数据、会话、插件 | `/data/xdg/*/omp`（插件在 `/data/xdg/data/omp/plugins`），所有上下文共用一份 |
+| pi-fff 的 frecency/history 数据库 | `/data/xdg/data/pi-fff`（`guest-env.sh` 设 `FFF_FRECENCY_DB`、`FFF_HISTORY_DB`）；默认位置 `~/.pi/agent/fff` 在只读的发布目录里，建库会报 `Read-only file system` |
 | msb 运行数据 | `~/Data/sandboxes/msb`（`MSB_HOME`），镜像缓存 `~/.cache/microsandbox` |
 
 旧数据卷上的 `/data/omp/plugins`（约 800 MB）不再使用，不会自动清理，确认后可手动删除；`sb sync` 会在新位置重建，需要重新 clone 私有插件仓库并安装 npm 包
