@@ -197,7 +197,11 @@ prepare_declared_layout() {
   # 只解析一次 current：清单与挂载源来自同一版本，宿主中途重新发布也不会错位
   cfg="$(readlink -f /run/sandbox-config/current)"
   list="$cfg/declared-paths"
-  [[ -f "$list" ]] || return 0
+  # 发布目录在而清单缺失，说明发布目录来自旧版本；静默放行会让上下文没有任何声明配置和只读保护
+  if [[ ! -f "$list" ]]; then
+    echo "[-] 错误: 发布目录缺少声明配置清单：$list（发布目录来自旧版本，重新发布配置后重试：just hm）" >&2
+    exit 1
+  fi
 
   while IFS= read -r t; do
     [[ -n "$t" ]] || continue

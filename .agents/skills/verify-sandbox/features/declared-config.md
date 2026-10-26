@@ -33,6 +33,7 @@ Preconditions:
   - 非空内容报错：等后台上下文退出，`$V msb exec sb-main -- bash -c "echo keep > $P/user.txt"`，运行 `$V run decl-placeholder-full -- $V sb run true`。`rc` 为 `1`，stderr 含「不会自动删除」
   - 空占位自动清掉：`$V msb exec sb-main -- rm $P/user.txt`，运行 `$V run decl-placeholder-clean -- $V sb run head -c 12 ~/.pi/agent/themes/catppuccin.json`。`rc` 为 `0`，输出主题 JSON 开头
 - **声明源缺失。** 宿主侧把 `$WORK/sbcfg/<current 指向的版本>/.pi/agent/pi-fff.json` 临时改名，运行 `$V run decl-missing-src -- $V sb run true`，再改回。`rc` 为 `1`，stderr 含「声明配置缺失」与该文件在 `/run/sandbox-config/<版本>/` 下的路径
+- **清单缺失。** 宿主侧把 `$WORK/sbcfg/<current 指向的版本>/declared-paths` 临时改名，运行 `$V run decl-missing-list -- $V sb run true`，再改回。`rc` 为 `1`，stderr 含「缺少声明配置清单」与 `/run/sandbox-config/<版本>/declared-paths`；没有发布目录的一次性 VM（`e2e/smoke.sh`）不受影响
 
 ## Gotchas
 
