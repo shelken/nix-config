@@ -275,8 +275,8 @@
               nvfetcher
               actionlint
               # nh # 不要引入，会把nix放进来
-              nix-prefetch-github
-              nix-prefetch-git
+              # nix-prefetch-github # 已由 utils/script/prefetch 替代
+              # nix-prefetch-git # 已由 utils/script/prefetch 替代
             ];
             name = "dots";
             shellHook = ''

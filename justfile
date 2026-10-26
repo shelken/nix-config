@@ -117,69 +117,9 @@ nvim-clean:
     # 变更原因：旧 AstroNvim v3 用户配置在 ~/.config/astronvim/lua/user，当前 v4 配置落在 ~/.config/nvim；两处都清理才符合这个任务名。
     @rm -rf $HOME/.config/astronvim/lua/user $HOME/.config/nvim
 
-# github sha256计算
-prefetch-gh owner repo rev="HEAD":
-    #!/usr/bin/env bash
-    json=$(nix-prefetch-github -- --no-deep-clone --quiet --rev {{ rev }} {{ owner }} {{ repo }})
-    owner=$(echo "$json" | jq -r '.owner')
-    repo=$(echo "$json" | jq -r '.repo')
-    rev=$(echo "$json" | jq -r '.rev' | cut -c 1-8)
-    hash=$(echo "$json" | jq -r '.hash')
-    cat <<EOF
-    pkgs.fetchFromGitHub {
-      owner = "$owner";
-      repo  = "$repo";
-      rev   = "$rev";
-      hash  = "$hash";
-    };
-    EOF
-
-# github
-prefetch-gh2 repo rev="HEAD":
-    #!/usr/bin/env bash
-    function parse_github_url {
-      local input={{ repo }}
-      local user repo
-
-      if [[ $input == https://github.com/* ]]; then
-        user=${input#https://github.com/}
-        user=${user%%/*}
-        repo=${input#https://github.com/$user/}
-      else
-        user=${input%%/*}
-        repo=${input#*/}
-      fi
-
-      echo "$user" "$repo"
-    }
-    read owner repo <<< $(parse_github_url {{ repo }})
-    json=$(nix-prefetch-git -- --no-deepClone --quiet --url "git@github.com:$owner/$repo" --rev {{ rev }})
-    rev=$(echo "$json" | jq -r '.rev' | cut -c 1-8)
-    hash=$(echo "$json" | jq -r '.hash')
-    last_date=$(echo "$json" | jq -r '.date')
-    cat <<EOF
-    $owner/$repo 上次更新时间：$last_date
-    pkgs.fetchFromGitHub {
-      owner = "$owner";
-      repo  = "$repo";
-      rev   = "$rev";
-      hash  = "$hash";
-    };
-    EOF
-
-prefetch-git repo rev:
-    @nix-prefetch-git -- --no-deepClone --quiet --url 'git@github.com:{{ repo }}' --rev '{{ rev }}' --fetch-submodules
-
-# nix-prefetch-url, 用于pypi等
-prefetch-url url:
-    @nix-prefetch-url --print-path '{{ url }}' | awk 'NR>1{print $1}' | xargs nix-hash --flat --base32 --type sha256 --sri
-
-# nix-prefetch-url2, 用于github
-prefetch-url2 url:
-    @nix-prefetch-url --print-path --unpack '{{ url }}' | awk 'NR>1{print $1}' | xargs nix-hash --type sha256 --sri
-
-prefetch-sha256 url:
-    @curl -sL '{{ url }}' | sha256sum
+# hash 计算统一入口（见 utils/script/prefetch --help）
+prefetch *args:
+    @{{ justfile_directory() }}/utils/script/prefetch {{ args }}
 
 # git pull
 pull:

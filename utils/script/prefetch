@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# 统一的 hash 计算入口，只依赖 nix 本体（nix flake prefetch / nix-prefetch-url），
+# 不需要 nix-prefetch-github / nix-prefetch-git。
+#
+# 输出 hash 与 pkgs.fetchFromGitHub / fetchgit / fetchurl 的 hash 完全等价
+# （三者都是 NAR 序列化 hash，已实测与 nix-prefetch-git 结果一致）。
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+用法: prefetch <子命令> [参数]
+
+  gh <owner/repo|url> [rev]     GitHub 仓库 → pkgs.fetchFromGitHub 代码块
+                                rev 省略或传 HEAD 时取默认分支最新提交
+  git <url> <rev> [--submodules] git 任意来源 → pkgs.fetchgit 代码块
+  url <url> [--unpack]          普通文件 → hash;--unpack 用于解包后的目录树
+  sha256 <url>                  下载文件的裸 sha256(base16),用于非 nix 场景
+EOF
+}
+
+# 一次 prefetch,输出 SRI hash
+nar_hash() {
+  prefetch_json "$1" || return 1
+  jq -r '.hash' <<<"$PREFETCH_JSON"
+}
+
+# 一次 prefetch,同时取 hash 与 locked 字段;
+# 结果写入全局 PREFETCH_JSON 供调用方用 jq 再取,避免重复走网络。
+# 注意:nix flake prefetch 会把 git 进度打到 stdout,与 JSON 混杂,必须分离
+prefetch_json() {
+  local ref=$1 err
+  err=$(mktemp)
+  if ! PREFETCH_JSON=$(nix flake prefetch --json "$ref" 2>"$err"); then
+    echo "prefetch 失败: $ref" >&2
+    cat "$err" >&2
+    rm -f "$err"
+    return 1
+  fi
+  rm -f "$err"
+}
+
+# epoch → YYYY-MM-DD,macOS 与 Linux 的 date 参数不同
+fmt_date() {
+  date -r "$1" +%F 2>/dev/null || date -d "@$1" +%F 2>/dev/null || echo "$1"
+}
+
+cmd_gh() {
+  local input=${1:?owner/repo 或 url 必填}
+  local rev=${2:-HEAD}
+  local owner repo
+
+  # 兼容 owner/repo、https://github.com/owner/repo、git@github.com:owner/repo
+  input=${input#https://github.com/}
+  input=${input#git@github.com:}
+  input=${input%.git}
+  owner=${input%%/*}
+  repo=${input#*/}
+
+  local ref="github:$owner/$repo"
+  [[ $rev != HEAD ]] && ref="$ref/$rev"
+
+  local hash full_rev date
+  prefetch_json "$ref" || return 1
+  hash=$(jq -r '.hash' <<<"$PREFETCH_JSON")
+  full_rev=$(jq -r '.locked.rev' <<<"$PREFETCH_JSON")
+  date=$(jq -r '.locked.lastModified' <<<"$PREFETCH_JSON")
+
+  cat <<EOF
+# $owner/$repo @ $full_rev ($(fmt_date "$date"))
+pkgs.fetchFromGitHub {
+  owner = "$owner";
+  repo  = "$repo";
+  rev   = "$full_rev";
+  hash  = "$hash";
+};
+EOF
+}
+
+cmd_git() {
+  local url=${1:?url 必填}
+  local rev=${2:?rev 必填}
+  shift 2
+  local submodules=false
+  for a in "$@"; do [[ $a == --submodules ]] && submodules=true; done
+
+  local ref="git+$url?rev=$rev&shallow=1"
+  [[ $submodules == true ]] && ref="$ref&submodules=1"
+
+  cat <<EOF
+pkgs.fetchgit {
+  url   = "$url";
+  rev   = "$rev";
+  hash  = "$(nar_hash "$ref")";
+};
+EOF
+}
+
+cmd_url() {
+  local url=${1:?url 必填}
+  local unpack=false
+  [[ ${2:-} == --unpack ]] && unpack=true
+
+  local args=(--type sha256 "$url")
+  [[ $unpack == true ]] && args=(--unpack "${args[@]}")
+
+  local raw
+  if ! raw=$(nix-prefetch-url "${args[@]}" 2>&1 | tail -1); then
+    echo "prefetch 失败: $url" >&2
+    echo "$raw" >&2
+    return 1
+  fi
+  nix hash convert --to sri --hash-algo sha256 "$raw"
+}
+
+# 裸 sha256(base16);macOS 无 sha256sum,统一走 shasum
+cmd_sha256() {
+  local url=${1:?url 必填}
+  curl -fsSL "$url" | shasum -a 256 | cut -d' ' -f1
+}
+
+case ${1:-} in
+gh) shift; cmd_gh "$@" ;;
+git) shift; cmd_git "$@" ;;
+url) shift; cmd_url "$@" ;;
+sha256) shift; cmd_sha256 "$@" ;;
+-h | --help | help | '') usage ;;
+*)
+  echo "未知子命令: $1" >&2
+  usage >&2
+  exit 1
+  ;;
+esac
