@@ -78,7 +78,7 @@ find_msb() {
 
 MSB="$(find_msb)"
 
-# sec-run 包装判定：sb 在宿主侧启动 msb 时自动注入 sops 凭据（GITHUB_TOKEN 等）。
+# sec-run 包装判定：sb 在宿主侧启动 msb 时自动注入凭据（GITHUB_TOKEN 等）。
 # e2e/CI 用假凭据验证「无有效 token → 私有插件跳过」路径时必须能关闭注入，
 # 否则宿主真实凭据会让假测失效；SB_NO_HOST_CREDENTIALS=1 显式禁用。
 if command -v sec-run >/dev/null 2>&1 && [[ "${SB_NO_HOST_CREDENTIALS:-0}" != "1" ]]; then
@@ -87,12 +87,19 @@ else
   SEC_RUN=()
 fi
 
+# 只有 create / start 需要宿主环境里的真实凭据：msb 的 --secret 在 VM 启动时读取宿主环境变量，
+# 之后的占位符替换由运行中的 VM 完成，exec / copy 等不再需要。
+# 每次 sec-run 都是一次 op run（解析引用、可能触发 1Password 授权弹窗），所以只在这两处包
 run_msb() {
-  if [[ ${#SEC_RUN[@]} -gt 0 ]]; then
-    "${SEC_RUN[@]}" "$MSB" "$@"
-  else
-    "$MSB" "$@"
-  fi
+  case "${1:-}" in
+    create | start)
+      if [[ ${#SEC_RUN[@]} -gt 0 ]]; then
+        "${SEC_RUN[@]}" "$MSB" "$@"
+        return
+      fi
+      ;;
+  esac
+  "$MSB" "$@"
 }
 
 usage() {
@@ -1014,7 +1021,7 @@ EOF
       run_msb exec sb-main -- chmod -R u+rwX,go-rwx "$ctx_guest_dir/imports"
     fi
 
-    # 进入 launcher（sec-run 凭据注入由 run_msb 统一处理）；
+    # 进入 launcher（exec 不需要宿主凭据，凭据只在 VM create/start 时注入，见 run_msb）；
     # launcher 发布 meta 后目录所有权归 launcher，宿主回收 trap 解除
     trap - EXIT INT TERM HUP
     run_code=0
