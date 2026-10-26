@@ -20,6 +20,24 @@ providers:
       timeoutMs: 3000
     # >>> mp-modelOverrides:auto-sync >>>
     modelOverrides:
+      zcode/GLM-5.2:
+        name: "GLM-5.2"
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [high, max]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      zcode/GLM-5-Turbo:
+        name: "GLM-5-Turbo"
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [high]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
       qoder-cn/qfmodel:
         name: "Qwen3.8-Flash"
         reasoning: true
@@ -123,15 +141,6 @@ providers:
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false
-      workbuddy-ai/step-5-preview:
-        name: "Step-5-Preview"
-        reasoning: true
-        thinking:
-          mode: effort
-          efforts: [low, medium, high]
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
       workbuddy-ai/deepseek-v4.1-flash-sg:
         name: "Deepseek-V4.1-Flash (SG)"
         reasoning: true
@@ -146,21 +155,75 @@ providers:
         name: "GLM-5.3-Flash"
         reasoning: true
         input: ["text"]
-      antigravity/gemini-3.8-flash:
-        name: "Gemini 3.8 Flash"
+      trae-cn/Doubao-Seed-2.1-Pro:
+        name: "Seed-2.1-Pro-0915"
         reasoning: true
         thinking:
           mode: effort
-          efforts: [low, medium, high]
+          efforts: [low, high]
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false
-      antigravity/claude-sonnet-4-6:
-        name: "Claude Sonnet 4.6 (Thinking)"
+      trae-cn/Doubao-Seed-2.1-Pro-max:
+        name: "Seed-2.1-Pro-0915 (Max)"
         reasoning: true
         thinking:
           mode: effort
-          efforts: [low, medium, high, max]
+          efforts: [low, high]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      trae-cn/glm-5.3-flashx-max:
+        name: "GLM-5.3-FlashX (Max)"
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, high, xhigh]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      trae-cn/glm-5.3-flash-max:
+        name: "GLM-5.3-Flash (Max)"
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, high, xhigh]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      trae-cn/glm-5.3-max:
+        name: "GLM-5.3 (Max)"
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, high, xhigh]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      trae-cn/glm-5.2-max:
+        name: "GLM-5.2 (Max)"
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [high, xhigh]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      trae-cn/deepseek-v4.1-flash-max:
+        name: "DeepSeek-V4.1-Flash (Max)"
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, high, xhigh]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      trae-cn/qwen3.8-flash-max:
+        name: "Qwen3.8-Flash (Max)"
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, high, xhigh]
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false
@@ -168,8 +231,23 @@ providers:
         name: "Kimi-K3 (Max)"
         reasoning: true
         input: ["text", "image"]
+        thinking:
+          mode: effort
+          efforts: [low, high, xhigh]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
       opencode-zen-free/beam-free:
         name: "Beam Free"
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, medium, high, xhigh, max]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
+      opencode-zen-free/flint-40b-free:
+        name: "Flint 40B Free"
         reasoning: true
         thinking:
           mode: effort
@@ -183,16 +261,6 @@ providers:
         thinking:
           mode: effort
           efforts: [low, high, max]
-        compat:
-          supportsReasoningEffort: true
-          omitReasoningEffort: false
-      opencode-zen-free/minimax-m3.1-flash-free:
-        name: "MiniMax M3.1 Flash Free"
-        reasoning: true
-        input: ["text", "image"]
-        thinking:
-          mode: effort
-          efforts: [low, medium, high, xhigh, max]
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false

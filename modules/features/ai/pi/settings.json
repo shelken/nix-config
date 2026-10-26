@@ -113,6 +113,6 @@
   "theme": "catppuccin",
   "transport": "auto",
   "tuiMode": "fullscreen",
-  "defaultProvider": "antigravity",
-  "defaultModel": "gemini-3.8-flash"
+  "defaultProvider": "cpa",
+  "defaultModel": "workbuddy/deepseek-v4.1-flash"
 }

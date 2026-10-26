@@ -15,14 +15,14 @@ modelRoles:
   glm-max: cpa/workbuddy/glm-5.3:high
   dsf: cpa/workbuddy/deepseek-v4.1-flash:high
   gpt: mp/codex/gpt-6.1-sol:high
+  gpt-lite: mp/codex/gpt-6-luna:max
   claude-lite: anthropic/claude-haiku-5-5:max
   claude: anthropic/claude-sonnet-5-5:high
   claude-max: anthropic/claude-opus-5-5:medium
-  gpt-lite: mp/codex/gpt-5.6-luna:max
-  reviewer-general: "@glm-flash"
+  reviewer-general: "@gpt:xhigh"
   reviewer-gemini: google-antigravity/gemini-3.8-flash:high
   reviewer-ds: "@dsf:max"
-  reviewer-glm: "@glm-flash:max"
+  reviewer-glm: "@glm-max"
   reviewer-gpt: "@gpt:xhigh"
   reviewer-cc: "@claude-max:high"
   vision: cpa/gpt-5.6-luna:high
@@ -32,8 +32,8 @@ modelRoles:
   web: google/gemini-2.5-flash
   gog: google-antigravity/gemini-3.8-flash:high
   plan: "@reviewer-gpt"
-  smol: "@gpt-lite"
-  scout: "@gpt"
+  smol: "@dsf"
+  scout: "@smol"
   default: "@claude"
   task: "@claude"
   slow: "@gpt:high"
@@ -120,7 +120,6 @@ retry:
       - cpa/workbuddy/hy3:high
     glm-flash:
       - cpa/workbuddy/glm-5.3-flash:max
-      - zcode-local/glm-5.3-flash:high
     glm-max:
       - cpa/workbuddy/glm-5.3:high
       - cpa/workbuddy/glm-5.2:medium
@@ -155,5 +154,5 @@ grep:
   enabled: false
 glob:
   enabled: false
-tools:
-  xdevDocs: builtins
+# tools:
+#   xdevDocs: builtins
