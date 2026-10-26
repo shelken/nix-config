@@ -363,7 +363,8 @@ query_guest_tool_state() {
 exec_sync_guest() {
   local vm_name="$1"
   shift
-  run_msb exec "$vm_name" --stream -- bash -c '
+  # sync 不读 stdin。msb 的 --stream 在 stdin 是终端时报错，--no-stdin 让它在终端与管道下都能跑
+  run_msb exec "$vm_name" --stream --no-stdin -- bash -c '
     if [[ -f /run/sandbox-config/current/sync-guest.sh ]]; then
       exec bash /run/sandbox-config/current/sync-guest.sh "$@"
     elif [[ -f /run/sandbox-config/sync-guest.sh ]]; then
@@ -942,6 +943,9 @@ EOF
     terminal=(--stream)
     if [[ -t 0 && -t 1 ]]; then
       terminal=(-t)
+    elif [[ -t 0 ]]; then
+      # stdin 是终端而 stdout 被重定向：msb 的 --stream 要求 stdin 为管道或 --no-stdin
+      terminal=(--stream --no-stdin)
     fi
 
     while [[ $# -gt 0 ]]; do
