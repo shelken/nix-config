@@ -115,7 +115,9 @@
           typeset -a _files
           _files=( --env-file="${opEnvBase}" )
           [[ -s "$SPECIFIC_ZSH" ]] && _files+=( --env-file="$SPECIFIC_ZSH" )
-          exec op run "''${_files[@]}" -- "$@"
+          # --no-masking：op run 默认代理 stdout 做敏感值遮蔽，会破坏 TUI 的
+          # tty 探测与 SIGWINCH（omp/pi 白屏卡死）。关闭遮蔽后终端直接交给子进程。
+          exec op run --no-masking "''${_files[@]}" -- "$@"
         fi
 
         # 无 op：旧行为，直接 source 覆盖层，然后执行
