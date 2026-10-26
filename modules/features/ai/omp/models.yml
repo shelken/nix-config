@@ -20,6 +20,16 @@ providers:
       timeoutMs: 3000
     # >>> mp-modelOverrides:auto-sync >>>
     modelOverrides:
+      codex/gpt-6.1-terra:
+        name: "GPT-6.1 Terra"
+        reasoning: true
+        input: ["text", "image"]
+        thinking:
+          mode: effort
+          efforts: [low, medium, high, xhigh, max]
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
       zcode/GLM-5.2:
         name: "GLM-5.2"
         reasoning: true
