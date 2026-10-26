@@ -47,6 +47,8 @@ flowchart LR
 - **沙箱基础环境 (Sandbox Base)**: 沙箱启动和隔离所需的 Linux 工具，由 sandbox 模块管理，不属于共享工具
 - **补齐 (Sync)**: 显式安装已登记但缺失的 mise 工具和插件，只增不删，不升级已有项。_避免_: 升级、更新
 - **共用安装层 (Shared Install Layer)**: 宿主上由所有沙箱 VM 共用的一份 mise 安装产物与下载缓存。_避免_: 共享缓存、镜像卷
+- **声明配置 (Declared Config)**: Nix 定义、发布进沙箱的配置文件或目录，即共享工具登记表 `files` 里的条目。上下文内只读，不管插件想不想改它。_避免_: 配置（太泛）
+- **运行状态 (Runtime State)**: 工具运行中产生或修改的文件，例如插件数据库、登录态、intercom 运行目录。可写，所有上下文共用，不写回宿主
 
 不变量：
 
@@ -58,6 +60,8 @@ flowchart LR
 6. 执行上下文对共用安装层只读；写入（安装）只经 `sb sync` 在上下文外发生
 7. 上限指纹只含 guest 侧挂载声明，不含宿主真实路径；宿主路径变化不触发 VM 重建
 8. 项目配置未批准或批准后内容变了，不得启动执行上下文；批准只发生在宿主上
+9. 声明配置由挂载强制只读，不靠约定；同目录里的运行状态照常可写
+10. 运行中的上下文看到的声明配置是启动时的快照；新配置在新开的上下文生效
 
 ## 两层能力
 
@@ -157,10 +161,12 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 | --- | --- |
 | `package` | nixpkgs 属性名，默认取登记名；与 `mise` 互斥 |
 | `mise` | mise 规格，版本字符串或属性集 |
-| `files` | 随工具进沙箱的配置文件，宿主照常作为 `home.file` |
+| `files` | 随工具进沙箱的声明配置，宿主照常作为 `home.file`。这是 Nix 配置进沙箱的唯一入口，宿主与沙箱都从它派生 |
 | `postInstall` | 宿主激活时与 `sb sync` 时各运行一次 |
 
 条目在 [dev/tools-base.nix](../../dev/tools-base.nix)（rg、fd、jq、gh、node、python3、uv）与 [ai/tools.nix](../tools.nix)（omp、pi、codex、claude-code、bun）。宿主独有的工具不登记
+
+`agent-common` 不对应可执行程序，只放 omp 与 pi 共用的配置：`.agents/` 下的 skills 与模型提示词，以及不专属某个 harness 的插件配置（如 `.config/ponytail`、`.config/rpiv-web-tools`）
 
 生成器把 Nix 条目合成 guest PATH（来自 `/nix/store` 只读挂载），把 mise 条目写成 `/run/sandbox-config/current/mise.toml`。`sb`、`just`、`spawn-subagent`、`computer-use` 等宿主控制命令在 guest PATH 里是同名桩，调用时以非零码退出并说明原因（[shelken.dev.sandbox.hostCommands](../../dev/tools.nix)）
 
@@ -182,15 +188,18 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 
 | 内容 | 位置 |
 | --- | --- |
-| 发布给 guest 的配置 | 宿主 `~/.config/sandbox/current`（Nix store 链接），guest `/run/sandbox-config/current` |
-| OMP 配置、skills | 上下文内只读 `/root/.omp/agent`、`/root/.agents` |
+| 发布给 guest 的配置 | 宿主 `~/.config/sandbox/current`（Nix store 链接），guest `/run/sandbox-config/current`；声明配置清单在同一版本目录的 `declared-paths` |
+| OMP、pi 配置与 skills | 上下文内 `/root/.omp/agent`、`/root/.pi/agent`、`/root/.agents`，整体可写，落在数据卷 `/data/home/` 下，所有上下文共用；其中声明配置逐项只读挂载 |
+| `.config/<X>` 声明配置 | 上下文内 `$XDG_CONFIG_HOME/<X>`（`/data/xdg/config/<X>`），只读挂载；沙箱里没有 `/root/.config` |
 | OMP 数据、会话、插件 | `/data/xdg/*/omp`（插件在 `/data/xdg/data/omp/plugins`），所有上下文共用一份 |
-| pi-fff 的 frecency/history 数据库 | `/data/xdg/data/pi-fff`（`guest-env.sh` 设 `FFF_FRECENCY_DB`、`FFF_HISTORY_DB`）；默认位置 `~/.pi/agent/fff` 在只读的发布目录里，建库会报 `Read-only file system` |
+| 其他运行状态（pi-fff 数据库、intercom 运行目录、插件自己的设置等） | 留在工具默认位置，例如 `/root/.pi/agent/fff`，落在可写根里，所有上下文共用 |
 | msb 运行数据 | `~/Data/sandboxes/msb`（`MSB_HOME`），镜像缓存 `~/.cache/microsandbox` |
 
 旧数据卷上的 `/data/omp/plugins`（约 800 MB）不再使用，不会自动清理，确认后可手动删除；`sb sync` 会在新位置重建，需要重新 clone 私有插件仓库并安装 npm 包
 
-配置发布后，复用中的 VM 新开的上下文即读到新配置，不改指纹，不触发重建。guest 不跟随宿主 live-edit 软链
+配置发布后，复用中的 VM 新开的上下文即读到新配置，不改指纹，不触发重建。运行中的上下文继续读启动时的版本：发布脚本保留旧版本 7 天，只清理更早的。guest 不跟随宿主 live-edit 软链
+
+上下文外（`sb sync`、`msb exec`）的 `/root/.omp/agent`、`/root/.pi`、`/root/.agents` 是指向只读发布目录的符号链接，看不到上下文里的可写根。上下文布局只由 launcher 负责，改它不改指纹
 
 ## 设计决策
 
@@ -281,7 +290,7 @@ PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 
 原来 `imports` 只能把文件放到上下文内的 `/imports/<文件名>`。home-ops 这类项目用 mise 把 `KUBECONFIG` 固定为 `$HOME/.kube/home-ops.yaml`，工具只认这个路径，所以没法用
 
-所以每项写 `src` 与 `target`。同一目标目录的导入共用一个暂存目录，launcher 把它整体绑定到该目录，不做单文件绑定，否则上下文内的原子改名会报 `Device or resource busy`（实测）。保留位置不能做目标目录：家目录本身、`/`、系统目录、`/data`、`/run`、`/.msb`，以及 launcher 铺设配置链接的 `~/.omp`、`~/.agents`、`~/.pi`；同一个 `target` 不能重复。导入文件在上下文内只对上下文用户可读写（`600`）
+所以每项写 `src` 与 `target`。同一目标目录的导入共用一个暂存目录，launcher 把它整体绑定到该目录，不做单文件绑定，否则上下文内的原子改名会报 `Device or resource busy`（实测）。保留位置不能做目标目录：家目录本身、`/`、系统目录、`/data`、`/run`、`/.msb`，以及 launcher 铺设 agent 配置目录的 `~/.omp`、`~/.agents`、`~/.pi`；同一个 `target` 不能重复。导入文件在上下文内只对上下文用户可读写（`600`）
 
 不做：
 
@@ -294,6 +303,31 @@ PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 - **把凭据放进 `/data` 持久化**：`/data` 绑进所有上下文，项目凭据会对其他项目可见
 
 代价：目标目录在上下文里只剩导入的文件
+
+### agent 配置目录整体可写，声明配置逐项只读
+
+原来 `/root/.omp/agent`、`/root/.pi`、`/root/.agents` 是指向只读发布目录的符号链接，整个目录只读。凡是把状态写在配置目录旁边的插件都会失败：pi-fff 建不了数据库（`Failed to create directory: Read-only file system`），pi-intercom 建不了 `~/.pi/agent/intercom` 运行目录，插件自己的设置文件也写不进去
+
+现在和宿主一致：三个目录是数据卷上的可写根，所有上下文共用；Nix 定义的路径按来源判断，逐项 `--ro-bind` 到上面：
+
+- 挂载单元就是发布清单的每一项：文件项绑文件，目录项（如 `.agents/skills/<名>`、`.omp/agent/agents`）绑整个目录。同目录里别人放的文件可写，`extensions/` 这类目录因此可以混放
+- launcher 只解析一次 `current`，清单与挂载源来自同一版本目录；源缺失直接报错并指出路径，不跳过
+- 嵌套声明项的祖先目录（如 `extensions/`、`intercom/`、`/data/xdg/config/<X>`），以及 `/root`、`/root/.omp`、`/root/.pi`，也都做成挂载点。内核只拒绝改名挂载点本身，改名普通祖先会把下面的只读挂载一起移走，原位置就能建出可写的同名替身（实测，经上下文路径或 `/data` 后备路径都成立）。做成挂载点后改名一律 `Device or resource busy`
+- 挂载点在数据卷上留下空文件或空目录占位。声明从文件改成目录（或反过来）时，旧占位会让 bwrap 报 `Destination is not a file` 而起不来。launcher 在启动锁内检查：类型不符的空占位，没有别的上下文在运行时删除；有别的上下文时报错，因为它们正把占位当挂载点用；非空内容一律报错，不自动删
+- 发布脚本保留旧版本 7 天。挂载钉住启动时的版本目录，立即删除旧版本会让运行中的上下文读不到复制来的条目（live-edit 主机上的 `settings.json`、`AGENTS.md` 等，实测）
+
+考虑过的替代方案：
+
+- **整目录只读**：即原来的做法，插件写状态全部失败
+- **符号链接农场**：可写目录里逐项链接到发布目录。插件 unlink 或原子替换就能把链接换成普通文件，只读只是约定
+- **持久化整个 HOME**：最省事，但 `/root` 其余部分也会跨上下文共用，`.sandbox.yaml` 的 `imports` 隔离失效
+
+代价：
+
+- 每次启动多约 180 个挂载，实测启动多 35ms 左右
+- 可写区里新建的 `hooks/`、`tools/`、`SYSTEM.md`、`RULES.md`、`commands/`、`rules/` 会对之后所有项目生效（OMP 从这些位置自动加载），不预留占位
+- 沙箱里的运行状态与宿主分开：`auth.json`、`agent.db` 等不从宿主导入，在沙箱里登录一次后留在数据卷共用；旧数据卷上的状态不迁移，新位置从空开始
+- 宿主 `just hm` 后，运行中的上下文仍是旧配置，重开上下文才生效
 
 ### 共用 mise 安装层
 
