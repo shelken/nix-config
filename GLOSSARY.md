@@ -23,6 +23,12 @@
 宿主和 Agent 沙箱都需要的工具，登记一次，两端各取本平台的产物。宿主独有的工具不是共享工具。
 _避免_: 公共工具、同步工具
 
+## 凭据注入
+
+- **凭据基座 (Secret Base)**: 仓库 `opSecretMap` 声明的变量名到 1Password `op://` 引用的映射，构建期生成引用文件，真实值只在 1Password。_避免_: secret 列表、明文基座
+- **覆盖层 (Override Layer)**: `$HOME/.specific.zsh`，只放对基座的临时差异（换值、切备用账号），同名覆盖基座，注释即回落。允许明文，推荐 `op://` 引用。_避免_: 特定配置、本地 secrets
+- **引用 (Reference)**: `op://<vault>/<item>/<field>` 形式的字符串，由 `op run` 在进程启动时解析为真实值。_避免_: secret 值、token
+
 ## 定时任务
 
 **任务 (Task)**:

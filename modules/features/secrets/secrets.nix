@@ -41,6 +41,38 @@
       inherit (lib) mkIf;
       cfg = config.shelken.secrets;
 
+      # ─── 凭据基座与覆盖层 ───
+      # 基座：仓库内声明的 op:// 引用映射，注入文件只含引用不含明文，可安全进 nix store
+      opSecretMap = {
+        APIM_API_KEY = "Personal/APIM_API_KEY";
+        BRAVE_API_KEY = "Personal/BRAVE_API_KEY";
+        BRAVE_SEARCH_API_KEY = "Personal/BRAVE_SEARCH_API_KEY";
+        BWS_ACCESS_TOKEN = "Personal/BWS_ACCESS_TOKEN";
+        COMMANDCODE_API_KEY = "Personal/COMMANDCODE_API_KEY";
+        CONTEXT_API_KEY = "Personal/CONTEXT_API_KEY";
+        CPA_PI_API_KEY = "Personal/CPA_PI_API_KEY";
+        CPA_TOKEN = "Personal/CPA_TOKEN";
+        DEEPSEEK_API_KEY = "Personal/DEEPSEEK_API_KEY";
+        EXA_API_KEY = "Personal/EXA_API_KEY";
+        FIRECRAWL_API_KEY = "Personal/FIRECRAWL_API_KEY";
+        MNEMOPI_EMBEDDING_API_KEY = "Personal/MNEMOPI_EMBEDDING_API_KEY";
+        MODELSCOPE_API_KEY = "Personal/MODELSCOPE_API_KEY";
+        MODELSCOPE_API_TOKEN = "Personal/MODELSCOPE_API_TOKEN";
+        OMLX_API_KEY = "Personal/OMLX_API_KEY";
+        OPENCODE_API_KEY = "Personal/OPENCODE_API_KEY";
+        SANDVAULT_ARGS = "Personal/SANDVAULT_ARGS";
+        WX_PI_API_KEY = "Personal/WX_PI_API_KEY";
+      };
+
+      # 基座 env 文件：VAR=op://<vault>/<item>/credential，只含引用不含明文
+      # 必须以换行结尾：无末尾换行时 cat 拼接覆盖层会让两行粘在一起，最后一行的 KEY 丢失
+      opEnvBase = pkgs.writeText "op-secrets.env" (
+        lib.concatStringsSep "\n" (
+          lib.mapAttrsToList (var: ref: "${var}=op://${ref}/credential") opSecretMap
+        )
+        + "\n"
+      );
+
       secretEnvMap = {
         GITHUB_TOKEN = "github/cli-token"; # 目前task依赖
       };
@@ -61,30 +93,33 @@
           exit 1
         fi
 
-        typeset -a _before_vars
-        if [[ -n "''${SEC_RUN_VERBOSE:-}" ]]; then
-          _before_vars=( ''${(k)parameters[(R)*export*]} )
-        fi
-
-        # 1. 注入 sops-nix 凭据
+        # sops 凭据直接进本进程环境，op run 会继承
         ${shellInit}
 
-        # 2. 仅在运行目标命令时按需注入 ~/.specific.zsh，主终端默认完全不加载
         SPECIFIC_ZSH="$HOME/.specific.zsh"
-        if [[ -s "$SPECIFIC_ZSH" ]]; then
-          source "$SPECIFIC_ZSH"
-        fi
 
-        # 3. 仅在 SEC_RUN_VERBOSE 环境变量存在时回显注入清单（输出至 stderr，不污染管道）
+        # 注入来源清单：op run 在子进程中解析引用，父进程看不到结果，
+        # 所以直接从环境文件读 KEY 名，而不是执行后比对环境
         if [[ -n "''${SEC_RUN_VERBOSE:-}" ]]; then
-          typeset -a _after_vars _new_vars
-          _after_vars=( ''${(k)parameters[(R)*export*]} )
-          _new_vars=( ''${(ou)''${_after_vars:|_before_vars}} )
-          if (( ''${#_new_vars} > 0 )); then
-            print -u2 -- "🔐 [sec-run] 注入环境变量 (''${#_new_vars} 个): ''${(j:, :)_new_vars}"
-          fi
+          print -u2 -- "🔐 [sec-run] 基座: ${opEnvBase}"
+          [[ -s "$SPECIFIC_ZSH" ]] && print -u2 -- "🔐 [sec-run] 覆盖层: $SPECIFIC_ZSH"
+          typeset _keys
+          _keys=$(cat "${opEnvBase}" "$SPECIFIC_ZSH" 2>/dev/null |
+            sed -nE 's/^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)=.*/\2/p' |
+            sort -u | paste -sd ' ' -)
+          [[ -n "$_keys" ]] && print -u2 -- "🔐 [sec-run] 变量: $_keys"
         fi
 
+        # 有 op：基座 + 覆盖层交给 op run 解析 op://，同名后者覆盖
+        if command -v op >/dev/null 2>&1; then
+          typeset -a _files
+          _files=( --env-file="${opEnvBase}" )
+          [[ -s "$SPECIFIC_ZSH" ]] && _files+=( --env-file="$SPECIFIC_ZSH" )
+          exec op run "''${_files[@]}" -- "$@"
+        fi
+
+        # 无 op：旧行为，直接 source 覆盖层，然后执行
+        [[ -s "$SPECIFIC_ZSH" ]] && source "$SPECIFIC_ZSH"
         exec "$@"
       '';
 
@@ -96,9 +131,12 @@
 
         usage() {
           echo "用法: sec-env <add|del|list> [参数...]"
-          echo "  sec-env add <KEY> [VALUE]  # 增加/更新变量（未提供 VALUE 时安全交互式输入）"
+          echo "  sec-env add <KEY> [VALUE]  # 增加/更新覆盖层变量；推荐 VALUE 用 op:// 引用"
+          echo "                            # （临时覆盖基座值或切换备用账号时）"
           echo "  sec-env del <KEY>          # 删除变量"
-          echo "  sec-env list               # 列出当前配置的所有变量名（只输出 Key，不泄露值）"
+          echo "  sec-env list               # 列出覆盖层变量名（只输出 Key，不泄露值）"
+          echo ""
+          echo "覆盖层文件: \$SPECIFIC_FILE（仅 sec-run 运行时经 op run 注入）"
           exit 1
         }
 
@@ -129,7 +167,11 @@
             touch "$SPECIFIC_FILE"
             TMP_OUT="$(mktemp)"
             awk -v k="$KEY" 'BEGIN { re = "^[[:space:]]*(export[[:space:]]+)?" k "=" } $0 !~ re { print }' "$SPECIFIC_FILE" > "$TMP_OUT"
-            printf "export %s=%s\n" "$KEY" "''${(q)VALUE}" >> "$TMP_OUT"
+            # dotenv 双引号格式：zsh source 与 op run 解析结果一致（(q) 转义只有
+            # shell 认，op 会把反斜杠留在值里）。内部 " 与 \ 需转义。
+            VALUE_ESC="''${VALUE//\\/\\\\}"
+            VALUE_ESC="''${VALUE_ESC//\"/\\\"}"
+            printf 'export %s="%s"\n' "$KEY" "$VALUE_ESC" >> "$TMP_OUT"
             mv "$TMP_OUT" "$SPECIFIC_FILE"
             chmod 600 "$SPECIFIC_FILE"
             echo "✅ 已保存: $KEY"
