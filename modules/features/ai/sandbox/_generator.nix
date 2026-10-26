@@ -147,6 +147,10 @@ let
     export XDG_STATE_HOME=/data/xdg/state
     export XDG_CACHE_HOME=/data/xdg/cache
     export XDG_CONFIG_HOME=/data/xdg/config
+    # pi-fff 的 frecency/history 数据库默认建在 ~/.pi/agent/fff，沙箱里那是只读的发布目录，
+    # 建库会报 Read-only file system。改放数据盘，所有上下文共用一份
+    export FFF_FRECENCY_DB=/data/xdg/data/pi-fff/frecency
+    export FFF_HISTORY_DB=/data/xdg/data/pi-fff/history
     if [[ -d /opt/sandbox-mise/data ]]; then
       # 宿主共用 mise 安装目录：所有 VM 共享同一份 installs/downloads
       export MISE_DATA_DIR=/opt/sandbox-mise/data
