@@ -195,11 +195,20 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 | 其他运行状态（pi-fff 数据库、intercom 运行目录、插件自己的设置等） | 留在工具默认位置，例如 `/root/.pi/agent/fff`，落在可写根里，所有上下文共用 |
 | msb 运行数据 | `~/Data/sandboxes/msb`（`MSB_HOME`），镜像缓存 `~/.cache/microsandbox` |
 
+可写根与数据卷的对应：
+
+| 上下文内路径 | 数据卷位置 | 用途 |
+| --- | --- | --- |
+| `/root/.omp/agent` | `/data/home/.omp/agent` | OMP 用户级配置目录：声明配置只读，其余（如自建 `hooks/`、`commands/`）可写 |
+| `/root/.pi/agent` | `/data/home/.pi/agent` | pi 与 pi 插件的配置和运行状态：`fff/`、`intercom/`、`npm/`、`git/`、`sessions/` 等 |
+| `/root/.agents` | `/data/home/.agents` | skills 与模型提示词，几乎全是声明配置 |
+| `$XDG_CONFIG_HOME/<X>` | `/data/xdg/config/<X>` | 宿主 `~/.config/<X>` 的声明配置（ponytail、rpiv-web-tools），只读 |
+
 旧数据卷上的 `/data/omp/plugins`（约 800 MB）不再使用，不会自动清理，确认后可手动删除；`sb sync` 会在新位置重建，需要重新 clone 私有插件仓库并安装 npm 包
 
 配置发布后，复用中的 VM 新开的上下文即读到新配置，不改指纹，不触发重建。运行中的上下文继续读启动时的版本：发布脚本保留旧版本 7 天，只清理更早的。guest 不跟随宿主 live-edit 软链
 
-上下文外（`sb sync`、`msb exec`）的 `/root/.omp/agent`、`/root/.pi`、`/root/.agents` 是指向只读发布目录的符号链接，看不到上下文里的可写根。上下文布局只由 launcher 负责，改它不改指纹
+上下文外（`sb sync`、`msb exec`）的 `/root/.omp/agent`、`/root/.pi`、`/root/.agents` 是指向只读发布目录的符号链接，看不到上下文里的可写根。上下文布局只由 launcher 负责，改它不改指纹。其中 `/root/.agents` 由 `sb.sh` 的 VM 级 patch 建立，进上限指纹，只服务上下文外；上下文内 launcher 用 tmpfs 整体遮住 `/root`，不受它影响
 
 ## 设计决策
 
@@ -328,6 +337,8 @@ PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 - 可写区里新建的 `hooks/`、`tools/`、`SYSTEM.md`、`RULES.md`、`commands/`、`rules/` 会对之后所有项目生效（OMP 从这些位置自动加载），不预留占位
 - 沙箱里的运行状态与宿主分开：`auth.json`、`agent.db` 等不从宿主导入，在沙箱里登录一次后留在数据卷共用；旧数据卷上的状态不迁移，新位置从空开始
 - 宿主 `just hm` 后，运行中的上下文仍是旧配置，重开上下文才生效
+
+已知局限：经 `/data` 后备路径可以把可写根本身改名（如 `mv /data/home/.pi /data/home/.pi-gone`）。声明配置的挂载钉着原目录，上下文视图不变，下次启动 launcher 重新建可写根，所以不是绕过；但数据卷上会留下改名后的孤儿目录。不做自动清理，无法区分用户故意改名与残留
 
 ### 共用 mise 安装层
 
