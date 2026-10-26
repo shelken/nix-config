@@ -4,7 +4,7 @@
 
 ## Sub-features
 
-- `omp-db` OMP 数据库建在 `/data/xdg/data/omp`，不写只读的 `~/.omp/agent`
+- `omp-db` OMP 数据库建在 `/data/xdg/data/omp`，不写 `~/.omp/agent`
 - `omp-discovery` 私网模型服务的 provider（cpa、commandcode-local、mp）出现在模型列表
 - `omp-chat` 用便宜模型完成一次单轮对话
 - `omp-no-project-grant` 项目不写 `.sandbox.yaml` 也能访问模型服务

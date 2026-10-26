@@ -64,6 +64,16 @@
         description = "宿主控制命令表（命令名 -> 沙箱内执行时的报错原因说明）";
       };
 
+      options.shelken.dev.sandbox.writableRoots = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = ''
+          沙箱里整体可写的配置根（相对 $HOME，如 ".omp/agent"）。
+          落在数据盘上、所有上下文共用；其中登记表 files 声明的路径逐项只读挂载在根上。
+          launcher 只执行发布出去的这份清单，根的增删只改 Nix。
+        '';
+      };
+
       config = lib.mkMerge [
         {
           # 校验：缺失字段与互斥字段断言

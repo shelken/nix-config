@@ -84,6 +84,8 @@
       };
       home.shellAliases.pi = "sec-run pi";
 
+      shelken.dev.sandbox.writableRoots = [ ".pi/agent" ];
+
       # pi 安装已迁入共享工具登记表（modules/features/ai/tools.nix 的 pi 条目）
       shelken.dev.tools.pi.files = {
         ".pi/agent/settings.json" = linkPi "settings.json";

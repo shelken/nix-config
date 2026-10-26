@@ -119,6 +119,167 @@ sweep_dead_contexts() {
   done
 }
 
+# 可写根：agent 配置目录整体落在数据盘、所有上下文共用；其中 Nix 声明的路径再逐项只读挂载。
+# 根的清单来自发布目录的 writable-roots（登记表 shelken.dev.sandbox.writableRoots），
+# launcher 自己不带任何路径，只按固定规则映射到数据盘：$HOME/<相对根> -> /data/home/<相对根>
+declare -A AGENT_ROOTS=()
+
+# 上下文路径 -> 数据盘上的同一位置（挂载点占位所在）。.config/<X> 映射到 $XDG_CONFIG_HOME/<X>
+declared_dst() {
+  case "$1" in
+    .config/*) echo "/data/xdg/config/${1#.config/}" ;;
+    *) echo "$HOME/$1" ;;
+  esac
+}
+
+backing_of() {
+  local p="$1" root
+  for root in "${!AGENT_ROOTS[@]}"; do
+    if [[ "$p" == "$root" || "$p" == "$root/"* ]]; then
+      echo "${AGENT_ROOTS[$root]}${p#"$root"}"
+      return
+    fi
+  done
+  echo "$p"
+}
+
+# 挂载根：上下文路径所在的可写根，或 /data（XDG 配置落点）；都不是则失败，调用方报错
+mount_root_of() {
+  local p="$1" root
+  for root in "${!AGENT_ROOTS[@]}"; do
+    if [[ "$p" == "$root/"* ]]; then
+      echo "$root"
+      return
+    fi
+  done
+  [[ "$p" == /data/* ]] || return 1
+  echo /data
+}
+
+# 空占位：上次上下文留下的挂载点（空文件或空目录），可以安全删除
+is_empty_placeholder() {
+  [[ ! -L "$1" ]] || return 1
+  if [[ -d "$1" ]]; then
+    [[ -z "$(ls -A "$1")" ]]
+  else
+    [[ -f "$1" && ! -s "$1" ]]
+  fi
+}
+
+# 落点类型与声明不符时：空占位且没有其他上下文在用才删除，其余报错退出
+resolve_conflict() {
+  local path="$1" want="$2" others="$3"
+  if is_empty_placeholder "$path" && [[ "$others" -eq 0 ]]; then
+    rm -rf "$path"
+    return
+  fi
+  if is_empty_placeholder "$path"; then
+    echo "[-] 错误: 声明配置的落点 $path 残留了类型不符的空占位（需要$want），但还有 $others 个上下文在运行，可能正把它当挂载点用；全部退出后重试" >&2
+  else
+    echo "[-] 错误: 声明配置的落点 $path 已有类型不符的内容（需要$want），不会自动删除；确认无用后手动移走" >&2
+  fi
+  exit 1
+}
+
+# 布局结果：bwrap 参数，以及需要变成挂载点的目录（导入目标不得落在其下）
+LAYOUT_ARGS=()
+MOUNT_POINTS=()
+
+# 是否落在 launcher 自己铺设的 agent 配置布局上（挂载点目录或可写根）
+is_agent_layout_path() {
+  local d="$1" p
+  for p in "${MOUNT_POINTS[@]}" "${!AGENT_ROOTS[@]}"; do
+    if [[ "$d" == "$p" || "$d" == "$p/"* ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# 发布目录在而清单缺失，说明发布目录来自旧版本；静默放行会让上下文没有任何声明配置和只读保护
+require_published() {
+  if [[ ! -f "$1" ]]; then
+    echo "[-] 错误: 发布目录缺少清单：$1（发布目录来自旧版本，重新发布配置后重试：just hm）" >&2
+    exit 1
+  fi
+}
+
+# agent 配置布局（启动锁内调用）：读发布清单，整理数据盘上的落点，生成 LAYOUT_ARGS：
+# tmpfs $HOME -> 根的上层目录（tmpfs）-> 可写根（数据盘）-> 声明配置的祖先目录 -> 声明配置逐项只读。
+# 上层目录与祖先目录都要变成挂载点：内核只拒绝改名挂载点本身，
+# 改名普通祖先会把下面的挂载一起移走，原位置就能建出可写的同名替身
+prepare_declared_layout() {
+  local others="$1" cfg list roots_file rel t dst src want root p a
+  local -a ancestors=() binds=() uppers=()
+  [[ -e /run/sandbox-config/current ]] || return 0
+  # 只解析一次 current：清单与挂载源来自同一版本，宿主中途重新发布也不会错位
+  cfg="$(readlink -f /run/sandbox-config/current)"
+  list="$cfg/declared-paths"
+  roots_file="$cfg/writable-roots"
+  require_published "$list"
+  require_published "$roots_file"
+
+  LAYOUT_ARGS+=(--tmpfs "$HOME")
+  while IFS= read -r rel; do
+    [[ -n "$rel" ]] || continue
+    root="$HOME/$rel"
+    AGENT_ROOTS["$root"]="/data/home/$rel"
+    mkdir -p "${AGENT_ROOTS[$root]}"
+    p="${root%/*}"
+    while [[ "$p" == "$HOME/"* ]]; do
+      uppers+=("$p")
+      p="${p%/*}"
+    done
+  done < "$roots_file"
+  # 父目录排在子目录前面：C 排序下前缀先于其延伸
+  while IFS= read -r p; do
+    [[ -n "$p" ]] || continue
+    MOUNT_POINTS+=("$p")
+    LAYOUT_ARGS+=(--dir "$p" --tmpfs "$p")
+  done < <(printf '%s\n' "${uppers[@]}" | LC_ALL=C sort -u)
+  for root in "${!AGENT_ROOTS[@]}"; do
+    LAYOUT_ARGS+=(--bind "${AGENT_ROOTS[$root]}" "$root")
+  done
+
+  while IFS= read -r t; do
+    [[ -n "$t" ]] || continue
+    src="$cfg/$t"
+    if [[ ! -e "$src" ]]; then
+      echo "[-] 错误: 声明配置缺失：$src（发布目录不完整，重新发布后重试）" >&2
+      exit 1
+    fi
+    dst="$(declared_dst "$t")"
+    if ! root="$(mount_root_of "$dst")"; then
+      echo "[-] 错误: 声明配置 $t 不在任何可写根或 .config/ 下（发布清单不一致，重新发布配置后重试：just hm）" >&2
+      exit 1
+    fi
+    p="$(dirname "$dst")"
+    while [[ "$p" != "$root" && "$p" != / ]]; do
+      ancestors+=("$p")
+      p="$(dirname "$p")"
+    done
+    if [[ -d "$src" ]]; then want="目录"; else want="文件"; fi
+    a="$(backing_of "$dst")"
+    if [[ -e "$a" || -L "$a" ]]; then
+      if [[ -L "$a" ]] || { [[ "$want" == "目录" ]] && [[ ! -d "$a" ]]; } || { [[ "$want" == "文件" ]] && [[ -d "$a" ]]; }; then
+        resolve_conflict "$a" "$want" "$others"
+      fi
+    fi
+    binds+=(--ro-bind "$src" "$dst")
+  done < "$list"
+
+  while IFS= read -r p; do
+    [[ -n "$p" ]] || continue
+    a="$(backing_of "$p")"
+    if [[ -L "$a" ]] || { [[ -e "$a" ]] && [[ ! -d "$a" ]]; }; then
+      resolve_conflict "$a" "目录" "$others"
+    fi
+    mkdir -p "$a"
+    LAYOUT_ARGS+=(--bind "$a" "$p")
+  done < <(printf '%s\n' "${ancestors[@]}" | LC_ALL=C sort -u)
+  LAYOUT_ARGS+=("${binds[@]}")
+}
+
 if [[ "${1:-}" == "--check-busy" ]]; then
   acquire_slot_lock
   sweep_dead_contexts
@@ -239,6 +400,17 @@ jq -n \
     ip: $ip, veth_host: $veth_host, veth_in: $veth_in, netns: $netns, chain: $chain}' > "$META_TMP"
 mv "$META_TMP" "$CURRENT_CTX_DIR/meta.json"
 rm -f "$CURRENT_CTX_DIR/starting"
+
+# 声明配置布局要在锁内整理：删除残留占位前必须确认没有别的上下文正把它当挂载点用
+OTHER_CONTEXTS=0
+for ctx_dir in "$CONTEXTS_DIR"/*; do
+  [[ -d "$ctx_dir" && "$ctx_dir" != "$CURRENT_CTX_DIR" ]] || continue
+  if [[ -f "$ctx_dir/meta.json" ]] || is_starting "$ctx_dir"; then
+    OTHER_CONTEXTS=$((OTHER_CONTEXTS + 1))
+  fi
+done
+trap 'rm -rf "$CURRENT_CTX_DIR"' EXIT
+prepare_declared_layout "$OTHER_CONTEXTS"
 release_slot_lock
 
 # 4. 退出清理钩子 (异常与正常退出均触发)
@@ -361,7 +533,7 @@ BWRAP_ARGS=(
 # 共享可写状态卷 /data
 if [[ -d /data ]]; then
   BWRAP_ARGS+=(--bind /data /data)
-  # OMP 只在 $XDG_*_HOME/omp 已存在时使用 XDG 路径，否则回落到只读的 ~/.omp/agent 而无法建库
+  # OMP 只在 $XDG_*_HOME/omp 已存在时使用 XDG 路径；保持 XDG 布局，插件目录才与 sb sync 的安装位置一致
   mkdir -p /data/xdg/data/omp /data/xdg/state/omp /data/xdg/cache/omp /data/xdg/config /data/mise /data/xdg/data/mise/shims
 fi
 
@@ -373,33 +545,29 @@ fi
 # 沙箱配置目录 (如果存在)
 if [[ -d /run/sandbox-config ]]; then
   BWRAP_ARGS+=(--ro-bind /run/sandbox-config /run/sandbox-config)
-  if [[ -e /run/sandbox-config/current/.omp ]]; then
-    BWRAP_ARGS+=(
-      --dir /root/.omp
-      --symlink /run/sandbox-config/current/.omp/agent /root/.omp/agent
-    )
-  fi
-  if [[ -e /run/sandbox-config/current/.agents ]]; then
-    BWRAP_ARGS+=(--symlink /run/sandbox-config/current/.agents /root/.agents)
-  fi
-  if [[ -e /run/sandbox-config/current/.pi ]]; then
-    BWRAP_ARGS+=(--symlink /run/sandbox-config/current/.pi /root/.pi)
-  fi
 fi
 
+# agent 配置布局（tmpfs 挂载点、可写根、声明配置）全部由 prepare_declared_layout 按发布清单生成。
+# 必须排在 imports 之前，否则后铺的 tmpfs 会遮住 imports 落在 ~ 下的目标
+BWRAP_ARGS+=("${LAYOUT_ARGS[@]}")
+
 # 导入文件：每个目标目录绑定一份暂存目录（目录形式支持原子改名；退出自动删除）。
-# 目标目录会被整体遮住，所以不能落在系统目录或 launcher 自己铺设的配置链接上
+# 目标目录会被整体遮住，所以不能落在系统目录或 launcher 自己铺设的 agent 配置目录上
 while IFS=$'\t' read -r stage dir; do
   [[ -n "$stage" ]] || continue
   dir="${dir/#\~/$HOME}"
   case "$dir" in
     "$HOME" | / | /usr | /usr/* | /bin | /bin/* | /lib | /lib/* | /lib64 | /lib64/* | /etc | /etc/* | \
       /proc | /proc/* | /dev | /dev/* | /run | /run/* | /nix | /nix/* | /opt | /opt/* | /data | /data/* | \
-      /.msb | /.msb/* | "$HOME/.omp" | "$HOME/.omp/"* | "$HOME/.agents" | "$HOME/.agents/"* | "$HOME/.pi" | "$HOME/.pi/"*)
+      /.msb | /.msb/*)
       echo "[-] 错误: imports 的目标目录 $dir 是沙箱保留位置" >&2
       exit 1
       ;;
   esac
+  if is_agent_layout_path "$dir"; then
+    echo "[-] 错误: imports 的目标目录 $dir 是沙箱保留位置" >&2
+    exit 1
+  fi
   BWRAP_ARGS+=(--bind "$IMPORTS_DIR/$stage" "$dir")
 done < <(jq -r '[.imports[]? | [.stage, .dir]] | unique[] | @tsv' <<< "$PLAN_JSON")
 

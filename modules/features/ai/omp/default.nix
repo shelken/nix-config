@@ -34,6 +34,8 @@
           omp = "sec-run omp";
         };
 
+        shelken.dev.sandbox.writableRoots = [ ".omp/agent" ];
+
         # omp 安装与插件补齐已迁入共享工具登记表（modules/features/ai/tools.nix 的 omp 条目）
         shelken.dev.tools.omp.files = {
           # omp 全局配置 / 快捷键 / 权限防护规则

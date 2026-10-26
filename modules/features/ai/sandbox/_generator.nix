@@ -147,10 +147,6 @@ let
     export XDG_STATE_HOME=/data/xdg/state
     export XDG_CACHE_HOME=/data/xdg/cache
     export XDG_CONFIG_HOME=/data/xdg/config
-    # pi-fff 的 frecency/history 数据库默认建在 ~/.pi/agent/fff，沙箱里那是只读的发布目录，
-    # 建库会报 Read-only file system。改放数据盘，所有上下文共用一份
-    export FFF_FRECENCY_DB=/data/xdg/data/pi-fff/frecency
-    export FFF_HISTORY_DB=/data/xdg/data/pi-fff/history
     if [[ -d /opt/sandbox-mise/data ]]; then
       # 宿主共用 mise 安装目录：所有 VM 共享同一份 installs/downloads
       export MISE_DATA_DIR=/opt/sandbox-mise/data
@@ -218,6 +214,18 @@ let
     lib.concatStringsSep "\n" (map (e: "${e.target}\t${toString e.path}") configEntries) + "\n"
   );
 
+  # 声明清单随内容发布进同一版本目录：launcher 从同一版本读清单和挂载源，二者不会错位
+  declaredPaths = pkgs.writeText "declared-paths" (
+    lib.concatStringsSep "\n" (map (e: e.target) configEntries) + "\n"
+  );
+
+  # 可写根清单（相对 $HOME，一行一个）：launcher 的唯一来源，与 declared-paths 同版本发布
+  writableRoots = pkgs.writeText "writable-roots" (
+    lib.concatMapStrings (r: "${r}\n") (
+      lib.unique (lib.sort lib.lessThan config.shelken.dev.sandbox.writableRoots)
+    )
+  );
+
   # 生成沙箱发布目录配置 (挂载到 /run/sandbox-config)
   rawSandboxConfig = pkgs.linkFarm "sandbox-config-inner" (
     [
@@ -237,6 +245,14 @@ let
         name = "postinstall-tools";
         path = postInstallList;
       }
+      {
+        name = "declared-paths";
+        path = declaredPaths;
+      }
+      {
+        name = "writable-roots";
+        path = writableRoots;
+      }
     ]
     ++ (map (e: {
       name = e.target;
@@ -249,10 +265,17 @@ let
   # 解引用后 guest 上下文读到的就是普通文件，不再依赖仓库工作区路径。
   # store 内条目仍用软链，只有 live-edit 这类仓库软链才复制。
   # 发布顺序：先写版本化目录，current.new 软链就位后同目录 rename 原子替换，
-  # 消除「旧目录改名 → 新目录就位」之间的 current 空窗；切换完成后再清理旧版本。
+  # 消除「旧目录改名 → 新目录就位」之间的 current 空窗。
+  # 运行中的上下文把声明配置按启动时的版本目录挂载，删掉旧版本会让它们读不到复制来的条目，
+  # 所以旧版本保留 7 天，只清理更早的。
   publishScript = pkgs.writeShellScript "publish-sandbox-config" ''
     set -euo pipefail
-    export PATH="${lib.makeBinPath [ pkgs.coreutils ]}:$PATH"
+    export PATH="${
+      lib.makeBinPath [
+        pkgs.coreutils
+        pkgs.findutils
+      ]
+    }:$PATH"
     cfg_root="''${SANDBOX_CONFIG_DIR:-$HOME/.config/sandbox}"
     mkdir -p "$cfg_root"
     version="v$(date +%Y%m%d%H%M%S)-$$"
@@ -275,6 +298,8 @@ let
     ln -sfn ${guestEnvSh} "$tmp/guest-env.sh"
     ln -sfn ${syncGuestScript} "$tmp/sync-guest.sh"
     ln -sfn ${postInstallList} "$tmp/postinstall-tools"
+    ln -sfn ${declaredPaths} "$tmp/declared-paths"
+    ln -sfn ${writableRoots} "$tmp/writable-roots"
     mv "$tmp" "$dst"
     # 原子切换：软链先就位为 current.new，再同目录 rename 覆盖 current（无空窗）
     ln -sfn "$version" "$cfg_root/current.new"
@@ -285,11 +310,12 @@ let
       mv "$cfg_root/current.new" "$cfg_root/current"
       rm -rf "$cfg_root/current.old"
     }
-    # 切换完成后清理旧版本（保留刚发布的 $version）
-    for old in "$cfg_root"/v*; do
-      [[ -d "$old" && "$old" != "$dst" ]] || continue
-      rm -rf "$old"
-    done
+    # 清理超过 7 天的旧版本（含失败残留的 .tmp），current 指向的版本与刚发布的版本始终保留
+    find "$cfg_root" -mindepth 1 -maxdepth 1 -name 'v*' -mmin +$((7 * 24 * 60)) -print0 \
+      | while IFS= read -r -d "" old; do
+          [[ "$old" == "$dst" || "$(basename "$old")" == "$(readlink "$cfg_root/current")" ]] && continue
+          rm -rf "$old"
+        done
   '';
 
   # guest 侧状态查询脚本（sb status 调用）：正文在 guest-status.sh，

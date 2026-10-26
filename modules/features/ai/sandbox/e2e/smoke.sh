@@ -115,9 +115,12 @@ if [[ ! -d "$MISE_HOST_DIR" ]]; then
   exit 1
 fi
 
-# 空沙箱配置目录: 让首次建 VM 的自动 sync 找不到 sync-guest.sh 而跳过
+# 空沙箱配置目录: 让首次建 VM 的自动 sync 找不到 sync-guest.sh 而跳过；
+# 空声明清单与空可写根清单：满足 launcher 对发布目录的前置检查，并表示本 e2e 不需要任何声明配置（不是放宽检查）
 CFG_DIR="$E2E_DIR/empty-sandbox-config"
 mkdir -p "$CFG_DIR/current"
+: > "$CFG_DIR/current/declared-paths"
+: > "$CFG_DIR/current/writable-roots"
 
 # 假工作区: 相邻项目 A（git 仓库 + worktree）与 B（不可见对照）
 WS="$E2E_DIR/workspace"

@@ -32,3 +32,4 @@
 - [隔离与并发上下文](./isolation-concurrency.md)：相邻项目、私网、secret、worktree，多个上下文互不打断
 - [工具补齐](./sync.md)：重复 sync 零下载、并发 sync 串行、私有插件、沙箱内无法装工具
 - [生命周期与授权](./lifecycle-grants.md)：上限变化重建或拒绝、`sb rm`、宿主命令桩、`.sandbox.yaml` 授权
+- [声明配置只读、运行状态可写](./declared-config.md)：声明文件与祖先目录挂载强制只读，兄弟可写且跨上下文共用，残留占位预检
