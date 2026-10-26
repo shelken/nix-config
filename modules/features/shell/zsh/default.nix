@@ -122,6 +122,11 @@
               # 性能分析
               # zmodload zsh/zprof
 
+              # mise 的 shim 目录全局共用一份，但版本声明是项目级的。
+              # oh-my-zsh 的 helm/fluxcd 等插件在加载时探测命令，项目外调用会命中
+              # 孤儿 shim 并报 "No version is set for shim"。此处先剔除，插件即跳过。
+              path=(''${path:#''${HOME}/.local/share/mise/shims})
+
               setopt AUTO_CD
               setopt INTERACTIVE_COMMENTS
               setopt HIST_FCNTL_LOCK
