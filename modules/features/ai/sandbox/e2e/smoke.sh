@@ -116,7 +116,7 @@ if [[ ! -d "$MISE_HOST_DIR" ]]; then
 fi
 
 # 空沙箱配置目录: 让首次建 VM 的自动 sync 找不到 sync-guest.sh 而跳过；
-# 空声明清单表示没有声明配置，launcher 在发布目录缺清单时会拒绝启动
+# 空声明清单：满足 launcher 对发布目录的前置检查，并表示本 e2e 不需要任何声明配置（不是放宽检查）
 CFG_DIR="$E2E_DIR/empty-sandbox-config"
 mkdir -p "$CFG_DIR/current"
 : > "$CFG_DIR/current/declared-paths"
