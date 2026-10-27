@@ -29,11 +29,9 @@ TERMS = [
     ("`run_in_background: true`", r"run_in_background"),
     ("`resume`", r"`resume`"),
     ("`file_attachments`", r"file_attachments"),
-    ("claude-", r"\bclaude-[a-z]+-\d"),
-    ("grok-", r"\bgrok-\d"),
-    ("gpt-", r"\bgpt-\d"),
-    ("inherit-parent", r"inherit-parent"),
-    ("pstack-models.mdc", r"pstack-models\.mdc"),
+    # 模型选择在这里不成立：具体 slug、别名、规则文件都属于同一件事，
+    # 文档只需声明「不按模型选择」，不列举任何一个 slug。
+    ("No pstack skill selects a model", r"\b(?:claude|grok|gpt)-[a-z0-9]|inherit-parent|pstack-models\.mdc"),
     (".cursor/skills/", r"\.cursor\/skills"),
     ("~/.cursor/plugins/", r"\.cursor\/plugins|\.cursor-plugin"),
     (".cursor/rules/", r"\.cursor\/rules|always-applied rule"),
