@@ -37,6 +37,31 @@
         builtins.listToAttrs entries;
 
       # 外部来源只声明仓库根目录和选择策略，解析后统一进入现有分组/平铺流程。
+      # 整树改写：漂移门需要跨 skill 的全局视野（同一专名可能出现在任意 skill），
+      # 逐 skill 派生无法做这个断言。脚本幂等，每次 build 重算需要指针的集合。
+      pstackSkills =
+        pkgs.runCommand "pstack-skills"
+          {
+            nativeBuildInputs = [ pkgs.python3 ];
+          }
+          ''
+            cp -r ${sources.cursor-plugins.src}/pstack $out
+            chmod -R u+w $out
+            python3 ${mylib.relativeToRoot "utils/script/adapt_pstack_skills.py"} \
+              "$out" \
+              ${./skills/pstack-harness/omp.md} \
+              ${./skills/pstack-harness/pi.md}
+          '';
+
+      # 派生目录自带形状：包装成 { derived = path; }，跳过需要读文件系统的单文件判定。
+      pstackSkillSource =
+        relativePath:
+        {
+          derived = pkgs.runCommand "pstack-skill-${flattenSkillName relativePath}" { } ''
+            cp -r ${pstackSkills}/skills/${relativePath} $out
+          '';
+        };
+
       fetchedSkillRepos = {
         anti-slop = {
           root = sources.anti-slop.src;
@@ -99,7 +124,12 @@
         };
 
         pstack = {
-          root = "${sources.cursor-plugins.src}/pstack/skills";
+          # 上游是 Cursor 方言：正文引用 Task/AskQuestion/~/.cursor/rules 等本机不存在的东西。
+          # build 期插入指针并改写死链；discoverFrom 让 eval 扫上游源码，避免 IFD。
+          root = pstackSkills;
+          discoverFrom = "${sources.cursor-plugins.src}/pstack/skills";
+          # 派生内的子目录不能直接当 source 字符串用，转成逐 skill 派生。
+          resolveSource = pstackSkillSource;
           discover = true;
           exclude = [
             "tdd"
@@ -123,19 +153,24 @@
       };
 
       discoverSkillSources =
-        repoName: root:
+        repoName: scanRoot: resolve:
         listToAttrsWithUniqueNameCheck "${repoName}: 自动发现的 skill 名冲突。" (
           map (relativePath: {
             name = flattenSkillName relativePath;
-            value = "${root}/${relativePath}";
-          }) (collectSkillRootRelativePaths root "")
+            value = resolve relativePath;
+          }) (collectSkillRootRelativePaths scanRoot "")
         );
 
       resolveSkillRepo =
         repoName: repo:
         let
-          discovered = if repo.discover or false then discoverSkillSources repoName repo.root else { };
-          explicit = lib.mapAttrs (_: relativePath: "${repo.root}/${relativePath}") (repo.skills or { });
+          # 内容可能来自派生目录：eval 期只能扫上游源码，不能 readDir 尚未构建的产物（IFD）。
+          scanRoot = repo.discoverFrom or repo.root;
+          # 派生目录里的子路径不能当 source 字符串用（eval 会做存在性检查），由来源自行包装。
+          resolve = repo.resolveSource or (relativePath: "${repo.root}/${relativePath}");
+          discovered =
+            if repo.discover or false then discoverSkillSources repoName scanRoot resolve else { };
+          explicit = lib.mapAttrs (_: relativePath: resolve relativePath) (repo.skills or { });
           duplicateNames = lib.intersectLists (builtins.attrNames discovered) (builtins.attrNames explicit);
           combined = discovered // explicit;
           exclusions = repo.exclude or [ ];
@@ -184,7 +219,13 @@
         repoName:
         lib.mapAttrs (
           skillName: sourcePath:
-          applyFrontmatterOverrides skillName (normalizeFetchedSkillSource sourcePath) (
+          let
+            # 派生来源不经过单文件判定：pathIsDirectory/pathExists 会读派生产物，触发 IFD。
+            resolvedSource = if builtins.isAttrs sourcePath then sourcePath.derived else sourcePath;
+            normalized =
+              if builtins.isAttrs sourcePath then resolvedSource else normalizeFetchedSkillSource sourcePath;
+          in
+          applyFrontmatterOverrides skillName normalized (
             fetchedSkillRepos.${repoName}.frontmatter.${skillName} or { }
           )
         )
