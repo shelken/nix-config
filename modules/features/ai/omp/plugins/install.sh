@@ -34,10 +34,7 @@ export GIT_CONFIG_KEY_0=url.https://github.com/.insteadOf GIT_CONFIG_VALUE_0=git
 export GIT_CONFIG_KEY_1=url.https://github.com/.insteadOf GIT_CONFIG_VALUE_1=ssh://git@github.com/
 export GIT_CONFIG_KEY_2=url.https://github.com/.insteadOf GIT_CONFIG_VALUE_2=git@github.com:
 
-# 依赖的安装脚本一律不跑：node-pty（经 @plannotator/webtui）没有 linux 预编译产物，装它要在 guest 里
-# node-gyp 编译，而 guest 没有 C 工具链。node-pty 只服务 plannotator 的终端桥接，不参与插件加载。
-# 宿主同样跳过，两端一致。
-if BUN_INSTALL_CACHE_DIR="$bun_cache" bun install --cwd "$plugins" --ignore-scripts --silent; then
+if BUN_INSTALL_CACHE_DIR="$bun_cache" bun install --cwd "$plugins" --silent; then
   exit 0
 fi
 

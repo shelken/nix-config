@@ -102,6 +102,8 @@
         ".pi/agent/extensions/pi-rename.json" = linkPiConfig "pi-rename.json";
         ".pi/agent/extensions/pi-vision-handoff.json" = linkPiConfig "pi-vision-handoff.json";
         ".pi/agent/extensions/trae/config.json" = linkPiConfig "trae.json";
+        # cpa 等 provider 的模型只来自 pi-dynamic-models 的自动发现，开关不在 Nix 里沙箱就拿不到
+        ".pi/agent/extensions/pi-dynamic-models/config.json" = linkPiConfig "pi-dynamic-models.json";
         ".pi/agent/extensions/subdir-context.ts" =
           mylib.mkConfigFile config ../omp/extensions/subdir-context.ts;
       };

@@ -8,8 +8,8 @@
 # 同步、GitHub 改走 https、失败处理）全部真实执行。
 #
 # 断言：
-#   1. 激活 PATH 下 `bun` 可被找到，且以隔离的插件目录为 --cwd、带
-#      --ignore-scripts 被调用（过去 PATH 被 HM 重置，bun 找不到，错误被吞）
+#   1. 激活 PATH 下 `bun` 可被找到，且以隔离的插件目录为 --cwd 被调用
+#      （过去 PATH 被 HM 重置，bun 找不到，错误被吞）
 #   2. 落盘的 package.json 与仓库清单逐字节一致（npm 与 git 依赖都原样保留），
 #      且 bun 收到 3 条把 GitHub 的 ssh 写法改走 https 的 git 配置、并禁用交互提示
 #   3. bun 失败时：宿主激活仍返回 0 但必须打印警告（失败不得静默）；
@@ -92,7 +92,7 @@ strict_activation_fails() {
 
 bun_called_once_in_plugins_dir() {
   [[ "$(wc -l < "$home/bun.calls")" -eq 1 ]] &&
-    grep -q -- "--cwd $plugins .*--ignore-scripts" "$home/bun.calls"
+    grep -q -- "--cwd $plugins " "$home/bun.calls"
 }
 
 activation_warns_and_continues() {
@@ -119,7 +119,7 @@ real_mise_bun_resolves() {
 }
 
 check "激活成功退出" run_activation 0
-check "bun 以隔离插件目录为 --cwd、带 --ignore-scripts 被调用一次" bun_called_once_in_plugins_dir
+check "bun 以隔离插件目录为 --cwd 被调用一次" bun_called_once_in_plugins_dir
 check "落盘的 package.json 与仓库清单逐字节一致" installed_manifest_matches_repo
 check "bun 收到 3 条 GitHub 改写配置并禁用交互提示" git_rewrite_and_no_prompt_reach_bun
 check "沙箱严格模式：bun 失败时返回非零并打印错误" strict_activation_fails

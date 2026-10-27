@@ -12,6 +12,7 @@ let
   hostCommandsCfg = config.shelken.dev.sandbox.hostCommands or { };
 
   # 沙箱基础环境（不登记为共享工具，理由见 ADR 0003）: bash, coreutils, curl, git, mise, bubblewrap, iproute2, iptables; plus jq, gnused, findutils, gawk
+  # 构建环境 gcc、gnumake、node-gyp 也在这里：没有 linux 预编译产物的原生依赖（如 node-pty）装包时要现场编译
   baseTools = with linuxPkgs; [
     bashInteractive
     coreutils
@@ -27,6 +28,9 @@ let
     gawk
     cacert
     openssh
+    gcc
+    gnumake
+    node-gyp
   ];
 
   # 共享工具 Nix 条目取仓库 nixpkgs 的 Linux 包

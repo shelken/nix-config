@@ -42,4 +42,3 @@ Preconditions:
 - `msb exec` 在上下文外，看到的 `/root/.pi/agent` 是指向只读发布目录的符号链接，不是可写根；检查运行状态要走 `sb run`
 - 数据卷上的可写根在 `/data/home/`，上下文里通过 `/data/home/...` 也能看到同一份运行状态
 - 占位预检只在启动时做；运行中的上下文看到的是启动时的声明配置快照
-- `pi` 在沙箱里还不能用：它在启动时按 `settings.json` 自动安装 packages，私有包的 `node-pty` 需要 `node-gyp`，guest 没有。不要用 pi 验证运行状态
