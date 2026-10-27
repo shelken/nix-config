@@ -145,7 +145,6 @@ let
         bashInteractive
         coreutils
         git
-        jq
         mise
       ];
       text = lib.removePrefix "#!/usr/bin/env bash\n" (
