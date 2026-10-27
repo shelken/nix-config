@@ -12,6 +12,7 @@ let
   hostCommandsCfg = config.shelken.dev.sandbox.hostCommands or { };
 
   # 沙箱基础环境（不登记为共享工具，理由见 ADR 0003）: bash, coreutils, curl, git, mise, bubblewrap, iproute2, iptables; plus jq, gnused, findutils, gawk
+  # 构建环境 gcc、gnumake、node-gyp 也在这里：没有 linux 预编译产物的原生依赖（如 node-pty）装包时要现场编译
   baseTools = with linuxPkgs; [
     bashInteractive
     coreutils
@@ -27,6 +28,9 @@ let
     gawk
     cacert
     openssh
+    gcc
+    gnumake
+    node-gyp
   ];
 
   # 共享工具 Nix 条目取仓库 nixpkgs 的 Linux 包
@@ -108,18 +112,6 @@ let
     jq 'walk(if type == "object" and (.baseUrl | type) == "string"
              then .baseUrl |= sub("^(?<scheme>https?://)(?<host>127[.]0[.]0[.]1|localhost|\\[::1\\])(?<rest>[:/]|$)"; "\(.scheme)host.microsandbox.internal\(.rest)")
              else . end)' ${toolsCfg.pi.files.".pi/agent/models.json".source} > "$out"
-  '';
-
-  # pi 启动时自己安装缺失的 packages。bun 默认信任 node-pty，会跑它的安装脚本而需要 node-gyp，
-  # guest 不带 C 工具链（见 README「共用 mise 安装层」）。沙箱版 settings.json 让 pi 的 bun 读一份
-  # 只忽略安装脚本的配置；不用全局 bunfig，项目自己的 bun install 照常跑脚本。
-  # 读仓库源文件：live-edit 主机的 home.file.source 是 out-of-store 软链，构建期跟随不了
-  piBunfig = pkgs.writeText "pi-bunfig.toml" ''
-    [install]
-    ignoreScripts = true
-  '';
-  settingsPi = pkgs.runCommand "pi-sandbox-settings.json" { nativeBuildInputs = [ pkgs.jq ]; } ''
-    jq '.npmCommand = ["bun", "--config=/run/sandbox-config/current/pi-bunfig.toml"]' ${../pi/settings.json} > "$out"
   '';
 
   allToolFiles = lib.concatMap (
@@ -216,8 +208,6 @@ let
         modelsOmp
       else if item.target == ".pi/agent/models.json" then
         modelsPi
-      else if item.target == ".pi/agent/settings.json" then
-        settingsPi
       else if builtins.isAttrs item.file && item.file ? source then
         item.file.source
       else
@@ -267,10 +257,6 @@ let
         name = "writable-roots";
         path = writableRoots;
       }
-      {
-        name = "pi-bunfig.toml";
-        path = piBunfig;
-      }
     ]
     ++ (map (e: {
       name = e.target;
@@ -318,7 +304,6 @@ let
     ln -sfn ${postInstallList} "$tmp/postinstall-tools"
     ln -sfn ${declaredPaths} "$tmp/declared-paths"
     ln -sfn ${writableRoots} "$tmp/writable-roots"
-    ln -sfn ${piBunfig} "$tmp/pi-bunfig.toml"
     mv "$tmp" "$dst"
     # 原子切换：软链先就位为 current.new，再同目录 rename 覆盖 current（无空窗）
     ln -sfn "$version" "$cfg_root/current.new"

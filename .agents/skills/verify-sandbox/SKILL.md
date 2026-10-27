@@ -76,4 +76,3 @@ $V cleanup
 - `sb sync` 写宿主真实共用 mise 层（设计如此，只补缺）。验证中不要 `mise use -g` 引入新工具再 sync，除非任务需要
 - 家里的模型服务在 `192.168.69.46:443`，靠 `sb.yaml` 的 `network.default_grant` 放行；用 IP 直连 443 会因缺 SNI 失败，测试用域名
 - Determinate 的 Native Linux Builder 不可用时，`setup` 构建失败，见 `postmortems/004-*`
-- live-edit 主机上，`mkConfigFile` 声明的配置是指向主工作区 `~/nix-config/...` 的软链，`setup` 发布时复制的是主工作区里的内容，不是当前 worktree，主工作区的未提交改动也会带进去。要验证 worktree 里改过的这类文件，注意这一点；worktree 里新增的 live-edit 文件主工作区没有，`setup` 会报 `cp: cannot stat`

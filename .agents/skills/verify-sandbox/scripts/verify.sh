@@ -31,7 +31,16 @@ iso_env() {
 cmd_setup() {
   mkdir -p "$WORK/msb" "$EVIDENCE"
   echo "[*] 构建 $HOST 的 Home Manager 产物（out-link 作为 GC root，防止验证中途被回收）"
-  nix build --out-link "$WORK/gen" "$REPO#homeConfigurations.$HOST.config.home.activationPackage"
+  # liveEdit 会把声明的配置软链到主工作区，验证的就不是当前 worktree；构建时强制关掉
+  nix build --impure --out-link "$WORK/gen" --expr "
+    let
+      flake = builtins.getFlake \"$REPO\";
+      sys = flake.darwinConfigurations.$HOST or flake.nixosConfigurations.$HOST;
+      user = flake.homeConfigurations.$HOST.config.home.username;
+    in
+    (sys.extendModules {
+      modules = [ ({ lib, ... }: { home-manager.users.\${user}.shelken.dotfiles.liveEdit = lib.mkForce false; }) ];
+    }).config.home-manager.users.\${user}.home.activationPackage"
 
   sed "s/^memory: .*/memory: \"${SB_VERIFY_MEMORY:-4G}\"/" "$REPO/modules/features/ai/sandbox/sb.yaml" > "$WORK/sb.yaml"
 
