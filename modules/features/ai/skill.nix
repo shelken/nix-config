@@ -53,13 +53,14 @@
               ${./skills/pstack-harness/pi.md}
           '';
 
-      # home.file.source 不能是 "${派生}/子路径" 这类字符串：eval 期会做路径存在性检查而失败。
-      # 每个 skill 单独成派生，链路与其它来源保持一致。
+      # 派生目录自带形状：包装成 { derived = path; }，跳过需要读文件系统的单文件判定。
       pstackSkillSource =
         relativePath:
-        pkgs.runCommand "pstack-skill-${flattenSkillName relativePath}" { } ''
-          cp -r ${pstackSkills}/skills/${relativePath} $out
-        '';
+        {
+          derived = pkgs.runCommand "pstack-skill-${flattenSkillName relativePath}" { } ''
+            cp -r ${pstackSkills}/skills/${relativePath} $out
+          '';
+        };
 
       fetchedSkillRepos = {
         anti-slop = {
@@ -218,7 +219,13 @@
         repoName:
         lib.mapAttrs (
           skillName: sourcePath:
-          applyFrontmatterOverrides skillName (normalizeFetchedSkillSource sourcePath) (
+          let
+            # 派生来源不经过单文件判定：pathIsDirectory/pathExists 会读派生产物，触发 IFD。
+            resolvedSource = if builtins.isAttrs sourcePath then sourcePath.derived else sourcePath;
+            normalized =
+              if builtins.isAttrs sourcePath then resolvedSource else normalizeFetchedSkillSource sourcePath;
+          in
+          applyFrontmatterOverrides skillName normalized (
             fetchedSkillRepos.${repoName}.frontmatter.${skillName} or { }
           )
         )

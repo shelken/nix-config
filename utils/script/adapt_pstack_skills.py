@@ -159,7 +159,14 @@ def main():
 
     missing = {}
     for key in sorted({term for terms in used.values() for term in terms}):
-        uncovered = [os.path.basename(path) for path, text in adapter_text.items() if key not in text]
+        # 术语以连字符结尾（如 `claude-`）时前缀本身即语义，只要求字面出现；
+        # 其余按右侧词边界比对，避免 generalPurpose 被 generalPurposeful 误判为已覆盖。
+        if key.endswith("-"):
+            hit = lambda text: key in text
+        else:
+            needle = re.compile(rf"(?<![A-Za-z0-9]){re.escape(key)}(?![A-Za-z0-9])")
+            hit = needle.search
+        uncovered = [os.path.basename(path) for path, text in adapter_text.items() if not hit(text)]
         if uncovered:
             missing[key] = uncovered
     if missing:

@@ -50,7 +50,7 @@ There is no `~/.cursor/rules/pstack-models.mdc` here. A pstack role maps to a pr
 - `spawn-subagent list` prints every profile with its model, thinking level, tools, and description. That output is the only source of truth; run it before naming a profile.
 - Pick the profile whose description matches the role: review work to a reviewer profile, exploration to `scout`, implementation to the general worker.
 - A role naming a list of models (arena runners, interrogate reviewers, architect runners, cross-judge pool) means one spawn per entry, on distinct model families where the list allows.
-- `inherit-parent` or `auto` means the profile inherits the parent model.
+- `inherit-parent` or `auto` has no pi equivalent: every profile pins its own `model` and `spawn-subagent` always passes it, so a spawn never inherits the parent model. When a role carries one of these aliases, pick the profile closest to the parent model and say which model will actually run.
 - Cursor slugs such as `claude-opus-5-5-xhigh`, `grok-4.7-xhigh-fast`, and `gpt-*` are not pi selectors. Translate the role to a profile first.
 - No profile matches the role: dispatch the general worker and state which role degraded. A refused profile is an error, not a hint to retry another name.
 
