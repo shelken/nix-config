@@ -15,15 +15,16 @@ description: 验证 nix-config 的 Agent 沙箱（sb、omp-sb、sb sync、launch
 
 ```bash
 V="$(git rev-parse --show-toplevel)/.agents/skills/verify-sandbox/scripts/verify.sh"   # 必须是绝对路径：run 会切到测试项目执行
-$V setup          # 构建当前分支的 mio Home Manager 产物、发布隔离配置、建测试项目
+eval "$($V env)" # MODEL、GATEWAY_URL、GATEWAY_ADDR、CPUS、MEMORY：从仓库事实源现算，文档不写死
+$V setup          # 构建当前分支的 Home Manager 产物（主机由 SB_VERIFY_HOST 选）、发布隔离配置、建测试项目
 $V doctor
 $V sb up          # 首次创建数据卷与主 VM，并自动 sb sync 一次
 $V sb status      # 就绪：VM 状态 Running、上限一致 consistent、缺失工具 无
 ```
 
 - `setup` 需要 Linux 构建器（本机 `linux-builder` VM 已启动）
-- 主 VM 规格默认 4G 内存，`SB_VERIFY_MEMORY=8G` 覆盖；其他字段照抄仓库 `sb.yaml`
-- 首次 `sb up` 约 1 分钟（插件 `bun install`）；mise 工具来自宿主共用层，已装齐时不下载
+- 主 VM 规格：`$CPUS` 照抄仓库 `sb.yaml`，`$MEMORY` 为验证用的较小值，用 `SB_VERIFY_MEMORY` 覆盖；其他字段照抄 `sb.yaml`
+- 首次 `sb up` 要装插件（`bun install`），耗时取决于网络；mise 工具来自宿主共用层，已装齐时不下载
 
 ## Doctor
 
@@ -40,7 +41,7 @@ $V doctor
 - 路径：`$V paths`
 - 功能步骤见 `features/` 下各文件
 
-调用 OMP 一律指定便宜模型：`$V sb run omp --model=cpa/gpt-5.6-luna -p '只回复 OK'`，并给命令加超时（`timeout 120`）
+调用 OMP 一律用 `$MODEL`：`$V sb run omp --model="$MODEL" -p '只回复 OK'`，并给命令加超时（`timeout 120`）
 
 ## Evidence
 
@@ -74,5 +75,5 @@ $V cleanup
 ## Gotchas
 
 - `sb sync` 写宿主真实共用 mise 层（设计如此，只补缺）。验证中不要 `mise use -g` 引入新工具再 sync，除非任务需要
-- 家里的模型服务在 `192.168.69.46:443`，靠 `sb.yaml` 的 `network.default_grant` 放行；用 IP 直连 443 会因缺 SNI 失败，测试用域名
+- 家里的模型服务在 `$GATEWAY_ADDR`，靠 `sb.yaml` 的 `network.default_grant` 放行；用 IP 直连会因缺 SNI 失败，测试用 `$GATEWAY_URL` 的域名
 - Determinate 的 Native Linux Builder 不可用时，`setup` 构建失败，见 `postmortems/004-*`

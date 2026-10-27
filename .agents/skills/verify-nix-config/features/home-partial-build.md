@@ -22,7 +22,7 @@ Preconditions:
 - 当前工作树包含待验证变更，新增且需要进入 flake 的配置文件已暂存
 - evidence 目录不与其他 drive 共用
 
-- **运行真实入口。** 执行 `.agents/skills/verify-nix-config/scripts/verify.sh home-build`。`transcript.log` 中的 nh pipeline 构建 `homeConfigurations.<host>.config.home.activationPackage`，命令退出码为 `0`
+- **运行真实入口。** 执行 `.agents/skills/verify-nix-config/scripts/verify.sh home-build`。helper 以 `just --set profile <host> hm-build` 调用，构建 `homeConfigurations.<host>` 的 Home 子结果，命令退出码为 `0`；`transcript.log` 末尾的 `PATHS`、`SIZE`、`DIFF` 带 ANSI 颜色码，用 `sed -E 's/\x1b\[[0-9;]*m//g'` 去色后再 grep
 - **确认同源。** 读取 `summary.json`。`home_drv` 与 `system_home_drv` 完全相同
 - **确认用户 profile。** `profile_dir` 不是系统 `/etc/profiles/per-user` 环境
 - **确认无切换。** `shared_profile_links_unchanged` 为 `true`，`before-links.txt` 与 `after-links.txt` 相同

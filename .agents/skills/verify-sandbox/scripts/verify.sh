@@ -26,6 +26,8 @@ iso_env() {
     MSB_HOME="$WORK/msb" MSB_CONFIG_PATH="$WORK/msb.json" "$@"
 }
 
+yq_repo() { nix shell --no-warn-dirty --inputs-from "$REPO" nixpkgs#yq-go -c yq "$@"; }
+
 cmd_setup() {
   mkdir -p "$WORK/msb" "$EVIDENCE"
   echo "[*] 构建 $HOST 的 Home Manager 产物（out-link 作为 GC root，防止验证中途被回收）"
@@ -67,7 +69,7 @@ EOF
 cmd_doctor() {
   local ok=1
   check() { if eval "$2" >/dev/null 2>&1; then echo "[+] $1"; else echo "[-] $1"; ok=0; fi; }
-  check "msb 0.7.7 可用" "'$MSB_BIN' --version | grep -q 0.7.7"
+  check "msb 可用" "'$MSB_BIN' --version"
   check "sec-run 可用（真实凭据注入）" "command -v sec-run"
   check "共用 mise 目录存在" "test -d '$HOME/Data/sandboxes/mise/aarch64-linux'"
   check "已 setup：sb 可执行且受 GC root 保护" "test -x '$WORK/gen/home-path/bin/sb'"
@@ -114,6 +116,16 @@ cmd_cleanup() {
   echo "[+] 已清理 VM、卷、工作目录与测试项目；证据保留在 $EVIDENCE"
 }
 
+# 文档里的模型、网关、规格都从仓库的事实源现算，避免写死后过期
+cmd_env() {
+  local sbyaml="$REPO/modules/features/ai/sandbox/sb.yaml"
+  printf 'MODEL=%q\n' "$(jq -r '"\(.defaultProvider)/\(.defaultModel)"' "$REPO/modules/features/ai/pi/settings.json")"
+  printf 'GATEWAY_URL=%q\n' "$(yq_repo -r '.providers.cpa.baseUrl' "$REPO/modules/features/ai/omp/models.yml")"
+  printf 'GATEWAY_ADDR=%q\n' "$(yq_repo -r '.network.default_grant[0]' "$sbyaml")"
+  printf 'CPUS=%q\n' "$(yq_repo -r '.cpus' "$sbyaml")"
+  printf 'MEMORY=%q\n' "${SB_VERIFY_MEMORY:-4G}"
+}
+
 case "${1:-}" in
   setup) cmd_setup ;;
   doctor) cmd_doctor ;;
@@ -123,5 +135,6 @@ case "${1:-}" in
   smoke) cmd_smoke ;;
   cleanup) cmd_cleanup ;;
   paths) echo "WORK=$WORK"; echo "PROJ=$PROJ"; echo "EVIDENCE=$EVIDENCE"; echo "SB=$(sb_bin 2>/dev/null || echo 未setup)" ;;
-  *) die "用法: verify.sh setup|doctor|sb <args>|msb <args>|run <名字> -- <命令>|smoke|cleanup|paths" ;;
+  env) cmd_env ;;
+  *) die "用法: verify.sh setup|doctor|env|sb <args>|msb <args>|run <名字> -- <命令>|smoke|cleanup|paths" ;;
 esac
