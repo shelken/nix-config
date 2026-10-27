@@ -43,6 +43,7 @@
       "thinking": "high"
     }
   },
+  "sandboxExclude": [],
   "packages": [
     "npm:pi-execution-time",
     "npm:pi-powerline-footer",

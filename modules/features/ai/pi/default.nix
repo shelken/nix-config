@@ -69,6 +69,30 @@
         providers = lib.mapAttrs (_: adaptProvider) mergedModels.providers;
       };
 
+      # 沙箱专用 settings.json：顶层 sandboxExclude 列出沙箱里不要的 packages 条目。
+      # 排除即不装，不是装后禁用；宿主读原文件，不受影响。
+      # 名字写错在构建期失败，避免静默漏排除。对象形式的条目按 source 匹配，原样保留其余字段。
+      piSettings = builtins.fromJSON (builtins.readFile ./settings.json);
+      sandboxExclude = piSettings.sandboxExclude or [ ];
+      entrySource = p: if builtins.isString p then p else p.source;
+      unknownExcludes = builtins.filter (n: !(builtins.any (p: entrySource p == n) piSettings.packages)) sandboxExclude;
+      sandboxSettings =
+        assert lib.assertMsg (unknownExcludes == [ ])
+          "pi settings.json 的 sandboxExclude 有 packages 里不存在的条目: ${toString unknownExcludes}";
+        jsonFormat.generate "pi-settings-sandbox.json" (
+          builtins.removeAttrs piSettings [ "sandboxExclude" ]
+          // {
+            packages = builtins.filter (p: !(builtins.elem (entrySource p) sandboxExclude)) piSettings.packages;
+          }
+        );
+
+      # 沙箱内 loopback 指向 VM 自身，模型地址统一改为宿主网关
+      sandboxModels = jsonFormat.generate "pi-sandbox-models.json" (
+        mylib.rewriteLoopbackBaseUrls "host.microsandbox.internal" {
+          providers = lib.mapAttrs (_: adaptProvider) mergedModels.providers;
+        }
+      );
+
       shellInit = ''
         export POWERLINE_NERD_FONTS=1
         export FFF_ENABLE_HOME_SCAN=0
@@ -87,6 +111,12 @@
       shelken.dev.sandbox.writableRoots = [ ".pi/agent" ];
 
       # pi 安装已迁入共享工具登记表（modules/features/ai/tools.nix 的 pi 条目）
+      shelken.dev.tools.pi.sandboxFiles = {
+        # 沙箱用 Nix 渲染的变体（去掉 sandboxExclude 列出的包）；宿主仍是仓库文件的软链
+        ".pi/agent/settings.json" = sandboxSettings;
+        ".pi/agent/models.json" = sandboxModels;
+      };
+
       shelken.dev.tools.pi.files = {
         ".pi/agent/settings.json" = linkPi "settings.json";
         ".pi/agent/keybindings.json" = linkPi "keybindings.json";

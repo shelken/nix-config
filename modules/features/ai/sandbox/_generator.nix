@@ -68,20 +68,6 @@ let
     tools = config.shelken.dev.miseTools;
   };
 
-  # 模型地址改写：loopback 在 guest 内指向 VM 自身，统一改为宿主网关 host.microsandbox.internal
-  loopbackPattern = "^(https?://)(127[.]0[.]0[.]1|localhost|\\[::1\\])([:/]|$)";
-  modelsOmp = pkgs.runCommand "omp-sandbox-models.yml" { nativeBuildInputs = [ pkgs.yq-go ]; } ''
-    yq '(.. | select(tag == "!!map") | select(has("baseUrl")) | .baseUrl) |= sub("${loopbackPattern}", "''${1}host.microsandbox.internal''${3}")' ${../omp/models.yml} > "$out"
-  '';
-
-  # Pi 的 models.json 由 pi/default.nix 从同一份 OMP YAML 生成，需要同样的地址改写
-  # jq 的 sub() 替换串只认 \(.name) 命名捕获，不是 yq 的 ${1}
-  modelsPi = pkgs.runCommand "pi-sandbox-models.json" { nativeBuildInputs = [ pkgs.jq ]; } ''
-    jq 'walk(if type == "object" and (.baseUrl | type) == "string"
-             then .baseUrl |= sub("^(?<scheme>https?://)(?<host>127[.]0[.]0[.]1|localhost|\\[::1\\])(?<rest>[:/]|$)"; "\(.scheme)host.microsandbox.internal\(.rest)")
-             else . end)' ${toolsCfg.pi.files.".pi/agent/models.json".source} > "$out"
-  '';
-
   allToolFiles = lib.concatMap (
     tool: lib.mapAttrsToList (target: file: { inherit target file; }) tool.files
   ) (builtins.attrValues toolsCfg);
@@ -160,17 +146,19 @@ let
   # live-edit 主机的 home.file.source 是 out-of-store 软链（指向仓库工作区），
   # guest 上下文只挂载 store 与配置目录，因此这里在构建期解引用成自包含副本，
   # 保证 /root/.pi、/root/.omp/agent 等在上下文内可读。
+  # 条目来源只有三种：sandboxFiles 的显式覆盖、{ source = ...; } 的软链目标、普通路径。
+  sandboxOverrides = lib.foldl' (acc: tool: acc // tool.sandboxFiles) { } (builtins.attrValues toolsCfg);
+  resolveEntry =
+    item:
+    if sandboxOverrides ? ${item.target} then
+      sandboxOverrides.${item.target}
+    else if builtins.isAttrs item.file && item.file ? source then
+      item.file.source
+    else
+      item.file;
   configEntries = map (item: {
     inherit (item) target;
-    path =
-      if item.target == ".omp/agent/models.yml" then
-        modelsOmp
-      else if item.target == ".pi/agent/models.json" then
-        modelsPi
-      else if builtins.isAttrs item.file && item.file ? source then
-        item.file.source
-      else
-        item.file;
+    path = resolveEntry item;
   }) allToolFiles;
 
   configManifest = pkgs.writeText "sandbox-config-manifest" (

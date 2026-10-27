@@ -47,6 +47,16 @@
                   description = "随工具进入沙箱的配置文件，宿主侧照常作为 home.file";
                 };
 
+                sandboxFiles = lib.mkOption {
+                  type = lib.types.attrsOf lib.types.anything;
+                  default = { };
+                  description = ''
+                    同一份文件在沙箱里的替代内容，按目标路径覆盖 files 的同名条目。
+                    宿主侧完全不受影响；未列出的路径沿用 files。这是宿主与沙箱内容
+                    唯一的差异入口，生成器不解释具体语义。
+                  '';
+                };
+
                 postInstall = lib.mkOption {
                   type = lib.types.nullOr lib.types.lines;
                   default = null;
@@ -92,6 +102,10 @@
               {
                 assertion = (tool.package != null || tool.mise != null) || (tool.files != { });
                 message = "shelken.dev.tools.${name}: 必须指定 package 或 mise 之一，或声明 files（纯配置条目）";
+              }
+              {
+                assertion = builtins.all (t: tool.files ? ${t}) (builtins.attrNames tool.sandboxFiles);
+                message = "shelken.dev.tools.${name}: sandboxFiles 的目标必须在 files 里存在，否则覆盖不会生效";
               }
             ]) cfg
           );
