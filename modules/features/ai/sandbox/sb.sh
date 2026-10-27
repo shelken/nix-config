@@ -541,7 +541,7 @@ resolve_and_validate_plan() {
     return 1
   fi
 
-  # 3. Worktree 自动加绑 git common dir；不在挂载根内时无法透传给 guest，
+  # Worktree 自动加绑 git common dir；不在挂载根内时无法透传给 guest，
   # 必须显式报错而不是让 launcher 静默跳过绑定（上下文内 git 丢历史）
   local git_common_dir=""
   if git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -574,7 +574,7 @@ resolve_and_validate_plan() {
     local cfg_json
     cfg_json="$(yq -o=json '.' "$proj_cfg")"
 
-    # 4a. 校验 imports：target 是上下文内的路径；src 是任意宿主文件，是否放行由 sb trust 的批准决定
+    # 校验 imports：target 是上下文内的路径；src 是任意宿主文件，是否放行由 sb trust 的批准决定
 
     local -a verified_imports=()
     local target_form='^(~/|/)[^/]'
@@ -623,7 +623,7 @@ resolve_and_validate_plan() {
       fi
     fi
 
-    # 4b. 校验 network 的写法；私网目标没有上限，是否放行由 sb trust 的批准决定
+    # 校验 network 的写法；私网目标没有上限，是否放行由 sb trust 的批准决定
     local -a verified_network=()
     while IFS= read -r net_target; do
       [[ -n "$net_target" ]] || continue
@@ -689,7 +689,7 @@ resolve_and_validate_plan() {
     fi
   fi
 
-  # 4d. sb.yaml 声明的所有上下文默认放行的私网 IP:端口（如家里的模型服务），与项目声明的目标合并
+  # sb.yaml 声明的所有上下文默认放行的私网 IP:端口（如家里的模型服务），与项目声明的目标合并
   local -a default_grants=()
   while IFS= read -r grant; do
     [[ -n "$grant" ]] || continue

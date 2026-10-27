@@ -187,7 +187,7 @@ is_agent_layout_path() {
   return 1
 }
 
-# 发布目录在而清单缺失，说明发布目录来自旧版本；静默放行会让上下文没有任何声明配置和只读保护
+# 发布目录在而清单缺失时不能静默放行：上下文会没有任何声明配置和只读保护
 require_published() {
   if [[ ! -f "$1" ]]; then
     echo "[-] 错误: 发布目录缺少清单：$1（发布目录来自旧版本，重新发布配置后重试：just hm）" >&2
@@ -370,8 +370,8 @@ mkdir -p "$CURRENT_CTX_DIR"
 # 宿主在复制 imports 时已建好该目录；没有 imports 时它不存在
 IMPORTS_DIR="$CURRENT_CTX_DIR/imports"
 
-# 登记元数据：jq 生成，写临时文件后 mv 原子发布；并移除宿主侧「启动中」标记，
-# 此后目录所有权归属本 launcher
+# 登记元数据：路径可含引号或换行，所以用 jq 生成合法 JSON；写临时文件后 mv 原子发布，
+# 并移除宿主侧「启动中」标记，此后目录所有权归属本 launcher
 META_TMP="$CURRENT_CTX_DIR/meta.json.tmp"
 jq -n \
   --arg id "$CTX_ID" \
@@ -481,14 +481,14 @@ for target in $(jq -r '.network[]? // empty' <<< "$PLAN_JSON"); do
   fi
 done
 
-# iptables 链只能追加：放行规则已在前面加好，私网 REJECT 必须排在其后（家庭网段 192.168.0.0/16 默认在此拦截）
+# 规则按顺序匹配：放行规则已在前面加好，私网 REJECT 必须排在其后（家庭网段 192.168.0.0/16 默认在此拦截）
 iptables -A "$CHAIN" -d 10.0.0.0/8 -j REJECT
 iptables -A "$CHAIN" -d 172.16.0.0/12 -j REJECT
 iptables -A "$CHAIN" -d 192.168.0.0/16 -j REJECT
 iptables -A "$CHAIN" -d 100.64.0.0/10 -j REJECT
 iptables -A "$CHAIN" -d 169.254.0.0/16 -j REJECT
 
-# e. 放行其余所有公网目标 (包括假 IP 代理 198.18.0.0/15 与外部公网)
+# 放行其余所有公网目标 (包括假 IP 代理 198.18.0.0/15 与外部公网)
 iptables -A "$CHAIN" -j ACCEPT
 
 BWRAP_ARGS=(
@@ -575,8 +575,7 @@ else
 fi
 
 # 唯一来源：/run/sandbox-config/current/guest-env.sh（generator 单一生成）。
-# 这里不再维护第二份回退：缺少该文件说明 VM 未挂载生成配置，
-# 此时上下文不含任何共享工具。
+# 缺少该文件说明 VM 未挂载生成配置：不加载工具环境，也不维护第二份回退。
 export GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
 export GIT_CONFIG_GLOBAL="@git_config@"
 if [[ -f /run/sandbox-config/current/guest-env.sh ]]; then
