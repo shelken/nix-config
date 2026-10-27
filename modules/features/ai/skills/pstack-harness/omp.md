@@ -19,8 +19,9 @@ pstack skills use Cursor names. In omp, read this file once per session, then ma
 | `subagent_type: generalPurpose` | Omit `agent`; the spawn uses the session default. |
 | `readonly: true` | A read-only agent: `scout` for exploration, a reviewer agent for review. The `task` tool description lists both. |
 | `readonly: false` | The default general worker agent. |
-| `poteto-agent` | The pstack delegate agent, when the session lists one built from pstack's `agents/poteto-agent.md`. Otherwise use the default and say so. |
-| `comment-sicko` | The pstack comment-review agent, when the session lists one built from pstack's `agents/comment-sicko.md`. Otherwise use the default and say so. |
+| `poteto-agent` | `agent: "poteto-agent"`. Nix generates it from pstack's `agents/poteto-agent.md`; it models `@task` and its first act is reading `~/.agents/skills/poteto-mode/SKILL.md`. Resume an existing one with `write agent://<id>` rather than spawning a sibling. |
+| `comment-sicko` | `agent: "comment-sicko"`. Nix generates it from pstack's `agents/comment-sicko.md` as a read-only comment reviewer; it reports `MUST KILL` targets and never edits code. The `no-comments` skill spells the type `"Comment Sicko"`; that is the upstream display name, and the agent name here is the lowercase slug. |
+| `subagent_type: "Comment Sicko"` | `agent: "comment-sicko"`. Same agent, lowercase slug; omp matches agent names case-sensitively and only the slug exists. |
 | `model: <slug>` | **Not accepted.** `task` rejects a `model` field unless the agent is `seance`. See Models. |
 | `environment: "cloud"` | Drop it. Subagents run in the current checkout. Isolation exists as `task.isolation.enabled`; while it is off, `isolated` is absent from the schema. |
 | `environment: "local"` | Drop it; that is the only mode. |
@@ -40,6 +41,42 @@ No pstack skill selects a model here. Every slug, alias, and model rule file in 
 - Every pstack model list, whether named in the skill or in a missing rule file, is not a model selector. Ignore the whole list, including any table of default slugs.
 - The `task` tool description lists the agents this session can spawn. That list is the only source of truth.
 - No agent matches the role: spawn the default and say which role degraded. Do not retry another name.
+
+Nix generates one reviewer per entry in `reviewerVariants` (`modules/features/ai/agents/default.nix`), each bound to the `@reviewer-<variant>` role in `config.yml`. The panel is `reviewer-gpt`, `reviewer-ds`, `reviewer-glm`, `reviewer-gemini`, `reviewer-cc`: five families, so a finding two of them reach independently is cross-family agreement, not one model agreeing with itself.
+
+`judge` is a separate agent, not a reviewer variant: it is bound to the `@judge` role in `config.yml` and exists for scoring options, not for finding bugs. Both roles are resolvable at call time — `task.agentModelOverrides` and `modelRoles` are read live, so changing `config.yml` needs no rebuild.
+
+## Adversarial review panels
+
+`/interrogate` and `/arena` fan out across model families. The upstream tables of slugs and the `interrogate reviewers` / `arena runners` lines from `~/.cursor/rules/pstack-models.mdc` have no counterpart here: the panel is the reviewer set, and the mapping from Reviewer A/B/C/D to a concrete agent lives in the `tasks[]` batch, not in a rule file.
+
+| Cursor | omp |
+| --- | --- |
+| One `generalPurpose` spawn per configured reviewer, `readonly: true` | One `tasks[]` item per panel member, `agent: "reviewer-<variant>"`. All items share one `context` and the same task text and rubric; the reviewer agent's own prompt owns the output schema. |
+| Reviewer A/B/C/D labels paired with a slug | Panel members `reviewer-gpt`, `reviewer-ds`, `reviewer-glm`, `reviewer-gemini`, `reviewer-cc`. Drop a member only when its provider is unavailable; say which one dropped. |
+| `arena runners` — N candidates on different models | Same panel as runners, one item each, one agent per model family: `agent: "reviewer-<variant>"` (`reviewer-gpt`, `reviewer-ds`, `reviewer-glm`, `reviewer-gemini`, `reviewer-cc`) for read-only design candidates, `agent: "poteto-agent"` for the seat that must write. Never run two candidates on the same family; when the brief needs more seats than families, say which family got a second seat. Give every candidate its own output path. |
+| `arena cross-judge pool` | `agent: "judge"`. That agent is the adjudicator: it scores candidates criterion by criterion against the rubric and names a base. It is bound to the `@judge` role (strong reasoning, different family from the write seat), takes paths to the candidates, and never edits. Do not substitute a `reviewer-<variant>` here: reviewers hunt bugs in a diff, they do not rank options. |
+| Lead judgment: the parent reads every result and decides | Stay in the main session. Fan out, then synthesize here. Do not delegate the verdict to a member of the panel it is judging; the `judge` agent is the only exception, and only when it ran on a family that produced no candidate. |
+
+Reviewers never edit. A panel item that needs to prove a candidate builds belongs in the candidate's own worktree, and the reviewer reads the diff.
+
+## Quick exploration and adjudication
+
+| Cursor | omp |
+| --- | --- |
+| `/how` explorer (`readonly: true`) | `agent: "scout"`. Read-only exploration; give it one exploration angle and the symbol or call path, and ask for a cited trace, not a fix. |
+| `/why` investigator (`readonly: false`) | `agent: "task"`. The upstream mode exists so MCP tools stay available, and `scout` cannot carry them. Keep the no-write posture in the brief instead; that is the posture, not the sandbox. |
+| Lead reviewer / adjudicator | The main session, or `reviewer-gpt` / `reviewer-cc` when the verdict needs a strong reasoning model rather than the session's own context. |
+
+## Cursor-only dependencies
+
+| Upstream dependency | omp |
+| --- | --- |
+| `deslop` (from `cursor-team-kit`) | Apply the **unslop** skill to every prose surface, then run `agent: "comment-sicko"` over the diff for the comment layer. The `no-comments` skill orchestrates this and is installed. |
+| `create-skill` (Cursor built-in) | Follow this repo's `writing-for-agents` skill. |
+| `control-cli` (from `cursor-team-kit`) | Installed natively at `~/.agents/skills/control-cli`. Read that skill and follow its harness loop: prefer the repo's own test/demo harness, otherwise a temporary `tmux` or PTY harness under `/tmp`, one action at a time with a deterministic wait. Quote the captured screen, then delete the harness. |
+| `control-ui` (from `cursor-team-kit`) | Use the **agent-browser** skill instead; it is installed at `~/.agents/skills/agent-browser` and drives Chrome over CDP. Workflow: `agent-browser open <url>` → `agent-browser snapshot -i` (element refs) → `fill`/`click` by ref → `wait --load networkidle` → re-snapshot and assert. For a native app rather than a page, use `computer-use-best-practice` instead of a browser. |
+
 
 ## setup-pstack
 

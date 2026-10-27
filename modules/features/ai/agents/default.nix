@@ -7,44 +7,103 @@
       ...
     }:
     let
-      # 模型角色变体列表，对应 omp/config.yml 中的 reviewer-* 角色；omp 与 pi 共用
+      # omp 与 pi 共用的 agent 定义：正文只有一份，模型只来自 config.yml 的角色。
+      # omp 侧输出 frontmatter 头 + 正文；pi 侧额外解析 @role 成 provider/model + thinking。
+      readOnlyOmpTools = "read, find, grep, glob, web_search";
+      readOnlyPiTools = "read,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom";
+
+      # comment-sicko 只查本地代码与注释，严禁外网检索干扰
+      commentSickoOmpTools = "read, find, grep, glob";
+      commentSickoPiTools = "read,grep,find,ls,ffgrep,fffind,intercom";
+
+      reviewerOmpTools = "read, find, grep, glob, bash, lsp, web_search, ast_grep";
+      reviewerPiTools = "read,bash,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom";
+
+      workerOmpTools = "read, edit, write, bash, eval, todo, grep, find, glob, lsp, ast_grep, web_search";
+      workerPiTools = "read,bash,edit,write,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom";
+
+      # judge 只裁决不改代码：给 web_search 查外部规范，不给 bash 防止偷偷改动代码。
+      judgeOmpTools = "read, find, grep, glob, web_search";
+      judgePiTools = "read,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom";
+
+      # omp 从 18.x 起自带这些 bundled agent，写进 agents 目录只是重复定义内置能力。
+      ompBundledAgents = [
+        "task"
+        "scout"
+        "sonic"
+        "reviewer"
+        "security-reviewer"
+        "seance"
+      ];
+
       reviewerVariants = [
         "general"
         "gemini"
         "ds"
         "glm"
         "gpt"
+        "cc"
       ];
 
-      # ---------- omp ----------
+      reviewerDescription = "Adversarial code reviewer (quality, security, correctness); read-only";
 
-      template = builtins.readFile ./reviewer.template.md;
+      agentsCommon = {
+        task = {
+          description = "General-purpose execution agent with full tool access; never use it for review, that is what the reviewers are for";
+          ompTools = workerOmpTools;
+          piTools = workerPiTools;
+          body = ./prompts/task.md;
+        };
 
-      # 为每个 reviewer 变体生成带有独立 name 与 model 的 .md 文件
-      generatedReviewers = map (v: {
-        name = "reviewer-${v}.md";
-        path = pkgs.writeText "reviewer-${v}.md" (
-          builtins.replaceStrings [ "@NAME@" "@MODEL@" ] [ "reviewer-${v}" "@reviewer-${v}" ] template
-        );
-      }) reviewerVariants;
+        scout = {
+          description = "Read-only codebase exploration and broad pattern search; returns compressed context another agent can act on";
+          ompTools = readOnlyOmpTools;
+          piTools = readOnlyPiTools;
+          body = ./prompts/scout.md;
+        };
 
-      # 扫描 agents 目录下除了 *.template.md 和 *.nix 之外的其他普通 .md 文件（支持手写自定义 agent）
-      extraAgentFiles = builtins.attrNames (
-        lib.filterAttrs (
-          name: type: type == "regular" && lib.hasSuffix ".md" name && !lib.hasSuffix ".template.md" name
-        ) (builtins.readDir ./.)
-      );
-      extraAgents = map (name: {
-        inherit name;
-        path = ./. + "/${name}";
-      }) extraAgentFiles;
+        reviewer = {
+          description = "Code review agent for quality, security, and correctness (read-only)";
+          ompTools = reviewerOmpTools;
+          ompSpawns = "scout";
+          # pi 的 profile 没有 spawns 概念，多派一个 reviewer-variant 才是它的跨家族面板。
+          piTools = reviewerPiTools;
+          body = ./prompts/reviewer.md;
+        };
 
-      # 聚合所有 agents 并构建软链目录
-      ompAgentsDir = pkgs.linkFarm "omp-agents" (generatedReviewers ++ extraAgents);
+        judge = {
+          description = "Adjudicator for arena candidates and plan options: scores against a rubric and names a base; never reviews a diff or edits code";
+          ompTools = judgeOmpTools;
+          piTools = judgePiTools;
+          body = ./prompts/judge.md;
+          # 裁决要的是强推理，不是审查模板；角色在 config.yml 里单列。
+          modelRole = "judge";
+        };
 
-      # ---------- pi ----------
-      # pi 的 agent 与 omp 内置/自定义 agent 同名，模型与 thinking 取自 omp/config.yml，
-      # 保证两边改一处角色配置即同步；spawn-subagent 以这里生成的 md 为真相源。
+        poteto-agent = {
+          description = "pstack poteto-mode execution agent: reads the poteto-mode skill first, then finishes the delegated task with full permissions";
+          ompTools = workerOmpTools;
+          ompSpawns = "*";
+          piTools = workerPiTools;
+          body = ./prompts/poteto-agent.md;
+        };
+
+        comment-sicko = {
+          description = "Read-only comment reviewer: reports corpse comments, redundant narration, and workaround sermons; never edits product code";
+          ompTools = commentSickoOmpTools;
+          piTools = commentSickoPiTools;
+          body = ./prompts/comment-sicko.md;
+        };
+      }
+      // lib.genAttrs (map (v: "reviewer-${v}") reviewerVariants) (name: {
+        description = "${reviewerDescription} (model role ${name})";
+        ompTools = reviewerOmpTools;
+        ompSpawns = "scout";
+        piTools = reviewerPiTools;
+        body = ./prompts/reviewer.md;
+      });
+
+      # ---------- 模型角色解析（omp 与 pi 共用）----------
 
       readYaml = mylib.readYaml pkgs;
 
@@ -52,10 +111,14 @@
       roles = ompConfig.modelRoles;
       agentModelOverrides = ompConfig.task.agentModelOverrides or { };
 
-      # omp 与 pi 对同一服务的 provider 命名不同
-      piProviderAlias = {
-        google-antigravity = "antigravity";
-      };
+      # judge 不在 task.agentModelOverrides 里也能工作：它自己的 modelRoles 条目就是真相源。
+      roleOf = name: agentsCommon.${name}.modelRole or name;
+      modelOf = name: agentModelOverrides.${name} or "@${roleOf name}";
+
+      # omp 与 pi 对同一服务的 provider 命名不同；映射与 spawn-subagent 热加载共用一份。
+      piProviderAlias =
+        (builtins.fromJSON (builtins.readFile ../skills/subagent-policy/subagent-config.json)).providerAlias
+          or { };
 
       # "provider/model:level" 或 "@role[:level]" -> { model, thinking }；:level 覆盖被引用角色的 level
       parseSpec =
@@ -98,36 +161,46 @@
           [ (piProviderAlias.${builtins.head parts} or (builtins.head parts)) ] ++ builtins.tail parts
         );
 
-      readOnlyTools = "read,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom";
-      reviewTools = "read,bash,grep,find,ls,ffgrep,fffind,intercom";
-
-      piAgents = {
-        task = {
-          description = "通用执行代理，完全工具权限，专注完成被委派的任务（勿用于 review，用 reviewer 系列）";
-          tools = "read,bash,edit,write,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom";
-          body = ./prompts/task.md;
-        };
-        scout = {
-          description = "只读代码库探索，快速分析与广泛模式搜索，返回可交接的压缩上下文";
-          tools = readOnlyTools;
-          body = ./prompts/scout.md;
-        };
-        reviewer = {
-          description = "代码审查代理，检查质量、安全与正确性（只读）";
-          tools = reviewTools;
-          body = null;
-        };
-      }
-      // lib.genAttrs (map (v: "reviewer-${v}") reviewerVariants) (name: {
-        description = "对抗性代码审查员（模型角色 ${name}）";
-        tools = reviewTools;
-        body = null;
-      });
-
+      # pi 的 frontmatter 只有这四个字段；description 与正文对每个 profile 都必须是独立文件。
       mkPiAgent =
         name: a:
         let
-          resolved = resolveSpec (agentModelOverrides.${name} or "@${name}");
+          resolved = resolveSpec (modelOf name);
+        in
+        {
+          name = "${name}.md";
+          path = pkgs.writeText "${name}.md" (
+            lib.concatStringsSep "\n" [
+              "---"
+              "description: ${a.description}"
+              "model: ${toPiModel resolved.model}"
+              "thinking: ${
+                if resolved.thinking == null then
+                  throw "agent ${name} 的模型角色未带 thinking 级别（config.yml 的 modelRoles）"
+                else
+                  resolved.thinking
+              }"
+              "tools: ${a.piTools}"
+              "---"
+              ""
+              (builtins.readFile a.body)
+            ]
+            + "\n"
+          );
+        };
+
+      # pi 没有内置 agent：每个 profile 都是独立 md，缺一个 spawn-subagent 就找不到它。
+      piAgentsDir = pkgs.linkFarm "pi-agents" (lib.mapAttrsToList mkPiAgent agentsCommon);
+
+      # ---------- omp ----------
+      # 输出 omp 的 agent frontmatter；output schema 只有 omp 认，放在独立文件里按需附加。
+
+      reviewerOutputSchema = lib.removeSuffix "\n" (builtins.readFile ./reviewer.output.yml);
+
+      mkOmpAgent =
+        name: a:
+        let
+          isReviewer = lib.hasPrefix "reviewer" name;
         in
         {
           name = "${name}.md";
@@ -135,24 +208,25 @@
             lib.concatStringsSep "\n" (
               [
                 "---"
+                "name: ${name}"
                 "description: ${a.description}"
-                "model: ${toPiModel resolved.model}"
-                "thinking: ${
-                  if resolved.thinking == null then
-                    throw "agent ${name} 的模型角色未带 thinking 级别（config.yml 的 modelRoles）"
-                  else
-                    resolved.thinking
-                }"
-                "tools: ${a.tools}"
-                "---"
+                "tools: ${a.ompTools}"
               ]
-              ++ lib.optional (a.body != null) ("\n" + builtins.readFile a.body)
+              ++ lib.optional ((a.ompSpawns or null) != null) "spawns: ${a.ompSpawns}"
+              ++ [ "model: ${modelOf name}" ]
+              ++ lib.optional isReviewer reviewerOutputSchema
+              ++ [
+                "---"
+                ""
+                (builtins.readFile a.body)
+              ]
             )
             + "\n"
           );
         };
 
-      piAgentsDir = pkgs.linkFarm "pi-agents" (lib.mapAttrsToList mkPiAgent piAgents);
+      ompAgents = lib.filterAttrs (name: _: !(builtins.elem name ompBundledAgents)) agentsCommon;
+      ompAgentsDir = pkgs.linkFarm "omp-agents" (lib.mapAttrsToList mkOmpAgent ompAgents);
     in
     {
       config = {

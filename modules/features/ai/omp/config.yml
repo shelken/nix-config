@@ -25,6 +25,8 @@ modelRoles:
   reviewer-glm: "@glm-max"
   reviewer-gpt: "@gpt:xhigh"
   reviewer-cc: "@claude-max:high"
+  # 专职裁决：arena/方案对比打分。指向 claude-max（强推理，非审查模板）。
+  judge: "@claude-max:high"
   vision: cpa/gpt-5.6-luna:high
   commit: cpa/workbuddy/hy3:high
   tiny: cpa/workbuddy/hy3:high
@@ -82,6 +84,10 @@ task:
     reviewer-ds: "@reviewer-ds"
     reviewer-glm: "@reviewer-glm"
     reviewer-gpt: "@reviewer-gpt"
+    reviewer-cc: "@reviewer-cc"
+    judge: "@judge"
+    poteto-agent: "@task"
+    comment-sicko: "@reviewer-gpt"
     scout: "@scout"
   disabledAgents: []
 browser:

@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 // spawn-subagent.ts — 在 Herdr 窗格或 Kitty 窗口中启动/关闭 pi 子代理
-// agent 真相源: ~/.pi/agent/agents/<profile>.md（nix 按 omp 的 modelRoles 生成）: frontmatter 定模型/工具，正文作系统提示追加。
+// agent 真相源: ~/.pi/agent/agents/<profile>.md（nix 按 omp 的 modelRoles 生成）: tools 与正文来自 md，
+// model/thinking 每次派发实时读 ~/.omp/agent/config.yml，读不到才回退 md 的静态值。
 // 用法: spawn-subagent <profile> <slug> -- <task> | close <pane-id> | list | --check | -h
 import { execFileSync, execSync } from "node:child_process";
 import {
@@ -42,7 +43,7 @@ function parseFrontmatter(text: string): Record<string, string | string[]> {
   return f;
 }
 
-// md 缺 model/thinking/tools 任一字段即视为无法解析。
+// md 缺 tools 即视为无法解析；model/thinking 优先用实时 config.yml，缺失才回退 md 的静态值。
 function resolveAgent(profile: string): Agent | null {
   const mdName = existsSync(agentsDir)
     ? readdirSync(agentsDir).find((f) => basename(f, ".md").toLowerCase() === profile.toLowerCase())
@@ -50,14 +51,80 @@ function resolveAgent(profile: string): Agent | null {
   if (!mdName) return null;
   const text = readFileSync(join(agentsDir, mdName), "utf8");
   const f = parseFrontmatter(text);
-  const model = String(f.model ?? ""), thinking = String(f.thinking ?? ""), tools = String(f.tools ?? "");
-  if (!model || !thinking || !tools) return null;
+  const tools = String(f.tools ?? "");
+  const live = liveModel(profile);
+  const model = live?.model ?? String(f.model ?? "");
+  const thinking = live?.thinking ?? String(f.thinking ?? "");
+  if (!tools || !model || !thinking) return null;
   // 插件排除全局统一：所有子代理共用一份派生 settings.json，per-md 无法生效
   return {
     name: profile, model, thinking, tools,
     exclude: (config.exclude ?? []) as string[], description: String(f.description ?? ""),
     body: text.replace(/^---\n[\s\S]*?\n---\n?/, "").trim(),
   };
+}
+
+// ---------- config.yml 热加载 ----------
+// md 由 nix 生成，改 config.yml 后不重新 build 就读不到新值；这里每次派发实时读一遍。
+// 任何失败（文件缺失、YAML 坏了、角色引用成环）都返回 null，调用方回退 md 里的静态值。
+
+const ompConfigPath = join(homedir(), ".omp", "agent", "config.yml");
+const LEVEL = /:(off|minimal|low|medium|high|xhigh|max)$/;
+
+function loadLiveConfig(): { roles: Record<string, string>; overrides: Record<string, string> } | null {
+  try {
+    if (!existsSync(ompConfigPath)) return null;
+    const doc = (Bun as any).YAML?.parse(readFileSync(ompConfigPath, "utf8"));
+    if (!doc || typeof doc !== "object") return null;
+    return {
+      roles: doc.modelRoles && typeof doc.modelRoles === "object" ? doc.modelRoles : {},
+      overrides: doc.task?.agentModelOverrides && typeof doc.task.agentModelOverrides === "object"
+        ? doc.task.agentModelOverrides
+        : {},
+    };
+  } catch { return null; }
+}
+
+// "provider/model:level" 或 "@role[:level]" -> { model, thinking }
+function resolveSpec(
+  spec: string,
+  roles: Record<string, string>,
+  seen: string[] = [],
+): { model: string; thinking: string } | null {
+  const m = spec.match(LEVEL);
+  const level = m ? m[1] : null;
+  const ref = m ? spec.slice(0, m.index) : spec;
+  if (ref.startsWith("@")) {
+    const role = ref.slice(1);
+    // 角色引用成环: 直接放弃，交给静态兜底。
+    if (seen.includes(role)) return null;
+    const next = roles[role];
+    if (typeof next !== "string") return null;
+    const base = resolveSpec(next, roles, [...seen, role]);
+    return base ? { model: base.model, thinking: level ?? base.thinking } : null;
+  }
+  if (!ref.includes("/")) return null;
+  return { model: ref, thinking: level ?? "" };
+}
+
+// omp 的 "provider/model" -> pi 的 provider 名
+function toPiModel(model: string): string {
+  const alias: Record<string, string> = config.providerAlias ?? {};
+  const i = model.indexOf("/");
+  if (i < 0) return model;
+  return (alias[model.slice(0, i)] ?? model.slice(0, i)) + model.slice(i);
+}
+
+function liveModel(profile: string): { model: string; thinking: string } | null {
+  const live = loadLiveConfig();
+  if (!live) return null;
+  const spec = live.overrides[profile] ?? `@${profile}`;
+  const resolved = resolveSpec(spec, live.roles);
+  if (!resolved) return null;
+  const model = toPiModel(resolved.model);
+  // pi 必须拿到 thinking 档位；角色没写 level 时视为未解析，避免把空值传给 --thinking。
+  const thinking = resolved.thinking;
+  return model && thinking ? { model, thinking } : null;
 }
 
 // ---------- 命令 ----------
@@ -81,7 +148,8 @@ function usage() {
   单个 agent → 单发；并发多个 agent（不论任务是否相同）→ batch，禁止循环单发
 
 profile: 对应 ~/.pi/agent/agents/<profile>.md（文件名匹配大小写不敏感，agent 名统一小写）；
-         md 由 nix 生成：frontmatter 的 model/thinking/tools 为唯一真相源，缺字段则无法解析；
+         md 由 nix 生成：frontmatter 的 tools 与正文生效；model/thinking 每次派发实时取自
+         ~/.omp/agent/config.yml 的 task.agentModelOverrides + modelRoles，该文件缺失/损坏时才回退 md 值；
          正文作为系统提示追加（--append-system-prompt）。
          插件排除由 subagent-config.json 的 exclude 全局统一，md 不支持单独声明。
 slug:    任务语义标识（小写字母/数字/连字符；agent 名 profile-slug-时间戳上限 32，
