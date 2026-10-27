@@ -5,14 +5,15 @@
 # 取已构建 Home Manager generation 里真实的 `tool-postInstall-omp` 激活片段，
 # 连同 activate 头部（HM 在此重置 PATH），在隔离 HOME 里按 `just hm` 同样的
 # 环境跑一遍。不下载任何东西：`bun` 的位置放一个替身，其余（PATH 解析、清单
-# 同步、私有插件改写、失败处理）全部真实执行。
+# 同步、GitHub 改走 https、失败处理）全部真实执行。
 #
 # 断言：
 #   1. 激活 PATH 下 `bun` 可被找到，且以隔离的插件目录为 --cwd、带
 #      --ignore-scripts 被调用（过去 PATH 被 HM 重置，bun 找不到，错误被吞）
-#   2. 安装前落盘的 package.json 与仓库清单一致：每个 npm 依赖原样保留，
-#      每个 git 依赖改写成 file: 指向 .git-vendor，不多不少
-#   3. bun 失败时激活仍返回 0，但必须打印警告（失败不得静默）
+#   2. 落盘的 package.json 与仓库清单逐字节一致（npm 与 git 依赖都原样保留），
+#      且 bun 收到 3 条把 GitHub 的 ssh 写法改走 https 的 git 配置、并禁用交互提示
+#   3. bun 失败时：宿主激活仍返回 0 但必须打印警告（失败不得静默）；
+#      SB_POSTINSTALL_STRICT 非空（沙箱 sb sync）时返回非零
 #   4. 真实 HOME 下，激活 PATH 能解析到 mise 提供的真实 bun（只读，不安装）
 #   5. 沙箱布局（XDG_DATA_HOME/omp 存在）：插件装到 $XDG_DATA_HOME/omp/plugins，
 #      不碰 ~/.omp/plugins（过去恒装到后者，OMP 读前者，沙箱内零插件）；
@@ -49,7 +50,7 @@ check() { # check <描述> <命令...>
   if "$@"; then echo "PASS $desc"; else echo "FAIL $desc"; fails=$((fails + 1)); fi
 }
 
-# 在隔离 HOME 里跑一次激活；$1 = 替身 bun 的退出码；$2 = 布局：
+# 在隔离 HOME 里跑一次激活；$1 = 替身 bun 的退出码；$2 = 布局；$3 非空 = 设 SB_POSTINSTALL_STRICT：
 #   空        宿主：不设 XDG_DATA_HOME
 #   xdg       沙箱：XDG_DATA_HOME 已设且 $XDG_DATA_HOME/omp 已存在
 #   xdg-bare  XDG_DATA_HOME 已设但 $XDG_DATA_HOME/omp 不存在（本机宿主的真实状态）
@@ -65,33 +66,28 @@ run_activation() {
   mkdir -p "$home/.local/share/mise/shims"
   cat > "$home/.local/share/mise/shims/bun" <<'STUB'
 #!/bin/sh
-printf '%s\t%s\n' "$BUN_INSTALL_CACHE_DIR" "$*" >> "$HOME/bun.calls"
+printf '%s\t%s\t%s\n' "$BUN_INSTALL_CACHE_DIR" "$*" "$GIT_CONFIG_COUNT:$GIT_TERMINAL_PROMPT" >> "$HOME/bun.calls"
 exit "${STUB_BUN_RC:-0}"
 STUB
   chmod +x "$home/.local/share/mise/shims/bun"
-  # 私有插件副本预置成"已 clone 且 ref 一致"，激活走复用分支，不触网
-  jq -r '.dependencies | to_entries[] | select(.value | test("^(git\\+|git@|ssh://)"))
-         | [.key, (.value | capture("#(?<r>.+)$").r)] | @tsv' "$manifest" |
-    while IFS=$'\t' read -r name ref; do
-      mkdir -p "$plugins/.git-vendor/$name"
-      printf '%s\n' "$ref" > "$plugins/.git-vendor/$name/.ref"
-    done
   { header; block; } > "$home/activation.sh"
   # env -i：不继承用户的 XDG_DATA_HOME 等变量，否则激活会落到真实插件目录
-  env -i HOME="$home" ${2:+XDG_DATA_HOME="$home/xdg/data"} STUB_BUN_RC="$1" PATH=/nix/var/nix/profiles/default/bin:/usr/bin:/bin \
+  env -i HOME="$home" ${2:+XDG_DATA_HOME="$home/xdg/data"} ${3:+SB_POSTINSTALL_STRICT=1} STUB_BUN_RC="$1" PATH=/nix/var/nix/profiles/default/bin:/usr/bin:/bin \
     "$hm_bash" "$home/activation.sh" > "$home/out" 2>&1
 }
 
 installed_manifest_matches_repo() {
-  jq -e --slurpfile got "$plugins/package.json" --arg vendor "$plugins/.git-vendor" '
-    .dependencies as $want
-    | $got[0].dependencies as $have
-    | ($want | keys) == ($have | keys)
-      and ($want | to_entries | all(
-          if (.value | test("^(git\\+|git@|ssh://)"))
-          then $have[.key] == "file:\($vendor)/\(.key)"
-          else $have[.key] == .value end))
-  ' "$manifest" > /dev/null
+  cmp -s "$manifest" "$plugins/package.json" && [[ -w "$plugins/package.json" ]]
+}
+
+git_rewrite_and_no_prompt_reach_bun() {
+  [[ "$(cut -f3 "$home/bun.calls")" == "3:0" ]]
+}
+
+strict_activation_fails() {
+  local rc=0
+  run_activation 1 "" strict || rc=$?
+  [[ "$rc" -ne 0 ]] && grep -q '错误' "$home/out"
 }
 
 bun_called_once_in_plugins_dir() {
@@ -124,7 +120,9 @@ real_mise_bun_resolves() {
 
 check "激活成功退出" run_activation 0
 check "bun 以隔离插件目录为 --cwd、带 --ignore-scripts 被调用一次" bun_called_once_in_plugins_dir
-check "落盘的 package.json 与仓库清单一致（npm 原样，git 改 file:）" installed_manifest_matches_repo
+check "落盘的 package.json 与仓库清单逐字节一致" installed_manifest_matches_repo
+check "bun 收到 3 条 GitHub 改写配置并禁用交互提示" git_rewrite_and_no_prompt_reach_bun
+check "沙箱严格模式：bun 失败时返回非零并打印错误" strict_activation_fails
 check "bun 失败时激活返回 0 且打印警告" activation_warns_and_continues
 check "沙箱布局：插件装到 \$XDG_DATA_HOME/omp/plugins，不碰 ~/.omp/plugins" sandbox_layout_installs_under_xdg
 check "XDG_DATA_HOME 已设但无 omp 目录：仍装到 ~/.omp/plugins" xdg_without_omp_dir_installs_under_home
