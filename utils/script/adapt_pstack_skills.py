@@ -40,10 +40,13 @@ TERMS = [
         "Cursor-only features",
         r"Bugbot|Cursor [Aa]utomation|cursor\.(sh|com)\/automations|[Cc]loud [Aa]gent|built-in PR tool",
     ),
-    # cursor-team-kit 与 Cursor 内建的私有依赖在本机不存在，每项都必须在两份映射表里给出平替。
+    # cursor-team-kit 里 deslop 与 Cursor 内建的 create-skill 在本机不存在，映射表要给出平替；
+    # control-cli 已按上游原样安装为原生 skill，control-ui 由本机 agent-browser 替代。
     ("`deslop`", r"\bdeslop\b"),
     ("`create-skill`", r"\bcreate-skill\b"),
-    ("`control-cli`", r"\bcontrol-(?:cli|ui)\b"),
+    # 两项分别检查：合并成一个正则会让只写了其中一项的文档蒙混过关。
+    ("`control-cli`", r"\bcontrol-cli\b"),
+    ("`control-ui`", r"\bcontrol-ui\b"),
     # 上游用展示名 "Comment Sicko" 作 subagent_type，本机只有小写 slug。
     ("Comment Sicko", r"Comment Sicko"),
 ]

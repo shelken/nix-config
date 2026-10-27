@@ -74,6 +74,13 @@
         #   skills.ast-grep = "ast-grep/skills/ast-grep";
         # };
 
+        # pstack 把 CLI/TUI 验收委托给这个 skill；只取 control-cli，
+        # control-ui 由本机 agent-browser 承担，见 skills/pstack-harness。
+        cursor-team-kit = {
+          root = "${sources.cursor-plugins.src}/cursor-team-kit/skills";
+          skills.control-cli = "control-cli";
+        };
+
         diagram-design = {
           root = sources.diagram-design.src;
           skills.diagram-design = "skills/diagram-design";

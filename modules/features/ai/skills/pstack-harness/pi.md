@@ -55,6 +55,8 @@ No pstack skill selects a model here. Every slug, alias, and model rule file in 
 
 Nix generates one reviewer profile per entry in `reviewerVariants` (`modules/features/ai/agents/default.nix`), each bound to the `@reviewer-<variant>` role in `config.yml`. The panel is `reviewer-gpt`, `reviewer-ds`, `reviewer-glm`, `reviewer-gemini`, `reviewer-cc`: five families, so a finding two of them reach independently is cross-family agreement, not one model agreeing with itself.
 
+`judge` is a separate profile, not a reviewer variant: it is bound to the `@judge` role in `config.yml` and exists for scoring options, not for finding bugs. `spawn-subagent` resolves `task.agentModelOverrides` and `modelRoles` from `~/.omp/agent/config.yml` on every dispatch, so a role change there applies without rebuilding the profiles; the md frontmatter is only the fallback when that file is absent or unparseable.
+
 ## Adversarial review panels
 
 `/interrogate` and `/arena` fan out across model families. The upstream tables of slugs and the `interrogate reviewers` / `arena runners` lines from `~/.cursor/rules/pstack-models.mdc` have no counterpart here: the panel is the reviewer set, and the Reviewer A/B/C/D to profile mapping lives in the batch manifest, not in a rule file.
@@ -63,9 +65,9 @@ Nix generates one reviewer profile per entry in `reviewerVariants` (`modules/fea
 | --- | --- |
 | One `generalPurpose` spawn per configured reviewer, `readonly: true` | One entry in the `batch` manifest per panel member, named `reviewer-<variant>`. Every entry shares the same brief and rubric; the profile's prompt owns the output schema. |
 | Reviewer A/B/C/D labels paired with a slug | Panel members `reviewer-gpt`, `reviewer-ds`, `reviewer-glm`, `reviewer-gemini`, `reviewer-cc`. Drop a member only when its provider is unavailable; say which one dropped. |
-| `arena runners` — N candidates on different models | Same panel as runners: `poteto-agent` when a candidate must write (an arena candidate produces an artifact), `reviewer-<variant>` when the candidates are read-only designs. Give every candidate its own output path. |
-| `arena cross-judge pool` | A judge from a different family than the base candidate: `reviewer-gpt` or `reviewer-cc` for synthesis, with the rubric and candidate paths in the brief. |
-| Lead judgment: the parent reads every result and decides | Stay in the main session and synthesize after the intercom results arrive. Do not delegate the verdict to a member of the panel it is judging. |
+| `arena runners` — N candidates on different models | Same panel as runners, one manifest entry each, one profile per model family: `reviewer-<variant>` (`reviewer-gpt`, `reviewer-ds`, `reviewer-glm`, `reviewer-gemini`, `reviewer-cc`) for read-only design candidates, `poteto-agent` for the seat that must write. Never run two candidates on the same family; when the brief needs more seats than families, say which family got a second seat. Give every candidate its own output path. |
+| `arena cross-judge pool` | `spawn-subagent judge`. That profile is the adjudicator: it scores candidates criterion by criterion against the rubric and names a base. It is bound to the `@judge` role (strong reasoning, a different family from the write seat), takes paths to the candidates, and never edits. Do not substitute `reviewer-<variant>` here: reviewers hunt bugs in a diff, they do not rank options. |
+| Lead judgment: the parent reads every result and decides | Stay in the main session and synthesize after the intercom results arrive. Do not delegate the verdict to a member of the panel it is judging; `judge` is the only exception, and only when it ran on a family that produced no candidate. |
 
 Reviewers never edit. A panel item that needs to prove a candidate builds belongs in the candidate's own worktree, and the reviewer reads the diff.
 
@@ -83,7 +85,8 @@ Reviewers never edit. A panel item that needs to prove a candidate builds belong
 | --- | --- |
 | `deslop` (from `cursor-team-kit`) | Apply the **unslop** skill to every prose surface, then run `comment-sicko` over the diff for the comment layer. The `no-comments` skill orchestrates this and is installed. |
 | `create-skill` (Cursor built-in) | Follow this repo's `writing-for-agents` skill. |
-| `control-cli`, `control-ui` (from `cursor-team-kit`) | Run the real command in this checkout and quote what it printed; for UI work drive the actual app or a browser session. Build the script that proves it (`principle-build-the-lever`) so the next reviewer reruns it instead of retyping steps. |
+| `control-cli` (from `cursor-team-kit`) | Installed natively at `~/.agents/skills/control-cli`. Read that skill and follow its harness loop: prefer the repo's own test/demo harness, otherwise a temporary `tmux` or PTY harness under `/tmp`, one action at a time with a deterministic wait. Quote the captured screen, then delete the harness. |
+| `control-ui` (from `cursor-team-kit`) | Use the **agent-browser** skill instead; it is installed at `~/.agents/skills/agent-browser` and drives Chrome over CDP. Workflow: `agent-browser open <url>` → `agent-browser snapshot -i` (element refs) → `fill`/`click` by ref → `wait --load networkidle` → re-snapshot and assert. For a native app rather than a page, use `computer-use-best-practice` instead of a browser. |
 
 ## setup-pstack
 

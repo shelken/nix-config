@@ -5,5 +5,10 @@
     "rpiv-todo",
     "pi-observational-memory",
     "pi-recap"
-  ]
+  ],
+  "//providerAlias": "omp config.yml 的 provider 前缀 -> pi 的 provider 名。nix 生成 profile 与 spawn-subagent 热加载共用这一份映射，避免两边各写一份。",
+  "providerAlias": {
+    "google-antigravity": "antigravity"
+  }
 }
+
