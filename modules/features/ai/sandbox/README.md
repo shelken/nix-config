@@ -44,7 +44,7 @@ flowchart LR
 - **能力授权 (Capability Grant)**: 某个执行上下文实际获得的额外路径、导入文件和私网目标。额外路径是挂载根的子集；导入文件和私网目标没有上限，由批准决定
 - **批准 (Approval)**: 用户用 `sb trust` 对项目 `.sandbox.yaml` 的规范化内容哈希做的记录。未批准或内容变了，启动直接报错
 - **项目配置 (Project Config)**: 项目仓库根 `.sandbox.yaml`，请求导入文件、私网目标和额外目录；批准后才生效
-- **沙箱基础环境 (Sandbox Base)**: 沙箱启动、隔离和编译原生依赖所需的 Linux 工具（含 gcc、gnumake、node-gyp），由 sandbox 模块管理，不属于共享工具
+- **沙箱基础环境 (Sandbox Base)**: 沙箱启动和隔离所需的 Linux 工具，由 sandbox 模块管理，不属于共享工具
 - **补齐 (Sync)**: 显式安装已登记但缺失的 mise 工具和插件，只增不删，不升级已有项。_避免_: 升级、更新
 - **共用安装层 (Shared Install Layer)**: 宿主上由所有沙箱 VM 共用的一份 mise 安装产物与下载缓存。_避免_: 共享缓存、镜像卷
 - **声明配置 (Declared Config)**: Nix 定义、发布进沙箱的配置文件或目录，即共享工具登记表 `files` 里的条目。上下文内只读，不管插件想不想改它。_避免_: 配置（太泛）
@@ -344,7 +344,7 @@ PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 
 ### pi 在上下文里自己装 packages
 
-pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就当场装：npm 源装到 `~/.pi/agent/npm`，git 源 clone 到 `~/.pi/agent/git/<host>/<path>`，再装依赖；已装好的第二次启动不再安装。`shelken/pi-extensions` 里 `@plannotator/pi-extension` 经 `@plannotator/webtui` 依赖 `node-pty`，它没有 linux-arm64 预编译产物，装包时由沙箱基础环境的 gcc、gnumake、node-gyp 现场编译（实测约 5 秒），所以 pi 不需要任何沙箱专用的装包配置
+pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就当场装：npm 源装到 `~/.pi/agent/npm`，git 源 clone 到 `~/.pi/agent/git/<host>/<path>`，再装依赖；已装好的第二次启动不再安装。当前这些包的依赖都带 linux-arm64 预编译产物，不需要编译器，所以 pi 不需要任何沙箱专用的装包配置
 
 所以：
 
@@ -356,16 +356,15 @@ pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就
 
 - **在 `sb sync` 里装**：sync 在上下文外，看到的 `~/.pi/agent` 是只读发布目录，要么复刻 launcher 的挂载视图，要么照抄 pi 的安装布局；而且 pi 启动时缺包仍会自己装
 - **`PI_OFFLINE=1` 跳过装包**：同时关掉模型发现，cpa 等 provider 的模型全部找不到
-- **只对 pi 的 bun 忽略安装脚本**：只覆盖 pi 这一处，要给 `settings.json` 在生成器里加沙箱专用分支；项目在上下文里自己 `bun install` 遇到同类原生依赖仍会失败。提供构建环境一次解决所有这类依赖
 
 代价：
 
-- 新数据卷上 pi 首启要装全部 packages，实测 43 到 86 秒（两次冷启动，含启动上下文和 `node-pty` 编译）；之后不再安装
+- 新数据卷上 pi 首启要装全部 packages，实测一次冷启动 114 秒（含启动上下文，受网络影响）；之后不再安装
 - cpa、mp 在 `models.json` 里只有 `modelOverrides`，没有 `models`，所以只能靠发现；不把 `modelOverrides` 静态化成 `models`（会让约 50 个模型退化成 128k/16k/仅文本，宿主也受影响）。`pi-dynamic-models` 对没有缓存的 provider 在会话开始前发现一次，所以新数据卷上 `pi -p --model cpa/…` 第一次就能解析模型；实测清空 `~/.pi/agent/cache` 后一次成功
 
 已知限制，根因未查，也没有加 timeout、重试等绕过：
 
-- **同时首启多个 pi 可能失败。** 没有复核，原因没有查。新数据卷上先单独启动一个 pi、等装完，再并发使用；装完之后的并发没有单独验证
+- **同时首启多个 pi 可能失败。** 实测新数据卷上同时首启 3 个只有 1 个成功，其余报 `Model "…" not found`；装完之后同时启动 3 个全部成功。原因没有查。新数据卷上先单独启动一个 pi、等装完，再并发使用
 
 ### 共用 mise 安装层
 
@@ -382,13 +381,11 @@ pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就
 - 主 VM 首次创建后自动 sync 一次；`sb run`、`sb shell`、`omp-sb` 复用已有 VM 时不自动 sync
 - OMP 插件在 guest 内按仓库清单完整重放，清单原样落盘。私有依赖在清单里写成 `git+ssh://git@github.com/…`：`install.sh` 在这一次安装里用环境变量给 git 加三条 `insteadOf`，把 GitHub 的 ssh 写法改走 https，认证交给 guest git 配置里的 `gh` credential helper。`gh` 读 `GITHUB_TOKEN`，它在 guest 里的值是占位符 `$MSB_GITHUB_TOKEN`（由 `sb.yaml` 的 `secrets` 声明，msb 在网络边界替换），token 不落盘、不进日志、不进进程参数。宿主激活走同一个脚本，同样不用 ssh
 - 安装失败（私有依赖拿不到、没有有效 GitHub 凭据等）时 `sb sync` 以非零退出，不静默跳过；宿主激活只打警告
-- 依赖的安装脚本照常执行。没有 linux 预编译产物的原生依赖（如 `node-pty`，`@plannotator/webtui` 的依赖）在 guest 里用沙箱基础环境的 gcc、gnumake、node-gyp 现场编译，`python3` 与 `nodejs` 本来就在 guest 里。这三项的闭包增量实测 333 MiB（gcc 267 MiB、binutils 37 MiB、node-gyp 7 MiB，其余 22 MiB）。闭包只在宿主 `/nix/store` 里存一份，由所有 VM 只读挂载，不随 VM 个数增加
+- 依赖的安装脚本照常执行。guest 里没有 C 工具链（gcc、make），没有 linux 预编译产物的原生依赖装不上：在上下文里 `bun add node-pty` 以 `install script … exited with 1` 失败，`sb sync` 装这类插件时同样非零退出。要引入这类依赖，先确认它有 linux-arm64 预编译产物
 
 代价：
 
 - 共用安装层损坏影响所有 VM，用 `sb sync` 重装自愈
-- 宿主目录体积随工具增长（约 1 至 2 GB 量级）
-- 宿主 `/nix/store` 多约 333 MiB 的构建环境；nixpkgs 升级后 gcc 版本变动时要重新下载这部分
 - 没有有效 GitHub 凭据时私有插件装不上，`sb sync` 失败
 
 ## 测试
