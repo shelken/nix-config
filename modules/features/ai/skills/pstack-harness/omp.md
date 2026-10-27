@@ -39,9 +39,10 @@ There is no `~/.cursor/rules/pstack-models.mdc` here. A pstack role maps to an a
 - The `task` tool description lists the agents this session can spawn. That list is the only source of truth; read it before naming one.
 - Pick the agent whose description matches the role: review work to a reviewer agent, exploration to `scout`, implementation to the default worker.
 - A role naming a list of models (arena runners, interrogate reviewers, architect runners, cross-judge pool) means one spawn per entry, on distinct model families where the list allows.
-- `inherit-parent` or `auto` means omit `agent`, so the spawn runs on the session default.
+- `inherit-parent` or `auto` carries no agent type of its own: omit `agent` so the spawn takes the session default.
 - Cursor slugs such as `claude-opus-5-5-xhigh`, `grok-4.7-xhigh-fast`, and `gpt-*` are not omp selectors. Translate the role to an agent first.
 - No agent matches the role: spawn the default and state which role degraded. A refused agent name is an error, not a hint to retry another name.
+- A skill that falls back to a hardcoded slug table when the role rule is missing (interrogate names `claude-opus-*` and `grok-*` defaults) has no such table here. Ignore the defaults and use the agent list, which is the only source of truth.
 
 Role values live in nix, not in a rule file: `modules/features/ai/agents/default.nix` reads `modelRoles` from `modules/features/ai/omp/config.yml` and generates the agent definitions.
 

@@ -133,7 +133,6 @@
           discover = true;
           exclude = [
             "tdd"
-            "interrogate"
           ];
           frontmatter.poteto-mode.name = "poteto-mode";
           frontmatter.make-bot-ui.name = "make-bot-ui";

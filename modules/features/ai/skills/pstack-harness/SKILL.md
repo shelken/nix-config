@@ -1,7 +1,6 @@
 ---
 name: pstack-harness
 description: pstack 技能在 omp 与 pi 上的宿主映射表。上游 pstack 用 Cursor 的工具名与路径写就，本仓库原样引入并在这里给出等价物。读 pstack 技能前先读本目录下与宿主对应的文件。
-disable-model-invocation: true
 ---
 
 # pstack harness
