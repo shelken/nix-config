@@ -79,8 +79,8 @@ find_msb() {
 MSB="$(find_msb)"
 
 # sec-run 包装判定：sb 在宿主侧启动 msb 时自动注入凭据（GITHUB_TOKEN 等）。
-# e2e/CI 用假凭据验证「无有效 token → 私有插件跳过」路径时必须能关闭注入，
-# 否则宿主真实凭据会让假测失效；SB_NO_HOST_CREDENTIALS=1 显式禁用。
+# e2e 用假凭据验证 secret 替换，必须能关闭注入，否则宿主真实凭据会让假测失效；
+# SB_NO_HOST_CREDENTIALS=1 显式禁用。
 if command -v sec-run >/dev/null 2>&1 && [[ "${SB_NO_HOST_CREDENTIALS:-0}" != "1" ]]; then
   SEC_RUN=(sec-run)
 else
