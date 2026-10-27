@@ -10,9 +10,9 @@
 
 ## 驱动约定
 
-- 下文 `$V` 指 SKILL.md 中定义的绝对路径；先执行 `eval "$($V paths)"` 得到 `$WORK`、`$PROJ`、`$EVIDENCE`
+- 下文 `$V` 指 SKILL.md 中定义的绝对路径；先执行 `eval "$($V paths)"` 与 `eval "$($V env)"`，得到 `$WORK`、`$PROJ`、`$EVIDENCE` 与 `$MODEL`、`$GATEWAY_URL`、`$GATEWAY_ADDR`、`$CPUS`、`$MEMORY`
 - 沙箱命令一律 `$V sb …`，guest 旁证一律 `$V msb exec sb-main -- …`
-- 调 OMP 一律 `--model=cpa/gpt-5.6-luna`，并加 `timeout`
+- 调 OMP 一律 `--model="$MODEL"`，并加 `timeout`
 - 修改了 `$WORK/sb.yaml` 或测试项目 `.sandbox.yaml` 的步骤，结束后恢复
 
 ## 证明与跳过

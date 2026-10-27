@@ -1,6 +1,6 @@
 # Darwin defaults readback
 
-Darwin defaults readback 从已构建的系统产物里取出真实写入清单，逐项回读系统存储，证明声明值确实落到磁盘，而不是只证明构建成功
+Darwin defaults readback 从本机已应用的系统产物（`/run/current-system/activate`，缺失时才退回当前 flake 的 toplevel）里取出真实写入清单，逐项回读系统存储，证明声明值确实落到磁盘，而不是只证明构建成功
 
 ## Sub-features
 
@@ -20,11 +20,11 @@ Darwin defaults readback 从已构建的系统产物里取出真实写入清单�
 Preconditions:
 
 - helper 内置 doctor；门禁失败时不执行回读
-- 当前机器已应用目标系统，且 `current-system` 与 `darwinConfigurations.<host>` 指向同一结果
+- 当前机器已应用目标系统。doctor 不检查 `current-system` 与 `darwinConfigurations.<host>` 是否同一结果，回读到的是已应用系统的清单；两者不同时结论只覆盖已应用的部分。核对：`readlink /run/current-system` 与 `nix eval --raw .#darwinConfigurations.<host>.config.system.build.toplevel.outPath` 的最后一段是否相同
 
-- **运行真实入口。** 执行 `VERIFY_HOST=<host> ./.agents/skills/verify-nix-config/scripts/verify.sh defaults`。退出码为 `0`，`transcript.log` 末行给出各项计数
-- **读取结果。** `defaults-readback.json` 的 `summary.counts` 与 `entries` 记录每项的 `expected`、`actual` 与 `status`
-- **区分状态。** `mismatch` 是值不符，`missing` 是声明的键在存储中不存在，`type_differs` 是值相等但类型不同；前两者为失败，`type_differs` 需消费端确认
+- **运行真实入口。** 执行 `VERIFY_HOST=<host> ./.agents/skills/verify-nix-config/scripts/verify.sh defaults`。退出码为 `0`，stdout 末两行是 `match=<n> type_differs=<n> mismatch=<n> missing=<n> unreadable=<n>` 与 `evidence=<dir>`
+- **读取结果。** `<evidence>/defaults-readback.json` 的 `summary` 含 `activate`（读的是哪份脚本）、`total` 与 `counts`（数量为零的状态不出现），`entries` 逐项记录 `domain`、`key`、`expected`、`actual` 与 `status`；`transcript.log` 为每个 `type_differs`、`mismatch`、`missing`、`unreadable` 的键各列一行，`match` 不列
+- **区分状态。** `mismatch` 是值不符，`missing` 是声明的键在存储中不存在，`unreadable` 是回读本身失败，`type_differs` 是值相等但类型不同；前三者计入失败，退出码为 `1`，`type_differs` 不计入失败，需消费端确认
 - **确认只读。** 回读只调用 `defaults export`，不写入偏好，也不改变 profile 链接
 
 ## Gotchas
@@ -33,4 +33,6 @@ Preconditions:
 - 声明类型与存储类型是两件事：布尔声明可能仍以整数 `0/1` 存储，值相等不代表已有存储被转换，需要消费端读取确认
 - `type_differs` 不是失败而是提示；把它当错误会误判合法的布尔声明
 - 回读只证明存储层；界面与应用行为必须通过消费该偏好的原生 API 或观察实际行为确认
-- 系统级域需要读取权限，权限不足时记 `unreadable` 并单独处理，不与值不符混为一谈
+- 系统级域需要读取权限。权限不足时 `defaults export` 仍返回 `0` 与近乎空的 plist，所以会被记为 `missing` 而不是 `unreadable`；`unreadable` 只在命令非零退出或 plist 解析失败时出现，两者都计入失败
+- `~<user>/Library/Preferences/ByHost/...` 这类 `~` 形式的域无法被 `defaults export` 解析，会得到空结果；本仓库目前没有这类域，将来出现时先改成绝对路径
+- 写入清单靠正则匹配 `defaults write <域> <键> '<plist>'`，该格式由 nix-darwin 生成；升级 nix-darwin 后若写法变化，漏抓的项不会报错，核对 `total` 是否合理
