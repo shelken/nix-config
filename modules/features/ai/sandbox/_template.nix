@@ -12,7 +12,7 @@ let
   unused = builtins.filter (n: !(lib.hasInfix "@${n}@" text)) names;
   # 只在模板自身的文字里找残留：先把已知占位符抹掉，注入的值（可能含 @）不参与检查
   leftover = lib.concatMap (m: if builtins.isList m then m else [ ]) (
-    builtins.split "(@[A-Za-z_]+@)" (builtins.replaceStrings marks (map (_: "") marks) text)
+    builtins.split "(@[A-Za-z_][A-Za-z0-9_]*@)" (builtins.replaceStrings marks (map (_: "") marks) text)
   );
 in
 assert lib.assertMsg (unused == [ ]) "${toString file}: 脚本里没有这些占位符：${toString unused}";
