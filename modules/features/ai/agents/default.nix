@@ -14,11 +14,62 @@
         "ds"
         "glm"
         "gpt"
+        "cc"
       ];
+
+      # pstack 工作流的自定义 agent：omp 与 pi 共用 prompts/ 下的正文，
+      # 模型统一取自 config.yml 的 task.agentModelOverrides，两端改一处即同步。
+      customAgents = {
+        poteto-agent = {
+          description = "pstack poteto-mode 执行代理：先读 poteto-mode skill，再全权限完成被委派的任务";
+          tools = "read, edit, write, bash, grep, find, glob, lsp, ast_grep, web_search";
+          piTools = "read,bash,edit,write,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom";
+          spawns = "*";
+          body = ./prompts/poteto-agent.md;
+        };
+        comment-sicko = {
+          description = "只读注释审查员：只报尸体注释、冗余叙述与 workaround 说教，绝不改业务代码";
+          tools = "read, find, grep, glob";
+          piTools = "read,grep,find,ls,ffgrep,fffind,intercom";
+          spawns = null;
+          body = ./prompts/comment-sicko.md;
+        };
+      };
 
       # ---------- omp ----------
 
       template = builtins.readFile ./reviewer.template.md;
+
+      customModel =
+        name:
+        agentModelOverrides.${name}
+          or (throw "agent ${name} 的模型角色未在 config.yml 的 task.agentModelOverrides 中声明");
+
+      mkOmpAgent = name: a: {
+        name = "${name}.md";
+        path = pkgs.writeText "${name}.md" (
+          lib.concatStringsSep "\n" (
+            [
+              "---"
+              "name: ${name}"
+              "description: ${a.description}"
+              "tools: ${a.tools}"
+            ]
+            ++ lib.optional (a.spawns != null) "spawns: ${a.spawns}"
+            ++ [
+              "model: ${customModel name}"
+              "---"
+              ""
+              (builtins.readFile a.body)
+            ]
+          )
+          + "\n"
+        );
+      };
+
+      generatedCustom = map (name: mkOmpAgent name customAgents.${name}) (
+        builtins.attrNames customAgents
+      );
 
       # 为每个 reviewer 变体生成带有独立 name 与 model 的 .md 文件
       generatedReviewers = map (v: {
@@ -40,7 +91,7 @@
       }) extraAgentFiles;
 
       # 聚合所有 agents 并构建软链目录
-      ompAgentsDir = pkgs.linkFarm "omp-agents" (generatedReviewers ++ extraAgents);
+      ompAgentsDir = pkgs.linkFarm "omp-agents" (generatedReviewers ++ generatedCustom ++ extraAgents);
 
       # ---------- pi ----------
       # pi 的 agent 与 omp 内置/自定义 agent 同名，模型与 thinking 取自 omp/config.yml，
@@ -118,6 +169,11 @@
           body = null;
         };
       }
+      // lib.genAttrs (builtins.attrNames customAgents) (name: {
+        description = customAgents.${name}.description;
+        tools = customAgents.${name}.piTools;
+        body = customAgents.${name}.body;
+      })
       // lib.genAttrs (map (v: "reviewer-${v}") reviewerVariants) (name: {
         description = "对抗性代码审查员（模型角色 ${name}）";
         tools = reviewTools;

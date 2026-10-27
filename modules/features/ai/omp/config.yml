@@ -82,6 +82,9 @@ task:
     reviewer-ds: "@reviewer-ds"
     reviewer-glm: "@reviewer-glm"
     reviewer-gpt: "@reviewer-gpt"
+    reviewer-cc: "@reviewer-cc"
+    poteto-agent: "@task"
+    comment-sicko: "@reviewer-gpt"
     scout: "@scout"
   disabledAgents: []
 browser:

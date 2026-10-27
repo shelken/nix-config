@@ -21,8 +21,9 @@ Run `spawn-subagent -h` once; its help owns the syntax, and this table only maps
 | `subagent_type: generalPurpose` | The general worker profile. |
 | `readonly: true` | A read-only profile: `scout` for exploration, a reviewer profile for review. |
 | `readonly: false` | The general worker profile. |
-| `poteto-agent` | The pstack delegate profile, when `spawn-subagent list` shows one built from pstack's `agents/poteto-agent.md`. Otherwise use the general worker and say so. |
-| `comment-sicko` | The pstack comment-review profile, when the list shows one built from pstack's `agents/comment-sicko.md`. Otherwise use the general worker and say so. |
+| `poteto-agent` | `spawn-subagent poteto-agent`. Nix generates the profile from pstack's `agents/poteto-agent.md`; it models `@task` and its first act is reading `~/.agents/skills/poteto-mode/SKILL.md`. Resume an existing pane with `spawn-subagent resume <pane-id>` rather than spawning a sibling. |
+| `comment-sicko` | `spawn-subagent comment-sicko`. Nix generates the profile from pstack's `agents/comment-sicko.md` as a read-only comment reviewer; it reports `MUST KILL` targets and never edits code. The `no-comments` skill spells the type `"Comment Sicko"`; that is the upstream display name, and the profile name here is the lowercase slug. |
+| `subagent_type: "Comment Sicko"` | `spawn-subagent comment-sicko`. Same profile, lowercase slug; the loader keys profiles by filename and only the slug exists. |
 | `model: <slug>` | **Not accepted.** `spawn-subagent` takes a profile, and the profile's frontmatter pins `model` and `thinking`. See Models. |
 | `environment: "cloud"` | Drop it. The agent runs in this checkout. |
 | `environment: "local"` | Drop it; that is the only mode. |
@@ -51,6 +52,38 @@ No pstack skill selects a model here. Every slug, alias, and model rule file in 
 - Every pstack model list, whether named in the skill or in a missing rule file, is not a model selector. Ignore the whole list, including any table of default slugs.
 - `spawn-subagent list` prints every profile with its model, thinking level, tools, and description. That output is the only source of truth.
 - No profile matches the role: dispatch the general worker and say which role degraded. Do not retry another name.
+
+Nix generates one reviewer profile per entry in `reviewerVariants` (`modules/features/ai/agents/default.nix`), each bound to the `@reviewer-<variant>` role in `config.yml`. The panel is `reviewer-gpt`, `reviewer-ds`, `reviewer-glm`, `reviewer-gemini`, `reviewer-cc`: five families, so a finding two of them reach independently is cross-family agreement, not one model agreeing with itself.
+
+## Adversarial review panels
+
+`/interrogate` and `/arena` fan out across model families. The upstream tables of slugs and the `interrogate reviewers` / `arena runners` lines from `~/.cursor/rules/pstack-models.mdc` have no counterpart here: the panel is the reviewer set, and the Reviewer A/B/C/D to profile mapping lives in the batch manifest, not in a rule file.
+
+| Cursor | pi |
+| --- | --- |
+| One `generalPurpose` spawn per configured reviewer, `readonly: true` | One entry in the `batch` manifest per panel member, named `reviewer-<variant>`. Every entry shares the same brief and rubric; the profile's prompt owns the output schema. |
+| Reviewer A/B/C/D labels paired with a slug | Panel members `reviewer-gpt`, `reviewer-ds`, `reviewer-glm`, `reviewer-gemini`, `reviewer-cc`. Drop a member only when its provider is unavailable; say which one dropped. |
+| `arena runners` — N candidates on different models | Same panel as runners: `poteto-agent` when a candidate must write (an arena candidate produces an artifact), `reviewer-<variant>` when the candidates are read-only designs. Give every candidate its own output path. |
+| `arena cross-judge pool` | A judge from a different family than the base candidate: `reviewer-gpt` or `reviewer-cc` for synthesis, with the rubric and candidate paths in the brief. |
+| Lead judgment: the parent reads every result and decides | Stay in the main session and synthesize after the intercom results arrive. Do not delegate the verdict to a member of the panel it is judging. |
+
+Reviewers never edit. A panel item that needs to prove a candidate builds belongs in the candidate's own worktree, and the reviewer reads the diff.
+
+## Quick exploration and adjudication
+
+| Cursor | pi |
+| --- | --- |
+| `/how` explorer (`readonly: true`) | `scout`. Read-only exploration; give it one exploration angle and the symbol or call path, and ask for a cited trace, not a fix. |
+| `/why` investigator (`readonly: false`) | The general worker profile. The upstream mode exists so MCP tools stay available, and `scout` cannot carry them. Keep the no-write posture in the brief instead. |
+| Lead reviewer / adjudicator | The main session, or `reviewer-gpt` / `reviewer-cc` when the verdict needs a strong reasoning model rather than the session's own context. |
+
+## Cursor-only dependencies
+
+| Upstream dependency | pi |
+| --- | --- |
+| `deslop` (from `cursor-team-kit`) | Apply the **unslop** skill to every prose surface, then run `comment-sicko` over the diff for the comment layer. The `no-comments` skill orchestrates this and is installed. |
+| `create-skill` (Cursor built-in) | Follow this repo's `writing-for-agents` skill. |
+| `control-cli`, `control-ui` (from `cursor-team-kit`) | Run the real command in this checkout and quote what it printed; for UI work drive the actual app or a browser session. Build the script that proves it (`principle-build-the-lever`) so the next reviewer reruns it instead of retyping steps. |
 
 ## setup-pstack
 

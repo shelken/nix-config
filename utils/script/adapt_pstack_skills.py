@@ -40,6 +40,12 @@ TERMS = [
         "Cursor-only features",
         r"Bugbot|Cursor [Aa]utomation|cursor\.(sh|com)\/automations|[Cc]loud [Aa]gent|built-in PR tool",
     ),
+    # cursor-team-kit 与 Cursor 内建的私有依赖在本机不存在，每项都必须在两份映射表里给出平替。
+    ("`deslop`", r"\bdeslop\b"),
+    ("`create-skill`", r"\bcreate-skill\b"),
+    ("`control-cli`", r"\bcontrol-(?:cli|ui)\b"),
+    # 上游用展示名 "Comment Sicko" 作 subagent_type，本机只有小写 slug。
+    ("Comment Sicko", r"Comment Sicko"),
 ]
 ROUTE_KEY = "Run another pstack skill"
 LINK = re.compile(r"\]\(([^)\s]+)\)")
