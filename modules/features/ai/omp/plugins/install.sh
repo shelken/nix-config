@@ -24,15 +24,15 @@ mkdir -p "$plugins/node_modules" "$bun_cache"
 # 落盘的是可写副本：源文件在 /nix/store，只读
 install -m 0644 "$manifest" "$plugins/package.json"
 
-# 清单里的私有依赖写成 git+ssh://git@github.com/…。宿主激活不该为 ssh 去触发 1Password 授权，
-# guest 里没有 SSH key，所以两边都把 GitHub 的 ssh 写法改走 https，认证交给当前环境的 git 配置里的
-# credential helper（宿主：gh 登录态；沙箱：gh 读 GITHUB_TOKEN 占位符，msb 在网络边界替换为真实 token）。
+# 清单里的私有依赖写成 git+ssh://git@github.com/…，bun 取包时把它解析成 ssh://git@github.com/…，
+# 两种前缀都要改写，只改前一种会在 guest 里以 Permission denied (publickey) 失败。
+# 宿主激活不该为 ssh 去触发 1Password 授权，guest 里没有 SSH key，所以两边都改走 https，认证交给当前环境的
+# git 配置里的 credential helper（宿主：gh 登录态；沙箱：gh 读 GITHUB_TOKEN 占位符，msb 在网络边界替换为真实 token）。
 # 只用环境变量设置，只作用于这一次安装，不写任何 gitconfig。
 export GIT_TERMINAL_PROMPT=0
-export GIT_CONFIG_COUNT=3
+export GIT_CONFIG_COUNT=2
 export GIT_CONFIG_KEY_0=url.https://github.com/.insteadOf GIT_CONFIG_VALUE_0=git+ssh://git@github.com/
 export GIT_CONFIG_KEY_1=url.https://github.com/.insteadOf GIT_CONFIG_VALUE_1=ssh://git@github.com/
-export GIT_CONFIG_KEY_2=url.https://github.com/.insteadOf GIT_CONFIG_VALUE_2=git@github.com:
 
 if BUN_INSTALL_CACHE_DIR="$bun_cache" bun install --cwd "$plugins" --silent; then
   exit 0

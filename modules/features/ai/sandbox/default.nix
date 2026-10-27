@@ -6,7 +6,6 @@
       mylib,
       pkgs,
       nixpkgs,
-      extendModules,
       ...
     }:
     let
@@ -35,7 +34,6 @@
           gitConfig
           ;
       };
-      sandboxConfig = generator.sandboxConfig;
 
       launcher = import ./_launcher.nix {
         inherit pkgs gitConfig;
@@ -48,7 +46,6 @@
           msbConfig
           msbHome
           launcher
-          sandboxConfig
           ;
         inherit (generator) guestStatus;
         defaultConf = ./sb.yaml;
@@ -104,10 +101,6 @@
         home.sessionVariables = {
           MSB_HOME = msbHome;
           MSB_CONFIG_PATH = "${msbConfig}";
-          # sb sync 宿主写锁目录（共用 mise 层）
-          SB_MISE_LOCK_DIR = sharedMiseDir;
-          # generate_msb_config 注入共用挂载时读取的宿主真实路径
-          SB_MISE_HOST_DIR = sharedMiseDir;
         };
         home.file.".config/sandbox/sb.yaml".source = ./sb.yaml;
 

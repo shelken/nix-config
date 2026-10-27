@@ -45,7 +45,7 @@ flowchart LR
 - **批准 (Approval)**: 用户用 `sb trust` 对项目 `.sandbox.yaml` 的规范化内容哈希做的记录。未批准或内容变了，启动直接报错
 - **项目配置 (Project Config)**: 项目仓库根 `.sandbox.yaml`，请求导入文件、私网目标和额外目录；批准后才生效
 - **沙箱基础环境 (Sandbox Base)**: 沙箱启动、隔离和编译原生依赖所需的 Linux 工具（含 gcc、gnumake、node-gyp），由 sandbox 模块管理，不属于共享工具
-- **补齐 (Sync)**: 显式安装已登记但缺失的 mise 工具和插件，只增不删，不升级已有项。_避免_: 升级、更新
+- **补齐 (Sync)**: 显式安装已登记但缺失的 mise 工具和插件。_避免_: 升级、更新
 - **共用安装层 (Shared Install Layer)**: 宿主上由所有沙箱 VM 共用的一份 mise 安装产物与下载缓存。_避免_: 共享缓存、镜像卷
 - **声明配置 (Declared Config)**: Nix 定义、发布进沙箱的配置文件或目录，即共享工具登记表 `files` 里的条目。上下文内只读，不管插件想不想改它。_避免_: 配置（太泛）
 - **运行状态 (Runtime State)**: 工具运行中产生或修改的文件，例如插件数据库、登录态、intercom 运行目录。可写，所有上下文共用，不写回宿主
@@ -110,9 +110,9 @@ sequenceDiagram
 
 - **视图**：bubblewrap 映射到 UID 1000，只读绑定 `/usr`、`/etc`、`/nix/store`、`/.msb/tls`（msb CA，`NODE_EXTRA_CA_CERTS` 指向这里，缺失时 OMP 的模型发现全部失败）、共用 mise 层与配置目录；可写绑定 `/data`、项目根、额外路径与 imports 的目标目录（该目录在上下文里只剩导入的文件）。`/run` 是 tmpfs，上下文看不到 `/run/sandbox/contexts` 里其他上下文的 imports。launcher 预先创建 `/data/xdg/*/omp`，OMP 只在这些目录存在时才把数据库放到 `/data`
 - **网络**：每个槽位一个 `/30` 子网（`10.200.x.y`），独立 netns 与 veth，NAT 出口。地址池 64 个，即单台主 VM 最多 64 个并发上下文
-- **并发**：清扫、选槽、发布 `meta.json` 在 guest 内一把 flock 下串行；网络资源按唯一槽位命名，不会互相覆盖。cleanup 只删 `meta.json` 归属本进程的资源
+- **并发**：清扫、选槽、发布 `meta.json` 在 guest 内一把 flock 下串行；网络资源按唯一槽位命名，不会互相覆盖。cleanup 删本进程槽位的网络资源与上下文目录；槽位在锁内按占用情况分配，同一槽位不会有两个存活 launcher
 - **复制窗口**：宿主复制 imports 期间目录还没有 `meta.json`，靠 `starting` 标记保护：120 秒宽限内清扫跳过它，忙碌计数也算上它。复制失败或宿主中断时宿主删除该目录
-- **残留清扫**：每次启动、`sb status`、忙碌判断都会清理 PID 已死的上下文，以及没有登记的 `vth*` 接口
+- **残留清扫**：每次启动与忙碌判断都会清理 PID 已死的上下文（连同它登记的 netns、veth 与 iptables 链）。被硬杀进程留下的同名网络资源由下一个拿到该槽位的上下文在 `ip netns add` / `iptables -N` 之前就地清掉
 
 ## 网络与 secret
 
@@ -140,7 +140,7 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 
 ## 主 VM 生命周期
 
-`sb.yaml` 生成的 msb 配置做 SHA-256 得到上限指纹，记在 VM label 与 `$MSB_HOME/sandboxes/sb-main/ceiling.hash`。指纹里的共用 mise 挂载被规范化为占位符，宿主路径不影响指纹
+`sb.yaml` 生成的 msb 配置做 SHA-256 得到上限指纹，只记在 VM label。指纹里的共用 mise 挂载被规范化为占位符，宿主路径不影响指纹
 
 | 情况 | 行为 |
 | --- | --- |
@@ -204,11 +204,9 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 | `/root/.agents` | `/data/home/.agents` | skills 与模型提示词，几乎全是声明配置 |
 | `$XDG_CONFIG_HOME/<X>` | `/data/xdg/config/<X>` | 宿主 `~/.config/<X>` 的声明配置（ponytail、rpiv-web-tools），只读 |
 
-旧数据卷上的 `/data/omp/plugins`（约 800 MB）不再使用，不会自动清理，确认后可手动删除；`sb sync` 会在新位置重建，需要重新 clone 私有插件仓库并安装 npm 包
-
 配置发布后，复用中的 VM 新开的上下文即读到新配置，不改指纹，不触发重建。运行中的上下文继续读启动时的版本：发布脚本保留旧版本 7 天，只清理更早的。guest 不跟随宿主 live-edit 软链
 
-上下文外（`sb sync`、`msb exec`）的 `/root/.omp/agent`、`/root/.pi/agent`、`/root/.agents` 是指向只读发布目录的符号链接（`sync-guest.sh` 按 `writable-roots` 逐项建立），看不到上下文里的可写根。上下文布局只由 launcher 负责，改它不改指纹。其中 `/root/.agents` 另由 `sb.sh` 的 VM 级 patch 建立，进上限指纹，只服务上下文外；上下文内 launcher 用 tmpfs 整体遮住 `/root`，不受它影响
+上下文外（`sb sync`、`msb exec`）的 `/root/.omp/agent`、`/root/.pi/agent`、`/root/.agents` 是指向只读发布目录的符号链接（`sync-guest.sh` 按 `writable-roots` 逐项建立），看不到上下文里的可写根。上下文布局只由 launcher 负责，改它不改指纹
 
 ## 设计决策
 
@@ -243,19 +241,19 @@ PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 
 ### 不做附加 VM、待升级登记和破坏性 sync
 
-宿主 CLI 一度增长到约 1300 行，四轮审查的问题大多集中在三处：附加 VM 的并发生命周期（同时首次进入、最后退出撞上新进入、各自数据盘与 shims）、主 VM 忙时的待升级登记、`sb sync` 的忙闲两套模式及其与生命周期的竞态。日常使用是多个项目、多个 Agent 同进同一台主 VM，这些机制都不在这条主路径上，所以不做：
+审查发现的问题大多集中在三处：附加 VM 的并发生命周期（同时首次进入、最后退出撞上新进入、各自数据盘与 shims）、主 VM 忙时的待升级登记、`sb sync` 的忙闲两套模式及其与生命周期的竞态。日常使用是多个项目、多个 Agent 同进同一台主 VM，这些机制都不在这条主路径上，所以不做：
 
 - 不提供单项目专用 VM。所有执行上下文都在主 VM，隔离由执行上下文提供
 - 能力上限变化时，主 VM 空闲则下一次启动自动重建；仍有执行上下文则报错并给出上下文数，不登记待升级
 - 只用一把宿主生命周期锁，只包住「检查上限指纹、必要时重建、启动 VM」。不做宿主侧预约，忙闲只看 guest 内 launcher 的上下文登记
-- `sb sync` 永远只补缺，不区分忙闲，不删除、不重建插件依赖，因此不需要判断忙闲，也不需要生命周期锁
+- `sb sync` 不区分忙闲，不删除、不重建插件依赖，因此不需要判断忙闲，也不需要生命周期锁
 - `sb status` 只报告缺失的 mise 工具，不报告插件安装状态
 
 代价：
 
 - 主 VM 忙时，某项目需要超出当前上限的能力，只能等主 VM 空闲后重建
 - `sb status` 不显示待升级，也不显示插件是否装全；插件结果只看 `sb sync` 输出
-- 沙箱里手装的插件、或已从清单删除的插件不会被自动清掉，需要时用 `sb volume` 清理数据盘
+- 沙箱里手装的插件、或已从清单删除的插件不会被自动清掉，需要时进 VM 手动清理数据卷
 - 改了 `sb.yaml` 且两个 Agent 在同一两秒内启动时，后启动的上下文可能在启动阶段被重建打断，重新启动即可
 - 忙时 `sb sync` 可能在运行中的 OMP 底下更新插件文件；插件已加载进内存，风险低
 
@@ -376,11 +374,11 @@ pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就
 - 宿主只有一个共用目录，取真实物理路径（非符号链接）；msb 解析符号链接后仍指向同一目录
 - 所有 VM 一律把它挂到 `/opt/sandbox-mise`。上限指纹只含 guest 侧声明 `/opt/sandbox-mise:rw`，不含宿主真实路径，宿主路径变化不触发重建
 - 共用的只有安装产物与下载缓存；mise 的 `state`、`shims` 与可写用户层配置仍归各 VM 数据盘
-- guest 环境变量只有一个来源 `/run/sandbox-config/current/guest-env.sh`，由生成器生成，`sb sync`、执行上下文、legacy 入口统一 source
+- guest 环境变量只有一个来源 `/run/sandbox-config/current/guest-env.sh`，由生成器生成，`sb sync`、执行上下文、`guest-status.sh` 统一 source
 - `sb sync` 在宿主侧经 flock（共用目录下的 `.sync.lock`）串行化，多 VM 并发 sync 不交叉写安装层
 - sync 不清理下载缓存，共用的下载缓存是资产
 - 主 VM 首次创建后自动 sync 一次；`sb run`、`sb shell`、`omp-sb` 复用已有 VM 时不自动 sync
-- OMP 插件在 guest 内按仓库清单完整重放，清单原样落盘。私有依赖在清单里写成 `git+ssh://git@github.com/…`：`install.sh` 在这一次安装里用环境变量给 git 加三条 `insteadOf`，把 GitHub 的 ssh 写法改走 https，认证交给 guest git 配置里的 `gh` credential helper。`gh` 读 `GITHUB_TOKEN`，它在 guest 里的值是占位符 `$MSB_GITHUB_TOKEN`（由 `sb.yaml` 的 `secrets` 声明，msb 在网络边界替换），token 不落盘、不进日志、不进进程参数。宿主激活走同一个脚本，同样不用 ssh
+- OMP 插件在 guest 内按仓库清单完整重放，清单原样落盘。私有依赖在清单里写成 `git+ssh://git@github.com/…`，bun 取包时会把它解析成 `ssh://git@github.com/…`：`install.sh` 在这一次安装里用环境变量让 git 把这两种写法都改走 https（两条 `insteadOf`），认证交给 guest git 配置里的 `gh` credential helper。`gh` 读 `GITHUB_TOKEN`，它在 guest 里的值是占位符 `$MSB_GITHUB_TOKEN`（由 `sb.yaml` 的 `secrets` 声明，msb 在网络边界替换），token 不落盘、不进日志、不进进程参数。宿主激活走同一个脚本，同样不用 ssh
 - 安装失败（私有依赖拿不到、没有有效 GitHub 凭据等）时 `sb sync` 以非零退出，不静默跳过；宿主激活只打警告
 - 依赖的安装脚本照常执行。没有 linux 预编译产物的原生依赖（如 `node-pty`，`@plannotator/webtui` 的依赖）在 guest 里用沙箱基础环境的 gcc、gnumake、node-gyp 现场编译，`python3` 与 `nodejs` 本来就在 guest 里。这三项的闭包增量实测 333 MiB（gcc 267 MiB、binutils 37 MiB、node-gyp 7 MiB，其余 22 MiB）。闭包只在宿主 `/nix/store` 里存一份，由所有 VM 只读挂载，不随 VM 个数增加
 
@@ -393,12 +391,12 @@ pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就
 
 ## 测试
 
-[e2e/smoke.sh](./e2e/smoke.sh) 在一次性 `MSB_HOME` 中启动临时 VM，断言四项隔离边界：相邻项目不可见、未声明私网无应用层响应、secret 在出口被替换、worktree 内可提交
+[e2e/smoke.sh](./e2e/smoke.sh) 在一次性 `MSB_HOME` 中启动临时 VM，断言三项隔离边界：相邻项目不可见、未声明私网无应用层响应、worktree 内可提交
 
 ```bash
 bash modules/features/ai/sandbox/e2e/smoke.sh
 ```
 
-需要宿主有 `msb`、ubuntu 镜像缓存、能访问公网与 Linux 构建器；默认现场构建 `sb`，可用 `SB_BIN` 指定。测试只读挂载共用 mise 层，不触发 `sb sync`
+需要宿主有 `msb`、ubuntu 镜像缓存、能访问公网与 Linux 构建器；默认现场构建 `sb`，可用 `SB_BIN` 指定。首次创建 VM 会自动执行一次 `sb sync`；冒烟测试的发布目录里没有 `sync-guest.sh`，那次 sync 在 guest 内直接跳过，共用 mise 层只被挂载、不被写入
 
 冒烟测试之外的行为验证（首次启动、OMP 调模型、sync、生命周期与授权）见项目技能 [verify-sandbox](../../../../.agents/skills/verify-sandbox/SKILL.md)

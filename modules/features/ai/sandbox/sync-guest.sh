@@ -10,9 +10,8 @@ fi
 # shellcheck source=/dev/null
 source /run/sandbox-config/current/guest-env.sh
 
-# sync 是唯一安装路径：写入共用安装层与共用下载/缓存目录
+# sync 是唯一安装路径：写入共用安装层与共用下载/缓存目录（MISE_DATA_DIR 由 guest-env.sh 按同一目录判断导出）
 if [[ -d /opt/sandbox-mise/data ]]; then
-  export MISE_DATA_DIR=/opt/sandbox-mise/data
   export MISE_CACHE_DIR=/opt/sandbox-mise/cache
   export MISE_DOWNLOADS_DIR=/opt/sandbox-mise/data/downloads
   mkdir -p "$MISE_DATA_DIR" "$MISE_CACHE_DIR" "$MISE_DOWNLOADS_DIR"
@@ -39,31 +38,13 @@ done < /run/sandbox-config/current/writable-roots
 export SB_POSTINSTALL_STRICT=1
 
 # 1. 补齐 mise 工具 (幂等：已安装的不重新下载、不升级；永远只补缺)
-# 先精确查出缺失规格再逐个安装：mise ls --missing 失败必须让 sync 非零退出，
-# 不能用 2>/dev/null … || true 吞掉后按空缺失列表继续 —— 那会把「查询失败」伪装成「全部已装」
 echo "[sb sync] 1. 补齐 mise 工具清单..."
 if ! command -v mise >/dev/null 2>&1; then
   echo "[-] 错误: guest 内未找到 mise，无法补齐工具" >&2
   exit 1
 fi
-missing_json="$(mise ls --missing --json)" || {
-  echo "[-] 错误: mise ls --missing 查询失败" >&2
-  exit 1
-}
-missing_specs_raw="$(printf '%s' "$missing_json" | jq -r 'to_entries[] | .key as $k | .value[] | "\($k)@\(.version)"')" || {
-  echo "[-] 错误: 解析 mise ls --missing 输出失败" >&2
-  exit 1
-}
-missing_specs=()
-while IFS= read -r spec; do
-  [[ -n "$spec" ]] && missing_specs+=("$spec")
-done <<< "$missing_specs_raw"
-if [[ ${#missing_specs[@]} -eq 0 ]]; then
-  echo "[sb sync] 所有 mise 工具均已安装，本次不发起任何安装"
-else
-  echo "[sb sync] 待安装: ${missing_specs[*]}"
-  mise install --yes "${missing_specs[@]}"
-fi
+# set -e 下安装失败必须让 sync 非零退出，不能吞成「全部已装」
+mise install --yes
 # 普通 reshim：只补新增 shim，不先清空目录，避免运行中上下文短暂找不到命令
 mise reshim
 

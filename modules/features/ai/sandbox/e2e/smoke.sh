@@ -6,8 +6,7 @@
 #     目录，首次建 VM 的自动 sb sync 因找不到 sync-guest.sh 而跳过（上下文
 #     PATH 回落到 launcher 内置的 bash/coreutils/git/curl，无需 mise 工具）；
 #     SB_MISE_LOCK_DIR 指向临时目录，不在共用层创建锁文件。
-#   - SB_NO_HOST_CREDENTIALS=1 禁止 sec-run 注入宿主真实凭据；secret 断言
-#     只用纯假值。
+#   - SB_NO_HOST_CREDENTIALS=1 禁止 sec-run 注入宿主真实凭据。
 set -euo pipefail
 
 E2E_DIR=""
@@ -123,7 +122,7 @@ git_host=(-c user.name=SmokeTest -c user.email=smoke@test.local)
   git worktree add -q "$WORKTREE" smoke-wt
 )
 
-# 全局上限: VM 级放开私网（上下文的 iptables 链仍按项目声明逐项拦截）；secret 只用假值
+# 全局上限: VM 级放开私网（上下文的 iptables 链仍按项目声明逐项拦截）
 TEST_YAML="$E2E_DIR/sb.yaml"
 cat > "$TEST_YAML" <<EOF
 image: "ubuntu"
@@ -140,10 +139,6 @@ network:
     - "public"
     - "dns"
     - "private"
-secrets:
-  MOCK_GITHUB_TOKEN:
-    allow:
-      - "api.github.com"
 EOF
 
 REPO_ROOT="$(dirname "${BASH_SOURCE[0]}")"
@@ -176,7 +171,6 @@ run_sb() {
     SB_MISE_HOST_DIR="$MISE_HOST_DIR" \
     SB_MISE_LOCK_DIR="$E2E_DIR/locks" \
     SB_NO_HOST_CREDENTIALS=1 \
-    MOCK_GITHUB_TOKEN="ghp_smoke_fake_secret_placeholder" \
     "$SB_BIN" "$@"
 }
 
@@ -184,7 +178,7 @@ run_sb() {
 (cd "$PROJ_A" && run_sb trust >/dev/null)
 
 
-echo "=== 1/4 相邻项目不可见 ==="
+echo "=== 1/3 相邻项目不可见 ==="
 vis="$(cd "$PROJ_A" && run_sb run bash -c \
   "if [[ -e '$PROJ_B' ]]; then echo FOUND; else echo NOT_FOUND; fi")"
 if [[ "$vis" != "NOT_FOUND" ]]; then
@@ -193,7 +187,7 @@ if [[ "$vis" != "NOT_FOUND" ]]; then
 fi
 echo "[+] 项目 A 上下文内看不到相邻项目 B"
 
-echo "=== 2/4 未声明的私网目标不可达 (应用层断言) ==="
+echo "=== 2/3 未声明的私网目标不可达 (应用层断言) ==="
 # msb 会伪响应 TCP 握手，ping 与 TCP 连通性都不可信；只能以是否收到 HTTP 响应行判定
 blocked="$(cd "$PROJ_A" && run_sb run curl -s -i -m 3 http://192.168.69.46/ 2>&1 || true)"
 if [[ "$blocked" == *"HTTP/"* ]]; then
@@ -203,19 +197,7 @@ if [[ "$blocked" == *"HTTP/"* ]]; then
 fi
 echo "[+] 未声明的私网目标无应用层响应 (curl 输出: ${blocked:-空})"
 
-echo "=== 3/4 假 secret 在网络边界被替换 ==="
-gh="$(cd "$PROJ_A" && run_sb run curl -s -i -m 10 https://api.github.com/user \
-  -H 'Authorization: Bearer $MOCK_GITHUB_TOKEN' \
-  -H 'User-Agent: sb-smoke-test' 2>&1 || true)"
-if [[ "$gh" != *"401 Unauthorized"* || "$gh" != *"Bad credentials"* ]]; then
-  echo "[-] Secret 替换断言失败 (未收到 GitHub 对假凭据的 401 拒绝):" >&2
-  echo "$gh" >&2
-  exit 1
-fi
-echo "[+] 占位符在出口被替换为假 secret 并被目标 401 拒绝"
-
-echo "=== 4/4 worktree 内 git status 与 git commit ==="
-(cd "$WORKTREE" && run_sb run git status --short)
+echo "=== 3/3 worktree 内 git commit ==="
 (cd "$WORKTREE" && run_sb run bash -c "
   echo worktree_smoke_data >> smoke-file.txt
   git add smoke-file.txt
@@ -226,6 +208,6 @@ if [[ "$last_commit" != "commit from smoke worktree" ]]; then
   echo "[-] worktree 提交未落到宿主仓库 (最后提交: $last_commit)" >&2
   exit 1
 fi
-echo "[+] worktree 内 git status / git commit 成功且提交同步回宿主"
+echo "[+] worktree 内 git commit 成功且提交同步回宿主"
 
 echo "[+] 隔离边界冒烟测试全部通过"

@@ -13,6 +13,7 @@
 - 下文 `$V` 指 SKILL.md 中定义的绝对路径；先执行 `eval "$($V paths)"` 与 `eval "$($V env)"`，得到 `$WORK`、`$PROJ`、`$EVIDENCE` 与 `$MODEL`、`$GATEWAY_URL`、`$GATEWAY_ADDR`、`$CPUS`、`$MEMORY`
 - 沙箱命令一律 `$V sb …`，guest 旁证一律 `$V msb exec sb-main -- …`
 - 调 OMP 一律 `--model="$MODEL"`，并加 `timeout`
+- `$V run` 恒返回 0，命令是否成功只看 `$EVIDENCE/<名字>.rc`；下文写的 `rc` 都指这个文件
 - 修改了 `$WORK/sb.yaml` 或测试项目 `.sandbox.yaml` 的步骤，结束后恢复
 
 ## 证明与跳过

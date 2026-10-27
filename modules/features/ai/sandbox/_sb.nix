@@ -5,7 +5,6 @@
   defaultConf,
   launcher,
   guestStatus,
-  sandboxConfig ? null,
 }:
 let
   template = import ./_template.nix { inherit (pkgs) lib; };
@@ -17,19 +16,16 @@ let
     DEFAULT_YAML = defaultConf;
     LAUNCHER = launcher;
     GUEST_STATUS = guestStatus;
-    SANDBOX_CONFIG = if sandboxConfig != null then sandboxConfig else "";
   };
 
   sb = pkgs.writeShellApplication {
     name = "sb";
     runtimeInputs = [
       pkgs.coreutils
-      pkgs.gnused
       pkgs.jq
       pkgs.yq-go
       pkgs.git
       pkgs.util-linux
-      pkgs.findutils
     ];
     text = sbText;
   };

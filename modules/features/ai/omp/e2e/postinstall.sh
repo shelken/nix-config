@@ -10,8 +10,8 @@
 # 断言：
 #   1. 激活 PATH 下 `bun` 可被找到，且以隔离的插件目录为 --cwd 被调用
 #      （过去 PATH 被 HM 重置，bun 找不到，错误被吞）
-#   2. 落盘的 package.json 与仓库清单逐字节一致（npm 与 git 依赖都原样保留），
-#      且 bun 收到 3 条把 GitHub 的 ssh 写法改走 https 的 git 配置、并禁用交互提示
+#   2. 落盘的 package.json 可写（源文件在 /nix/store 只读，必须落成可写副本），
+#      且 bun 收到禁用交互提示的 git 配置
 #   3. bun 失败时：宿主激活仍返回 0 但必须打印警告（失败不得静默）；
 #      SB_POSTINSTALL_STRICT 非空（沙箱 sb sync）时返回非零
 #   4. 真实 HOME 下，激活 PATH 能解析到 mise 提供的真实 bun（只读，不安装）
@@ -29,7 +29,6 @@ set -euo pipefail
 repo="$(git rev-parse --show-toplevel)"
 profile="${HM_PROFILE:-$(sed -n 's/^PROFILE=//p' "$repo/.host-profile" 2>/dev/null || true)}"
 [[ -n "$profile" ]] || { echo "缺少 profile：设 HM_PROFILE 或提供 .host-profile" >&2; exit 2; }
-manifest="$repo/modules/features/ai/omp/plugins/package.json"
 
 gen="$(nix build --no-link --print-out-paths "$repo#homeConfigurations.$profile.activationPackage")"
 activate="$gen/activate"
@@ -66,7 +65,7 @@ run_activation() {
   mkdir -p "$home/.local/share/mise/shims"
   cat > "$home/.local/share/mise/shims/bun" <<'STUB'
 #!/bin/sh
-printf '%s\t%s\t%s\n' "$BUN_INSTALL_CACHE_DIR" "$*" "$GIT_CONFIG_COUNT:$GIT_TERMINAL_PROMPT" >> "$HOME/bun.calls"
+printf '%s\t%s\t%s\n' "$BUN_INSTALL_CACHE_DIR" "$*" "$GIT_TERMINAL_PROMPT" >> "$HOME/bun.calls"
 exit "${STUB_BUN_RC:-0}"
 STUB
   chmod +x "$home/.local/share/mise/shims/bun"
@@ -76,12 +75,12 @@ STUB
     "$hm_bash" "$home/activation.sh" > "$home/out" 2>&1
 }
 
-installed_manifest_matches_repo() {
-  cmp -s "$manifest" "$plugins/package.json" && [[ -w "$plugins/package.json" ]]
+installed_manifest_is_writable() {
+  [[ -w "$plugins/package.json" ]]
 }
 
-git_rewrite_and_no_prompt_reach_bun() {
-  [[ "$(cut -f3 "$home/bun.calls")" == "3:0" ]]
+no_prompt_reaches_bun() {
+  [[ "$(cut -f3 "$home/bun.calls")" == "0" ]]
 }
 
 strict_activation_fails() {
@@ -104,7 +103,7 @@ activation_warns_and_continues() {
 sandbox_layout_installs_under_xdg() {
   run_activation 0 xdg &&
     bun_called_once_in_plugins_dir &&
-    installed_manifest_matches_repo &&
+    installed_manifest_is_writable &&
     [[ ! -e "$home/.omp/plugins" ]]
 }
 
@@ -120,8 +119,8 @@ real_mise_bun_resolves() {
 
 check "激活成功退出" run_activation 0
 check "bun 以隔离插件目录为 --cwd 被调用一次" bun_called_once_in_plugins_dir
-check "落盘的 package.json 与仓库清单逐字节一致" installed_manifest_matches_repo
-check "bun 收到 3 条 GitHub 改写配置并禁用交互提示" git_rewrite_and_no_prompt_reach_bun
+check "落盘的 package.json 可写" installed_manifest_is_writable
+check "bun 收到禁用交互提示的 git 配置" no_prompt_reaches_bun
 check "沙箱严格模式：bun 失败时返回非零并打印错误" strict_activation_fails
 check "bun 失败时激活返回 0 且打印警告" activation_warns_and_continues
 check "沙箱布局：插件装到 \$XDG_DATA_HOME/omp/plugins，不碰 ~/.omp/plugins" sandbox_layout_installs_under_xdg

@@ -9,7 +9,7 @@ let
   linuxSystem = "${pkgs.stdenv.hostPlatform.parsed.cpu.name}-linux";
   linuxPkgs = nixpkgs.legacyPackages.${linuxSystem};
   toolsCfg = config.shelken.dev.tools;
-  hostCommandsCfg = config.shelken.dev.sandbox.hostCommands or { };
+  hostCommandsCfg = config.shelken.dev.sandbox.hostCommands;
 
   # 沙箱基础环境（不登记为共享工具，理由见 ADR 0003）: bash, coreutils, curl, git, mise, bubblewrap, iproute2, iptables; plus jq, gnused, findutils, gawk
   # 构建环境 gcc、gnumake、node-gyp 也在这里：没有 linux 预编译产物的原生依赖（如 node-pty）装包时要现场编译
@@ -46,27 +46,9 @@ let
       lib.mapAttrsToList (name: reason: ''
         cat <<'EOF' > "$out/bin/${name}"
         #!/bin/sh
-        ${
-          if name == "just" then
-            ''
-              case "$1" in
-                hm|sw|switch|rebuild|hm-build)
-                  echo "[-] 错误: just $1 是宿主系统切换命令，沙箱内无法修改宿主系统配置"
-                  exit 1
-                  ;;
-                *)
-                  echo "[-] 错误: just 在沙箱内未安装；若需执行宿主切换命令 (just hm/sw)，沙箱内无法修改宿主系统配置: ${reason}"
-                  exit 1
-                  ;;
-              esac
-            ''
-          else
-            ''
-              # 写 stdout：sb run 的上下文里 guest stderr 不回流，写 stderr 用户看不到原因
-              echo "[-] 错误: ${name} 是宿主控制命令，沙箱内无法执行: ${reason}"
-              exit 1
-            ''
-        }
+        # 写 stdout：sb run 的上下文里 guest stderr 不回流，写 stderr 用户看不到原因
+        echo "[-] 错误: ${name} 是宿主控制命令，沙箱内无法执行: ${reason}"
+        exit 1
         EOF
         chmod +x "$out/bin/${name}"
       '') hostCommandsCfg
@@ -150,7 +132,6 @@ let
     fi
     # 运行上下文禁止 mise 隐式安装；安装只允许经 sb sync 显式进行
     export MISE_AUTO_INSTALL=0
-    export MISE_NOT_FOUND_AUTO_INSTALL=0
     export PATH="$MISE_SHIMS_DIR:${guestBinPath}"
   '';
 
@@ -304,35 +285,18 @@ let
       runtimeInputs = with linuxPkgs; [
         bashInteractive
         coreutils
-        gnugrep
         jq
         mise
       ];
       text = lib.removePrefix "#!/usr/bin/env bash\n" (builtins.readFile ./guest-status.sh);
     }
   }/bin/guest-status";
-
-  # 生成沙箱发布目录配置 (支持无论是挂载到 /run/sandbox-config 还是挂载到 current 均完全兼容)
-  sandboxConfig = pkgs.runCommand "sandbox-config" { } ''
-    mkdir -p "$out"
-    ln -s "${rawSandboxConfig}" "$out/current"
-    for f in "${rawSandboxConfig}"/*; do
-      base="$(basename "$f")"
-      ln -s "$f" "$out/$base"
-    done
-  '';
 in
 {
   inherit
     linuxPkgs
-    guestEnv
     guestBinPath
-    guestEnvSh
-    readOnlyMiseToml
-    sandboxConfig
     publishScript
-    syncGuestScript
     guestStatus
-    hostCommandStubs
     ;
 }
