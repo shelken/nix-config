@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Agent 沙箱验证 harness：一次性 MSB_HOME + 当前分支真实构建的 sb + 隔离发布的沙箱配置
-# 用法见同目录上级的 SKILL.md
 set -euo pipefail
 
 REPO="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
@@ -80,11 +78,9 @@ cmd_doctor() {
   [[ "$ok" -eq 1 ]] || die "doctor 未通过，不要继续驱动"
 }
 
-# 在测试项目里运行隔离的 sb；其余子命令同理
 cmd_sb() { cd "$PROJ" && iso_env "$(sb_bin)" "$@"; }
 cmd_msb() { iso_env "$MSB_BIN" "$@"; }
 
-# 记录一次操作的证据：命令、stdout、stderr、退出码
 cmd_run() {
   local name="$1"; shift
   [[ "${1:-}" == "--" ]] && shift

@@ -1,22 +1,5 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# Agent 沙箱隔离边界冒烟测试 (smoke.sh)
-#
-# 单文件最小 harness，只保留四项隔离边界断言（其余端到端验证不维护自动化
-# 套件，在单元 6 切换时手动做一次）:
-#   1. 项目 A 上下文内看不到相邻项目 B（bubblewrap 只绑定当前项目）。
-#   2. 未声明的私网目标不可达（应用层断言：msb 会伪响应 TCP 握手，必须以
-#      「是否收到 HTTP 响应行」判定，不能用 ping/TCP 连通性）。
-#   3. 假 secret 在上下文内被网络边界替换（占位符发往 api.github.com，
-#      被目标以 401 Bad credentials 拒绝，证明替换真实发生）。
-#   4. worktree 内 git status 与 git commit 成功（common dir 自动加绑）。
-#
-# 运行方式（仓库根目录执行）:
-#   bash modules/features/ai/sandbox/e2e/smoke.sh
-#   前置: 宿主有 msb 与 ubuntu 镜像缓存、共用 mise 目录存在、可访问公网；
-#         默认现场构建 sb，可用 SB_BIN=<sb路径> 覆盖跳过构建。
-#
-# 硬约束（与被替换的旧 e2e 套件一致）:
+# 硬约束:
 #   - 一次性 MSB_HOME（mktemp 后取真实路径），绝不触碰日常主 VM；
 #     绝不全局 export MSB_HOME，msb 只以单命令前缀执行。
 #   - 共用 mise 目录只挂载、绝不写入/移动/删除：SB_SANDBOX_CONFIG 指向空
@@ -25,7 +8,6 @@
 #     SB_MISE_LOCK_DIR 指向临时目录，不在共用层创建锁文件。
 #   - SB_NO_HOST_CREDENTIALS=1 禁止 sec-run 注入宿主真实凭据；secret 断言
 #     只用纯假值。
-# ==============================================================================
 set -euo pipefail
 
 E2E_DIR=""
@@ -82,16 +64,12 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM HUP
 
-# ------------------------------------------------------------------------------
-# 1. 一次性隔离环境: MSB_HOME、msb 全局配置、假工作区、全局上限 YAML
-# ------------------------------------------------------------------------------
 find_msb
 E2E_DIR="$(resolve "$(mktemp -d /tmp/sb-smoke-XXXXXX)")"
 E2E_MSB_HOME="$E2E_DIR/msb-home"
 E2E_MSB_CONFIG="$E2E_DIR/microsandbox-config.json"
 mkdir -p "$E2E_MSB_HOME"
 
-# 复用宿主镜像缓存（realpath 规避符号链接），关闭 metrics 采样
 host_cache="$HOME/.cache/microsandbox"
 if [[ -d "$host_cache" ]]; then
   host_cache="$(resolve "$host_cache")"
@@ -122,7 +100,6 @@ mkdir -p "$CFG_DIR/current"
 : > "$CFG_DIR/current/declared-paths"
 : > "$CFG_DIR/current/writable-roots"
 
-# 假工作区: 相邻项目 A（git 仓库 + worktree）与 B（不可见对照）
 WS="$E2E_DIR/workspace"
 mkdir -p "$WS"
 WS="$(resolve "$WS")"
@@ -169,9 +146,6 @@ secrets:
       - "api.github.com"
 EOF
 
-# ------------------------------------------------------------------------------
-# 2. 定位 sb: 优先 SB_BIN 覆盖，否则构建一次 Home Manager 产物
-# ------------------------------------------------------------------------------
 REPO_ROOT="$(dirname "${BASH_SOURCE[0]}")"
 while [[ ! -e "$REPO_ROOT/flake.nix" && "$REPO_ROOT" != "/" ]]; do
   REPO_ROOT="$(dirname "$REPO_ROOT")"
@@ -194,7 +168,6 @@ fi
 echo "[+] sb: $SB_BIN"
 echo "[+] 临时隔离环境: $E2E_DIR"
 
-# 统一入口: 隔离环境变量 + 假凭据 + 禁用宿主凭据注入（绝不读取真实密钥）
 run_sb() {
   MSB_CONFIG_PATH="$E2E_MSB_CONFIG" \
     MSB_HOME="$E2E_MSB_HOME" \
@@ -210,9 +183,6 @@ run_sb() {
 # 项目 A 的 .sandbox.yaml 需要先批准；worktree 里是同一份内容，哈希相同，无需再批准
 (cd "$PROJ_A" && run_sb trust >/dev/null)
 
-# ------------------------------------------------------------------------------
-# 3. 四项隔离边界断言（任一失败即非零退出，EXIT trap 兜底清理）
-# ------------------------------------------------------------------------------
 
 echo "=== 1/4 相邻项目不可见 ==="
 vis="$(cd "$PROJ_A" && run_sb run bash -c \
@@ -224,6 +194,7 @@ fi
 echo "[+] 项目 A 上下文内看不到相邻项目 B"
 
 echo "=== 2/4 未声明的私网目标不可达 (应用层断言) ==="
+# msb 会伪响应 TCP 握手，ping 与 TCP 连通性都不可信；只能以是否收到 HTTP 响应行判定
 blocked="$(cd "$PROJ_A" && run_sb run curl -s -i -m 3 http://192.168.69.46/ 2>&1 || true)"
 if [[ "$blocked" == *"HTTP/"* ]]; then
   echo "[-] 未声明的私网目标收到了应用层 HTTP 响应:" >&2

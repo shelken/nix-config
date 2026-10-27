@@ -1,15 +1,10 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# guest 侧工具状态查询（由 sb status 在 VM 内执行）
-#
 # 只打印 TSV，JSON 组装在宿主侧做（避免多层引号嵌套）：
 #   missing<TAB><工具名>    mise 未安装的工具
-#
 # 只报告缺失的 mise 工具，不检查插件安装状态，原因见 README「设计决策」。
 # 环境唯一来源：/run/sandbox-config/current/guest-env.sh。
-# 该文件或 mise.toml 缺失说明 VM 未挂载生成配置（例如单元 2 的一次性 VM），
-# 没有声明任何工具 → 无缺失项，退出码 0。
-# ==============================================================================
+# mise.toml 缺失说明 VM 未挂载生成配置（例如一次性 VM），没有声明任何工具 → 无缺失项，退出码 0；
+# mise.toml 在而 guest-env.sh 缺失则报错退出 3。
 set -euo pipefail
 
 CONFIG_DIR=/run/sandbox-config/current
