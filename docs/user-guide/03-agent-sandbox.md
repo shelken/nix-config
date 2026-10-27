@@ -40,7 +40,7 @@ omp-sb --model=cpa/gpt-5.6-luna -p '只回复 OK'
 
 家里的模型服务（`192.168.69.46:443`）由 `sb.yaml` 的 `network.default_grant` 对所有项目默认放行，不需要在项目里声明
 
-沙箱里也能用 pi：`sb run pi …`。新数据卷上第一次启动会自己装 packages，约一到两分钟，之后不再装。同时首次启动多个 pi 可能失败，根因未查：先单独启一个等装完
+沙箱里也能用 pi：`sb run pi …`。新数据卷上第一次启动会自己装 packages（含现场编译 `node-pty`），约 1 分钟，之后不再装。同时首次启动多个 pi 可能失败，根因未查：先单独启一个等装完
 
 项目必须位于挂载根内（默认 `~/Code`、`~/nix-config`、`~/.herdr/worktrees`），否则启动时报错
 
