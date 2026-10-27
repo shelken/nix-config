@@ -9,15 +9,21 @@
     let
       # omp 与 pi 共用的 agent 定义：正文只有一份，模型只来自 config.yml 的角色。
       # omp 侧输出 frontmatter 头 + 正文；pi 侧额外解析 @role 成 provider/model + thinking。
-      readOnlyOmpTools = "read, find, grep, glob";
-      readOnlyPiTools = "read,grep,find,ls,ffgrep,fffind,intercom";
+      readOnlyOmpTools = "read, find, grep, glob, web_search";
+      readOnlyPiTools = "read,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom";
+
+      # comment-sicko 只查本地代码与注释，严禁外网检索干扰
+      commentSickoOmpTools = "read, find, grep, glob";
+      commentSickoPiTools = "read,grep,find,ls,ffgrep,fffind,intercom";
 
       reviewerOmpTools = "read, find, grep, glob, bash, lsp, web_search, ast_grep";
-      reviewerPiTools = "read,bash,grep,find,ls,ffgrep,fffind,intercom";
+      reviewerPiTools = "read,bash,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom";
 
+      workerOmpTools = "read, edit, write, bash, eval, todo, grep, find, glob, lsp, ast_grep, web_search";
       workerPiTools = "read,bash,edit,write,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom";
 
-      # judge 只裁决不改代码：不给 bash，读不到写不了的候选就没法被它偷偷改。
+      # judge 只裁决不改代码：给 web_search 查外部规范，不给 bash 防止偷偷改动代码。
+      judgeOmpTools = "read, find, grep, glob, web_search";
       judgePiTools = "read,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom";
 
       # omp 从 18.x 起自带这些 bundled agent，写进 agents 目录只是重复定义内置能力。
@@ -44,7 +50,7 @@
       agentsCommon = {
         task = {
           description = "General-purpose execution agent with full tool access; never use it for review, that is what the reviewers are for";
-          ompTools = "read, edit, write, bash, grep, find, glob, lsp, ast_grep, web_search";
+          ompTools = workerOmpTools;
           piTools = workerPiTools;
           body = ./prompts/task.md;
         };
@@ -67,7 +73,7 @@
 
         judge = {
           description = "Adjudicator for arena candidates and plan options: scores against a rubric and names a base; never reviews a diff or edits code";
-          ompTools = readOnlyOmpTools;
+          ompTools = judgeOmpTools;
           piTools = judgePiTools;
           body = ./prompts/judge.md;
           # 裁决要的是强推理，不是审查模板；角色在 config.yml 里单列。
@@ -76,7 +82,7 @@
 
         poteto-agent = {
           description = "pstack poteto-mode execution agent: reads the poteto-mode skill first, then finishes the delegated task with full permissions";
-          ompTools = "read, edit, write, bash, grep, find, glob, lsp, ast_grep, web_search";
+          ompTools = workerOmpTools;
           ompSpawns = "*";
           piTools = workerPiTools;
           body = ./prompts/poteto-agent.md;
@@ -84,8 +90,8 @@
 
         comment-sicko = {
           description = "Read-only comment reviewer: reports corpse comments, redundant narration, and workaround sermons; never edits product code";
-          ompTools = readOnlyOmpTools;
-          piTools = readOnlyPiTools;
+          ompTools = commentSickoOmpTools;
+          piTools = commentSickoPiTools;
           body = ./prompts/comment-sicko.md;
         };
       }
