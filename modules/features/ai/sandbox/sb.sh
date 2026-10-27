@@ -1,15 +1,6 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# sb：宿主侧 Agent 沙箱管理 CLI
-#
-# 由 sb.nix 用 writeShellApplication 打包（构建期过 shellcheck）；Nix 只注入
-# 下面大写占位符（配置路径、发布目录、launcher 与 guest 查询脚本路径），业务逻辑全部在本文件。
-#
-# 职责：
-#   - 主 VM (sb-main) 的创建、启动、空闲重建、删除
-#   - sb sync（宿主写锁 + guest 内 sync-guest.sh）
-#   - sb status（规格、指纹一致性、缺失工具）
-# ==============================================================================
+# 由 Nix 用 writeShellApplication 打包（构建期过 shellcheck）；Nix 只替换下面的大写占位符
+# （配置路径、发布目录、launcher 与 guest 查询脚本路径），业务逻辑全部在本文件。
 set -euo pipefail
 
 DEFAULT_MSB_CONFIG="@MSB_CONFIG@"
@@ -25,15 +16,12 @@ export MSB_HOME="${MSB_HOME:-$DEFAULT_MSB_HOME}"
 # 新开终端前环境变量尚未生效时也指向同一目录；e2e 覆盖它把一次性 VM 挂到 harness 共用目录
 export SB_MISE_HOST_DIR="${SB_MISE_HOST_DIR:-$HOME/Data/sandboxes/mise/aarch64-linux}"
 
-# ------------------------------------------------------------------
 # 主 VM 生命周期锁：跨进程互斥，锁目录固定在 $MSB_HOME/locks，
 # 不放在可被删除的 VM 目录 ($MSB_HOME/sandboxes/<vm>) 内。
 # 只包住「检查上限指纹 → 必要时重建 → 启动 VM」，原因见 README「设计决策」。
-# ------------------------------------------------------------------
 SB_LOCK_DIR="$MSB_HOME/locks"
 mkdir -p "$SB_LOCK_DIR"
 
-# 获取主 VM 生命周期互斥锁：acquire_sb_lock [timeout_s]
 # 成功后锁 fd 持有至 release_sb_lock 或进程退出；失败（超时）返回非 0，
 # 调用方必须放弃本次清理/重建，不得继续删除。
 acquire_sb_lock() {
@@ -62,7 +50,6 @@ if [[ -z "$YAML_FILE" ]]; then
   fi
 fi
 
-# 寻找 msb 可执行文件
 find_msb() {
   if command -v msb >/dev/null 2>&1; then
     echo "msb"
@@ -125,7 +112,6 @@ expand_path() {
   # shellcheck disable=SC2016  # 刻意保持字面量，交给下面的参数展开匹配
   local brace_home='${HOME}' plain_home='$HOME'
   p="${p/#\~/$home}"
-  # 先展开 ${HOME}（花括号形式更长）再展开 $HOME，避免后者把前者的前缀拆坏
   p="${p//$brace_home/$home}"
   p="${p//$plain_home/$home}"
   printf '%s\n' "$p"
@@ -140,7 +126,6 @@ sandbox_cfg_hash() {
   yq -o=json -I=0 'sort_keys(..)' "$1" | sha256sum | cut -d' ' -f1
 }
 
-# 输出 approved / unapproved / none（项目没有 .sandbox.yaml，不需要批准）
 approval_state() {
   local cfg="$1/.sandbox.yaml"
   if [[ ! -f "$cfg" ]]; then
@@ -152,7 +137,6 @@ approval_state() {
   fi
 }
 
-# 把解析后的计划打印成清单（sb plan 与 sb trust 共用）
 print_plan() {
   local plan_json="$1" state default_grants_json
   state="$(approval_state "$(jq -r '.project_root' <<< "$plan_json")")"
@@ -171,7 +155,6 @@ print_plan() {
   ' <<< "$plan_json"
 }
 
-# 从全局 YAML 声明转换为 msb 所需的配置 JSON
 generate_msb_config() {
   local src_yaml="$1"
   local dst_json="$2"
@@ -318,7 +301,7 @@ wait_for_vm_running() {
   return 1
 }
 
-# 判定主 VM 是否有运行中的执行上下文：忙闲只看 guest 内 launcher 的登记表
+# 判定主 VM 是否有运行中的执行上下文：以 guest 内 launcher 的登记表为准，launcher 不可达时退回进程探测
 is_vm_busy() {
   local vm_name="$1"
   local st
@@ -345,7 +328,6 @@ is_vm_busy() {
   return 1
 }
 
-# 查询 guest 内缺失的 mise 工具（不报告插件安装状态）。
 # guest 侧脚本独立成 guest-status.sh（只输出 TSV），JSON 组装在这里做，避免多层引号嵌套。
 # 查询失败必须报错而不是伪装成全齐：返回非零并打印原因。
 query_guest_tool_state() {
@@ -356,7 +338,6 @@ query_guest_tool_state() {
     echo "[-] 错误: 查询 $vm_name 缺失工具失败 (rc=$rc)" >&2
     return 1
   fi
-  # 宿主侧组装 JSON：空输出 → {"missing":[]}
   if [[ -z "$out" ]]; then
     printf '%s\n' '{"missing":[]}'
     return 0
@@ -366,7 +347,6 @@ query_guest_tool_state() {
     | {missing: [$rows[] | select(.[0] == "missing") | .[1]]}'
 }
 
-# 在 guest 内执行 sync-guest.sh
 exec_sync_guest() {
   local vm_name="$1"
   shift
@@ -450,7 +430,7 @@ ensure_vm_locked() {
   vol_name="$(jq -r '.volume.name // "sb-main-data"' <<< "$ceiling_json")"
   vol_size="$(jq -r '.volume.size // "8G"' <<< "$ceiling_json")"
 
-  # 确保数据卷卷存在（删除 VM 时保留，重新挂载即持久数据）
+  # 确保数据卷存在（删除 VM 时保留，重新挂载即持久数据）
   if ! "$MSB" volume inspect "$vol_name" >/dev/null 2>&1; then
     echo "[sb] 数据卷 $vol_name 不存在，正在创建 (ext4 disk, 大小: $vol_size)..." >&2
     "$MSB" volume create "$vol_name" --kind disk --size "$vol_size" >&2
@@ -514,7 +494,6 @@ ensure_vm_locked() {
   trap - EXIT INT TERM
 }
 
-# sb up：生命周期锁内的 ensure（只保证 VM 就绪）
 sb_up() {
   if ! acquire_sb_lock 300; then
     echo "[-] 错误: 主 VM sb-main 生命周期锁被其他进程长期持有，放弃本次启动/重建" >&2
@@ -524,7 +503,6 @@ sb_up() {
   release_sb_lock
 }
 
-# 解析项目执行计划并严格校验能力上限 (项目根、worktree common dir、.sandbox.yaml)
 resolve_and_validate_plan() {
   local cwd="$1"
   local ceiling_yaml="$2"
@@ -532,7 +510,6 @@ resolve_and_validate_plan() {
   local ceiling_json
   ceiling_json="$(yq -o=json '.' "$ceiling_yaml")"
 
-  # 1. 展开并规范化能力上限中的 mount_roots
   local -a allowed_roots=()
   while IFS= read -r root_path; do
     [[ -n "$root_path" ]] || continue
@@ -543,7 +520,6 @@ resolve_and_validate_plan() {
     fi
   done < <(jq -r '(.mount_roots // [])[]' <<< "$ceiling_json")
 
-  # 2. 定位项目根 project_root
   local project_root=""
   if git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     project_root="$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || true)"
@@ -553,7 +529,6 @@ resolve_and_validate_plan() {
   fi
   project_root="$(realpath "$project_root")"
 
-  # 校验 project_root 是否落在挂载根内
   local root_allowed=0
   for ar in "${allowed_roots[@]}"; do
     if [[ "$project_root" == "$ar" || "$project_root" == "$ar"/* ]]; then
@@ -590,7 +565,6 @@ resolve_and_validate_plan() {
     fi
   fi
 
-  # 4. 解析与校验 .sandbox.yaml
   local proj_cfg="$project_root/.sandbox.yaml"
   local imports_json="[]"
   local network_json="[]"
@@ -664,7 +638,6 @@ resolve_and_validate_plan() {
       network_json="$(printf '%s\n' "${verified_network[@]}" | jq -R . | jq -s .)"
     fi
 
-    # 4c. 校验 paths
     local -a verified_paths=()
     while IFS= read -r item; do
       [[ -n "$item" ]] || continue
@@ -730,11 +703,9 @@ resolve_and_validate_plan() {
     network_json="$(printf '%s\n' "${default_grants[@]}" | jq -R . | jq -s --argjson proj "$network_json" '$proj + . | unique')"
   fi
 
-  # 5. 提取默认授权目标 default_allow (非家庭网段项目，如 host:tcp:*)
   local default_allow_json
   default_allow_json="$(jq -c '[.network.allow[]? | select(. | test("^host:tcp:"))]' <<< "$ceiling_json")"
 
-  # 6. 生成最终计划 JSON
   jq -n \
     --arg pr "$project_root" \
     --arg gcd "$git_common_dir" \
@@ -859,7 +830,6 @@ case "$cmd" in
       ceiling_match="inconsistent"
     fi
 
-    # 只报告缺失的 mise 工具
     missing_tools_json="[]"
     missing_tools_str="无"
     if [[ "$status" == "Running" ]]; then
@@ -924,7 +894,6 @@ EOF
     ;;
 
   trust)
-    # 批准当前项目的 .sandbox.yaml；内容哈希变化后需要重新批准
     plan_json="$(resolve_and_validate_plan "$(pwd -P)" "$YAML_FILE")"
     project_root="$(jq -r '.project_root' <<< "$plan_json")"
     if [[ ! -f "$project_root/.sandbox.yaml" ]]; then
@@ -985,7 +954,6 @@ EOF
     fi
     ctx_id="ctx_$(date +%s)_$RANDOM"
 
-    # 生命周期锁包住「检查指纹 → 必要时重建 → 启动 VM」，之后进入 launcher
     if ! acquire_sb_lock 300; then
       echo "[-] 错误: 主 VM sb-main 生命周期锁被其他进程长期持有，放弃本次启动" >&2
       exit 1

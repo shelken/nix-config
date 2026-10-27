@@ -6,9 +6,8 @@ export HOME="${HOME:-/root}"
 
 CONTEXTS_DIR="/run/sandbox/contexts"
 MAX_SLOTS=64
-# 宿主复制 imports 的时间窗保护：未超宽限的「启动中」目录视为存活（B）
+# 宿主复制 imports 的时间窗保护：未超宽限的「启动中」目录视为存活
 STARTUP_GRACE_SECS=120
-# 上下文目录归属锁：清扫、选槽、meta 发布必须在这把锁内完成（A）
 SLOT_LOCK="$CONTEXTS_DIR/.slot.lock"
 
 acquire_slot_lock() {
@@ -22,7 +21,6 @@ release_slot_lock() {
   exec 9>&-
 }
 
-# 目录处于宿主复制 imports 阶段：存在 starting 标记且未超宽限
 is_starting() {
   local dir="$1"
   [[ -f "$dir/starting" ]] || return 1
@@ -31,7 +29,6 @@ is_starting() {
   [[ $(( $(date +%s) - started )) -lt $STARTUP_GRACE_SECS ]]
 }
 
-# 1. 残留清扫逻辑：检查所有已登记上下文，清理死进程残留；清理无归属的孤儿网络资源
 sweep_dead_contexts() {
   if [[ ! -d "$CONTEXTS_DIR" ]]; then
     return 0
@@ -56,13 +53,12 @@ sweep_dead_contexts() {
     if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
       is_alive=1
     fi
-    # 无 meta 的目录可能正被宿主复制 imports：宽限内视为存活（B）
+    # 无 meta 的目录可能正被宿主复制 imports：宽限内视为存活
     if [[ "$is_alive" -eq 0 && ! -f "$meta" ]] && is_starting "$ctx_dir"; then
       is_alive=1
     fi
 
     if [[ "$is_alive" -eq 0 ]]; then
-      # 进程已死亡，清除对应的 iptables 规则、veth、netns 与登记目录
       if [[ -n "$ip" && -n "$chain" ]]; then
         iptables -D FORWARD -s "$ip" -j "$chain" 2>/dev/null || true
       fi
@@ -80,7 +76,6 @@ sweep_dead_contexts() {
     fi
   done
 
-  # 扫描并清理孤儿 netns (以 sb_ctx_ 开头但无登记上下文)
   for ns in $(ip netns list 2>/dev/null | awk '{print $1}' | grep '^sb_ctx_' || true); do
     local found=0
     for ctx_dir in "$CONTEXTS_DIR"/*; do
@@ -143,7 +138,6 @@ backing_of() {
   echo "$p"
 }
 
-# 挂载根：上下文路径所在的可写根，或 /data（XDG 配置落点）；都不是则失败，调用方报错
 mount_root_of() {
   local p="$1" root
   for root in "${!AGENT_ROOTS[@]}"; do
@@ -156,7 +150,6 @@ mount_root_of() {
   echo /data
 }
 
-# 空占位：上次上下文留下的挂载点（空文件或空目录），可以安全删除
 is_empty_placeholder() {
   [[ ! -L "$1" ]] || return 1
   if [[ -d "$1" ]]; then
@@ -166,7 +159,6 @@ is_empty_placeholder() {
   fi
 }
 
-# 落点类型与声明不符时：空占位且没有其他上下文在用才删除，其余报错退出
 resolve_conflict() {
   local path="$1" want="$2" others="$3"
   if is_empty_placeholder "$path" && [[ "$others" -eq 0 ]]; then
@@ -185,7 +177,6 @@ resolve_conflict() {
 LAYOUT_ARGS=()
 MOUNT_POINTS=()
 
-# 是否落在 launcher 自己铺设的 agent 配置布局上（挂载点目录或可写根）
 is_agent_layout_path() {
   local d="$1" p
   for p in "${MOUNT_POINTS[@]}" "${!AGENT_ROOTS[@]}"; do
@@ -287,7 +278,7 @@ if [[ "${1:-}" == "--check-busy" ]]; then
   if [[ -d "$CONTEXTS_DIR" ]]; then
     for ctx_dir in "$CONTEXTS_DIR"/*; do
       [[ -d "$ctx_dir" ]] || continue
-      # 启动中的目录在宽限内同样占用 VM，计入忙碌（B）
+      # 启动中的目录在宽限内同样占用 VM，计入忙碌
       if [[ -f "$ctx_dir/meta.json" ]] || is_starting "$ctx_dir"; then
         count=$((count + 1))
       fi
@@ -298,7 +289,6 @@ if [[ "${1:-}" == "--check-busy" ]]; then
   exit 0
 fi
 
-# 子命令 2: 列出活跃上下文元数据
 if [[ "${1:-}" == "--list-contexts" ]]; then
   acquire_slot_lock
   sweep_dead_contexts
@@ -334,13 +324,12 @@ shift 3
 
 # 启动临界区：死上下文清扫、选槽、meta.json 原子发布在同一把短期锁内串行，
 # 否则并发 launcher 会选中同一槽位，失败方的清理会误删另一上下文的
-# netns/veth/iptables（A）
+# netns/veth/iptables
 acquire_slot_lock
 sweep_dead_contexts
 
 mkdir -p "$CONTEXTS_DIR"
 
-# 2. 地址池与槽位分配 (找到最小未占用的 slot)
 declare -A USED_SLOTS=()
 for ctx_dir in "$CONTEXTS_DIR"/*; do
   [[ -d "$ctx_dir" ]] || continue
@@ -381,9 +370,8 @@ mkdir -p "$CURRENT_CTX_DIR"
 # 宿主在复制 imports 时已建好该目录；没有 imports 时它不存在
 IMPORTS_DIR="$CURRENT_CTX_DIR/imports"
 
-# 3. 登记当前上下文元数据：jq 生成（转义路径中的引号/换行，合法路径不产生
-# 损坏的 JSON），写临时文件后 mv 原子发布（D），并移除宿主侧「启动中」标记；
-# 此后目录所有权归属本 launcher（B）
+# 登记元数据：jq 生成，写临时文件后 mv 原子发布；并移除宿主侧「启动中」标记，
+# 此后目录所有权归属本 launcher
 META_TMP="$CURRENT_CTX_DIR/meta.json.tmp"
 jq -n \
   --arg id "$CTX_ID" \
@@ -413,36 +401,31 @@ trap 'rm -rf "$CURRENT_CTX_DIR"' EXIT
 prepare_declared_layout "$OTHER_CONTEXTS"
 release_slot_lock
 
-# 4. 退出清理钩子 (异常与正常退出均触发)
 cleanup() {
   local exit_code=$?
   trap - EXIT INT TERM HUP
 
-  # 归属校验：只删除本次启动确实创建的资源（A）。槽位冲突时 meta 归属另一
+  # 归属校验：只删除本次启动确实创建的资源。槽位冲突时 meta 归属另一
   # launcher，删除同名 netns/veth/chain 会拆掉另一个运行中的上下文
   local owned=0
   if [[ -f "$CURRENT_CTX_DIR/meta.json" ]] && [[ "$(jq -r '.pid // 0' "$CURRENT_CTX_DIR/meta.json" 2>/dev/null || echo 0)" == "$$" ]]; then
     owned=1
   fi
   if [[ "$owned" -eq 1 ]]; then
-    # 删除 iptables 规则与专用链
     iptables -D FORWARD -s "$IP_GUEST" -j "$CHAIN" 2>/dev/null || true
     iptables -F "$CHAIN" 2>/dev/null || true
     iptables -X "$CHAIN" 2>/dev/null || true
 
-    # 删除 veth 与 netns
     ip link del "$VETH_HOST" 2>/dev/null || true
     ip netns del "$NETNS" 2>/dev/null || true
   fi
 
-  # 删除导入文件与登记目录
   rm -rf "$CURRENT_CTX_DIR"
 
   exit "$exit_code"
 }
 trap cleanup EXIT INT TERM HUP
 
-# 5. 网络环境搭建 (netns + veth + NAT + FORWARD)
 echo 1 > /proc/sys/net/ipv4/ip_forward
 
 DEFAULT_DEV="$(ip route show default 2>/dev/null | awk '{print $5}' | head -n 1 || true)"
@@ -465,11 +448,9 @@ ip -n "$NETNS" link set "$VETH_IN" up
 ip -n "$NETNS" link set lo up
 ip -n "$NETNS" route add default via "$IP_HOST"
 
-# 6. 配置上下文专有 iptables 链 (规则只按源地址匹配)
 iptables -N "$CHAIN"
 iptables -A FORWARD -s "$IP_GUEST" -j "$CHAIN"
 
-# a. 默认放行 DNS (来自 /etc/resolv.conf 的 nameserver)
 while IFS= read -r dns; do
   if [[ "$dns" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     iptables -A "$CHAIN" -d "$dns" -p udp --dport 53 -j ACCEPT
@@ -477,7 +458,6 @@ while IFS= read -r dns; do
   fi
 done < <(grep '^nameserver' /etc/resolv.conf 2>/dev/null | awk '{print $2}')
 
-# b. 默认放行宿主端口 (如 host:tcp:3425, host:tcp:8080)
 HOST_IP="$(grep 'host.microsandbox.internal' /etc/hosts 2>/dev/null | awk '{print $1}' | grep '^[0-9]' | head -n 1 || true)"
 if [[ -z "$HOST_IP" ]]; then
   HOST_IP="$(ip route show default 2>/dev/null | awk '{print $3}' | head -n 1 || true)"
@@ -491,7 +471,6 @@ for item in $(jq -r '.default_allow[]? // empty' <<< "$PLAN_JSON"); do
   fi
 done
 
-# c. 放行项目在 .sandbox.yaml 中显式声明的私网目标
 for target in $(jq -r '.network[]? // empty' <<< "$PLAN_JSON"); do
   if [[ "$target" =~ ^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+):([0-9]+)$ ]]; then
     ip="${BASH_REMATCH[1]}"
@@ -502,7 +481,7 @@ for target in $(jq -r '.network[]? // empty' <<< "$PLAN_JSON"); do
   fi
 done
 
-# d. 拦截未声明的所有私网与保留网段 (家庭网段 192.168.0.0/16 默认落在此处拦截)
+# iptables 链只能追加：放行规则已在前面加好，私网 REJECT 必须排在其后（家庭网段 192.168.0.0/16 默认在此拦截）
 iptables -A "$CHAIN" -d 10.0.0.0/8 -j REJECT
 iptables -A "$CHAIN" -d 172.16.0.0/12 -j REJECT
 iptables -A "$CHAIN" -d 192.168.0.0/16 -j REJECT
@@ -512,7 +491,6 @@ iptables -A "$CHAIN" -d 169.254.0.0/16 -j REJECT
 # e. 放行其余所有公网目标 (包括假 IP 代理 198.18.0.0/15 与外部公网)
 iptables -A "$CHAIN" -j ACCEPT
 
-# 7. 组装 bubblewrap 隔离参数
 BWRAP_ARGS=(
   --unshare-user --uid 1000 --gid 1000
   --unshare-ipc --unshare-pid --unshare-uts
@@ -530,7 +508,6 @@ BWRAP_ARGS=(
   --ro-bind-try /.msb/tls /.msb/tls
 )
 
-# 共享可写状态卷 /data
 if [[ -d /data ]]; then
   BWRAP_ARGS+=(--bind /data /data)
   # OMP 只在 $XDG_*_HOME/omp 已存在时使用 XDG 路径；保持 XDG 布局，插件目录才与 sb sync 的安装位置一致
@@ -542,7 +519,6 @@ if [[ -d /opt/sandbox-mise ]]; then
   BWRAP_ARGS+=(--ro-bind /opt/sandbox-mise /opt/sandbox-mise)
 fi
 
-# 沙箱配置目录 (如果存在)
 if [[ -d /run/sandbox-config ]]; then
   BWRAP_ARGS+=(--ro-bind /run/sandbox-config /run/sandbox-config)
 fi
@@ -571,17 +547,14 @@ while IFS=$'\t' read -r stage dir; do
   BWRAP_ARGS+=(--bind "$IMPORTS_DIR/$stage" "$dir")
 done < <(jq -r '[.imports[]? | [.stage, .dir]] | unique[] | @tsv' <<< "$PLAN_JSON")
 
-# 绑定当前项目根目录 (相邻未绑定项目在视图中不可见)
 BWRAP_ARGS+=(--bind "$PROJECT_ROOT" "$PROJECT_ROOT")
 
-# 若存在项目根外的 git common dir，自动加绑
 if [[ -n "$GIT_COMMON_DIR" && "$GIT_COMMON_DIR" != "$PROJECT_ROOT" && "$GIT_COMMON_DIR" != "$PROJECT_ROOT"/* ]]; then
   if [[ -e "$GIT_COMMON_DIR" ]]; then
     BWRAP_ARGS+=(--bind "$GIT_COMMON_DIR" "$GIT_COMMON_DIR")
   fi
 fi
 
-# 绑定声明的额外路径 paths
 while IFS= read -r item; do
   [[ -n "$item" ]] || continue
   p="$(jq -r .path <<< "$item")"
@@ -595,17 +568,15 @@ while IFS= read -r item; do
   fi
 done < <(jq -c '.paths[]? // empty' <<< "$PLAN_JSON")
 
-# 设置工作目录
 if [[ -d "$CWD" ]]; then
   BWRAP_ARGS+=(--chdir "$CWD")
 else
   BWRAP_ARGS+=(--chdir "$PROJECT_ROOT")
 fi
 
-# 8. 环境变量与命令执行
 # 唯一来源：/run/sandbox-config/current/guest-env.sh（generator 单一生成）。
 # 这里不再维护第二份回退：缺少该文件说明 VM 未挂载生成配置，
-# 此时 PATH 只有基础工具（未声明任何共享工具），行为与单元 2 一次性 VM 一致。
+# 此时上下文不含任何共享工具。
 export GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
 export GIT_CONFIG_GLOBAL="@git_config@"
 if [[ -f /run/sandbox-config/current/guest-env.sh ]]; then
@@ -616,7 +587,6 @@ fi
 # minio/mc 的版本列表约 14 MB，超过 mise 的超时，缓存写不进去，每次重试并刷警告。
 # 写在这里而不是 guest-env.sh：sb sync 也 source 它，但 sync 在上下文外，必须联网
 export MISE_OFFLINE=1
-# 依据参数形式分流：单字符串含复杂语法走 bash -c，多参数直接 exec
 if [[ $# -eq 0 ]]; then
   set -- bash
 fi
