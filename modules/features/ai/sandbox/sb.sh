@@ -40,6 +40,14 @@ release_sb_lock() {
   exec 8>&-
 }
 
+# 获取生命周期锁，失败即报错退出。action 是「放弃本次<动作>」里的动作词。
+require_sb_lock() {
+  local action="$1"
+  acquire_sb_lock 300 && return 0
+  echo "[-] 错误: 主 VM sb-main 生命周期锁被其他进程长期持有，放弃本次${action}" >&2
+  exit 1
+}
+
 YAML_FILE="${SB_CONFIG:-}"
 if [[ -z "$YAML_FILE" ]]; then
   if [[ -f "$HOME/.config/sandbox/sb.yaml" ]]; then
@@ -268,7 +276,7 @@ wait_for_vm_running() {
   local attempt=0
   while [[ $attempt -lt $max_attempts ]]; do
     local st
-    st="$("$MSB" inspect "$vm_name" --format json 2>/dev/null | jq -r '.status // empty' 2>/dev/null || true)"
+    st="$(vm_status "$vm_name")"
     if [[ "$st" == "Running" ]]; then
       return 0
     fi
@@ -279,6 +287,11 @@ wait_for_vm_running() {
   return 1
 }
 
+# 查询 VM 当前状态（Running / Stopped / 空）。查询失败返回空串，调用方按非 Running 处理。
+vm_status() {
+  "$MSB" inspect "$1" --format json 2>/dev/null | jq -r '.status // empty' 2>/dev/null || true
+}
+
 # 取主 VM 内活跃执行上下文数，写入全局 BUSY_COUNT；取不到时返回 1，原因写入 BUSY_ERROR。
 # 调用方据此区分「确认空闲 0」「确认忙 N」「查不到」三种状态，不要把查不到当成忙。
 query_active_contexts() {
@@ -286,7 +299,7 @@ query_active_contexts() {
   local st out err err_file rc=0
   BUSY_COUNT=""
   BUSY_ERROR=""
-  st="$("$MSB" inspect "$vm_name" --format json 2>/dev/null | jq -r '.status // empty' 2>/dev/null || true)"
+  st="$(vm_status "$vm_name")"
   if [[ "$st" != "Running" ]]; then
     BUSY_COUNT=0
     return 0
@@ -376,18 +389,12 @@ sb_sync() {
   fi
   if ! "$MSB" inspect "$vm_name" --format json >/dev/null 2>&1; then
     echo "[sb] VM $vm_name 尚未创建，正在自动启动..." >&2
-    if ! acquire_sb_lock 300; then
-      echo "[-] 错误: 主 VM 生命周期锁被其他进程长期持有，放弃本次启动" >&2
-      exit 1
-    fi
+    require_sb_lock 启动
     ensure_vm_locked
     release_sb_lock
-  elif [[ "$("$MSB" inspect "$vm_name" --format json 2>/dev/null | jq -r '.status // empty' 2>/dev/null || true)" != "Running" ]]; then
+  elif [[ "$(vm_status "$vm_name")" != "Running" ]]; then
     echo "[sb] VM $vm_name 处于停止状态，正在启动..." >&2
-    if ! acquire_sb_lock 300; then
-      echo "[-] 错误: 主 VM 生命周期锁被其他进程长期持有，放弃本次启动" >&2
-      exit 1
-    fi
+    require_sb_lock 启动
     run_msb start "$vm_name"
     wait_for_vm_running "$vm_name"
     release_sb_lock
@@ -470,10 +477,7 @@ ensure_vm_locked() {
 }
 
 sb_up() {
-  if ! acquire_sb_lock 300; then
-    echo "[-] 错误: 主 VM sb-main 生命周期锁被其他进程长期持有，放弃本次启动/重建" >&2
-    exit 1
-  fi
+  require_sb_lock 启动/重建
   ensure_vm_locked
   release_sb_lock
 }
@@ -710,10 +714,7 @@ case "$cmd" in
 
   down)
     # 停止操作与创建/启动/重建互斥（同一把生命周期锁）
-    if ! acquire_sb_lock 300; then
-      echo "[-] 错误: 主 VM sb-main 生命周期锁被其他进程长期持有，放弃本次停止" >&2
-      exit 1
-    fi
+    require_sb_lock 停止
     echo "[sb] 正在停止主 VM sb-main..." >&2
     "$MSB" stop sb-main "$@"
     release_sb_lock
@@ -730,10 +731,7 @@ case "$cmd" in
       fi
     done
     # 删除操作与创建/启动/重建互斥（同一把生命周期锁）
-    if ! acquire_sb_lock 300; then
-      echo "[-] 错误: 主 VM sb-main 生命周期锁被其他进程长期持有，放弃本次删除" >&2
-      exit 1
-    fi
+    require_sb_lock 删除
     # 有运行中的执行上下文时拒绝直接删除，--force 才强制（避免一键打断所有 Agent）
     if [[ "$force" -eq 0 ]]; then
       if ! query_active_contexts sb-main; then
@@ -898,10 +896,7 @@ EOF
     fi
     ctx_id="ctx_$(date +%s)_$RANDOM"
 
-    if ! acquire_sb_lock 300; then
-      echo "[-] 错误: 主 VM sb-main 生命周期锁被其他进程长期持有，放弃本次启动" >&2
-      exit 1
-    fi
+    require_sb_lock 启动
     ensure_vm_locked
     release_sb_lock
 

@@ -44,7 +44,7 @@ flowchart LR
 - **能力授权 (Capability Grant)**: 某个执行上下文实际获得的额外路径、导入文件和私网目标。额外路径是挂载根的子集；导入文件和私网目标没有上限，由批准决定
 - **批准 (Approval)**: 用户用 `sb trust` 对项目 `.sandbox.yaml` 的规范化内容哈希做的记录。未批准或内容变了，启动直接报错
 - **项目配置 (Project Config)**: 项目仓库根 `.sandbox.yaml`，请求导入文件、私网目标和额外目录；批准后才生效
-- **沙箱基础环境 (Sandbox Base)**: 沙箱启动、隔离和编译原生依赖所需的 Linux 工具（含 gcc、gnumake、node-gyp），由 sandbox 模块管理，不属于共享工具
+- **沙箱基础环境 (Sandbox Base)**: 沙箱启动与隔离所需的 Linux 工具，由 sandbox 模块管理，不属于共享工具。不含 C 工具链，见「设计决策」
 - **补齐 (Sync)**: 显式安装已登记但缺失的 mise 工具和插件。_避免_: 升级、更新
 - **共用安装层 (Shared Install Layer)**: 宿主上由所有沙箱 VM 共用的一份 mise 安装产物与下载缓存。_避免_: 共享缓存、镜像卷
 - **声明配置 (Declared Config)**: Nix 定义、发布进沙箱的配置文件或目录，即共享工具登记表 `files` 里的条目。上下文内只读，不管插件想不想改它。_避免_: 配置（太泛）
@@ -183,7 +183,7 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 
 - 跨 VM 的写锁：共用目录下的 `.sync.lock`
 - `mise install` 只补缺，不升级、不删除；不区分 VM 忙闲
-- 运行各工具的 `postInstall`，其中 OMP 插件按 [package.json](../omp/plugins/package.json) 执行 `bun install`，只补缺。私有依赖用 `GITHUB_TOKEN` 占位符认证，安装失败时 `sb sync` 以非零退出，原因见「设计决策」
+- 运行各工具的 `postInstall`，其中 OMP 插件按 [package.json](../omp/plugins/package.json) 执行：先装到暂存目录，装成功才把整个 `node_modules` 换成暂存结果（清单之外的条目因此消失），装失败时旧目录原样保留。私有依赖用 `GITHUB_TOKEN` 占位符认证，安装失败时 `sb sync` 以非零退出，原因见「设计决策」
 
 ## 配置与数据位置
 
@@ -247,14 +247,14 @@ PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 - 不提供单项目专用 VM。所有执行上下文都在主 VM，隔离由执行上下文提供
 - 能力上限变化时，主 VM 空闲则下一次启动自动重建；仍有执行上下文则报错并给出上下文数，不登记待升级
 - 只用一把宿主生命周期锁，只包住「检查上限指纹、必要时重建、启动 VM」。不做宿主侧预约，忙闲只看 guest 内 launcher 的上下文登记
-- `sb sync` 不区分忙闲，不删除、不重建插件依赖，因此不需要判断忙闲，也不需要生命周期锁
+- `sb sync` 不区分忙闲，不重建插件依赖的下载缓存，因此不需要判断忙闲，也不需要生命周期锁
 - `sb status` 只报告缺失的 mise 工具，不报告插件安装状态
 
 代价：
 
 - 主 VM 忙时，某项目需要超出当前上限的能力，只能等主 VM 空闲后重建
 - `sb status` 不显示待升级，也不显示插件是否装全；插件结果只看 `sb sync` 输出
-- 沙箱里手装的插件、或已从清单删除的插件不会被自动清掉，需要时进 VM 手动清理数据卷
+- 插件目录每次 `sb sync` 都与清单严格对齐，手装的插件会被删除；需要临时插件时改清单
 - 改了 `sb.yaml` 且两个 Agent 在同一两秒内启动时，后启动的上下文可能在启动阶段被重建打断，重新启动即可
 - 忙时 `sb sync` 可能在运行中的 OMP 底下更新插件文件；插件已加载进内存，风险低
 
@@ -380,14 +380,15 @@ pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就
 - sync 不清理下载缓存，共用的下载缓存是资产
 - 主 VM 首次创建后自动 sync 一次；`sb run`、`sb shell`、`omp-sb` 复用已有 VM 时不自动 sync
 - OMP 插件在 guest 内按仓库清单完整重放，清单原样落盘。私有依赖在清单里写成 `git+ssh://git@github.com/…`，bun 取包时会把它解析成 `ssh://git@github.com/…`：`install.sh` 在这一次安装里用环境变量让 git 把这两种写法都改走 https（两条 `insteadOf`），认证交给 guest git 配置里的 `gh` credential helper。`gh` 读 `GITHUB_TOKEN`，它在 guest 里的值是占位符 `$MSB_GITHUB_TOKEN`（由 `sb.yaml` 的 `secrets` 声明，msb 在网络边界替换），token 不落盘、不进日志、不进进程参数。宿主激活走同一个脚本，同样不用 ssh
+- 宿主与沙箱要装不同的插件时，在清单顶层写 `sandboxExclude`：列出的依赖只从沙箱清单里去掉，宿主清单不变。沙箱清单由 Nix 在构建期生成（`sandboxFiles`），`guest-env.sh` 导出 `SB_OMP_MANIFEST` 指向它，`install.sh` 读该变量；宿主没有这个变量，用仓库原件。排除项写错（不在 `dependencies` 里）构建期直接失败。`install.sh` 把插件目录与清单严格对齐，被排除的插件不落盘
 - 安装失败（私有依赖拿不到、没有有效 GitHub 凭据等）时 `sb sync` 以非零退出，不静默跳过；宿主激活只打警告
-- 依赖的安装脚本照常执行。没有 linux 预编译产物的原生依赖（如 `node-pty`，`@plannotator/webtui` 的依赖）在 guest 里用沙箱基础环境的 gcc、gnumake、node-gyp 现场编译，`python3` 与 `nodejs` 本来就在 guest 里。这三项的闭包增量实测 333 MiB（gcc 267 MiB、binutils 37 MiB、node-gyp 7 MiB，其余 22 MiB）。闭包只在宿主 `/nix/store` 里存一份，由所有 VM 只读挂载，不随 VM 个数增加
+- 依赖的安装脚本照常执行。沙箱基础环境不带 C 工具链，没有 linux 预编译产物的原生依赖装不上，这是刻意的取舍：唯一需要它的 `simple-plannotator`（依赖 `node-pty`）已从沙箱插件清单排除，宿主仍保留。实测省下约 331 MiB 闭包
 
 代价：
 
 - 共用安装层损坏影响所有 VM，用 `sb sync` 重装自愈
 - 宿主目录体积随工具增长（约 1 至 2 GB 量级）
-- 宿主 `/nix/store` 多约 333 MiB 的构建环境；nixpkgs 升级后 gcc 版本变动时要重新下载这部分
+- 沙箱里装不了需要现场编译的原生依赖（如 `node-pty`），负对照见 `ae7b2b5d` 的验证记录
 - 没有有效 GitHub 凭据时私有插件装不上，`sb sync` 失败
 
 ## 测试

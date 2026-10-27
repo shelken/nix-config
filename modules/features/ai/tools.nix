@@ -18,10 +18,11 @@
         version = "latest";
         minimum_release_age = "0h";
       };
-      # 插件按仓库清单补装，只补缺，不删除目录里已有的依赖（沙箱内手装的插件与已从清单删除的插件不被清理）。
-      # 宿主激活与沙箱 sb sync 共用 install.sh，差异由它读环境变量决定，见脚本头部
+      # 插件目录每次都与清单严格对齐：清单之外的条目删除，清单内的重新安装。
+      # 宿主激活与沙箱 sb sync 共用 install.sh。清单路径在运行时决定：guest 由 guest-env.sh 导出
+      # SB_OMP_MANIFEST 指向沙箱版清单（已按 sandboxExclude 过滤），宿主没有该变量，用仓库原件。
       postInstall = ''
-        bash ${./omp/plugins/install.sh} ${./omp/plugins/package.json}
+        bash ${./omp/plugins/install.sh} "''${SB_OMP_MANIFEST:-${./omp/plugins/package.json}}"
       '';
     };
     pi = {
