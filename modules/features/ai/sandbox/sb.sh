@@ -279,24 +279,40 @@ wait_for_vm_running() {
   return 1
 }
 
-# 判定主 VM 是否有运行中的执行上下文：唯一来源是 guest 内 launcher 的登记表；
-# 取不到计数时按忙处理，避免误删正在运行的上下文
-is_vm_busy() {
+# 取主 VM 内活跃执行上下文数，写入全局 BUSY_COUNT；取不到时返回 1，原因写入 BUSY_ERROR。
+# 调用方据此区分「确认空闲 0」「确认忙 N」「查不到」三种状态，不要把查不到当成忙。
+query_active_contexts() {
   local vm_name="$1"
-  local st
+  local st out err err_file rc=0
+  BUSY_COUNT=""
+  BUSY_ERROR=""
   st="$("$MSB" inspect "$vm_name" --format json 2>/dev/null | jq -r '.status // empty' 2>/dev/null || true)"
   if [[ "$st" != "Running" ]]; then
+    BUSY_COUNT=0
+    return 0
+  fi
+  err_file="$(mktemp)"
+  out="$("$MSB" exec "$vm_name" -- bash "$LAUNCHER" --check-busy 2>"$err_file")" || rc=$?
+  err="$(head -c 400 "$err_file" 2>/dev/null || true)"
+  rm -f "$err_file"
+  err="${err//$'\n'/ }"
+  if [[ $rc -ne 0 ]]; then
+    BUSY_ERROR="guest 查询退出码 $rc${err:+，stderr: $err}"
     return 1
   fi
+  out="${out//[[:space:]]/}"
+  if [[ ! "$out" =~ ^[0-9]+$ ]]; then
+    BUSY_ERROR="guest 返回非数字输出 [${out}]${err:+，stderr: $err}"
+    return 1
+  fi
+  BUSY_COUNT="$out"
+}
 
-  # 通过 guest 内 launcher 检查活跃上下文登记（自动清扫死进程残留）
-  local active_count
-  active_count="$("$MSB" exec "$vm_name" -- bash "$LAUNCHER" --check-busy 2>/dev/null || echo "")"
-  if [[ "$active_count" =~ ^[0-9]+$ ]]; then
-    [[ "$active_count" -gt 0 ]] && return 0
-    return 1
-  fi
-  return 0
+# 判定主 VM 是否有运行中的执行上下文：唯一来源是 guest 内 launcher 的登记表。
+# 计数取不到时按忙处理（宁可拒绝重建，也不打断可能正在运行的上下文）。
+is_vm_busy() {
+  query_active_contexts "$1" || return 0
+  [[ "$BUSY_COUNT" -gt 0 ]]
 }
 
 # guest 侧脚本独立成 guest-status.sh（只输出 TSV），JSON 组装在这里做，避免多层引号嵌套。
@@ -424,10 +440,12 @@ ensure_vm_locked() {
     else
       # 上限发生变化；锁内重读忙碌状态：
       # 空闲 → 直接重建；忙 → 只报错并给出运行中上下文数，不登记任何状态
-      if is_vm_busy "$vm_name"; then
-        local active_count
-        active_count="$("$MSB" exec "$vm_name" -- bash "$LAUNCHER" --check-busy 2>/dev/null || echo "?")"
-        echo "[-] 错误: sb.yaml 已变，主 VM 有 ${active_count} 个执行上下文在运行，全部退出后再启动即按新上限重建。" >&2
+      if ! query_active_contexts "$vm_name"; then
+        echo "[-] 错误: 无法确认主 VM $vm_name 内是否有执行上下文在运行，本次不重建以免打断它们。原因: $BUSY_ERROR" >&2
+        exit 1
+      fi
+      if [[ "$BUSY_COUNT" -gt 0 ]]; then
+        echo "[-] 错误: 能力上限已变（$yaml_file 生成的上限指纹与主 VM 不一致），主 VM 有 $BUSY_COUNT 个执行上下文在运行，全部退出后再启动即按新上限重建。" >&2
         exit 1
       fi
       echo "[sb] 检测到能力上限变化且主 VM $vm_name 空闲，正在重建 (保留数据盘 $vol_name)..." >&2
@@ -717,10 +735,15 @@ case "$cmd" in
       exit 1
     fi
     # 有运行中的执行上下文时拒绝直接删除，--force 才强制（避免一键打断所有 Agent）
-    if [[ "$force" -eq 0 ]] && is_vm_busy sb-main; then
-      active_count="$("$MSB" exec sb-main -- bash "$LAUNCHER" --check-busy 2>/dev/null || echo "?")"
-      echo "[-] 错误: 主 VM sb-main 有 ${active_count} 个执行上下文正在运行，拒绝删除。全部退出后重试，或用 sb rm --force 强制 (会打断所有上下文)" >&2
-      exit 1
+    if [[ "$force" -eq 0 ]]; then
+      if ! query_active_contexts sb-main; then
+        echo "[-] 错误: 无法确认主 VM sb-main 内是否有执行上下文在运行，拒绝删除。原因: $BUSY_ERROR。确认全部退出后重试，或用 sb rm --force 强制 (会打断所有上下文)" >&2
+        exit 1
+      fi
+      if [[ "$BUSY_COUNT" -gt 0 ]]; then
+        echo "[-] 错误: 主 VM sb-main 有 $BUSY_COUNT 个执行上下文正在运行，拒绝删除。全部退出后重试，或用 sb rm --force 强制 (会打断所有上下文)" >&2
+        exit 1
+      fi
     fi
     echo "[sb] 正在删除主 VM sb-main (保留数据卷)..." >&2
     "$MSB" rm --force sb-main "${rm_args[@]}"
@@ -755,8 +778,12 @@ case "$cmd" in
       if [[ -z "$vm_fp" ]]; then
         vm_fp="-"
       fi
-      if is_vm_busy "$vm_name"; then
-        busy="busy"
+      if query_active_contexts "$vm_name"; then
+        if [[ "$BUSY_COUNT" -gt 0 ]]; then
+          busy="busy ($BUSY_COUNT)"
+        fi
+      else
+        busy="unknown ($BUSY_ERROR)"
       fi
     fi
 
