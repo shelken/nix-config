@@ -26,7 +26,6 @@ let
     gnused
     findutils
     gawk
-    cacert
     openssh
     gcc
     gnumake
