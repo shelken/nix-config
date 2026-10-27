@@ -8,28 +8,17 @@
   sandboxConfig ? null,
 }:
 let
-  # 宿主 CLI：逻辑在 sb.sh，Nix 只注入路径（shellcheck 在构建期对最终产物生效）。
-  # 在求值期替换源文件文本，不用 replaceVars + readFile：后者会读取依赖 Linux guest
-  # 脚本的派生产物，导致求值宿主配置也要先构建 Linux 包（IFD）。
-  sbText =
-    builtins.replaceStrings
-      [
-        "@MSB_CONFIG@"
-        "@MSB_HOME@"
-        "@DEFAULT_YAML@"
-        "@LAUNCHER@"
-        "@GUEST_STATUS@"
-        "@SANDBOX_CONFIG@"
-      ]
-      [
-        "${msbConfig}"
-        "${msbHome}"
-        "${defaultConf}"
-        "${launcher}"
-        "${guestStatus}"
-        (if sandboxConfig != null then "${sandboxConfig}" else "")
-      ]
-      (builtins.readFile ./sb.sh);
+  template = import ./_template.nix { inherit (pkgs) lib; };
+
+  # 宿主 CLI：逻辑在 sb.sh，Nix 只注入路径（shellcheck 在构建期对最终产物生效）
+  sbText = template ./sb.sh {
+    MSB_CONFIG = msbConfig;
+    MSB_HOME = msbHome;
+    DEFAULT_YAML = defaultConf;
+    LAUNCHER = launcher;
+    GUEST_STATUS = guestStatus;
+    SANDBOX_CONFIG = if sandboxConfig != null then sandboxConfig else "";
+  };
 
   sb = pkgs.writeShellApplication {
     name = "sb";

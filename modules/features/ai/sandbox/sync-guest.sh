@@ -36,21 +36,11 @@ GITCFG
 fi
 export GIT_TERMINAL_PROMPT=0
 
-# CA 证书：guest 里优先用镜像/Nix 实际存在的 bundle。
-# 先前的顺序把宿主 store 路径排在最前，guest 里不存在时会静默保留错误的 SSL_CERT_FILE，
-# 导致所有 https 请求报「self-signed certificate in certificate chain」。
-ca_bundle=""
-for candidate in /etc/ssl/certs/ca-certificates.crt "@cacert@/etc/ssl/certs/ca-bundle.crt"; do
-  if [[ -r "$candidate" ]]; then
-    ca_bundle="$candidate"
-    break
-  fi
-done
-if [[ -n "$ca_bundle" ]]; then
-  export SSL_CERT_FILE="$ca_bundle"
-  export CURL_CA_BUNDLE="$ca_bundle"
-  export GIT_SSL_CAINFO="$ca_bundle"
-fi
+# guest 的 HTTPS 出口由 msb 重签证书，只信任镜像里的 /etc/ssl/certs/ca-certificates.crt（内容就是 msb 的 CA）。
+# Nix 的公共 CA bundle 会报「self-signed certificate in certificate chain」，所以没有回落
+ca_bundle=/etc/ssl/certs/ca-certificates.crt
+[[ -r "$ca_bundle" ]] || { echo "[-] 错误: guest 里缺少 $ca_bundle（msb 的 CA）" >&2; exit 1; }
+export SSL_CERT_FILE="$ca_bundle" CURL_CA_BUNDLE="$ca_bundle" GIT_SSL_CAINFO="$ca_bundle"
 
 # 确保 /data 基础目录结构存在
 mkdir -p /data/mise /data/xdg/data/mise /data/xdg/cache/mise /data/xdg/config/mise "$MISE_SHIMS_DIR" /data/xdg/data/omp
