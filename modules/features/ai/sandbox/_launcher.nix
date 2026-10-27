@@ -12,13 +12,7 @@ let
     bubblewrap
     iproute2
     jq
-    gnused
     iptables
-    git
-    curl
-    ripgrep
-    fd
-    findutils
     gawk
   ];
   template = import ./_template.nix { lib = linuxPkgs.lib; };

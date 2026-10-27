@@ -8,7 +8,6 @@ DEFAULT_MSB_HOME="@MSB_HOME@"
 DEFAULT_YAML="@DEFAULT_YAML@"
 LAUNCHER="@LAUNCHER@"
 GUEST_STATUS="@GUEST_STATUS@"
-DEFAULT_SANDBOX_CONFIG="@SANDBOX_CONFIG@"
 
 export MSB_CONFIG_PATH="${MSB_CONFIG_PATH:-$DEFAULT_MSB_CONFIG}"
 export MSB_HOME="${MSB_HOME:-$DEFAULT_MSB_HOME}"
@@ -53,12 +52,8 @@ fi
 find_msb() {
   if command -v msb >/dev/null 2>&1; then
     echo "msb"
-  elif [[ -x "$HOME/.local/share/mise/installs/microsandbox/0.7.7/msb" ]]; then
-    echo "$HOME/.local/share/mise/installs/microsandbox/0.7.7/msb"
-  elif [[ -x "/run/current-system/sw/bin/msb" ]]; then
-    echo "/run/current-system/sw/bin/msb"
   else
-    echo "[-] 错误: 未能在 PATH 或 mise 目录找到 msb 0.7.7" >&2
+    echo "[-] 错误: PATH 中没有 msb（用 mise 安装 microsandbox，并确认 mise 已激活）" >&2
     exit 1
   fi
 }
@@ -96,24 +91,22 @@ sb up                创建或启动主 VM (sb-main)，已运行且上限一致�
 sb down              停止主 VM
 sb rm [--force]       删除主 VM，保留数据卷；有运行中上下文时拒绝，--force 强制删除
 sb sync              补齐沙箱内的 mise 工具与 OMP 插件 (幂等，只装缺失项；宿主写锁串行化)
-sb status [--json]   查看主 VM 状态、规格、能力上限指纹一致性与缺失工具
+sb status            查看主 VM 状态、规格、能力上限指纹一致性与缺失工具
 sb plan [--json]     显示当前项目解析后的授权：挂载、导入、放行的私网目标与批准状态 (不创建 VM，被拒绝时先看它)
 sb trust             批准当前项目的 .sandbox.yaml (内容哈希变了要重新批准；未批准时 sb run 直接报错)
 sb run [-t] CMD…     在当前项目执行上下文内运行命令 (TTY 自适应)
 sb shell             进入当前项目执行上下文的交互式 Bash shell
-sb volume …          命名卷管理 (原生透传至 msb volume)
 EOF
   exit "${1:-0}"
 }
 
-# 展开路径里的 ~、$HOME、${HOME} 前缀/引用（不引入 eval；realpath 与相对根解析由调用点负责）
+# 展开路径里的 ~、${HOME} 前缀/引用（不引入 eval；realpath 与相对根解析由调用点负责）
 expand_path() {
   local p="$1" home="$HOME"
   # shellcheck disable=SC2016  # 刻意保持字面量，交给下面的参数展开匹配
-  local brace_home='${HOME}' plain_home='$HOME'
+  local brace_home='${HOME}'
   p="${p/#\~/$home}"
   p="${p//$brace_home/$home}"
-  p="${p//$plain_home/$home}"
   printf '%s\n' "$p"
 }
 
@@ -168,9 +161,9 @@ generate_msb_config() {
   raw_json="$(yq -o=json '.' "$src_yaml")"
 
   local image cpus memory vol_name
-  image="$(jq -r '.image // .vm.image // "ubuntu"' <<< "$raw_json")"
-  cpus="$(jq -r '.cpus // .vm.cpus // 4' <<< "$raw_json")"
-  memory="$(jq -r '.memory // .vm.memory // "8G"' <<< "$raw_json")"
+  image="$(jq -r '.image // "ubuntu"' <<< "$raw_json")"
+  cpus="$(jq -r '.cpus // 4' <<< "$raw_json")"
+  memory="$(jq -r '.memory // "8G"' <<< "$raw_json")"
   vol_name="$(jq -r '.volume.name // "sb-main-data"' <<< "$raw_json")"
   local -a roots=()
   while IFS= read -r root_path; do
@@ -192,27 +185,19 @@ generate_msb_config() {
     roots_json="[]"
   fi
 
-  # 配置发布源优先级：显式覆盖 > 宿主持久发布目录 > 内置 store 目录
+  # 配置发布源优先级：显式覆盖 > 宿主持久发布目录
   # 持久目录在更新 current 链接时保持路径不变，内容变化（模型、提示词、工具清单）
-  # 因此不会改变上限指纹；直接挂 store 路径会让每次配置发布都触发重建。
+  # 因此不会改变上限指纹。
   local real_sandbox_cfg=""
   if [[ -n "${SB_SANDBOX_CONFIG:-}" && -d "${SB_SANDBOX_CONFIG:-}" ]]; then
     real_sandbox_cfg="$(realpath "$SB_SANDBOX_CONFIG")"
   elif [[ -d "$HOME/.config/sandbox/current" ]]; then
     real_sandbox_cfg="$(realpath "$HOME/.config/sandbox")"
-  elif [[ -n "$DEFAULT_SANDBOX_CONFIG" && -d "$DEFAULT_SANDBOX_CONFIG" ]]; then
-    real_sandbox_cfg="$(realpath "$DEFAULT_SANDBOX_CONFIG")"
-  elif [[ -d "$HOME/.config/sandbox" ]]; then
-    real_sandbox_cfg="$(realpath "$HOME/.config/sandbox")"
   fi
 
   local -a sb_mount_entries=()
   if [[ -n "$real_sandbox_cfg" && -d "$real_sandbox_cfg" ]]; then
-    if [[ -d "$real_sandbox_cfg/current" ]]; then
-      sb_mount_entries+=("$real_sandbox_cfg:/run/sandbox-config:ro,stat-virt=relaxed")
-    else
-      sb_mount_entries+=("$real_sandbox_cfg:/run/sandbox-config/current:ro,stat-virt=relaxed")
-    fi
+    sb_mount_entries+=("$real_sandbox_cfg:/run/sandbox-config:ro,stat-virt=relaxed")
   fi
   local sb_mount_json
   if [[ ${#sb_mount_entries[@]} -gt 0 ]]; then
@@ -245,7 +230,6 @@ generate_msb_config() {
     --arg mem "$memory" \
     --arg vol "$vol_name" \
     --arg nix "/nix/store:/nix/store:ro,stat-virt=relaxed" \
-    --arg sb_cfg "$real_sandbox_cfg" \
     --argjson sb_mounts "$sb_mount_json" \
     --argjson sb_mise "$sb_mise_json" \
     --argjson roots "$roots_json" \
@@ -258,11 +242,6 @@ generate_msb_config() {
       + $sb_mise
       + ($roots | map("\(.):\(.)"))
     ) as $mounts |
-    (
-      if ($sb_cfg | length) > 0 then [
-        {"symlink": {"target": "/run/sandbox-config/current/.agents", "link": "/root/.agents"}}
-      ] else null end
-    ) as $patches |
     {
       image: $img,
       cpus: $cpus,
@@ -270,7 +249,6 @@ generate_msb_config() {
       mounts: $mounts,
       network: $net
     }
-    + (if $patches != null then {patches: $patches} else {} end)
     + (if ($sec | keys | length) > 0 then {secrets: $sec} else {} end)
     ' > "$dst_json"
 }
@@ -301,7 +279,8 @@ wait_for_vm_running() {
   return 1
 }
 
-# 判定主 VM 是否有运行中的执行上下文：以 guest 内 launcher 的登记表为准，launcher 不可达时退回进程探测
+# 判定主 VM 是否有运行中的执行上下文：唯一来源是 guest 内 launcher 的登记表；
+# 取不到计数时按忙处理，避免误删正在运行的上下文
 is_vm_busy() {
   local vm_name="$1"
   local st
@@ -317,15 +296,7 @@ is_vm_busy() {
     [[ "$active_count" -gt 0 ]] && return 0
     return 1
   fi
-
-  # 容错降级：若 launcher 尚未就绪，检查宿主连接与 guest 进程
-  if pgrep -fl "msb exec.*${vm_name}" >/dev/null 2>&1; then
-    return 0
-  fi
-  if "$MSB" exec "$vm_name" -- sh -c 'pgrep -x omp || pgrep -x bwrap' >/dev/null 2>&1; then
-    return 0
-  fi
-  return 1
+  return 0
 }
 
 # guest 侧脚本独立成 guest-status.sh（只输出 TSV），JSON 组装在这里做，避免多层引号嵌套。
@@ -354,8 +325,6 @@ exec_sync_guest() {
   run_msb exec "$vm_name" --stream --no-stdin -- bash -c '
     if [[ -f /run/sandbox-config/current/sync-guest.sh ]]; then
       exec bash /run/sandbox-config/current/sync-guest.sh "$@"
-    elif [[ -f /run/sandbox-config/sync-guest.sh ]]; then
-      exec bash /run/sandbox-config/sync-guest.sh "$@"
     else
       echo "[!] 警告: 未在沙箱内找到 sync-guest.sh，跳过自动补齐" >&2
       exit 1
@@ -436,22 +405,12 @@ ensure_vm_locked() {
     "$MSB" volume create "$vol_name" --kind disk --size "$vol_size" >&2
   fi
 
-  # VM 创建后要落的状态：指纹与上限 YAML，供指纹比对与诊断
-  record_vm_state() {
-    mkdir -p "$MSB_HOME/sandboxes/$vm_name"
-    echo "$current_fp" > "$MSB_HOME/sandboxes/$vm_name/ceiling.hash"
-    cp "$yaml_file" "$MSB_HOME/sandboxes/$vm_name/ceiling.yaml"
-  }
-
   local -a create_args=(--name "$vm_name" --conf "$tmp_cfg" --label "ceiling_fingerprint=$current_fp")
 
   if vm_state="$("$MSB" inspect "$vm_name" --format json 2>/dev/null)"; then
     local vm_status vm_fp
     vm_status="$(jq -r '.status // empty' <<< "$vm_state")"
     vm_fp="$(jq -r '.config.labels.ceiling_fingerprint // empty' <<< "$vm_state")"
-    if [[ -z "$vm_fp" && -f "$MSB_HOME/sandboxes/$vm_name/ceiling.hash" ]]; then
-      vm_fp="$(cat "$MSB_HOME/sandboxes/$vm_name/ceiling.hash")"
-    fi
 
     if [[ "$vm_fp" == "$current_fp" ]]; then
       if [[ "$vm_status" == "Running" ]]; then
@@ -475,14 +434,12 @@ ensure_vm_locked() {
       "$MSB" stop "$vm_name" >/dev/null 2>&1 || true
       "$MSB" rm --force "$vm_name" >/dev/null 2>&1 || true
       run_msb create "${create_args[@]}" >&2
-      record_vm_state
       wait_for_vm_running "$vm_name"
       echo "[sb] 主 VM $vm_name 重建完成并已启动" >&2
     fi
   else
     echo "[sb] 正在创建主 VM: $vm_name (上限指纹: ${current_fp:0:12})..." >&2
     run_msb create "${create_args[@]}" >&2
-    record_vm_state
     wait_for_vm_running "$vm_name"
     echo "[sb] 主 VM $vm_name 创建并启动成功" >&2
     # 首次创建自动补齐一次工具；已持有生命周期锁，只补共用 mise 写锁
@@ -766,19 +723,11 @@ case "$cmd" in
       exit 1
     fi
     echo "[sb] 正在删除主 VM sb-main (保留数据卷)..." >&2
-    rm -f "$MSB_HOME/sandboxes/sb-main/ceiling.hash" 2>/dev/null || true
     "$MSB" rm --force sb-main "${rm_args[@]}"
     release_sb_lock
     ;;
 
   status)
-    json_mode=0
-    for arg in "$@"; do
-      if [[ "$arg" == "--json" || "$arg" == "-j" ]]; then
-        json_mode=1
-      fi
-    done
-
     vm_name="sb-main"
     status="Not created"
     cpus="-"
@@ -803,9 +752,6 @@ case "$cmd" in
       fi
 
       vm_fp="$(jq -r '.config.labels.ceiling_fingerprint // empty' <<< "$vm_state")"
-      if [[ -z "$vm_fp" && -f "$MSB_HOME/sandboxes/$vm_name/ceiling.hash" ]]; then
-        vm_fp="$(cat "$MSB_HOME/sandboxes/$vm_name/ceiling.hash")"
-      fi
       if [[ -z "$vm_fp" ]]; then
         vm_fp="-"
       fi
@@ -846,31 +792,7 @@ case "$cmd" in
       missing_tools_str="未知 (VM 未运行)"
     fi
 
-    if [[ "$json_mode" -eq 1 ]]; then
-      jq -n \
-        --arg name "$vm_name" \
-        --arg status "$status" \
-        --arg cpus "$cpus" \
-        --arg memory "$memory" \
-        --arg vm_fingerprint "$vm_fp" \
-        --arg current_fingerprint "$current_fp" \
-        --arg ceiling_match "$ceiling_match" \
-        --arg busy "$busy" \
-        --argjson missing_tools "$missing_tools_json" \
-        '{
-          name: $name,
-          status: $status,
-          cpus: $cpus,
-          memory: $memory,
-          vm_fingerprint: $vm_fingerprint,
-          current_fingerprint: $current_fingerprint,
-          ceiling_match: ($ceiling_match == "consistent"),
-          ceiling_status: $ceiling_match,
-          busy: ($busy == "busy"),
-          missing_tools: $missing_tools
-        }'
-    else
-      cat <<EOF
+    cat <<EOF
 VM 名称: $vm_name
 VM 状态: $status
 VM 规格: cpus=$cpus, memory=$memory
@@ -880,7 +802,6 @@ VM 规格: cpus=$cpus, memory=$memory
 运行状态: $busy
 缺失工具: $missing_tools_str
 EOF
-    fi
     ;;
 
   plan)
@@ -902,17 +823,13 @@ EOF
     fi
     cfg_hash="$(sandbox_cfg_hash "$project_root/.sandbox.yaml")"
     mkdir -p "$SB_APPROVAL_DIR"
-    printf '%s\n%s\n' "$project_root" "$(date -Iseconds)" > "$SB_APPROVAL_DIR/$cfg_hash"
+    : > "$SB_APPROVAL_DIR/$cfg_hash"
     print_plan "$plan_json"
     echo "[+] 已批准 $project_root/.sandbox.yaml (${cfg_hash:0:12})"
     ;;
 
   sync)
     sb_sync "$@"
-    ;;
-
-  volume)
-    exec "$MSB" volume "$@"
     ;;
 
   run)

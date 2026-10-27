@@ -26,7 +26,7 @@
 
 Preconditions:
 
-- 主 VM Running；先 `eval "$($V paths)"` 与 `eval "$($V env)"`，再定义 `IP=${GATEWAY_ADDR%:*}` 与等待忙碌的函数：`wait_busy() { for _ in $(seq 30); do $V sb status 2>&1 | grep -q busy && return; sleep 1; done; return 1; }`
+- 主 VM Running；定义 `IP=${GATEWAY_ADDR%:*}` 与等待忙碌的函数：`wait_busy() { for _ in $(seq 30); do $V sb status 2>&1 | grep -q busy && return; sleep 1; done; return 1; }`
 - 宿主上 `curl -s -o /dev/null -m 5 -w '%{http_code}' http://$IP:80` 有 HTTP 响应（不是 `000`），否则「默认放行」「批准流程」两步看不出放行与拦截的差别
 
 - **忙时改上限。** 运行 `$V sb run bash -c 'sleep 25; echo LONG_DONE' > "$EVIDENCE/long.out" 2>&1 &`，`wait_busy` 返回后把 `$WORK/sb.yaml` 的 `cpus` 改为 `$((CPUS - 1))`，运行 `$V run ceil-busy -- $V sb run true`。`rc` 为 `1`，stderr 含「sb.yaml 已变，主 VM 有 1 个执行上下文在运行」；等待后 `long.out` 含 `LONG_DONE`

@@ -75,43 +75,6 @@ sweep_dead_contexts() {
       rm -rf "$ctx_dir"
     fi
   done
-
-  for ns in $(ip netns list 2>/dev/null | awk '{print $1}' | grep '^sb_ctx_' || true); do
-    local found=0
-    for ctx_dir in "$CONTEXTS_DIR"/*; do
-      [[ -d "$ctx_dir" ]] || continue
-      if [[ -f "$ctx_dir/meta.json" ]]; then
-        local reg_ns
-        reg_ns="$(jq -r '.netns // empty' "$ctx_dir/meta.json" 2>/dev/null || true)"
-        if [[ "$reg_ns" == "$ns" ]]; then
-          found=1
-          break
-        fi
-      fi
-    done
-    if [[ "$found" -eq 0 ]]; then
-      ip netns del "$ns" 2>/dev/null || true
-    fi
-  done
-
-  # 扫描并清理孤儿 veth 接口 (以 vth 开头但无对应登记)；veth 在 ip -o link 中带 @peer 后缀，先截断再匹配
-  for veth in $(ip -o link show 2>/dev/null | awk -F': ' '{sub(/@.*/, "", $2); print $2}' | grep -E '^vth[0-9]+$' || true); do
-    local found=0
-    for ctx_dir in "$CONTEXTS_DIR"/*; do
-      [[ -d "$ctx_dir" ]] || continue
-      if [[ -f "$ctx_dir/meta.json" ]]; then
-        local reg_veth
-        reg_veth="$(jq -r '.veth_host // empty' "$ctx_dir/meta.json" 2>/dev/null || true)"
-        if [[ "$reg_veth" == "$veth" ]]; then
-          found=1
-          break
-        fi
-      fi
-    done
-    if [[ "$found" -eq 0 ]]; then
-      ip link del "$veth" 2>/dev/null || true
-    fi
-  done
 }
 
 # 可写根：agent 配置目录整体落在数据盘、所有上下文共用；其中 Nix 声明的路径再逐项只读挂载。
@@ -289,28 +252,6 @@ if [[ "${1:-}" == "--check-busy" ]]; then
   exit 0
 fi
 
-if [[ "${1:-}" == "--list-contexts" ]]; then
-  acquire_slot_lock
-  sweep_dead_contexts
-  res="[]"
-  items=()
-  if [[ -d "$CONTEXTS_DIR" ]]; then
-    items=()
-    for ctx_dir in "$CONTEXTS_DIR"/*; do
-      [[ -d "$ctx_dir" ]] || continue
-      if [[ -f "$ctx_dir/meta.json" ]]; then
-        items+=("$(cat "$ctx_dir/meta.json")")
-      fi
-    done
-    if [[ ${#items[@]} -gt 0 ]]; then
-      res="$(printf '%s\n' "${items[@]}" | jq -s .)"
-    fi
-  fi
-  echo "$res"
-  release_slot_lock
-  exit 0
-fi
-
 if [[ $# -lt 3 ]]; then
   echo "[-] 错误: sb-launcher 参数不足。用法: sb-launcher <ctx_id> <plan_json> <cwd> [cmd...]" >&2
   exit 1
@@ -374,18 +315,13 @@ IMPORTS_DIR="$CURRENT_CTX_DIR/imports"
 # 并移除宿主侧「启动中」标记，此后目录所有权归属本 launcher
 META_TMP="$CURRENT_CTX_DIR/meta.json.tmp"
 jq -n \
-  --arg id "$CTX_ID" \
   --argjson slot "$SLOT" \
   --argjson pid "$$" \
-  --arg project_root "$PROJECT_ROOT" \
-  --arg created_at "$(date -Iseconds)" \
   --arg ip "$IP_GUEST" \
   --arg veth_host "$VETH_HOST" \
-  --arg veth_in "$VETH_IN" \
   --arg netns "$NETNS" \
   --arg chain "$CHAIN" \
-  '{id: $id, slot: $slot, pid: $pid, project_root: $project_root, created_at: $created_at,
-    ip: $ip, veth_host: $veth_host, veth_in: $veth_in, netns: $netns, chain: $chain}' > "$META_TMP"
+  '{slot: $slot, pid: $pid, ip: $ip, veth_host: $veth_host, netns: $netns, chain: $chain}' > "$META_TMP"
 mv "$META_TMP" "$CURRENT_CTX_DIR/meta.json"
 rm -f "$CURRENT_CTX_DIR/starting"
 
@@ -405,20 +341,12 @@ cleanup() {
   local exit_code=$?
   trap - EXIT INT TERM HUP
 
-  # 归属校验：只删除本次启动确实创建的资源。槽位冲突时 meta 归属另一
-  # launcher，删除同名 netns/veth/chain 会拆掉另一个运行中的上下文
-  local owned=0
-  if [[ -f "$CURRENT_CTX_DIR/meta.json" ]] && [[ "$(jq -r '.pid // 0' "$CURRENT_CTX_DIR/meta.json" 2>/dev/null || echo 0)" == "$$" ]]; then
-    owned=1
-  fi
-  if [[ "$owned" -eq 1 ]]; then
-    iptables -D FORWARD -s "$IP_GUEST" -j "$CHAIN" 2>/dev/null || true
-    iptables -F "$CHAIN" 2>/dev/null || true
-    iptables -X "$CHAIN" 2>/dev/null || true
+  iptables -D FORWARD -s "$IP_GUEST" -j "$CHAIN" 2>/dev/null || true
+  iptables -F "$CHAIN" 2>/dev/null || true
+  iptables -X "$CHAIN" 2>/dev/null || true
 
-    ip link del "$VETH_HOST" 2>/dev/null || true
-    ip netns del "$NETNS" 2>/dev/null || true
-  fi
+  ip link del "$VETH_HOST" 2>/dev/null || true
+  ip netns del "$NETNS" 2>/dev/null || true
 
   rm -rf "$CURRENT_CTX_DIR"
 
@@ -436,6 +364,14 @@ iptables -t nat -C POSTROUTING -s 10.200.0.0/16 -o "$DEFAULT_DEV" -j MASQUERADE 
 iptables -P FORWARD DROP
 iptables -C FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT 2>/dev/null || \
   iptables -I FORWARD 1 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# 本槽位在上面的锁内刚分配，且本目录已登记该槽，同名网络资源必然属于已被硬杀的旧进程：
+# 不清掉它们，下面的 ip netns add / iptables -N 会因重名直接失败
+iptables -D FORWARD -s "$IP_GUEST" -j "$CHAIN" 2>/dev/null || true
+iptables -F "$CHAIN" 2>/dev/null || true
+iptables -X "$CHAIN" 2>/dev/null || true
+ip link del "$VETH_HOST" 2>/dev/null || true
+ip netns del "$NETNS" 2>/dev/null || true
 
 ip netns add "$NETNS"
 ip link add "$VETH_HOST" type veth peer name "$VETH_IN"
@@ -586,12 +522,4 @@ fi
 # minio/mc 的版本列表约 14 MB，超过 mise 的超时，缓存写不进去，每次重试并刷警告。
 # 写在这里而不是 guest-env.sh：sb sync 也 source 它，但 sync 在上下文外，必须联网
 export MISE_OFFLINE=1
-if [[ $# -eq 0 ]]; then
-  set -- bash
-fi
-
-if [[ $# -eq 1 && ("$1" =~ [[:space:]\|\&\;\<\>] || ! -x "$(command -v "$1" 2>/dev/null || true)") ]]; then
-  ip netns exec "$NETNS" bwrap "${BWRAP_ARGS[@]}" -- bash -c "$1"
-else
-  ip netns exec "$NETNS" bwrap "${BWRAP_ARGS[@]}" -- "$@"
-fi
+ip netns exec "$NETNS" bwrap "${BWRAP_ARGS[@]}" -- "$@"
