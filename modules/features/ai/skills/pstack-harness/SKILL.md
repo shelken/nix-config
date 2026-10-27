@@ -23,4 +23,8 @@ disable-model-invocation: true
 
 ## 模型角色
 
-pstack 上游把每个角色映射到一个模型 slug，写在 `~/.cursor/rules/pstack-models.mdc`，该文件在这里不存在。角色改由 nix 生成：`modules/features/ai/agents/default.nix` 从 `modules/features/ai/omp/config.yml` 的 `modelRoles` 派生 omp agent 与 pi profile，两侧共用一份真相源。映射表里的角色→agent 表就是这份配置的视图。
+pstack 上游把每个角色映射到一个模型 slug，写在 `~/.cursor/rules/pstack-models.mdc`，该文件在这里不存在。角色改由 nix 生成：`modules/features/ai/agents/default.nix` 从 `modules/features/ai/omp/config.yml` 的 `modelRoles` 派生 omp agent 与 pi profile，两侧共用一份真相源。映射表只说明怎么按角色选 agent，不列举 agent 名。
+
+## 漂移检查
+
+`utils/script/adapt_pstack_skills.py` 在构建期扫描上游技能，被用到的每个 Cursor 专名都必须在两份映射表里出现，否则构建失败。上游新增专名时，先补表。

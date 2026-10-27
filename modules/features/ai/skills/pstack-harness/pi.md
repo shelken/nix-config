@@ -6,11 +6,11 @@ pstack skills use Cursor names. In pi, read this file once per session, then map
 
 | Cursor | pi |
 | --- | --- |
-| `Task` | `spawn-subagent` (host command in `~/.local/bin`), one call per spawn; several spawns go through one `batch` manifest, never a loop. |
+| `Task` | `spawn-subagent`, one call per spawn; several spawns go through one `batch` manifest, never a loop. |
 | `AskQuestion` | No ask tool. Write the question and the options in your reply. |
 | Open a todolist | `todo`. |
 | Run another pstack skill (`/name` or "the **name** skill") | `read ~/.agents/skills/<name>/SKILL.md`. When you tell the user to type it, write `/skill:<name>`. |
-| `Grep`, `Glob` | `grep`, `find`, `ffgrep`, `fffind`. |
+| `Grep`, `Glob` | `grep` and `find`; `ffgrep` and `fffind` when the session lists them. |
 
 ## Spawning
 
@@ -18,12 +18,12 @@ Run `spawn-subagent -h` once; its help owns the syntax, and this table only maps
 
 | Cursor | pi |
 | --- | --- |
-| `subagent_type: generalPurpose` | `spawn-subagent task <slug> -- <task>` |
-| `readonly: true` | `spawn-subagent scout <slug> -- <task>` (read-only tools), or `reviewer-<variant>` for a read-only review. |
-| `readonly: false` | `spawn-subagent task <slug> -- <task>` |
-| `poteto-agent` | `spawn-subagent poteto <slug> -- <task>` |
-| `comment-sicko` | `spawn-subagent comment-sicko <slug> -- <task>` |
-| `model: <slug>` | **Not accepted.** `spawn-subagent` takes a profile, and the profile's frontmatter pins `model`/`thinking`. Pick the profile from the role table; never pass a slug. |
+| `subagent_type: generalPurpose` | The general worker profile. |
+| `readonly: true` | A read-only profile: `scout` for exploration, a reviewer profile for review. |
+| `readonly: false` | The general worker profile. |
+| `poteto-agent` | The pstack delegate profile, when `spawn-subagent list` shows one built from pstack's `agents/poteto-agent.md`. Otherwise use the general worker and say so. |
+| `comment-sicko` | The pstack comment-review profile, when the list shows one built from pstack's `agents/comment-sicko.md`. Otherwise use the general worker and say so. |
+| `model: <slug>` | **Not accepted.** `spawn-subagent` takes a profile, and the profile's frontmatter pins `model` and `thinking`. See Models. |
 | `environment: "cloud"` | Drop it. The agent runs in this checkout. |
 | `environment: "local"` | Drop it; that is the only mode. |
 | `cloud_base_branch: <b>` | Drop it, and put the branch or commit to check out in the brief. |
@@ -34,36 +34,31 @@ Run `spawn-subagent -h` once; its help owns the syntax, and this table only maps
 
 After a successful dispatch, **end your turn immediately**: no further tool calls, no sleep, no polling. The conclusion arrives over intercom and wakes you. This is the only reliable completion signal; panes report `idle` for the whole run.
 
-Several spawns share one manifest file:
+Several spawns share one manifest file. A per-spawn model, `readonly`, or `cloud_base_branch` has no field; encode it in the task text instead.
 
 ```json
 {
   "task": "shared brief",
-  "agents": ["reviewer-ds", { "profile": "reviewer-gemini", "slug": "auth", "task": "extra angle" }]
+  "agents": ["<profile>", { "profile": "<profile>", "slug": "extra-angle", "task": "additional instructions" }]
 }
 ```
 
-A `cloud_base_branch`, a per-spawn model, or a `readonly` flag has no field; encode it in the task text instead.
-
 ## Models
 
-There is no `~/.cursor/rules/pstack-models.mdc` here. Role to profile:
+There is no `~/.cursor/rules/pstack-models.mdc` here. A pstack role maps to a profile, never to a model slug.
 
-| pstack role | profile |
-| --- | --- |
-| `swarm workers`, `feature`, `refactoring`, `bug-fix`, `perf-issue`, `hillclimb`, `how explorer`, `why investigators`, `reflect tooling` | `pstack-worker` |
-| `judgment and prose`, `hardest tasks`, `how explainer`, `why synthesizer`, `architect runners` | `pstack-judgment` |
-| `interrogate reviewers`, `arena runners`, `arena cross-judge pool` | one profile per entry: `reviewer-general` (judgment), `reviewer-gpt`, `reviewer-ds`, `reviewer-glm`, `reviewer-gemini`. A list value means one spawn per entry. |
-| `reflect judgment, divergent, synthesizer` | `pstack-judgment` |
-| `inherit-parent`, `auto` | Omit the model; the profile inherits the parent. |
+- `spawn-subagent list` prints every profile with its model, thinking level, tools, and description. That output is the only source of truth; run it before naming a profile.
+- Pick the profile whose description matches the role: review work to a reviewer profile, exploration to `scout`, implementation to the general worker.
+- A role naming a list of models (arena runners, interrogate reviewers, architect runners, cross-judge pool) means one spawn per entry, on distinct model families where the list allows.
+- `inherit-parent` or `auto` means the profile inherits the parent model.
+- Cursor slugs such as `claude-opus-5-5-xhigh`, `grok-4.7-xhigh-fast`, and `gpt-*` are not pi selectors. Translate the role to a profile first.
+- No profile matches the role: dispatch the general worker and state which role degraded. A refused profile is an error, not a hint to retry another name.
 
-Cursor slugs such as `claude-opus-5-5-xhigh`, `grok-4.7-xhigh-fast`, and `gpt-*` have no pi equivalent at the call site: `spawn-subagent` takes a profile, never a slug. Translate the slug to a role above first, then dispatch that profile. Never pass the slug, and never retry a rejected slug with another spelling.
-
-Run `spawn-subagent list` when you need the live profile list; it prints each profile's model, thinking level, and tools. A refused profile is an error, not a hint to retry another name: dispatch the default `task` profile and say which role degraded.
+Role values live in nix, not in a rule file: `modules/features/ai/agents/default.nix` reads `modelRoles` from `modules/features/ai/omp/config.yml` and generates the profile files.
 
 ## setup-pstack
 
-There is nothing to configure at runtime. Profiles are generated by nix (`modules/features/ai/agents/default.nix` reads `modelRoles`). Do not write a rule file; report that `spawn-subagent list` is authoritative and stop.
+Nothing to configure at runtime. Do not write a rule file; `spawn-subagent list` is authoritative. Report that and stop.
 
 ## Paths
 
@@ -71,7 +66,7 @@ There is nothing to configure at runtime. Profiles are generated by nix (`module
 | --- | --- |
 | `.cursor/skills/`, `~/.cursor/skills/` | `.pi/skills/` (project), `~/.pi/agent/skills/` (user), `~/.agents/skills/` (shared, where pstack is installed) |
 | `~/.cursor/plugins/`, `.cursor-plugin/plugin.json` | pstack is installed as plain skills under `~/.agents/skills/`; there is no plugin manifest to read |
-| `.cursor/rules/*.mdc`, always-applied rules | `~/.pi/agent/AGENTS.md` (user) or `.pi/AGENTS.md` (project). Do not write either for pstack; the role table above replaces the model rule. |
+| `.cursor/rules/*.mdc`, always-applied rules | pi loads standing instructions from `AGENTS.md` (`~/.pi/agent/AGENTS.md` user, `.pi/AGENTS.md` project), which nix manages. Do not write one for pstack. |
 | `https://github.com/cursor/plugins/blob/main/pstack/<path>` | `~/.agents/skills/<name>/<path>` when the file is inside that skill, otherwise say the URL is unavailable offline and continue without it. |
 | Transcripts in `~/.cursor/projects/<slug>/agent-transcripts/` | `~/.pi/agent/sessions/<slug>/*.jsonl`, newest directly inside that folder. A subagent's own transcript lives under `~/.pi/agent-subagent/sessions/`. |
 
@@ -81,7 +76,7 @@ pi has no Cursor Automations, Bugbot, or cloud agents. When a step needs one, pu
 
 | Cursor | pi |
 | --- | --- |
-| Cursor Automations: routines, `update_state` routine calls, `api2.cursor.sh/automations` webhooks, routine wakes, `SendToUser` secret requests | Skip with the line. The `automate-me` and `make-bot-ui` skills are excluded from this install for that reason. |
+| Cursor Automations: routines, `update_state` routine calls, `api2.cursor.sh/automations` webhooks, routine wakes, `SendToUser` secret requests | Skip with the line. |
 | Bugbot | Triage bugbot comments as ordinary review threads with `gh`. Skip a step that starts, waits for, or configures Bugbot when the PR has no Bugbot check or comment. |
 | Cursor cloud agents | Nothing to map. Run locally and skip any step that needs the cloud agent itself, such as its dashboard status or its own machine. |
 | A built-in PR tool | Use the forge command the step already gives, such as `gh pr create`. That is not a skip, so write no line. |
