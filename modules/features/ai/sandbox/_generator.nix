@@ -78,22 +78,9 @@ let
 
   guestBinPath = "${guestEnv}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
 
-  # guest 只读层 mise 配置 (由 shelken.dev.tools 中的 mise 条目生成)
-  miseTools = lib.listToAttrs (
-    lib.concatMap (
-      name:
-      let
-        tool = toolsCfg.${name};
-      in
-      lib.optional (tool.mise != null) {
-        name = if builtins.isAttrs tool.mise && tool.mise ? name then tool.mise.name else name;
-        value = if builtins.isAttrs tool.mise then builtins.removeAttrs tool.mise [ "name" ] else tool.mise;
-      }
-    ) (builtins.attrNames toolsCfg)
-  );
-
+  # guest 只读层 mise 配置：规格与宿主 programs.mise 共用同一张表
   readOnlyMiseToml = (pkgs.formats.toml { }).generate "sandbox-mise.toml" {
-    tools = miseTools;
+    tools = config.shelken.dev.miseTools;
   };
 
   # 模型地址改写：loopback 在 guest 内指向 VM 自身，统一改为宿主网关 host.microsandbox.internal
@@ -114,14 +101,7 @@ let
     tool: lib.mapAttrsToList (target: file: { inherit target file; }) tool.files
   ) (builtins.attrValues toolsCfg);
 
-  # 发布给 guest 的插件清单（single source：generator 决定，sync 重放时使用）
-  postInstallTools = builtins.filter (name: toolsCfg.${name}.postInstall != null) (
-    builtins.attrNames toolsCfg
-  );
-
-  postInstallList = pkgs.writeText "postinstall-tools" (
-    lib.concatStringsSep "\n" postInstallTools + "\n"
-  );
+  template = import ./_template.nix { inherit lib; };
 
   # 生成沙箱内执行的 sync 步骤（由 sb sync 调用，只补缺，不删除现有依赖）
   postInstallSteps = lib.concatStringsSep "\n" (
@@ -185,10 +165,10 @@ let
         mise
       ];
       text = lib.removePrefix "#!/usr/bin/env bash\n" (
-        lib.replaceStrings
-          [ "@guest_bin_path@" "@git_config@" "@cacert@" "@postinstall_steps@" ]
-          [ guestBinPath "${gitConfig}" "${linuxPkgs.cacert}" postInstallSteps ]
-          (builtins.readFile ./sync-guest.sh)
+        template ./sync-guest.sh {
+          git_config = gitConfig;
+          postinstall_steps = postInstallSteps;
+        }
       );
     }
   }/bin/sync-guest";
@@ -242,10 +222,6 @@ let
         path = syncGuestScript;
       }
       {
-        name = "postinstall-tools";
-        path = postInstallList;
-      }
-      {
         name = "declared-paths";
         path = declaredPaths;
       }
@@ -297,7 +273,6 @@ let
     ln -sfn ${readOnlyMiseToml} "$tmp/mise.toml"
     ln -sfn ${guestEnvSh} "$tmp/guest-env.sh"
     ln -sfn ${syncGuestScript} "$tmp/sync-guest.sh"
-    ln -sfn ${postInstallList} "$tmp/postinstall-tools"
     ln -sfn ${declaredPaths} "$tmp/declared-paths"
     ln -sfn ${writableRoots} "$tmp/writable-roots"
     mv "$tmp" "$dst"

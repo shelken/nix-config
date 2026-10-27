@@ -37,16 +37,9 @@
       };
       sandboxConfig = generator.sandboxConfig;
 
-      linuxSystem = "${pkgs.stdenv.hostPlatform.parsed.cpu.name}-linux";
-      linuxPkgs = nixpkgs.legacyPackages.${linuxSystem};
-
       launcher = import ./_launcher.nix {
-        inherit
-          pkgs
-          linuxPkgs
-          gitConfig
-          ;
-        inherit (generator) guestBinPath;
+        inherit pkgs gitConfig;
+        inherit (generator) guestBinPath linuxPkgs;
       };
 
       sb = import ./_sb.nix {

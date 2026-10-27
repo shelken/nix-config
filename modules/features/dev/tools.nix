@@ -74,6 +74,12 @@
         '';
       };
 
+      options.shelken.dev.miseTools = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        readOnly = true;
+        description = "由登记表 mise 条目生成的 mise 工具规格（工具名 -> 规格）；宿主 programs.mise 与沙箱只读 mise.toml 都读它，保证两端同版本";
+      };
+
       config = lib.mkMerge [
         {
           # 校验：缺失字段与互斥字段断言
@@ -95,33 +101,22 @@
             builtins.attrValues cfg
           );
 
-          # 宿主生成器：mise 条目进 programs.mise.globalConfig.tools
-          programs.mise.globalConfig.tools = lib.listToAttrs (
+          # mise 条目 -> 规格表：宿主与沙箱共用
+          shelken.dev.miseTools = lib.listToAttrs (
             lib.concatMap (
               name:
               let
                 tool = cfg.${name};
               in
-              lib.optional (tool.mise != null) (
-                if builtins.isAttrs tool.mise then
-                  if tool.mise ? name then
-                    {
-                      name = tool.mise.name;
-                      value = builtins.removeAttrs tool.mise [ "name" ];
-                    }
-                  else
-                    {
-                      inherit name;
-                      value = tool.mise;
-                    }
-                else
-                  {
-                    inherit name;
-                    value = tool.mise;
-                  }
-              )
+              lib.optional (tool.mise != null) {
+                name = if builtins.isAttrs tool.mise && tool.mise ? name then tool.mise.name else name;
+                value = if builtins.isAttrs tool.mise then builtins.removeAttrs tool.mise [ "name" ] else tool.mise;
+              }
             ) (builtins.attrNames cfg)
           );
+
+          # 宿主生成器：mise 条目进 programs.mise.globalConfig.tools
+          programs.mise.globalConfig.tools = config.shelken.dev.miseTools;
 
           # 宿主生成器：postInstall 进 home.activation
           home.activation = lib.listToAttrs (
