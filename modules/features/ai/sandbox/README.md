@@ -355,15 +355,15 @@ PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 - `sb sync` 在宿主侧经 flock（共用目录下的 `.sync.lock`）串行化，多 VM 并发 sync 不交叉写安装层
 - sync 不清理下载缓存，共用的下载缓存是资产
 - 主 VM 首次创建后自动 sync 一次；`sb run`、`sb shell`、`omp-sb` 复用已有 VM 时不自动 sync
-- OMP 插件在 guest 内按仓库清单完整重放。带 GitHub 有效凭据时，`git+ssh://git@github.com/...` 源改写为 `https://github.com/...`，凭据经 `GIT_CONFIG_GLOBAL` 的 `insteadOf` 指向占位符 URL `$MSB_GITHUB_TOKEN`（由 `sb.yaml` 的 `secrets` 声明，msb 在网络边界替换），token 不落盘、不进日志、不进进程参数
-- 私有插件能装就装：VM 本地 `.git-vendor` 已有同一依赖且 ref 一致时直接复用；否则对该 git 源做一次禁交互的浅 clone（`GIT_TERMINAL_PROMPT=0`、`--depth 1`，带 ref 时 `--branch`），以 `file:` 依赖安装。clone 失败只在 `sb sync` 输出中警告，不区分原因，退出码不受影响
-- 不执行依赖安装脚本（`bun install --ignore-scripts`）：`node-pty`（`@plannotator/webtui` 的依赖）在 Linux 无预编译产物，安装脚本回落 `node-gyp rebuild`，需要 C 工具链。实测补齐 gcc-wrapper 的闭包增量 1.3 GiB（gcc-wrapper 370 MiB、binutils 121 MiB、isl/mpfr/mpc/gcc 等），远超 200 MiB 预算，所以不引入编译器。`node-pty` 只供 plannotator 的终端桥接，不参与插件加载。将来确需本地终端桥接，再单独评估工具链预算
+- OMP 插件在 guest 内按仓库清单完整重放，清单原样落盘。私有依赖在清单里写成 `git+ssh://git@github.com/…`：`install.sh` 在这一次安装里用环境变量给 git 加三条 `insteadOf`，把 GitHub 的 ssh 写法改走 https，认证交给 guest git 配置里的 `gh` credential helper。`gh` 读 `GITHUB_TOKEN`，它在 guest 里的值是占位符 `$MSB_GITHUB_TOKEN`（由 `sb.yaml` 的 `secrets` 声明，msb 在网络边界替换），token 不落盘、不进日志、不进进程参数。宿主激活走同一个脚本，同样不用 ssh
+- 安装失败（私有依赖拿不到、没有有效 GitHub 凭据等）时 `sb sync` 以非零退出，不静默跳过；宿主激活只打警告
+- 不执行依赖安装脚本（`bun install --ignore-scripts`）：`node-pty`（`@plannotator/webtui` 的依赖）没有 linux 预编译产物，安装脚本回落 `node-gyp` 编译，而 guest 没有 C 工具链。`node-pty` 只供 plannotator 的终端桥接，不参与插件加载。是否在 guest 里补构建环境尚未决定
 
 代价：
 
 - 共用安装层损坏影响所有 VM，用 `sb sync` 重装自愈
 - 宿主目录体积随工具增长（约 1 至 2 GB 量级）
-- 无凭据环境下私有插件不可用，只在 `sb sync` 输出中提示
+- 没有有效 GitHub 凭据时私有插件装不上，`sb sync` 失败
 - `node-pty` 的原生桥接在沙箱内不可用
 
 ## 测试

@@ -7,7 +7,7 @@
 - `sync-noop` 工具已齐时不下载，共用层大小不变
 - `sync-serial` 两个 sync 同时启动时串行完成，都成功
 - `sync-tty` 在真实终端里 `sb sync` 能执行（msb 的 `--stream` 在 stdin 是终端时报错）；stdin 是终端、stdout 被管道时 `sb run` 也能执行
-- `sync-private` 私有插件经 `GITHUB_TOKEN` clone 安装
+- `sync-private` 私有插件经 bun 安装，GitHub 凭据来自 `GITHUB_TOKEN` 占位符
 - `sync-tools` 登记的 Nix 与 mise 工具在上下文内可用
 - `ctx-no-install` 上下文内 `mise use -g` 失败且不写配置
 - `ctx-offline` 上下文内 mise 不联网：项目 `mise.toml` 写 `latest` 的大版本列表工具不再超时拖慢启动，OMP 仍能正常调用模型
@@ -33,6 +33,5 @@ Preconditions:
 ## Gotchas
 
 - `sb sync` 写真实共用层；不要为了测试引入新工具
-- 私有插件 clone 失败只打警告且 `rc` 仍为 `0`，必须看插件目录内容
-- guest 里的插件 `package.json` 把私有依赖改写为 `file:/data/xdg/data/omp/plugins/.git-vendor/…`，这是设计
+- 私有插件装不上时 `sb sync` 的 `rc` 非零。bun 会先打几行 git 的 `Authentication failed` 再改走别的方式，最终 `rc` 为 `0` 且插件目录有内容时可忽略这些行
 - 验证终端行为时必须用 `script -q /dev/null <命令>` 分配 pty；直接 `$V run` 或管道调用的 stdin 不是终端，这类 bug 测不出来

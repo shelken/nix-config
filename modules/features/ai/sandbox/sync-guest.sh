@@ -19,23 +19,6 @@ if [[ -d /opt/sandbox-mise/data ]]; then
 fi
 export GIT_CONFIG_GLOBAL="@git_config@"
 
-# 插件含私有 GitHub 仓库（git+ssh），guest 无 SSH key。
-# msb secrets 只在网络边界替换占位符，因此这里用占位符拼出 https 凭据 URL；
-# 占位符仅在发往 allow 名单内主机的请求中被替换成真实 token（宿主 sb.yaml 已声明）。
-# 用独立配置文件并 include 宿主配置，避免覆盖原有 credential/insteadOf 规则。
-if [[ -n "${GITHUB_TOKEN:-}" ]]; then
-  mkdir -p /data/sandbox-sync
-  cat > /data/sandbox-sync/gitconfig <<'GITCFG'
-[url "https://x-access-token:$MSB_GITHUB_TOKEN@github.com/"]
-insteadOf = https://github.com/
-insteadOf = git@github.com:
-insteadOf = git+ssh://git@github.com/
-insteadOf = ssh://git@github.com/
-GITCFG
-  export GIT_CONFIG_GLOBAL=/data/sandbox-sync/gitconfig
-fi
-export GIT_TERMINAL_PROMPT=0
-
 # guest 的 HTTPS 出口由 msb 重签证书，只信任镜像里的 /etc/ssl/certs/ca-certificates.crt（内容就是 msb 的 CA）。
 # Nix 的公共 CA bundle 会报「self-signed certificate in certificate chain」，所以没有回落
 ca_bundle=/etc/ssl/certs/ca-certificates.crt
