@@ -5,7 +5,7 @@ disabledProviders:
   - opencode
   - gemini
 memory:
-  backend: off
+  backend: "off"
 mnemopi:
   scoping: per-project-tagged
   embeddingModel: gemini-embedding-2
@@ -13,7 +13,7 @@ mnemopi:
 modelRoles:
   glm-flash: mp/qoder-cn/gfmodel:max
   glm-max: cpa/workbuddy/glm-5.3:high
-  dsf: cpa/workbuddy/deepseek-v4.1-flash:max
+  dsf: mp/loomy/DeepSeek-V4.1-Flash:high
   gpt: mp/codex/gpt-6.1-sol:high
   gpt-lite: mp/codex/gpt-5.6-luna:max
   claude-lite: anthropic/claude-haiku-5-5:max
@@ -21,12 +21,11 @@ modelRoles:
   claude-max: anthropic/claude-opus-5-5:medium
   reviewer-general: "@gpt:xhigh"
   reviewer-gemini: google-antigravity/gemini-3.8-flash:high
-  reviewer-ds: "@dsf:max"
+  reviewer-ds: "@dsf"
   reviewer-glm: "@glm-max"
   reviewer-gpt: "@gpt:xhigh"
-  reviewer-cc: "@claude-max:high"
-  # 专职裁决：arena/方案对比打分。指向 claude-max（强推理，非审查模板）。
-  judge: "@claude-max:high"
+  reviewer-cc: "@claude"
+  judge: "@claude"
   vision: cpa/gpt-5.6-luna:high
   commit: cpa/workbuddy/hy3:high
   tiny: cpa/workbuddy/hy3:high
@@ -36,7 +35,7 @@ modelRoles:
   plan: "@reviewer-gpt"
   smol: "@dsf"
   scout: "@smol"
-  default: "@claude"
+  default: "@dsf"
   task: "@dsf"
   slow: "@gpt:high"
 cycleOrder:
@@ -111,11 +110,10 @@ retry:
     scout:
       - google-antigravity/gemini-3.8-flash:high
       - cpa/workbuddy/glm-5.3:max
-    # context-prune
-    "cpa/workbuddy/hy3":
+    cpa/workbuddy/hy3:
       - mp/codex/gpt-5.6-luna:high
       - google-antigravity/gemini-3.8-flash:medium
-    "cpa/gpt-5.6-luna":
+    cpa/gpt-5.6-luna:
       - google-antigravity/gemini-3.8-flash:medium
       - cpa/workbuddy/hy3:high
     commit:
@@ -129,7 +127,8 @@ retry:
       - cpa/workbuddy/glm-5.3:high
       - mp/qoder-cn/gmodel:high
     dsf:
-      - cpa/workbuddy/deepseek-v4.1-flash:high
+      - cpa/workbuddy/deepseek-v4-flash:xhigh
+      - cpa/workbuddy/deepseek-v4.1-flash:max
     web:
       - web/exa
       - web/brave
@@ -158,5 +157,3 @@ grep:
   enabled: false
 glob:
   enabled: false
-# tools:
-#   xdevDocs: builtins
