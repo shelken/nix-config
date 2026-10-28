@@ -30,6 +30,8 @@
 
 第一次启动会自动完成三件事，耗时几分钟：创建数据卷、创建主 VM、执行一次 `sb sync` 安装 omp、pi、codex 等工具。之后再启动只需几秒
 
+更新插件清单后运行 `sb sync`。每次同步都会恢复缺失的 OMP 插件，删除清单外插件和旧登记表。清单未变时也会重建插件。Bun 的锁文件和下载缓存保留，已有缓存可以复用；缓存缺少所需内容时会下载。安装先在临时目录完成，替换失败时恢复旧插件。
+
 `omp-sb` 的参数原样转给 OMP：
 
 ```bash
@@ -40,7 +42,7 @@ omp-sb --model=cpa/gpt-5.6-luna -p '只回复 OK'
 
 家里的模型服务（`192.168.69.46:443`）由 `sb.yaml` 的 `network.default_grant` 对所有项目默认放行，不需要在项目里声明
 
-沙箱里也能用 pi：`sb run pi …`。新数据卷上第一次启动会自己装 packages（含现场编译 `node-pty`），约 1 分钟，之后不再装；首次并发启动的注意事项见 [沙箱 README](../../modules/features/ai/sandbox/README.md) 的「pi 在上下文里自己装 packages」
+沙箱里也能用 pi：`sb run pi …`。新数据卷上第一次启动会安装沙箱清单中的 packages，之后复用已安装的包。沙箱排除 `simple-plannotator`，无需编译 `node-pty`。首次并发启动的注意事项见 [沙箱 README](../../modules/features/ai/sandbox/README.md) 的「pi 在上下文里自己装 packages」
 
 项目必须位于挂载根内（默认 `~/Code`、`~/nix-config`、`~/.herdr/worktrees`），否则启动时报错
 
