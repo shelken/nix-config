@@ -88,6 +88,7 @@ activate_home() {
   # 不继承宿主变量，清单与所有写入都限定在隔离 HOME。
   env -i HOME="$home" ${layout:+XDG_DATA_HOME="$home/xdg/data"} \
     ${2:+SB_POSTINSTALL_STRICT=1} SB_OMP_MANIFEST="$home/manifest.json" \
+    GITHUB_TOKEN=MSB_VERIFY_GITHUB_TOKEN \
     STUB_BUN_RC="$1" STUB_JQ="$jq_bin" STUB_REAL_MV="$mv_bin" STUB_MODE="${3:-}" \
     PATH=/nix/var/nix/profiles/default/bin:/usr/bin:/bin \
     "$hm_bash" "$home/activation.sh" > "$home/out" 2>&1
