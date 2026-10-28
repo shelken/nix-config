@@ -16,14 +16,14 @@ description: pstack 技能在 omp 与 pi 上的宿主映射表。上游 pstack �
 
 映射表各自的权威范围：
 
-- 工具名、子代理字段、模型角色、路径、仅 Cursor 有的功能，各有一张表。
-- 某字段在表里没有对应行时，丢弃它并在回复里说明，不要猜一个等价物。
-- 工具 schema 拒绝某个字段或值时，按表里的说明处理，不要换着拼写重试。
+- 工具名、子代理字段、模型角色、路径、仅 Cursor 有的功能，各有一张表
+- 某字段在表里没有对应行时，丢弃它并在回复里说明，不要猜一个等价物
+- 工具 schema 拒绝某个字段或值时，按表里的说明处理，不要换着拼写重试
 
 ## 模型角色
 
-pstack 上游把每个角色映射到一个模型 slug，写在 `~/.cursor/rules/pstack-models.mdc`，该文件在这里不存在。角色改由 nix 生成：`modules/features/ai/agents/default.nix` 从 `modules/features/ai/omp/config.yml` 的 `modelRoles` 派生 omp agent 与 pi profile，两侧共用一份真相源。pi 侧 `spawn-subagent` 每次派发还会实时重读该 `config.yml`，所以改角色不必重新 build。映射表只说明怎么按角色选 agent，不列举 agent 名。
+pstack 上游把每个角色映射到一个模型 slug，写在 `~/.cursor/rules/pstack-models.mdc`，该文件在这里不存在。角色改由 nix 统一生成：`modules/features/ai/agents/default.nix` 从 `modules/features/ai/omp/config.yml` 的 `modelRoles` 派生 omp agent 与 pi profile，两侧共用一份真相源。pi 侧 `spawn-subagent` 每次派发还会实时重读该 `config.yml`，改角色不必重新 build。映射表只说明怎么按角色选 agent，不列举 agent 名
 
 ## 漂移检查
 
-`utils/script/adapt_pstack_skills.py` 在构建期扫描上游技能，被用到的每个 Cursor 专名都必须在两份映射表里出现，否则构建失败。上游新增专名时，先补表。
+`utils/script/adapt_pstack_skills.py` 在构建期扫描上游技能，被用到的每个 Cursor 专名都必须在两份映射表里出现，否则构建失败。上游新增专名时，先补表
