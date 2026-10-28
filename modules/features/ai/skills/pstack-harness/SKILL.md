@@ -16,14 +16,7 @@ description: pstack 技能在 omp 与 pi 上的宿主映射表。上游 pstack �
 
 映射表各自的权威范围：
 
-- 工具名、子代理字段、模型角色、路径、仅 Cursor 有的功能，各有一张表
-- 某字段在表里没有对应行时，丢弃它并在回复里说明，不要猜一个等价物
-- 工具 schema 拒绝某个字段或值时，按表里的说明处理，不要换着拼写重试
+- 工具名、子代理字段、模型角色、路径、仅 Cursor 有的功能，各有一张表。
+- 某字段在表里没有对应行时，丢弃它并在回复里说明，不要猜一个等价物。
+- 工具 schema 拒绝某个字段或值时，按表里的说明处理，不要换着拼写重试。
 
-## 模型角色
-
-上游 `~/.cursor/rules/pstack-models.mdc` 在此不存在。角色由 `modules/features/ai/omp/config.yml` 的 `modelRoles` 统一定义，由 nix 分别派生为 omp agent 与 pi profile。pi 侧派发时实时读取该配置，修改角色无需重新 build。按映射表对应的角色选取 agent 或 profile
-
-## 漂移检查
-
-`utils/script/adapt_pstack_skills.py` 在构建期扫描上游技能，被用到的每个 Cursor 专名都必须在两份映射表里出现，否则构建失败。上游新增专名时，先补表
