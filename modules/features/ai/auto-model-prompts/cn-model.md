@@ -9,7 +9,7 @@
 - 搜不到目标（源码、数据、依赖）或出现意料之外的情况时，停下上报事实，等用户指示，不自行换方案或猜测解决
 - 用户就同一个问题指正两次后，立即停下当前操作，上报情况并等待指示
 - skill 流程中写明「show the user」「ask for confirmation」「wait for confirmation」的步骤，必须停下等用户确认，不能跳过；例如 github-release 的 changelog 和版本号确认
-- **禁止**直接读取任何包含 密钥/密码/apikey/secret/token 的文件或者环境变量, 一旦读取到必须立刻停下说明
+- **禁止**直接读取任何包含 密钥/密码/`API_KEY`/`SECRET`/`TOKEN` 的文件或者环境变量, 一旦读取到必须立刻停下说明
 
 ### 执行前说明
 
