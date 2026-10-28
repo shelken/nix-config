@@ -19,6 +19,9 @@
     }:
     let
       cfg = config.shelken.dev.tools;
+      nixPackages = lib.concatMap (tool: lib.optional (tool.package != null) pkgs.${tool.package}) (
+        builtins.attrValues cfg
+      );
     in
     {
       options.shelken.dev.tools = lib.mkOption {
@@ -109,9 +112,7 @@
           );
 
           # 宿主生成器：Nix 条目进 home.packages
-          home.packages = lib.concatMap (tool: lib.optional (tool.package != null) pkgs.${tool.package}) (
-            builtins.attrValues cfg
-          );
+          home.packages = nixPackages;
 
           # mise 条目 -> 规格表：宿主与沙箱共用
           shelken.dev.miseTools = lib.listToAttrs (
@@ -140,17 +141,8 @@
               lib.optional (tool.postInstall != null && tool.postInstall != "") {
                 name = "tool-postInstall-${name}";
                 value = lib.hm.dag.entryAfter [ "writeBoundary" "sops-nix" ] ''
-                  # HM 的 activate 把 PATH 重置成自己的工具链，不继承用户 shell；mise 的 PATH hook 随之丢失。
-                  # gh/git 由 Nix 注入；bun 等 mise 工具（ADR 0003 单一来源，不把 Nix Bun 带进闭包）经 shims 目录解析
-                  export PATH="${
-                    lib.makeBinPath (
-                      with pkgs;
-                      [
-                        gh
-                        git
-                      ]
-                    )
-                  }:$HOME/.local/share/mise/shims:$PATH"
+                  # HM 重置 PATH；登记的 Nix 运行时须先于 mise shims，避免命中未配置版本的旧 shim。
+                  export PATH="${lib.makeBinPath ([ pkgs.git ] ++ nixPackages)}:$HOME/.local/share/mise/shims:$PATH"
                   ${tool.postInstall}
                 '';
               }

@@ -379,9 +379,10 @@ pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就
 - `sb sync` 在宿主侧经 flock（共用目录下的 `.sync.lock`）串行化，多 VM 并发 sync 不交叉写安装层
 - sync 不清理下载缓存，共用的下载缓存是资产
 - 主 VM 首次创建后自动 sync 一次；`sb run`、`sb shell`、`omp-sb` 复用已有 VM 时不自动 sync
-- OMP 插件在 guest 内每次按沙箱清单重建。先把可写清单副本和旧 `bun.lock` 放入同级暂存目录，再使用保留的 Bun 缓存安装。安装成功后备份整个旧插件目录，再替换为新目录；清单外插件和旧登记表随旧目录删除。替换失败时恢复旧目录。私有依赖的 `git+ssh://git@github.com/…` 与 `ssh://git@github.com/…` 在本次安装中都改走 https（两条 `insteadOf`），认证交给环境中的 `gh` credential helper。guest 的 `GITHUB_TOKEN` 是占位符，msb 在网络边界替换；宿主激活共用脚本，同样不用 ssh
+- OMP 插件在 guest 内每次按沙箱清单重建。先把可写清单副本和旧 `bun.lock` 放入同级暂存目录，再使用保留的 Bun 缓存安装。安装成功后备份整个旧插件目录，再替换为新目录；清单外插件和旧登记表随旧目录删除。替换失败时恢复旧目录。私有依赖的 `git+ssh://git@github.com/…` 与 `ssh://git@github.com/…` 在本次安装中都改走 https（两条 `insteadOf`）。安装脚本通过 `gh auth token` 读取当前登录态，只向本次 Bun 安装传入 `GITHUB_TOKEN`；避免 Bun 把 SSH 用户名 `git` 带入 HTTPS 认证后被 credential helper 拒绝。guest 读到的是占位符，msb 在网络边界替换；宿主从现有 gh 登录态读取，同样不用 ssh
 - 宿主与沙箱要装不同的插件时，在清单顶层写 `sandboxExclude`：列出的依赖只从沙箱清单里去掉，宿主清单不变。沙箱清单由 Nix 在构建期生成（`sandboxFiles`）。`guest-env.sh` 导出 `SB_OMP_MANIFEST`，共享工具的安装命令把该路径传给 `install.sh`；宿主未设置时使用仓库原件。排除项不在 `dependencies` 里时构建失败
 - 安装或替换失败时 `sb sync` 以非零退出，宿主激活只打警告。替换前的备份包含插件、清单、锁文件和登记表；自动恢复也失败时输出备份路径并保留备份。缓存缺少所需内容时 Bun 可以联网下载
+- 宿主 Home Manager 激活会重置 PATH。`postInstall` 先加入登记表中的 Nix 工具，再加入 mise shims；Node 等 Nix 运行时不会被未配置版本的旧 mise shim 遮蔽。Bun 继续由 mise 提供
 - 依赖的安装脚本照常执行。沙箱基础环境不带 C 工具链，没有 linux 预编译产物的原生依赖装不上，这是刻意的取舍：唯一需要它的 `simple-plannotator`（依赖 `node-pty`）已从沙箱插件清单排除，宿主仍保留。实测省下约 331 MiB 闭包
 
 代价：
