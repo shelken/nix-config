@@ -62,7 +62,7 @@
           let
             roots = config.shelken.dev.sandbox.writableRoots;
             under = root: p: p == root || lib.hasPrefix "${root}/" p;
-            targets = lib.concatMap (tool: builtins.attrNames tool.files) (
+            targets = lib.concatMap (tool: builtins.attrNames tool.files ++ builtins.attrNames tool.sandboxFiles) (
               builtins.attrValues config.shelken.dev.tools
             );
           in

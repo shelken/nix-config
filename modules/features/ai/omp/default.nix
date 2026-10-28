@@ -16,6 +16,21 @@
         (pkgs.formats.yaml { }).generate "omp-sandbox-models.yml"
           (mylib.rewriteLoopbackBaseUrls "host.microsandbox.internal" (mylib.readYaml pkgs ./models.yml));
 
+      # 沙箱专用插件清单：顶层 sandboxExclude 列出沙箱里不装的依赖。
+      # 排除即不装，装什么完全由清单决定；宿主读原清单，不受影响。
+      ompManifest = builtins.fromJSON (builtins.readFile ./plugins/package.json);
+      sandboxExclude = ompManifest.sandboxExclude or [ ];
+      unknownExcludes = builtins.filter (n: !(ompManifest.dependencies ? ${n})) sandboxExclude;
+      sandboxManifest =
+        assert lib.assertMsg (unknownExcludes == [ ])
+          "omp plugins/package.json 的 sandboxExclude 有 dependencies 里不存在的条目: ${toString unknownExcludes}";
+        (pkgs.formats.json { }).generate "omp-sandbox-plugin-manifest.json" (
+          builtins.removeAttrs ompManifest [ "sandboxExclude" ]
+          // {
+            dependencies = builtins.removeAttrs ompManifest.dependencies sandboxExclude;
+          }
+        );
+
       # 扩展目录内除 *.test.ts 外的 .ts 逐个软链；目录内还含测试与 AGENTS.md，不能整目录软链
       extensionFiles = builtins.attrNames (
         lib.filterAttrs (
@@ -45,6 +60,8 @@
         # omp 安装与插件补齐已迁入共享工具登记表（modules/features/ai/tools.nix 的 omp 条目）
         shelken.dev.tools.omp.sandboxFiles = {
           ".omp/agent/models.yml" = sandboxModels;
+          # 沙箱版插件清单随发布目录进 guest，sb sync 的 postInstall 读它
+          ".omp/agent/plugins-package.json" = sandboxManifest;
         };
 
         shelken.dev.tools.omp.files = {

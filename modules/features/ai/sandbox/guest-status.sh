@@ -7,6 +7,8 @@
 # mise.toml 在而 guest-env.sh 缺失则报错退出 3。
 set -euo pipefail
 
+# source 之前必须先定位发布目录，这是 guest-env.sh 里 SB_CONFIG_DIR 的引导值；
+# source 之后的脚本一律用 $SB_CONFIG_DIR。
 CONFIG_DIR=/run/sandbox-config/current
 
 if [[ ! -f "$CONFIG_DIR/mise.toml" ]]; then

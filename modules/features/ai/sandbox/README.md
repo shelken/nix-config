@@ -44,7 +44,7 @@ flowchart LR
 - **能力授权 (Capability Grant)**: 某个执行上下文实际获得的额外路径、导入文件和私网目标。额外路径是挂载根的子集；导入文件和私网目标没有上限，由批准决定
 - **批准 (Approval)**: 用户用 `sb trust` 对项目 `.sandbox.yaml` 的规范化内容哈希做的记录。未批准或内容变了，启动直接报错
 - **项目配置 (Project Config)**: 项目仓库根 `.sandbox.yaml`，请求导入文件、私网目标和额外目录；批准后才生效
-- **沙箱基础环境 (Sandbox Base)**: 沙箱启动、隔离和编译原生依赖所需的 Linux 工具（含 gcc、gnumake、node-gyp），由 sandbox 模块管理，不属于共享工具
+- **沙箱基础环境 (Sandbox Base)**: 沙箱启动与隔离所需的 Linux 工具，由 sandbox 模块管理，不属于共享工具。不含 C 工具链，见「设计决策」
 - **补齐 (Sync)**: 显式安装已登记但缺失的 mise 工具和插件。_避免_: 升级、更新
 - **共用安装层 (Shared Install Layer)**: 宿主上由所有沙箱 VM 共用的一份 mise 安装产物与下载缓存。_避免_: 共享缓存、镜像卷
 - **声明配置 (Declared Config)**: Nix 定义、发布进沙箱的配置文件或目录，即共享工具登记表 `files` 里的条目。上下文内只读，不管插件想不想改它。_避免_: 配置（太泛）
@@ -183,7 +183,7 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 
 - 跨 VM 的写锁：共用目录下的 `.sync.lock`
 - `mise install` 只补缺，不升级、不删除；不区分 VM 忙闲
-- 运行各工具的 `postInstall`，其中 OMP 插件按 [package.json](../omp/plugins/package.json) 执行 `bun install`，只补缺。私有依赖用 `GITHUB_TOKEN` 占位符认证，安装失败时 `sb sync` 以非零退出，原因见「设计决策」
+- 运行各工具的 `postInstall`，其中 OMP 插件按 [package.json](../omp/plugins/package.json) 执行：先装到暂存目录，装成功才把整个 `node_modules` 换成暂存结果（清单之外的条目因此消失），装失败时旧目录原样保留。私有依赖用 `GITHUB_TOKEN` 占位符认证，安装失败时 `sb sync` 以非零退出，原因见「设计决策」
 
 ## 配置与数据位置
 
@@ -247,14 +247,14 @@ PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 - 不提供单项目专用 VM。所有执行上下文都在主 VM，隔离由执行上下文提供
 - 能力上限变化时，主 VM 空闲则下一次启动自动重建；仍有执行上下文则报错并给出上下文数，不登记待升级
 - 只用一把宿主生命周期锁，只包住「检查上限指纹、必要时重建、启动 VM」。不做宿主侧预约，忙闲只看 guest 内 launcher 的上下文登记
-- `sb sync` 不区分忙闲，不删除、不重建插件依赖，因此不需要判断忙闲，也不需要生命周期锁
+- `sb sync` 不区分忙闲，不重建插件依赖的下载缓存，因此不需要判断忙闲，也不需要生命周期锁
 - `sb status` 只报告缺失的 mise 工具，不报告插件安装状态
 
 代价：
 
 - 主 VM 忙时，某项目需要超出当前上限的能力，只能等主 VM 空闲后重建
 - `sb status` 不显示待升级，也不显示插件是否装全；插件结果只看 `sb sync` 输出
-- 沙箱里手装的插件、或已从清单删除的插件不会被自动清掉，需要时进 VM 手动清理数据卷
+- 插件目录每次 `sb sync` 都与清单严格对齐，手装的插件会被删除；需要临时插件时改清单
 - 改了 `sb.yaml` 且两个 Agent 在同一两秒内启动时，后启动的上下文可能在启动阶段被重建打断，重新启动即可
 - 忙时 `sb sync` 可能在运行中的 OMP 底下更新插件文件；插件已加载进内存，风险低
 
@@ -343,11 +343,11 @@ PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 
 ### pi 在上下文里自己装 packages
 
-pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就当场装：npm 源装到 `~/.pi/agent/npm`，git 源 clone 到 `~/.pi/agent/git/<host>/<path>`，再装依赖；已装好的第二次启动不再安装。`shelken/pi-extensions` 里 `@plannotator/pi-extension` 经 `@plannotator/webtui` 依赖 `node-pty`，它没有 linux-arm64 预编译产物，装包时由沙箱基础环境的 gcc、gnumake、node-gyp 现场编译（实测约 5 秒），所以 pi 不需要任何沙箱专用的装包配置
+pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就当场装：npm 源装到 `~/.pi/agent/npm`，git 源 clone 到 `~/.pi/agent/git/<host>/<path>`，再装依赖；已装好的第二次启动不再安装。沙箱清单排除依赖 `node-pty` 的 `@shelken/simple-plannotator`，其余扩展按清单安装。
 
 所以：
 
-- 沙箱里的 `settings.json` 就是宿主那份，不改写
+- 沙箱里的 `settings.json` 由 Nix 生成，去掉 `sandboxExclude` 列出的 packages 和该字段本身；宿主继续使用仓库配置
 - 包落在可写根里，属于运行状态，所有上下文共用。不变量 6 管的是共用 mise 安装层，不涉及这里
 - `pi-dynamic-models` 的开关（`~/.pi/agent/extensions/pi-dynamic-models/config.json`）由 Nix 声明。cpa、mp 等 provider 在 `models.json` 里没有模型，只靠它向网关发现
 
@@ -355,11 +355,11 @@ pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就
 
 - **在 `sb sync` 里装**：sync 在上下文外，看到的 `~/.pi/agent` 是只读发布目录，要么复刻 launcher 的挂载视图，要么照抄 pi 的安装布局；而且 pi 启动时缺包仍会自己装
 - **`PI_OFFLINE=1` 跳过装包**：同时关掉模型发现，cpa 等 provider 的模型全部找不到
-- **只对 pi 的 bun 忽略安装脚本**：只覆盖 pi 这一处，要给 `settings.json` 在生成器里加沙箱专用分支；项目在上下文里自己 `bun install` 遇到同类原生依赖仍会失败。提供构建环境一次解决所有这类依赖
+- **只对 pi 的 bun 忽略安装脚本**：需要原生模块的包可能装好却无法加载。沙箱直接排除需要现场编译的插件，其余包照常执行安装脚本
 
 代价：
 
-- 新数据卷上 pi 首启要装全部 packages，实测 43 到 86 秒（两次冷启动，含启动上下文和 `node-pty` 编译）；之后不再安装
+- 新数据卷上 pi 首启要安装清单中的 packages，耗时取决于网络和缓存；之后复用已安装的包
 - cpa、mp 在 `models.json` 里只有 `modelOverrides`，没有 `models`，所以只能靠发现；不把 `modelOverrides` 静态化成 `models`（会让约 50 个模型退化成 128k/16k/仅文本，宿主也受影响）。`pi-dynamic-models` 对没有缓存的 provider 在会话开始前发现一次，所以新数据卷上 `pi -p --model cpa/…` 第一次就能解析模型；实测清空 `~/.pi/agent/cache` 后一次成功
 
 已知限制，根因未查，也没有加 timeout、重试等绕过：
@@ -379,15 +379,16 @@ pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就
 - `sb sync` 在宿主侧经 flock（共用目录下的 `.sync.lock`）串行化，多 VM 并发 sync 不交叉写安装层
 - sync 不清理下载缓存，共用的下载缓存是资产
 - 主 VM 首次创建后自动 sync 一次；`sb run`、`sb shell`、`omp-sb` 复用已有 VM 时不自动 sync
-- OMP 插件在 guest 内按仓库清单完整重放，清单原样落盘。私有依赖在清单里写成 `git+ssh://git@github.com/…`，bun 取包时会把它解析成 `ssh://git@github.com/…`：`install.sh` 在这一次安装里用环境变量让 git 把这两种写法都改走 https（两条 `insteadOf`），认证交给 guest git 配置里的 `gh` credential helper。`gh` 读 `GITHUB_TOKEN`，它在 guest 里的值是占位符 `$MSB_GITHUB_TOKEN`（由 `sb.yaml` 的 `secrets` 声明，msb 在网络边界替换），token 不落盘、不进日志、不进进程参数。宿主激活走同一个脚本，同样不用 ssh
-- 安装失败（私有依赖拿不到、没有有效 GitHub 凭据等）时 `sb sync` 以非零退出，不静默跳过；宿主激活只打警告
-- 依赖的安装脚本照常执行。没有 linux 预编译产物的原生依赖（如 `node-pty`，`@plannotator/webtui` 的依赖）在 guest 里用沙箱基础环境的 gcc、gnumake、node-gyp 现场编译，`python3` 与 `nodejs` 本来就在 guest 里。这三项的闭包增量实测 333 MiB（gcc 267 MiB、binutils 37 MiB、node-gyp 7 MiB，其余 22 MiB）。闭包只在宿主 `/nix/store` 里存一份，由所有 VM 只读挂载，不随 VM 个数增加
+- OMP 插件在 guest 内每次按沙箱清单重建。先把可写清单副本和旧 `bun.lock` 放入同级暂存目录，再使用保留的 Bun 缓存安装。安装成功后备份整个旧插件目录，再替换为新目录；清单外插件和旧登记表随旧目录删除。替换失败时恢复旧目录。私有依赖的 `git+ssh://git@github.com/…` 与 `ssh://git@github.com/…` 在本次安装中都改走 https（两条 `insteadOf`），认证交给环境中的 `gh` credential helper。guest 的 `GITHUB_TOKEN` 是占位符，msb 在网络边界替换；宿主激活共用脚本，同样不用 ssh
+- 宿主与沙箱要装不同的插件时，在清单顶层写 `sandboxExclude`：列出的依赖只从沙箱清单里去掉，宿主清单不变。沙箱清单由 Nix 在构建期生成（`sandboxFiles`）。`guest-env.sh` 导出 `SB_OMP_MANIFEST`，共享工具的安装命令把该路径传给 `install.sh`；宿主未设置时使用仓库原件。排除项不在 `dependencies` 里时构建失败
+- 安装或替换失败时 `sb sync` 以非零退出，宿主激活只打警告。替换前的备份包含插件、清单、锁文件和登记表；自动恢复也失败时输出备份路径并保留备份。缓存缺少所需内容时 Bun 可以联网下载
+- 依赖的安装脚本照常执行。沙箱基础环境不带 C 工具链，没有 linux 预编译产物的原生依赖装不上，这是刻意的取舍：唯一需要它的 `simple-plannotator`（依赖 `node-pty`）已从沙箱插件清单排除，宿主仍保留。实测省下约 331 MiB 闭包
 
 代价：
 
 - 共用安装层损坏影响所有 VM，用 `sb sync` 重装自愈
 - 宿主目录体积随工具增长（约 1 至 2 GB 量级）
-- 宿主 `/nix/store` 多约 333 MiB 的构建环境；nixpkgs 升级后 gcc 版本变动时要重新下载这部分
+- 沙箱里装不了需要现场编译的原生依赖（如 `node-pty`），负对照见 `ae7b2b5d` 的验证记录
 - 没有有效 GitHub 凭据时私有插件装不上，`sb sync` 失败
 
 ## 测试

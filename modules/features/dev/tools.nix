@@ -103,10 +103,8 @@
                 assertion = (tool.package != null || tool.mise != null) || (tool.files != { });
                 message = "shelken.dev.tools.${name}: 必须指定 package 或 mise 之一，或声明 files（纯配置条目）";
               }
-              {
-                assertion = builtins.all (t: tool.files ? ${t}) (builtins.attrNames tool.sandboxFiles);
-                message = "shelken.dev.tools.${name}: sandboxFiles 的目标必须在 files 里存在，否则覆盖不会生效";
-              }
+              # sandboxFiles 的目标由 sandbox/default.nix 统一校验是否落在可写根下；
+              # 同名条目是覆盖，新条目是沙箱专属文件，两者都合法，这里不重复判断。
             ]) cfg
           );
 

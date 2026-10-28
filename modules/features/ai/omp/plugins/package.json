@@ -1,17 +1,18 @@
 {
   "name": "omp-plugins",
   "private": true,
+  "sandboxExclude": ["@shelken/simple-plannotator"],
   "dependencies": {
     "@ff-labs/pi-fff": "npm:@ff-labs/pi-fff@0.11.0",
-    "@dietrichgebert/ponytail": "npm:@dietrichgebert/ponytail@4.10.0",
-    "@shelken/pi-co-authored-by": "npm:@shelken/pi-co-authored-by@0.2.15",
+    "@dietrichgebert/ponytail": "npm:@dietrichgebert/ponytail@5.3.2",
+    "@shelken/pi-co-authored-by": "npm:@shelken/pi-co-authored-by@0.2.16",
     "@shelken/pi-context-prune": "git+ssh://git@github.com/shelken/pi-context-prune.git#main",
-    "@shelken/simple-plannotator": "npm:@shelken/simple-plannotator@0.1.6",
+    "@shelken/simple-plannotator": "npm:@shelken/simple-plannotator@0.1.7",
     "@shelken/pi-auto-model-prompts": "npm:@shelken/pi-auto-model-prompts@0.3.1",
     "pi-trae-provider": "git+ssh://git@github.com/shelken/pi-trae-provider.git#main",
     "pi-zed-provider": "git+ssh://git@github.com/shelken/pi-zed-provider.git#main",
-    "pi-commandcode-provider": "npm:pi-commandcode-provider",
-    "pi-intercom": "npm:pi-intercom@0.17.1",
+    "pi-commandcode-provider": "npm:pi-commandcode-provider@0.7.10",
+    "pi-intercom": "npm:pi-intercom@0.18.1",
     "@shelken/pi-sounds": "npm:@shelken/pi-sounds@0.1.0"
   }
 }

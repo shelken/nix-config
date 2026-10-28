@@ -12,7 +12,8 @@ let
   hostCommandsCfg = config.shelken.dev.sandbox.hostCommands;
 
   # 沙箱基础环境（不登记为共享工具，理由见 ADR 0003）: bash, coreutils, curl, git, mise, bubblewrap, iproute2, iptables; plus jq, gnused, findutils, gawk
-  # 构建环境 gcc、gnumake、node-gyp 也在这里：没有 linux 预编译产物的原生依赖（如 node-pty）装包时要现场编译
+  # 不带 C 工具链：沙箱里排除了依赖 node-pty 的 simple-plannotator，没有需要现场编译的原生依赖。
+  # 没有预编译产物的原生依赖在沙箱里装不上，这是刻意的取舍（引入 gcc 会让闭包多约 333 MiB）。
   baseTools = with linuxPkgs; [
     bashInteractive
     coreutils
@@ -27,9 +28,6 @@ let
     findutils
     gawk
     openssh
-    gcc
-    gnumake
-    node-gyp
   ];
 
   # 共享工具 Nix 条目取仓库 nixpkgs 的 Linux 包
@@ -68,13 +66,19 @@ let
     tools = config.shelken.dev.miseTools;
   };
 
-  allToolFiles = lib.concatMap (
-    tool: lib.mapAttrsToList (target: file: { inherit target file; }) tool.files
-  ) (builtins.attrValues toolsCfg);
+  # 发布给 guest 的配置条目来源：files 的全部条目，加上 sandboxFiles 里那些不在 files 中的
+  # 沙箱专属文件（例如沙箱专用插件清单）。sandboxFiles 与 files 同名的条目是覆盖，不重复发布。
+  toolTargets =
+    tool:
+    lib.mapAttrsToList (target: file: { inherit target file; }) tool.files
+    ++ lib.mapAttrsToList (target: file: { inherit target file; }) (
+      builtins.removeAttrs tool.sandboxFiles (builtins.attrNames tool.files)
+    );
+  allToolFiles = lib.concatMap toolTargets (builtins.attrValues toolsCfg);
 
   template = import ./_template.nix { inherit lib; };
 
-  # 生成沙箱内执行的 sync 步骤（由 sb sync 调用，只补缺，不删除现有依赖）
+  # 生成沙箱内执行的 sync 步骤（由 sb sync 调用）
   postInstallSteps = lib.concatStringsSep "\n" (
     lib.concatMap (
       name:
@@ -98,24 +102,27 @@ let
     export XDG_STATE_HOME=/data/xdg/state
     export XDG_CACHE_HOME=/data/xdg/cache
     export XDG_CONFIG_HOME=/data/xdg/config
-    if [[ -d /opt/sandbox-mise/data ]]; then
-      # 宿主共用 mise 安装目录：所有 VM 共享同一份 installs/downloads
-      export MISE_DATA_DIR=/opt/sandbox-mise/data
-      export MISE_CACHE_DIR=/data/xdg/cache/mise
+    # guest 侧固定路径：三个 guest 脚本都 source 本文件，不再各自写一份字面量
+    export SB_CONFIG_DIR=/run/sandbox-config/current
+    export SB_MISE_LAYER=/opt/sandbox-mise
+    # 沙箱版 OMP 插件清单（已按 sandboxExclude 过滤）；宿主没有这个变量，postInstall 回落到仓库原件
+    export SB_OMP_MANIFEST="$SB_CONFIG_DIR/.omp/agent/plugins-package.json"
+    # 共用层是否可用只判断一次，MISE_DATA_DIR 与 SB_BUN_CACHE_DIR 必须同源，
+    # 否则会出现安装目录在数据盘、下载缓存在共用层的错配
+    if [[ -d "$SB_MISE_LAYER/data" ]]; then
+      export MISE_DATA_DIR="$SB_MISE_LAYER/data"
+      export SB_BUN_CACHE_DIR="$SB_MISE_LAYER/cache/bun-cache"
+      mkdir -p "$SB_BUN_CACHE_DIR" 2>/dev/null || true
     else
       # 未挂载共用目录时回落到本 VM 数据盘（一次性 VM / 旧数据盘）
       export MISE_DATA_DIR=/data/xdg/data/mise
-      export MISE_CACHE_DIR=/data/xdg/cache/mise
+      unset SB_BUN_CACHE_DIR
     fi
+    export MISE_CACHE_DIR=/data/xdg/cache/mise
     export MISE_STATE_DIR=/data/xdg/state/mise
     export MISE_SHIMS_DIR=/data/xdg/data/mise/shims
-    export MISE_SYSTEM_CONFIG_FILE=/run/sandbox-config/current/mise.toml
+    export MISE_SYSTEM_CONFIG_FILE="$SB_CONFIG_DIR/mise.toml"
     export MISE_GLOBAL_CONFIG_FILE=/data/mise/config.toml
-    # Bun 下载缓存共用：落到共用 mise 层 cache 下的 bun-cache
-    if [[ -d /opt/sandbox-mise ]]; then
-      export SB_BUN_CACHE_DIR=/opt/sandbox-mise/cache/bun-cache
-      mkdir -p "$SB_BUN_CACHE_DIR" 2>/dev/null || true
-    fi
     # 运行上下文禁止 mise 隐式安装；安装只允许经 sb sync 显式进行
     export MISE_AUTO_INSTALL=0
     export PATH="$MISE_SHIMS_DIR:${guestBinPath}"

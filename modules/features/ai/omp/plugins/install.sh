@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# 把仓库里的 OMP 插件清单补装到 OMP 读取的插件目录，只补缺，不删除目录里已有的依赖。
-# 宿主激活（home.activation）与沙箱的 sb sync 共用本脚本。
+# 每次按清单重建 OMP 插件。宿主激活与沙箱 sb sync 共用本脚本。
+# 安装先使用同级暂存目录；替换前备份整个插件目录，替换失败时恢复旧状态。
 #
 # 用法: install.sh <清单 package.json>
 #
@@ -19,10 +19,9 @@ else
   plugins="$HOME/.omp/plugins"
 fi
 bun_cache="${SB_BUN_CACHE_DIR:-$HOME/.omp/.bun-cache}"
-mkdir -p "$plugins/node_modules" "$bun_cache"
 
-# 落盘的是可写副本：源文件在 /nix/store，只读
-install -m 0644 "$manifest" "$plugins/package.json"
+# 不清 bun 缓存里的 git 条目：每次清都会让私有依赖重新 clone，网络一抖就整次失败。
+# 需要重新解析 #main 时删 $plugins/bun.lock。
 
 # 清单里的私有依赖写成 git+ssh://git@github.com/…，bun 取包时把它解析成 ssh://git@github.com/…，
 # 两种前缀都要改写，只改前一种会在 guest 里以 Permission denied (publickey) 失败。
@@ -34,11 +33,40 @@ export GIT_CONFIG_COUNT=2
 export GIT_CONFIG_KEY_0=url.https://github.com/.insteadOf GIT_CONFIG_VALUE_0=git+ssh://git@github.com/
 export GIT_CONFIG_KEY_1=url.https://github.com/.insteadOf GIT_CONFIG_VALUE_1=ssh://git@github.com/
 
-if BUN_INSTALL_CACHE_DIR="$bun_cache" bun install --cwd "$plugins" --silent; then
+staging=""
+backup=""
+install_plugins() {
+  mkdir -p "$plugins" "$bun_cache" || return 1
+  staging="$(mktemp -d "$(dirname "$plugins")/.plugins-staging.XXXXXX")" || return 1
+  install -m 0644 "$manifest" "$staging/package.json" || return 1
+  # 保留锁文件和下载缓存，避免每次同步重新解析版本或 clone 私有依赖。
+  if [[ -f "$plugins/bun.lock" ]]; then
+    cp "$plugins/bun.lock" "$staging/bun.lock" || return 1
+  fi
+  BUN_INSTALL_CACHE_DIR="$bun_cache" bun install --cwd "$staging" --silent || return 1
+  if [[ ! -d "$staging/node_modules" ]]; then
+    echo "[-] bun install 未生成 node_modules: $staging" >&2
+    return 1
+  fi
+
+  backup="$(mktemp -d "$(dirname "$plugins")/.plugins-backup.XXXXXX")" || return 1
+  mv "$plugins" "$backup/plugins" || return 1
+  if ! mv "$staging" "$plugins"; then
+    if ! mv "$backup/plugins" "$plugins"; then
+      echo "[-] 原插件恢复失败，备份保留在: $backup/plugins" >&2
+    fi
+    return 1
+  fi
+}
+
+if install_plugins; then
+  rm -rf "$backup" || true
   exit 0
 fi
 
-msg="omp 插件安装失败，插件目录可能与清单不一致: $plugins"
+if [[ -n "$staging" ]]; then rm -rf "$staging" || true; fi
+if [[ -n "$backup" && ! -e "$backup/plugins" ]]; then rm -rf "$backup" || true; fi
+msg="omp 插件安装或替换失败: $plugins"
 if [[ -n "${SB_POSTINSTALL_STRICT:-}" ]]; then
   echo "[-] 错误: $msg" >&2
   exit 1

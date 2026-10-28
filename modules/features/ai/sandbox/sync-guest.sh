@@ -3,17 +3,19 @@ set -euo pipefail
 
 # 环境唯一来源：generator 生成的 guest-env.sh。
 # 该文件缺失说明 VM 未挂载生成配置，也就没有工具清单可补 —— 直接报错，不再维护第二份回退。
-if [[ ! -f /run/sandbox-config/current/guest-env.sh ]]; then
-  echo "[-] 错误: 沙箱内缺少 /run/sandbox-config/current/guest-env.sh，无法确定工具环境" >&2
+# 发布目录路径在 source 之前只能写字面量（引导值），source 之后一律用 $SB_CONFIG_DIR。
+CONFIG_DIR=/run/sandbox-config/current
+if [[ ! -f "$CONFIG_DIR/guest-env.sh" ]]; then
+  echo "[-] 错误: 沙箱内缺少 $CONFIG_DIR/guest-env.sh，无法确定工具环境" >&2
   exit 1
 fi
 # shellcheck source=/dev/null
-source /run/sandbox-config/current/guest-env.sh
+source "$CONFIG_DIR/guest-env.sh"
 
 # sync 是唯一安装路径：写入共用安装层与共用下载/缓存目录（MISE_DATA_DIR 由 guest-env.sh 按同一目录判断导出）
-if [[ -d /opt/sandbox-mise/data ]]; then
-  export MISE_CACHE_DIR=/opt/sandbox-mise/cache
-  export MISE_DOWNLOADS_DIR=/opt/sandbox-mise/data/downloads
+if [[ -d "$SB_MISE_LAYER/data" ]]; then
+  export MISE_CACHE_DIR="$SB_MISE_LAYER/cache"
+  export MISE_DOWNLOADS_DIR="$SB_MISE_LAYER/data/downloads"
   mkdir -p "$MISE_DATA_DIR" "$MISE_CACHE_DIR" "$MISE_DOWNLOADS_DIR"
 fi
 export GIT_CONFIG_GLOBAL="@git_config@"
@@ -48,7 +50,7 @@ mise install --yes
 # 普通 reshim：只补新增 shim，不先清空目录，避免运行中上下文短暂找不到命令
 mise reshim
 
-# 2. 运行共享工具 postInstall 步骤（按清单 bun install 只补缺，不删除现有依赖）
+# 2. 运行共享工具 postInstall 步骤（插件装到暂存目录，成功后整体替换）
 echo "[sb sync] 2. 执行工具 postInstall (重放插件清单)..."
 @postinstall_steps@
 
