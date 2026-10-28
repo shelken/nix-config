@@ -89,15 +89,15 @@
   };
   mattpocock-skills = {
     pname = "mattpocock-skills";
-    version = "b0618bc436ad893b3c5e84e55fba86586d34a404";
+    version = "59db609eb1e18aaf59b63284d0e52255aff0c63c";
     src = fetchFromGitHub {
       owner = "mattpocock";
       repo = "skills";
-      rev = "b0618bc436ad893b3c5e84e55fba86586d34a404";
+      rev = "59db609eb1e18aaf59b63284d0e52255aff0c63c";
       fetchSubmodules = false;
-      sha256 = "sha256-1QwFBwG+gORvDvW4HM0LrZlHZKmKtWr7pUHU0MAXF2Y=";
+      sha256 = "sha256-CkNJKbSlW8bUSfvHqfl7JTPnq8o1iYdzI24LGDMojE4=";
     };
-    date = "2026-10-08";
+    date = "2026-10-27";
   };
   projects-yazi = {
     pname = "projects-yazi";
