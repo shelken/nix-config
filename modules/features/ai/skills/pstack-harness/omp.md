@@ -42,7 +42,7 @@ No pstack skill selects a model here. Every slug, alias, and model rule file in 
 - The `task` tool description lists the spawnable agents.
 - When no agent matches a requested role, spawn the default worker and state which role degraded.
 
-The reviewer panel is one seat per distinct model among the `reviewer-<variant>` agents in the `task` tool description. When two variants resolve to the same model, spawn one and state which variant you dropped.
+The reviewer panel is one seat per distinct model among the `reviewer-<variant>` agents in the `task` tool description. Resolve each variant's model via `omp config get modelRoles --json`. When two variants resolve to the same model, spawn one and state which variant you dropped.
 
 `judge` is an independent agent bound to the `@judge` role in `config.yml`. It scores options and does not review code.
 
