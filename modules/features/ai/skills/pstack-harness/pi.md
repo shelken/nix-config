@@ -48,14 +48,14 @@ Several spawns share one manifest file. A per-spawn model, `readonly`, or `cloud
 
 No pstack skill selects a model here. Every slug, alias, and model rule file in the skill text is dead weight.
 
-- Model choice lives in the profile, not in the call. Pick the profile whose description matches the role: review to a reviewer profile, exploration to `scout`, implementation to the general worker.
-- Every pstack model list, whether named in the skill or in a missing rule file, is not a model selector. Ignore the whole list, including any table of default slugs.
-- `spawn-subagent list` prints every profile with its model, thinking level, tools, and description. That output is the only source of truth.
-- No profile matches the role: dispatch the general worker and say which role degraded. Do not retry another name.
+- Pick the profile whose description matches the role: review to a reviewer profile, exploration to `scout`, implementation to the general worker.
+- Ignore model lists in pstack skills and upstream rule files.
+- `spawn-subagent list` prints the available profiles.
+- When no profile matches a requested role, dispatch the general worker and state which role degraded.
 
-Nix generates one reviewer profile per entry in `reviewerVariants` (`modules/features/ai/agents/default.nix`), each bound to the `@reviewer-<variant>` role in `config.yml`. Never restate that set here: `spawn-subagent list` prints the profiles this machine has. A variant's model family is the provider its role resolves to in `config.yml`, so distinct names do not prove distinct families; check the resolved provider before counting a finding as cross-family agreement.
+The reviewer panel consists of the `reviewer-<variant>` profiles in `spawn-subagent list`. A variant's model family is the provider of its `@reviewer-<variant>` role in `config.yml`. Verify that roles resolve to distinct providers before treating independent review findings as cross-family agreement.
 
-`judge` is a separate profile, not a reviewer variant: it is bound to the `@judge` role in `config.yml` and exists for scoring options, not for finding bugs. Role resolution happens at dispatch; the order and its fallbacks live in `modules/features/ai/skills/subagent-policy/spawn-subagent`.
+`judge` is an independent profile bound to the `@judge` role in `config.yml`. It scores options and does not review code.
 
 ## Adversarial review panels
 

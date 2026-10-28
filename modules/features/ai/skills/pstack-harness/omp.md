@@ -37,14 +37,14 @@ Every item also requires `solutionSpace`: how open-ended the child's problem is,
 
 No pstack skill selects a model here. Every slug, alias, and model rule file in the skill text is dead weight.
 
-- Model choice lives in the agent definition, not in the call. Pick the agent whose description matches the role: review to a reviewer agent, exploration to `scout`, implementation to the default worker.
-- Every pstack model list, whether named in the skill or in a missing rule file, is not a model selector. Ignore the whole list, including any table of default slugs.
-- The `task` tool description lists the agents this session can spawn. That list is the only source of truth.
-- No agent matches the role: spawn the default and say which role degraded. Do not retry another name.
+- Pick the agent whose description matches the role: review to a reviewer agent, exploration to `scout`, implementation to the default worker.
+- Ignore model lists in pstack skills and upstream rule files.
+- The `task` tool description lists the spawnable agents.
+- When no agent matches a requested role, spawn the default worker and state which role degraded.
 
-Nix generates one reviewer per entry in `reviewerVariants` (`modules/features/ai/agents/default.nix`), each bound to the `@reviewer-<variant>` role in `config.yml`. Never restate that set here: the `task` tool description lists the reviewers this session can spawn. A variant's model family is the provider its role resolves to in `config.yml`, so distinct names do not prove distinct families; check the resolved provider before counting a finding as cross-family agreement.
+The reviewer panel consists of the `reviewer-<variant>` agents in the `task` tool description. A variant's model family is the provider of its `@reviewer-<variant>` role in `config.yml`. Verify that roles resolve to distinct providers before treating independent review findings as cross-family agreement.
 
-`judge` is a separate agent, not a reviewer variant: it is bound to the `@judge` role in `config.yml` and exists for scoring options, not for finding bugs. omp resolves the roles from `config.yml` when it spawns, so a role change needs no rebuild.
+`judge` is an independent agent bound to the `@judge` role in `config.yml`. It scores options and does not review code.
 
 ## Adversarial review panels
 
