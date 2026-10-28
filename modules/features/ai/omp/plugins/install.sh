@@ -24,13 +24,8 @@ fi
 bun_cache="${SB_BUN_CACHE_DIR:-$HOME/.omp/.bun-cache}"
 mkdir -p "$plugins" "$bun_cache"
 
-# Bun 对缓存里已有的 git 裸仓库只 fetch 到 FETCH_HEAD，不更新 refs/heads/main，#main 永远解析成
-# 首次克隆的提交（上游缺陷 #11548）。只删 git 条目（*.git 裸仓库、@G@<sha> 提取目录）强制重新克隆，
-# npm 包条目跨激活保留（a8f79454 实测 35s → 5s）。
-# a8f79454 原本清理 $plugins/.bun-cache；#129 把缓存目录换成 SB_BUN_CACHE_DIR 后那行清的是不存在的
-# 目录，#159 据此删除，于是 #main 跟踪能力从 #129 起就丢了。这里把清理指回实际缓存目录。
-# 上游修复 oven-sh/bun#44968 已合并但未进 1.4.3；bun ≥ 1.4.4 实测后即可删掉这行。
-rm -rf "$bun_cache"/*.git "$bun_cache"/@G@* 2>/dev/null || true
+# 不清 bun 缓存里的 git 条目：每次清都会让私有依赖重新 clone，网络一抖就整次失败。
+# 需要重新解析 #main 时删 $plugins/bun.lock。
 
 # 落盘的是可写副本：源文件在 /nix/store，只读
 # 与清单严格对齐：结果只取决于清单，清单之外的条目一律不留。
@@ -45,6 +40,13 @@ mkdir -p "$staging"
 install -m 0644 "$manifest" "$staging/package.json"
 # bun.lock 一并带过去：删掉它 bun 要重新解析版本，实测断网即 DNSResolveFailed；留着才能离线复用缓存。
 if [[ -f "$plugins/bun.lock" ]]; then cp "$plugins/bun.lock" "$staging/bun.lock"; fi
+
+# 清单没变且已装好就跳过，避免每次 sync 重装几百个包。
+if [[ -f "$plugins/package.json" && -d "$plugins/node_modules" ]] \
+  && cmp -s "$staging/package.json" "$plugins/package.json"; then
+  rm -rf "$staging"
+  exit 0
+fi
 
 # 清单里的私有依赖写成 git+ssh://git@github.com/…，bun 取包时把它解析成 ssh://git@github.com/…，
 # 两种前缀都要改写，只改前一种会在 guest 里以 Permission denied (publickey) 失败。
