@@ -22,7 +22,7 @@ description: pstack 技能在 omp 与 pi 上的宿主映射表。上游 pstack �
 
 ## 模型角色
 
-上游 `~/.cursor/rules/pstack-models.mdc` 在此不存在。角色由 `modules/features/ai/omp/config.yml` 的 `modelRoles` 统一定义，由 nix 分别派生为 omp agent 与 pi profile。按映射表对应的角色选取 agent 或 profile
+上游 `~/.cursor/rules/pstack-models.mdc` 在此不存在。角色由 `modules/features/ai/omp/config.yml` 的 `modelRoles` 统一定义，由 nix 分别派生为 omp agent 与 pi profile。pi 侧派发时实时读取该配置，修改角色无需重新 build。按映射表对应的角色选取 agent 或 profile
 
 ## 漂移检查
 

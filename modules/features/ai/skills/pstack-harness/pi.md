@@ -53,7 +53,7 @@ No pstack skill selects a model here. Every slug, alias, and model rule file in 
 - `spawn-subagent list` prints the available profiles.
 - When no profile matches a requested role, dispatch the general worker and state which role degraded.
 
-The reviewer panel consists of the `reviewer-<variant>` profiles in `spawn-subagent list`. A variant's model family is the provider of its `@reviewer-<variant>` role in `config.yml`. Verify that roles resolve to distinct providers before treating independent review findings as cross-family agreement.
+The reviewer panel consists of the `reviewer-<variant>` profiles in `spawn-subagent list`.
 
 `judge` is an independent profile bound to the `@judge` role in `config.yml`. It scores options and does not review code.
 
@@ -64,9 +64,9 @@ The reviewer panel consists of the `reviewer-<variant>` profiles in `spawn-subag
 | Cursor | pi |
 | --- | --- |
 | One `generalPurpose` spawn per configured reviewer, `readonly: true` | One entry in the `batch` manifest per panel member, named `reviewer-<variant>`. Every entry shares the same brief and rubric; the profile's prompt owns the output schema. |
-| Reviewer A/B/C/D labels paired with a slug | One manifest entry per reviewer profile from `spawn-subagent list`, each on a distinct resolved family. Drop a member only when its provider is unavailable; say which one dropped. |
-| `arena runners` — N candidates on different models | Same panel as runners, one manifest entry each, one profile per model family: `reviewer-<variant>` for read-only design candidates, `poteto-agent` for the seat that must write. Never run two candidates on the same family; when the brief needs more seats than families, say which family got a second seat. Give every candidate its own output path. |
-| `arena cross-judge pool` | `spawn-subagent judge`. That profile is the adjudicator: it scores candidates criterion by criterion against the rubric and names a base. It is bound to the `@judge` role, takes paths to the candidates, and never edits; confirm in `config.yml` that the role resolves to a different family from the write seat. Do not substitute `reviewer-<variant>` here: reviewers hunt bugs in a diff, they do not rank options. |
+| Reviewer A/B/C/D labels paired with a slug | One manifest entry per reviewer profile from `spawn-subagent list`. Drop a member only when its provider is unavailable; say which one dropped. |
+| `arena runners` — N candidates on different models | Same panel as runners, one manifest entry each: `reviewer-<variant>` for read-only design candidates, `poteto-agent` for the seat that must write. Give every candidate its own output path. |
+| `arena cross-judge pool` | `spawn-subagent judge`. That profile is the adjudicator: it scores candidates criterion by criterion against the rubric and names a base. It is bound to the `@judge` role, takes paths to the candidates, and never edits. Do not substitute `reviewer-<variant>` here: reviewers hunt bugs in a diff, they do not rank options. |
 | Lead judgment: the parent reads every result and decides | Stay in the main session and synthesize after the intercom results arrive. Do not delegate the verdict to a member of the panel it is judging; `judge` is the only exception, and only when it ran on a family that produced no candidate. |
 
 Reviewers never edit. A panel item that needs to prove a candidate builds belongs in the candidate's own worktree, and the reviewer reads the diff.
