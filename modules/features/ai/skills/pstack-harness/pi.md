@@ -24,7 +24,7 @@ Run `spawn-subagent -h` once; its help owns the syntax, and this table only maps
 | `poteto-agent` | `spawn-subagent poteto-agent`. Nix generates the profile from pstack's `agents/poteto-agent.md`; it models `@task` and its first act is reading `~/.agents/skills/poteto-mode/SKILL.md`. Resume an existing pane with `spawn-subagent resume <pane-id>` rather than spawning a sibling. |
 | `comment-sicko` | `spawn-subagent comment-sicko`. Nix generates the profile from pstack's `agents/comment-sicko.md` as a read-only comment reviewer; it reports `MUST KILL` targets and never edits code. The `no-comments` skill spells the type `"Comment Sicko"`; that is the upstream display name, and the profile name here is the lowercase slug. |
 | `subagent_type: "Comment Sicko"` | `spawn-subagent comment-sicko`. Same profile, lowercase slug; the loader keys profiles by filename and only the slug exists. |
-| `model: <slug>` | **Not accepted.** `spawn-subagent` takes a profile, and the profile's frontmatter pins `model` and `thinking`. See Models. |
+| `model: <slug>` | **Not accepted.** `spawn-subagent` takes a profile. It reads `model` and `thinking` from `~/.omp/agent/config.yml` (`task.agentModelOverrides` plus `modelRoles`) on every dispatch; the profile frontmatter is the fallback when that file is missing or unparseable. See Models. |
 | `environment: "cloud"` | Drop it. The agent runs in this checkout. |
 | `environment: "local"` | Drop it; that is the only mode. |
 | `cloud_base_branch: <b>` | Drop it, and put the branch or commit to check out in the brief. |
@@ -53,7 +53,7 @@ No pstack skill selects a model here. Every slug, alias, and model rule file in 
 - `spawn-subagent list` prints the available profiles.
 - When no profile matches a requested role, dispatch the general worker and state which role degraded.
 
-The reviewer panel consists of the `reviewer-<variant>` profiles in `spawn-subagent list`.
+The reviewer panel is one seat per distinct model among the `reviewer-<variant>` profiles in `spawn-subagent list`. When two variants resolve to the same model, dispatch one and state which variant you dropped.
 
 `judge` is an independent profile bound to the `@judge` role in `config.yml`. It scores options and does not review code.
 
@@ -64,7 +64,7 @@ The reviewer panel consists of the `reviewer-<variant>` profiles in `spawn-subag
 | Cursor | pi |
 | --- | --- |
 | One `generalPurpose` spawn per configured reviewer, `readonly: true` | One entry in the `batch` manifest per panel member, named `reviewer-<variant>`. Every entry shares the same brief and rubric; the profile's prompt owns the output schema. |
-| Reviewer A/B/C/D labels paired with a slug | One manifest entry per reviewer profile from `spawn-subagent list`. Drop a member only when its provider is unavailable; say which one dropped. |
+| Reviewer A/B/C/D labels paired with a slug | One manifest entry per seat in the reviewer panel. Drop a seat only when its model is unavailable or duplicates another seat's model; say which one dropped. |
 | `arena runners` — N candidates on different models | Same panel as runners, one manifest entry each: `reviewer-<variant>` for read-only design candidates, `poteto-agent` for the seat that must write. Give every candidate its own output path. |
 | `arena cross-judge pool` | `spawn-subagent judge`. That profile is the adjudicator: it scores candidates criterion by criterion against the rubric and names a base. It is bound to the `@judge` role, takes paths to the candidates, and never edits. Do not substitute `reviewer-<variant>` here: reviewers hunt bugs in a diff, they do not rank options. |
 | Lead judgment: the parent reads every result and decides | Stay in the main session and synthesize after the intercom results arrive. Do not delegate the verdict to a member of the panel it is judging; `judge` is the only exception, and only when it ran on a family that produced no candidate. |
