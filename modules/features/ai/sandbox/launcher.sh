@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# sb-launcher: 沙箱 Guest 内部执行上下文隔离器
+# 职责：
+# 1. 槽位锁分配、死上下文清理与元数据发布 (meta.json)
+# 2. 独立网络命名空间配置 (netns, veth, iptables 规则链与私网拦截)
+# 3. 声明配置只读覆盖与数据盘可写根布局生成 (bubblewrap layout)
+# 4. 执行上下文构建与 bubblewrap 隔离启动
 set -euo pipefail
 
 export PATH="/data/xdg/data/mise/shims:${SB_GUEST_BIN_PATH:-/usr/local/bin:/usr/bin:/bin}"
@@ -6,14 +12,13 @@ export HOME="${HOME:-/root}"
 
 CONTEXTS_DIR="/run/sandbox/contexts"
 MAX_SLOTS=64
-# 宿主复制 imports 的时间窗保护：未超宽限的「启动中」目录视为存活
 STARTUP_GRACE_SECS=120
 SLOT_LOCK="$CONTEXTS_DIR/.slot.lock"
 
 acquire_slot_lock() {
   mkdir -p "$CONTEXTS_DIR"
   exec 9>>"$SLOT_LOCK"
-  flock -w 30 9
+  flock -x -w 30 9
 }
 
 release_slot_lock() {
@@ -22,151 +27,128 @@ release_slot_lock() {
 }
 
 is_starting() {
-  local dir="$1"
-  [[ -f "$dir/starting" ]] || return 1
-  local started
-  started="$(stat -c %Y "$dir/starting" 2>/dev/null || echo 0)"
-  [[ $(( $(date +%s) - started )) -lt $STARTUP_GRACE_SECS ]]
+  local ctx_dir="$1" st
+  [[ -f "$ctx_dir/starting" ]] || return 1
+  st="$(stat -c %Y "$ctx_dir/starting" 2>/dev/null || echo 0)"
+  (( $(date +%s) - st < STARTUP_GRACE_SECS ))
 }
 
 sweep_dead_contexts() {
-  if [[ ! -d "$CONTEXTS_DIR" ]]; then
-    return 0
-  fi
-
+  [[ -d "$CONTEXTS_DIR" ]] || return 0
   for ctx_dir in "$CONTEXTS_DIR"/*; do
     [[ -d "$ctx_dir" ]] || continue
-    if [[ -n "${CURRENT_CTX_ID:-}" && "$ctx_dir" == "$CONTEXTS_DIR/$CURRENT_CTX_ID" ]]; then
+    local meta="$ctx_dir/meta.json"
+    if [[ ! -f "$meta" ]]; then
+      if is_starting "$ctx_dir"; then
+        continue
+      fi
+      rm -rf "$ctx_dir"
       continue
     fi
-    local meta="$ctx_dir/meta.json"
-    local pid="" ip="" veth_host="" netns="" chain=""
-    if [[ -f "$meta" ]]; then
-      pid="$(jq -r '.pid // empty' "$meta" 2>/dev/null || true)"
-      ip="$(jq -r '.ip // empty' "$meta" 2>/dev/null || true)"
-      veth_host="$(jq -r '.veth_host // empty' "$meta" 2>/dev/null || true)"
-      netns="$(jq -r '.netns // empty' "$meta" 2>/dev/null || true)"
-      chain="$(jq -r '.chain // empty' "$meta" 2>/dev/null || true)"
-    fi
-
-    local is_alive=0
-    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-      is_alive=1
-    fi
-    # 无 meta 的目录可能正被宿主复制 imports：宽限内视为存活
-    if [[ "$is_alive" -eq 0 && ! -f "$meta" ]] && is_starting "$ctx_dir"; then
-      is_alive=1
-    fi
-
-    if [[ "$is_alive" -eq 0 ]]; then
-      if [[ -n "$ip" && -n "$chain" ]]; then
-        iptables -D FORWARD -s "$ip" -j "$chain" 2>/dev/null || true
-      fi
+    local pid slot veth netns chain
+    pid="$(jq -r '.pid // empty' "$meta" 2>/dev/null || true)"
+    slot="$(jq -r '.slot // empty' "$meta" 2>/dev/null || true)"
+    veth="$(jq -r '.veth_host // empty' "$meta" 2>/dev/null || true)"
+    netns="$(jq -r '.netns // empty' "$meta" 2>/dev/null || true)"
+    chain="$(jq -r '.chain // empty' "$meta" 2>/dev/null || true)"
+    if [[ -z "$pid" || ! -d "/proc/$pid" ]]; then
       if [[ -n "$chain" ]]; then
+        iptables -D FORWARD -s "10.200.$((slot / 64)).$(( (slot % 64) * 4 + 2 ))" -j "$chain" 2>/dev/null || true
         iptables -F "$chain" 2>/dev/null || true
         iptables -X "$chain" 2>/dev/null || true
       fi
-      if [[ -n "$veth_host" ]]; then
-        ip link del "$veth_host" 2>/dev/null || true
-      fi
-      if [[ -n "$netns" ]]; then
-        ip netns del "$netns" 2>/dev/null || true
-      fi
+      [[ -n "$veth" ]] && ip link del "$veth" 2>/dev/null || true
+      [[ -n "$netns" ]] && ip netns del "$netns" 2>/dev/null || true
       rm -rf "$ctx_dir"
     fi
   done
 }
 
-# 可写根：agent 配置目录整体落在数据盘、所有上下文共用；其中 Nix 声明的路径再逐项只读挂载。
-# 根的清单来自发布目录的 writable-roots（登记表 shelken.dev.sandbox.writableRoots），
-# launcher 自己不带任何路径，只按固定规则映射到数据盘：$HOME/<相对根> -> /data/home/<相对根>
 declare -A AGENT_ROOTS=()
+LAYOUT_ARGS=()
+MOUNT_POINTS=()
 
-# 上下文路径 -> 数据盘上的同一位置（挂载点占位所在）。.config/<X> 映射到 $XDG_CONFIG_HOME/<X>
 declared_dst() {
-  case "$1" in
-    .config/*) echo "/data/xdg/config/${1#.config/}" ;;
-    *) echo "$HOME/$1" ;;
-  esac
+  local t="$1"
+  if [[ "$t" == .config/* ]]; then
+    printf '%s/%s\n' "${XDG_CONFIG_HOME:-/data/xdg/config}" "${t#.config/}"
+  else
+    printf '%s/%s\n' "$HOME" "$t"
+  fi
 }
 
 backing_of() {
-  local p="$1" root
+  local path="$1" root
   for root in "${!AGENT_ROOTS[@]}"; do
-    if [[ "$p" == "$root" || "$p" == "$root/"* ]]; then
-      echo "${AGENT_ROOTS[$root]}${p#"$root"}"
-      return
+    if [[ "$path" == "$root" || "$path" == "$root/"* ]]; then
+      printf '%s%s\n' "${AGENT_ROOTS[$root]}" "${path#"$root"}"
+      return 0
     fi
   done
-  echo "$p"
+  printf '%s\n' "$path"
 }
 
 mount_root_of() {
-  local p="$1" root
+  local path="$1" root
   for root in "${!AGENT_ROOTS[@]}"; do
-    if [[ "$p" == "$root/"* ]]; then
-      echo "$root"
-      return
+    if [[ "$path" == "$root" || "$path" == "$root/"* ]]; then
+      printf '%s\n' "$root"
+      return 0
     fi
   done
-  [[ "$p" == /data/* ]] || return 1
-  echo /data
+  if [[ "$path" == "${XDG_CONFIG_HOME:-/data/xdg/config}"* ]]; then
+    printf '%s\n' "${XDG_CONFIG_HOME:-/data/xdg/config}"
+    return 0
+  fi
+  return 1
 }
 
 is_empty_placeholder() {
-  [[ ! -L "$1" ]] || return 1
-  if [[ -d "$1" ]]; then
-    [[ -z "$(ls -A "$1")" ]]
-  else
-    [[ -f "$1" && ! -s "$1" ]]
-  fi
+  local dir="$1"
+  [[ -d "$dir" ]] || return 1
+  local entries
+  entries="$(find "$dir" -mindepth 1 -maxdepth 1 2>/dev/null | head -n 1 || true)"
+  [[ -z "$entries" ]]
 }
 
 resolve_conflict() {
   local path="$1" want="$2" others="$3"
-  if is_empty_placeholder "$path" && [[ "$others" -eq 0 ]]; then
-    rm -rf "$path"
-    return
+  if [[ "$others" -gt 0 ]]; then
+    echo "[-] 错误: 数据盘路径冲突：$path（期望 $want，但存在不同类型的项），有其他上下文在运行，不自动覆盖以免破坏它们" >&2
+    exit 1
   fi
   if is_empty_placeholder "$path"; then
-    echo "[-] 错误: 声明配置的落点 $path 残留了类型不符的空占位（需要$want），但还有 $others 个上下文在运行，可能正把它当挂载点用；全部退出后重试" >&2
-  else
-    echo "[-] 错误: 声明配置的落点 $path 已有类型不符的内容（需要$want），不会自动删除；确认无用后手动移走" >&2
+    rm -rf "$path"
+    return 0
   fi
+  echo "[-] 错误: 数据盘路径冲突：$path（期望 $want，但存在非空项），清空该路径后重试" >&2
   exit 1
 }
 
-# 布局结果：bwrap 参数，以及需要变成挂载点的目录（导入目标不得落在其下）
-LAYOUT_ARGS=()
-MOUNT_POINTS=()
-
 is_agent_layout_path() {
-  local d="$1" p
-  for p in "${MOUNT_POINTS[@]}" "${!AGENT_ROOTS[@]}"; do
-    if [[ "$d" == "$p" || "$d" == "$p/"* ]]; then
-      return 0
-    fi
+  local target="$1" p
+  for p in "${MOUNT_POINTS[@]}"; do
+    [[ "$target" == "$p" || "$target" == "$p/"* ]] && return 0
+  done
+  for p in "${!AGENT_ROOTS[@]}"; do
+    [[ "$target" == "$p" || "$target" == "$p/"* ]] && return 0
   done
   return 1
 }
 
-# 发布目录在而清单缺失时不能静默放行：上下文会没有任何声明配置和只读保护
 require_published() {
-  if [[ ! -f "$1" ]]; then
-    echo "[-] 错误: 发布目录缺少清单：$1（发布目录来自旧版本，重新发布配置后重试：just hm）" >&2
+  local file="$1"
+  if [[ ! -f "$file" ]]; then
+    echo "[-] 错误: 沙箱发布目录不完整（缺少 $file），重新发布配置后重试：just hm" >&2
     exit 1
   fi
 }
 
-# agent 配置布局（启动锁内调用）：读发布清单，整理数据盘上的落点，生成 LAYOUT_ARGS：
-# tmpfs $HOME -> 根的上层目录（tmpfs）-> 可写根（数据盘）-> 声明配置的祖先目录 -> 声明配置逐项只读。
-# 上层目录与祖先目录都要变成挂载点：内核只拒绝改名挂载点本身，
-# 改名普通祖先会把下面的挂载一起移走，原位置就能建出可写的同名替身
+# 声明配置布局规划（启动锁内调用）
 prepare_declared_layout() {
   local others="$1" cfg list roots_file rel t dst src want root p a
   local -a ancestors=() binds=() uppers=()
   [[ -e /run/sandbox-config/current ]] || return 0
-  # 只解析一次 current：清单与挂载源来自同一版本，宿主中途重新发布也不会错位
   cfg="$(readlink -f /run/sandbox-config/current)"
   list="$cfg/declared-paths"
   roots_file="$cfg/writable-roots"
@@ -185,12 +167,13 @@ prepare_declared_layout() {
       p="${p%/*}"
     done
   done < "$roots_file"
-  # 父目录排在子目录前面：C 排序下前缀先于其延伸
+
   while IFS= read -r p; do
     [[ -n "$p" ]] || continue
     MOUNT_POINTS+=("$p")
     LAYOUT_ARGS+=(--dir "$p" --tmpfs "$p")
   done < <(printf '%s\n' "${uppers[@]}" | LC_ALL=C sort -u)
+
   for root in "${!AGENT_ROOTS[@]}"; do
     LAYOUT_ARGS+=(--bind "${AGENT_ROOTS[$root]}" "$root")
   done
@@ -204,7 +187,7 @@ prepare_declared_layout() {
     fi
     dst="$(declared_dst "$t")"
     if ! root="$(mount_root_of "$dst")"; then
-      echo "[-] 错误: 声明配置 $t 不在任何可写根或 .config/ 下（发布清单不一致，重新发布配置后重试：just hm）" >&2
+      echo "[-] 错误: 声明配置 $t 不在任何可写根或 .config/ 下（重新发布配置后重试：just hm）" >&2
       exit 1
     fi
     p="$(dirname "$dst")"
@@ -234,6 +217,85 @@ prepare_declared_layout() {
   LAYOUT_ARGS+=("${binds[@]}")
 }
 
+# 网络命名空间与防火墙规则配置
+setup_network_isolation() {
+  local slot="$1" ip_host="$2" ip_guest="$3" veth_host="$4" veth_in="$5" netns="$6" chain="$7" plan_json="$8"
+  echo 1 > /proc/sys/net/ipv4/ip_forward
+
+  local default_dev
+  default_dev="$(ip route show default 2>/dev/null | awk '{print $5}' | head -n 1 || true)"
+  [[ -z "$default_dev" ]] && default_dev="eth0"
+
+  iptables -t nat -C POSTROUTING -s 10.200.0.0/16 -o "$default_dev" -j MASQUERADE 2>/dev/null || \
+    iptables -t nat -A POSTROUTING -s 10.200.0.0/16 -o "$default_dev" -j MASQUERADE
+  iptables -P FORWARD DROP
+  iptables -C FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT 2>/dev/null || \
+    iptables -I FORWARD 1 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+  # 清理旧残留
+  iptables -D FORWARD -s "$ip_guest" -j "$chain" 2>/dev/null || true
+  iptables -F "$chain" 2>/dev/null || true
+  iptables -X "$chain" 2>/dev/null || true
+  ip link del "$veth_host" 2>/dev/null || true
+  ip netns del "$netns" 2>/dev/null || true
+
+  # 建立 veth 与 netns
+  ip netns add "$netns"
+  ip link add "$veth_host" type veth peer name "$veth_in"
+  ip link set "$veth_in" netns "$netns"
+
+  ip addr add "${ip_host}/30" dev "$veth_host"
+  ip link set "$veth_host" up
+  ip -n "$netns" addr add "${ip_guest}/30" dev "$veth_in"
+  ip -n "$netns" link set "$veth_in" up
+  ip -n "$netns" link set lo up
+  ip -n "$netns" route add default via "$ip_host"
+
+  # 配置链放行规则
+  iptables -N "$chain"
+  iptables -A FORWARD -s "$ip_guest" -j "$chain"
+
+  # DNS 放行
+  while IFS= read -r dns; do
+    if [[ "$dns" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      iptables -A "$chain" -d "$dns" -p udp --dport 53 -j ACCEPT
+      iptables -A "$chain" -d "$dns" -p tcp --dport 53 -j ACCEPT
+    fi
+  done < <(grep '^nameserver' /etc/resolv.conf 2>/dev/null | awk '{print $2}')
+
+  # 宿主服务放行
+  local host_ip
+  host_ip="$(grep 'host.microsandbox.internal' /etc/hosts 2>/dev/null | awk '{print $1}' | grep '^[0-9]' | head -n 1 || true)"
+  [[ -z "$host_ip" ]] && host_ip="$(ip route show default 2>/dev/null | awk '{print $3}' | head -n 1 || true)"
+
+  for item in $(jq -r '.default_allow[]? // empty' <<< "$plan_json"); do
+    if [[ "$item" =~ ^host:tcp:([0-9]+)$ ]]; then
+      local port="${BASH_REMATCH[1]}"
+      [[ -n "$host_ip" ]] && iptables -A "$chain" -d "$host_ip" -p tcp --dport "$port" -j ACCEPT
+    fi
+  done
+
+  # 项目获准私网放行
+  for target in $(jq -r '.network[]? // empty' <<< "$plan_json"); do
+    if [[ "$target" =~ ^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+):([0-9]+)$ ]]; then
+      iptables -A "$chain" -d "${BASH_REMATCH[1]}" -p tcp --dport "${BASH_REMATCH[2]}" -j ACCEPT
+    elif [[ -n "$target" ]]; then
+      iptables -A "$chain" -d "$target" -j ACCEPT
+    fi
+  done
+
+  # 私网网段全拦截 (家庭网段 192.168.0.0/16 默认在此拦截)
+  iptables -A "$chain" -d 10.0.0.0/8 -j REJECT
+  iptables -A "$chain" -d 172.16.0.0/12 -j REJECT
+  iptables -A "$chain" -d 192.168.0.0/16 -j REJECT
+  iptables -A "$chain" -d 100.64.0.0/10 -j REJECT
+  iptables -A "$chain" -d 169.254.0.0/16 -j REJECT
+
+  # 放行其余所有公网目标
+  iptables -A "$chain" -j ACCEPT
+}
+
+# 检查活跃上下文数 (--check-busy)
 if [[ "${1:-}" == "--check-busy" ]]; then
   acquire_slot_lock
   sweep_dead_contexts
@@ -241,7 +303,6 @@ if [[ "${1:-}" == "--check-busy" ]]; then
   if [[ -d "$CONTEXTS_DIR" ]]; then
     for ctx_dir in "$CONTEXTS_DIR"/*; do
       [[ -d "$ctx_dir" ]] || continue
-      # 启动中的目录在宽限内同样占用 VM，计入忙碌
       if [[ -f "$ctx_dir/meta.json" ]] || is_starting "$ctx_dir"; then
         count=$((count + 1))
       fi
@@ -258,27 +319,20 @@ if [[ $# -lt 3 ]]; then
 fi
 
 CTX_ID="$1"
-CURRENT_CTX_ID="$1"
 PLAN_JSON="$2"
 CWD="$3"
 shift 3
 
-# 启动临界区：死上下文清扫、选槽、meta.json 原子发布在同一把短期锁内串行，
-# 否则并发 launcher 会选中同一槽位，失败方的清理会误删另一上下文的
-# netns/veth/iptables
+# 1. 槽位锁分配与元数据发布
 acquire_slot_lock
 sweep_dead_contexts
-
-mkdir -p "$CONTEXTS_DIR"
 
 declare -A USED_SLOTS=()
 for ctx_dir in "$CONTEXTS_DIR"/*; do
   [[ -d "$ctx_dir" ]] || continue
   if [[ -f "$ctx_dir/meta.json" ]]; then
     s="$(jq -r '.slot // empty' "$ctx_dir/meta.json" 2>/dev/null || true)"
-    if [[ -n "$s" && "$s" =~ ^[0-9]+$ ]]; then
-      USED_SLOTS["$s"]=1
-    fi
+    [[ -n "$s" && "$s" =~ ^[0-9]+$ ]] && USED_SLOTS["$s"]=1
   fi
 done
 
@@ -292,6 +346,7 @@ done
 
 if [[ "$ALLOCATED_SLOT" -lt 0 ]]; then
   echo "[-] 错误: 执行上下文地址池已耗尽 (当前上限: $MAX_SLOTS 个并发上下文)" >&2
+  release_slot_lock
   exit 1
 fi
 
@@ -308,11 +363,8 @@ GIT_COMMON_DIR="$(jq -r '.git_common_dir // empty' <<< "$PLAN_JSON")"
 
 CURRENT_CTX_DIR="$CONTEXTS_DIR/$CTX_ID"
 mkdir -p "$CURRENT_CTX_DIR"
-# 宿主在复制 imports 时已建好该目录；没有 imports 时它不存在
 IMPORTS_DIR="$CURRENT_CTX_DIR/imports"
 
-# 登记元数据：路径可含引号或换行，所以用 jq 生成合法 JSON；写临时文件后 mv 原子发布，
-# 并移除宿主侧「启动中」标记，此后目录所有权归属本 launcher
 META_TMP="$CURRENT_CTX_DIR/meta.json.tmp"
 jq -n \
   --argjson slot "$SLOT" \
@@ -325,7 +377,6 @@ jq -n \
 mv "$META_TMP" "$CURRENT_CTX_DIR/meta.json"
 rm -f "$CURRENT_CTX_DIR/starting"
 
-# 声明配置布局要在锁内整理：删除残留占位前必须确认没有别的上下文正把它当挂载点用
 OTHER_CONTEXTS=0
 for ctx_dir in "$CONTEXTS_DIR"/*; do
   [[ -d "$ctx_dir" && "$ctx_dir" != "$CURRENT_CTX_DIR" ]] || continue
@@ -333,100 +384,29 @@ for ctx_dir in "$CONTEXTS_DIR"/*; do
     OTHER_CONTEXTS=$((OTHER_CONTEXTS + 1))
   fi
 done
+
 trap 'rm -rf "$CURRENT_CTX_DIR"' EXIT
 prepare_declared_layout "$OTHER_CONTEXTS"
 release_slot_lock
 
+# 2. 退出清理钩子
 cleanup() {
   local exit_code=$?
   trap - EXIT INT TERM HUP
-
   iptables -D FORWARD -s "$IP_GUEST" -j "$CHAIN" 2>/dev/null || true
   iptables -F "$CHAIN" 2>/dev/null || true
   iptables -X "$CHAIN" 2>/dev/null || true
-
   ip link del "$VETH_HOST" 2>/dev/null || true
   ip netns del "$NETNS" 2>/dev/null || true
-
   rm -rf "$CURRENT_CTX_DIR"
-
   exit "$exit_code"
 }
 trap cleanup EXIT INT TERM HUP
 
-echo 1 > /proc/sys/net/ipv4/ip_forward
+# 3. 配置网络隔离
+setup_network_isolation "$SLOT" "$IP_HOST" "$IP_GUEST" "$VETH_HOST" "$VETH_IN" "$NETNS" "$CHAIN" "$PLAN_JSON"
 
-DEFAULT_DEV="$(ip route show default 2>/dev/null | awk '{print $5}' | head -n 1 || true)"
-if [[ -z "$DEFAULT_DEV" ]]; then DEFAULT_DEV="eth0"; fi
-
-iptables -t nat -C POSTROUTING -s 10.200.0.0/16 -o "$DEFAULT_DEV" -j MASQUERADE 2>/dev/null || \
-  iptables -t nat -A POSTROUTING -s 10.200.0.0/16 -o "$DEFAULT_DEV" -j MASQUERADE
-iptables -P FORWARD DROP
-iptables -C FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT 2>/dev/null || \
-  iptables -I FORWARD 1 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-
-# 本槽位在上面的锁内刚分配，且本目录已登记该槽，同名网络资源必然属于已被硬杀的旧进程：
-# 不清掉它们，下面的 ip netns add / iptables -N 会因重名直接失败
-iptables -D FORWARD -s "$IP_GUEST" -j "$CHAIN" 2>/dev/null || true
-iptables -F "$CHAIN" 2>/dev/null || true
-iptables -X "$CHAIN" 2>/dev/null || true
-ip link del "$VETH_HOST" 2>/dev/null || true
-ip netns del "$NETNS" 2>/dev/null || true
-
-ip netns add "$NETNS"
-ip link add "$VETH_HOST" type veth peer name "$VETH_IN"
-ip link set "$VETH_IN" netns "$NETNS"
-
-ip addr add "${IP_HOST}/30" dev "$VETH_HOST"
-ip link set "$VETH_HOST" up
-ip -n "$NETNS" addr add "${IP_GUEST}/30" dev "$VETH_IN"
-ip -n "$NETNS" link set "$VETH_IN" up
-ip -n "$NETNS" link set lo up
-ip -n "$NETNS" route add default via "$IP_HOST"
-
-iptables -N "$CHAIN"
-iptables -A FORWARD -s "$IP_GUEST" -j "$CHAIN"
-
-while IFS= read -r dns; do
-  if [[ "$dns" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    iptables -A "$CHAIN" -d "$dns" -p udp --dport 53 -j ACCEPT
-    iptables -A "$CHAIN" -d "$dns" -p tcp --dport 53 -j ACCEPT
-  fi
-done < <(grep '^nameserver' /etc/resolv.conf 2>/dev/null | awk '{print $2}')
-
-HOST_IP="$(grep 'host.microsandbox.internal' /etc/hosts 2>/dev/null | awk '{print $1}' | grep '^[0-9]' | head -n 1 || true)"
-if [[ -z "$HOST_IP" ]]; then
-  HOST_IP="$(ip route show default 2>/dev/null | awk '{print $3}' | head -n 1 || true)"
-fi
-for item in $(jq -r '.default_allow[]? // empty' <<< "$PLAN_JSON"); do
-  if [[ "$item" =~ ^host:tcp:([0-9]+)$ ]]; then
-    port="${BASH_REMATCH[1]}"
-    if [[ -n "$HOST_IP" ]]; then
-      iptables -A "$CHAIN" -d "$HOST_IP" -p tcp --dport "$port" -j ACCEPT
-    fi
-  fi
-done
-
-for target in $(jq -r '.network[]? // empty' <<< "$PLAN_JSON"); do
-  if [[ "$target" =~ ^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+):([0-9]+)$ ]]; then
-    ip="${BASH_REMATCH[1]}"
-    port="${BASH_REMATCH[2]}"
-    iptables -A "$CHAIN" -d "$ip" -p tcp --dport "$port" -j ACCEPT
-  elif [[ -n "$target" ]]; then
-    iptables -A "$CHAIN" -d "$target" -j ACCEPT
-  fi
-done
-
-# 规则按顺序匹配：放行规则已在前面加好，私网 REJECT 必须排在其后（家庭网段 192.168.0.0/16 默认在此拦截）
-iptables -A "$CHAIN" -d 10.0.0.0/8 -j REJECT
-iptables -A "$CHAIN" -d 172.16.0.0/12 -j REJECT
-iptables -A "$CHAIN" -d 192.168.0.0/16 -j REJECT
-iptables -A "$CHAIN" -d 100.64.0.0/10 -j REJECT
-iptables -A "$CHAIN" -d 169.254.0.0/16 -j REJECT
-
-# 放行其余所有公网目标 (包括假 IP 代理 198.18.0.0/15 与外部公网)
-iptables -A "$CHAIN" -j ACCEPT
-
+# 4. 构建 bubblewrap 参数
 BWRAP_ARGS=(
   --unshare-user --uid 1000 --gid 1000
   --unshare-ipc --unshare-pid --unshare-uts
@@ -440,31 +420,20 @@ BWRAP_ARGS=(
   --tmpfs /tmp
   --tmpfs /run
   --ro-bind /nix/store /nix/store
-  # msb 设置的 NODE_EXTRA_CA_CERTS 指向这里；路径缺失时 OMP 的模型发现全部失败
   --ro-bind-try /.msb/tls /.msb/tls
 )
 
 if [[ -d /data ]]; then
   BWRAP_ARGS+=(--bind /data /data)
-  # OMP 只在 $XDG_*_HOME/omp 已存在时使用 XDG 路径；保持 XDG 布局，插件目录才与 sb sync 的安装位置一致
   mkdir -p /data/xdg/data/omp /data/xdg/state/omp /data/xdg/cache/omp /data/xdg/config /data/mise /data/xdg/data/mise/shims
 fi
 
-# 宿主共用 mise 目录：执行上下文内只读，安装仅经 sb sync
-if [[ -d /opt/sandbox-mise ]]; then
-  BWRAP_ARGS+=(--ro-bind /opt/sandbox-mise /opt/sandbox-mise)
-fi
+[[ -d /opt/sandbox-mise ]] && BWRAP_ARGS+=(--ro-bind /opt/sandbox-mise /opt/sandbox-mise)
+[[ -d /run/sandbox-config ]] && BWRAP_ARGS+=(--ro-bind /run/sandbox-config /run/sandbox-config)
 
-if [[ -d /run/sandbox-config ]]; then
-  BWRAP_ARGS+=(--ro-bind /run/sandbox-config /run/sandbox-config)
-fi
-
-# agent 配置布局（tmpfs 挂载点、可写根、声明配置）全部由 prepare_declared_layout 按发布清单生成。
-# 必须排在 imports 之前，否则后铺的 tmpfs 会遮住 imports 落在 ~ 下的目标
 BWRAP_ARGS+=("${LAYOUT_ARGS[@]}")
 
-# 导入文件：每个目标目录绑定一份暂存目录（目录形式支持原子改名；退出自动删除）。
-# 目标目录会被整体遮住，所以不能落在系统目录或 launcher 自己铺设的 agent 配置目录上
+# 导入文件绑定
 while IFS=$'\t' read -r stage dir; do
   [[ -n "$stage" ]] || continue
   dir="${dir/#\~/$HOME}"
@@ -486,9 +455,7 @@ done < <(jq -r '[.imports[]? | [.stage, .dir]] | unique[] | @tsv' <<< "$PLAN_JSO
 BWRAP_ARGS+=(--bind "$PROJECT_ROOT" "$PROJECT_ROOT")
 
 if [[ -n "$GIT_COMMON_DIR" && "$GIT_COMMON_DIR" != "$PROJECT_ROOT" && "$GIT_COMMON_DIR" != "$PROJECT_ROOT"/* ]]; then
-  if [[ -e "$GIT_COMMON_DIR" ]]; then
-    BWRAP_ARGS+=(--bind "$GIT_COMMON_DIR" "$GIT_COMMON_DIR")
-  fi
+  [[ -e "$GIT_COMMON_DIR" ]] && BWRAP_ARGS+=(--bind "$GIT_COMMON_DIR" "$GIT_COMMON_DIR")
 fi
 
 while IFS= read -r item; do
@@ -510,16 +477,13 @@ else
   BWRAP_ARGS+=(--chdir "$PROJECT_ROOT")
 fi
 
-# 唯一来源：/run/sandbox-config/current/guest-env.sh（generator 单一生成）。
-# 缺少该文件说明 VM 未挂载生成配置：不加载工具环境，也不维护第二份回退。
+# 5. 加载工具环境并启动
 export GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
 export GIT_CONFIG_GLOBAL="${SB_GIT_CONFIG:-}"
 if [[ -f /run/sandbox-config/current/guest-env.sh ]]; then
   # shellcheck source=/dev/null
   source /run/sandbox-config/current/guest-env.sh
 fi
-# 上下文不能安装工具，联网解析项目 mise.toml 里的 latest 没有意义，反而每次启动都白等：
-# minio/mc 的版本列表约 14 MB，超过 mise 的超时，缓存写不进去，每次重试并刷警告。
-# 写在这里而不是 guest-env.sh：sb sync 也 source 它，但 sync 在上下文外，必须联网
 export MISE_OFFLINE=1
-ip netns exec "$NETNS" bwrap "${BWRAP_ARGS[@]}" -- "$@"
+
+exec ip netns exec "$NETNS" bwrap "${BWRAP_ARGS[@]}" -- "$@"
