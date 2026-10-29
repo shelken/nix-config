@@ -30,12 +30,11 @@ flowchart LR
 
 | 模块 / 组件 | 文件 | 职责 |
 | --- | --- | --- |
-| 顶层组装与 Seam | [default.nix](./default.nix) | Home Manager 特性装配入口，声明 options 并挂载 activation 动作 |
-| 声明与前置校验 | [_spec.nix](./_spec.nix) | 集中提取路径、策略、工具规范，执行可写根不嵌套与合法性静态断言 |
+| 顶层装配 Seam | [default.nix](./default.nix) | 极小装配入口，声明 options 并挂载 activation 动作 |
+| 配置物化深模块 | [_config.nix](./_config.nix) | 静态路径断言、声明文件收集、解引用工作区软链、原子发布至 `~/.config/sandbox/current` 并修剪过期版本 |
 | Guest 运行时与隔离器 | [_guest.nix](./_guest.nix)、[launcher.sh](./launcher.sh)、[sync-guest.sh](./sync-guest.sh)、[guest-status.sh](./guest-status.sh) | 封装 Linux 工具闭包、环境脚本、状态探测、插件补齐与 bubblewrap 隔离执行器 |
-| 配置收集与原子发布 | [_config.nix](./_config.nix) | 汇总声明文件与覆盖项，解引用外部软链，原子发布至 `~/.config/sandbox/current` 并修剪过期版本 |
-| 宿主驱动与 CLI | [_runtime.nix](./_runtime.nix)、[sb.sh](./sb.sh) | 封装 microsandbox 驱动配置，组装 `sb` 与 `omp-sb` 命令行工具 |
-| 能力上限 | [sb.yaml](./sb.yaml) | 部署到 `~/.config/sandbox/sb.yaml`，`SB_CONFIG` 可覆盖 |
+| 宿主驱动与 CLI | [_host.nix](./_host.nix)、[sb.sh](./sb.sh) | 封装 microsandbox 驱动配置，接收原生 `sb.yaml`，组装 `sb` 与 `omp-sb` 命令行工具 |
+| 能力上限 | [sb.yaml](./sb.yaml) | 原生 YAML 策略基线，部署到 `~/.config/sandbox/sb.yaml`，供日常查看与编辑 |
 
 ## 术语与不变量
 
