@@ -28,12 +28,13 @@ flowchart LR
   H -- /opt/sandbox-mise --> M
 ```
 
-| 组件 | 文件 | 职责 |
+| 模块 / 组件 | 文件 | 职责 |
 | --- | --- | --- |
-| 宿主 CLI | [sb.sh](./sb.sh)、[_sb.nix](./_sb.nix) | 读上限、解析项目计划、管理主 VM 生命周期、复制 imports、调用 launcher |
-| launcher | [launcher.sh](./launcher.sh)、[_launcher.nix](./_launcher.nix) | 在 guest 内以 root 建网络与 bubblewrap 视图，运行命令，退出清理 |
-| 生成器 | [_generator.nix](./_generator.nix)、[sync-guest.sh](./sync-guest.sh) | 由登记表生成 guest 环境、mise 配置、OMP 配置与 sync 脚本 |
-| 状态查询 | [guest-status.sh](./guest-status.sh) | 列出缺失的 mise 工具，供 `sb status` 使用 |
+| 顶层组装与 Seam | [default.nix](./default.nix) | Home Manager 特性装配入口，声明 options 并挂载 activation 动作 |
+| 声明与前置校验 | [_spec.nix](./_spec.nix) | 集中提取路径、策略、工具规范，执行可写根不嵌套与合法性静态断言 |
+| Guest 运行时与隔离器 | [_guest.nix](./_guest.nix)、[launcher.sh](./launcher.sh)、[sync-guest.sh](./sync-guest.sh)、[guest-status.sh](./guest-status.sh) | 封装 Linux 工具闭包、环境脚本、状态探测、插件补齐与 bubblewrap 隔离执行器 |
+| 配置收集与原子发布 | [_config.nix](./_config.nix) | 汇总声明文件与覆盖项，解引用外部软链，原子发布至 `~/.config/sandbox/current` 并修剪过期版本 |
+| 宿主驱动与 CLI | [_runtime.nix](./_runtime.nix)、[sb.sh](./sb.sh) | 封装 microsandbox 驱动配置，组装 `sb` 与 `omp-sb` 命令行工具 |
 | 能力上限 | [sb.yaml](./sb.yaml) | 部署到 `~/.config/sandbox/sb.yaml`，`SB_CONFIG` 可覆盖 |
 
 ## 术语与不变量
