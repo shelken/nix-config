@@ -84,15 +84,17 @@ NixOS 主机用 `self.modules.nixos.<名>`
 
 参数写在主机文件的 `shelken` 下，没写就用默认值
 
-| 选项                        | 写在          | 默认值         | 作用                                                                           |
-| --------------------------- | ------------- | -------------- | ------------------------------------------------------------------------------ |
-| `secrets.enable`            | `default.nix` | `false`        | 主机持有 age 密钥；kopia 备份等需要密钥的功能依赖它，未开启时求值报错          |
-| `wm.manager`                | `default.nix` | `"aerospace"`  | 窗口管理器，可选 `"aerospace"`、`"omniwm"`（`gui` 及以上）                     |
-| `tools.autoinputswitch.app` | `default.nix` | `"typeswitch"` | 自动切换输入法的软件，可选 `"typeswitch"`、`"inputsourcepro"`（`workstation`） |
-| `dotfiles.liveEdit`         | `home.nix`    | `false`        | 配置文件软链到本地仓库，改完即时生效；远程部署机保持关闭                       |
-| `backup.backupPaths`        | `home.nix`    | `[ ]`          | kopia 额外备份的路径（`workstation`）                                          |
-| `dev.ai.sandbox.enable`     | `home.nix`    | `false`        | 安装 agent 沙箱（`workstation`）                                               |
-| `neovim.minimal`            | `home.nix`    | `false`        | 只装 neovim，不带配置                                                          |
+| 选项                        | 写在          | 默认值           | 作用                                                                              |
+| --------------------------- | ------------- | ---------------- | --------------------------------------------------------------------------------- |
+| `secrets.enable`            | `default.nix` | `false`          | 主机持有 age 密钥；kopia 备份等需要密钥的功能依赖它，未开启时求值报错             |
+| `wm.manager`                | `default.nix` | `"aerospace"`    | 窗口管理器，可选 `"aerospace"`、`"omniwm"`（`gui` 及以上）                        |
+| `tools.autoinputswitch.app` | `default.nix` | `"typeswitch"`   | 自动切换输入法的软件，可选 `"typeswitch"`、`"inputsourcepro"`（`workstation`）    |
+| `dotfiles.liveEdit`         | `home.nix`    | `false`          | 配置文件软链到本地仓库，改完即时生效；远程部署机保持关闭                          |
+| `backup.backupPaths`        | `home.nix`    | `[ ]`            | kopia 额外备份的路径（`workstation`）                                             |
+| `backup.calendarInterval`   | `home.nix`    | 按 hostname 分布 | kopia 快照时间，`"H:M"` 列表；默认 `2:00` 到 `8:00` 间取两个时刻（`workstation`） |
+| `backup.maintenanceWhen`    | `home.nix`    | `"5:00"`         | kopia 每日策略收敛的时间，全量维护只在周日跑（`workstation`）                     |
+| `dev.ai.sandbox.enable`     | `home.nix`    | `false`          | 安装 agent 沙箱（`workstation`）                                                  |
+| `neovim.minimal`            | `home.nix`    | `false`          | 只装 neovim，不带配置                                                             |
 
 ## 新增一台主机
 
