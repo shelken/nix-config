@@ -2,7 +2,6 @@
   config,
   pkgs,
   lib,
-  mylib,
   myvars,
   hostname,
   ...
@@ -10,158 +9,122 @@
 let
   cfg = config.shelken.backup;
   effectivePaths = cfg.backupPaths ++ (lib.concatLists (lib.attrValues cfg.app));
-  backupScript = pkgs.writeShellScript "kopia-backup.sh" ''
-    notify() {
-      ${pkgs.terminal-notifier}/bin/terminal-notifier \
-        -title "$1" -message "$2" \
-        -group "kopia" -sound Basso \
-        2>/dev/null || true
-    }
+  effectiveIgnores = lib.naturalSort (lib.unique (cfg.policy.ignores ++ cfg.ignores));
+  target = "${myvars.username}@${hostname}";
 
-    log() {
-      ${pkgs.gum}/bin/gum log -l "$1" -t rfc3339 -s "$2" "''${@:3}"
-    }
-    if [ -z $KOPIA_PASSWORD_FILE ]; then
-      log error "KOPIA_PASSWORD_FILE 缺失"
-      exit 1
-    fi
-    export KOPIA_PASSWORD=$(cat $KOPIA_PASSWORD_FILE)
-    userAtHost="${myvars.username}@${hostname}"
+  kopiaConfigPath = config.sops.templates."kopia-repository.config".path;
+  kopiaPasswordPath = config.sops.secrets.kopia-password.path;
 
-    log info "=== Backup Started ==="
-
-    # 添加随机延迟，防止多设备同时触发（0-10分钟随机）
-    # 如果 CANCEL_RANDOM=true 则跳过随机延迟
-    if [ "$CANCEL_RANDOM" != "true" ]; then
-      random_delay=$(od -An -N2 -t u2 /dev/urandom | xargs | awk '{print $1 % 600}')
-      log info "Random delay: $random_delay seconds（如果要跳过 delay 设置 CANCEL_RANDOM=true）"
-      sleep $random_delay
-    else
-      log info "Random delay skipped (CANCEL_RANDOM=true)"
-    fi
-
-    log debug "KOPIA_PASSWORD_FILE: $KOPIA_PASSWORD_FILE"
-    log debug "KOPIA_CONFIG_PATH: $KOPIA_CONFIG_PATH"
-    # 检查仓库连接
+  # 连接检查：所有 kopia 操作的前提，快照/策略/维护三条命令共用
+  repoCheck = ''
     ${pkgs.kopia}/bin/kopia repository status &>/dev/null || {
-      log error "Repository not connected"
-      notify "Kopia Backup Failed" "Repository not connected"
+      echo "Kopia repository not connected" >&2
+      exit 1
+    }
+  '';
+
+  # 快照体：只做逐路径快照。策略收敛与全量维护不在快照热路径上
+  backupBody = ''
+    ${repoCheck}
+
+    # 目标策略还没落进这个库（首次部署或新设备）时先同步一次，
+    # 否则首个快照会按默认策略把 node_modules、target、.build 之类一并传上去
+    if ! ${pkgs.kopia}/bin/kopia policy export "${target}" >/dev/null 2>&1; then
+      ${policySyncCore}
+    fi
+
+    ${lib.optionalString (effectivePaths == [ ]) ''
+      echo "No backup paths configured, skipping backup"
+      exit 0
+    ''}
+    ${lib.optionalString (effectivePaths != [ ]) ''
+      for dir in ${toString effectivePaths}; do
+        if [ ! -e "$dir" ]; then
+          echo "Path does not exist, skipping: $dir"
+          continue
+        fi
+        echo "Backing up: $dir"
+        ${pkgs.kopia}/bin/kopia snapshot create "$dir" \
+          --tags=type:automated \
+          --progress || {
+          echo "Backup failed for $dir" >&2
+          exit 1
+        }
+      done
+    ''}
+  '';
+
+  # 策略收敛核心：ignores 先比对再写（无变化不产生写操作），压缩与保留每次幂等声明。
+  # 快照前补同步与独立命令共用，因此不含仓库连接检查
+  policySyncCore = ''
+    # 一次 export 同时拿输出和退出码：写成 cmd | grep 时，管道在 pipefail 下整体判失败，
+    # 首次部署（目标策略还不存在）会被误判成读取失败
+    policyJson=""
+    if ! policyJson=$(${pkgs.kopia}/bin/kopia policy export "${target}" 2>&1); then
+      case "$policyJson" in
+        *"policy not found"*)
+          # 首次部署的正常状态，交给下面的 policy set 创建
+          policyJson=""
+          ;;
+        *)
+          echo "$policyJson" >&2
+          exit 1
+          ;;
+      esac
+    fi
+    currentIgnores=$(printf '%s' "$policyJson" | ${pkgs.jq}/bin/jq -c '."${target}".files.ignore // [] | sort') || {
+      echo "Failed to parse policy for ${target}" >&2
       exit 1
     }
 
-    # 配置策略
-    log info "Setting up backup policies"
-
-    # 同步声明的 ignores（仅比对，无变化不写入；失败即终止，不带错误策略进入备份）
-    # ponytail: 顺序脚本无并发，clear+add 两条命令分两次执行即可，无需 policy import 原子替换
-    ${toString (
-      lib.concatMapStringsSep "\n" (
-        policyName:
-        let
-          policyObj = cfg.policy."${policyName}";
-          # host 级用户自定义 ignores 只合并进当前机器对应的 user@host target
-          effectiveIgnores =
-            if policyName == "${myvars.username}@${hostname}" then
-              lib.naturalSort (lib.unique (policyObj.ignores ++ cfg.ignores))
-            else
-              lib.naturalSort policyObj.ignores;
-          expectedJson = builtins.toJSON effectiveIgnores;
-        in
-        lib.optionalString (policyName != "global") ''
-          log info "Syncing ignores: ${policyName}"
-          current=$(${pkgs.kopia}/bin/kopia policy export "${policyName}" 2>/dev/null) || {
-            # target 不存在是首次部署的正常状态（走 update 创建）；其他错误（连接/权限）则终止
-            if ${pkgs.kopia}/bin/kopia policy export "${policyName}" 2>&1 | grep -q "policy not found"; then
-              current=""
-            else
-              log error "Failed to read policy for ${policyName}"
-              notify "Kopia Backup Failed" "Failed to read policy for ${policyName}"
-              exit 1
-            fi
-          }
-          current=$(echo "''${current:-}" | ${pkgs.jq}/bin/jq -c '."${policyName}".files.ignore // [] | sort' 2>/dev/null) || {
-            log error "Failed to parse policy for ${policyName}"
-            exit 1
-          }
-          if [ "$current" = '${expectedJson}' ]; then
-            log info "Ignores for ${policyName} up to date, skipping."
-          else
-            log info "Updating ignores for ${policyName}..."
-            ${pkgs.kopia}/bin/kopia policy set "${policyName}" --clear-ignore || {
-              log error "Failed to clear ignores for ${policyName}"
-              notify "Kopia Backup Failed" "Failed to clear ignores for ${policyName}"
-              exit 1
-            }
-            ${lib.optionalString (effectiveIgnores != [ ]) ''
-              ${pkgs.kopia}/bin/kopia policy set "${policyName}" \
-                ${
-                  toString (
-                    lib.concatMapStringsSep " \\\n              " (
-                      ignore: "--add-ignore \"${ignore}\""
-                    ) effectiveIgnores
-                  )
-                } || {
-                log error "Failed to set ignores for ${policyName}"
-                notify "Kopia Backup Failed" "Failed to set ignores for ${policyName}"
-                exit 1
-              }
-            ''}
-            # 压缩与保留策略仍然每次声明（幂等，kopia 值相同不会产生写操作差异）
-            ${pkgs.kopia}/bin/kopia policy set "${policyName}" \
-              --compression="${policyObj.compression}" \
-              ${
-                toString (
-                  lib.concatMapStringsSep " \\\n              " (
-                    retentionType: "--keep-${retentionType} ${toString (policyObj.retention."${retentionType}")}"
-                  ) (builtins.attrNames policyObj.retention)
-                )
-              } || {
-              log error "Failed to set policy for ${policyName}"
-              notify "Kopia Backup Failed" "Failed to set policy for ${policyName}"
-              exit 1
-            }
-          fi
-        ''
-      ) (builtins.attrNames cfg.policy)
-    )}
-
-    # 检查是否有备份路径
-    if [ ${toString (builtins.length effectivePaths)} -eq 0 ]; then
-      log info "No backup paths configured, skipping backup"
-      exit 0
+    if [ "$currentIgnores" = '${builtins.toJSON effectiveIgnores}' ]; then
+      echo "Ignores for ${target} up to date, skipping."
+    else
+      echo "Updating ignores for ${target}..."
+      ${pkgs.kopia}/bin/kopia policy set "${target}" --clear-ignore || exit 1
+      ${lib.optionalString (effectiveIgnores != [ ]) ''
+        ${pkgs.kopia}/bin/kopia policy set "${target}" \
+          ${
+            toString (
+              lib.concatMapStringsSep " \\\n          " (ignore: "--add-ignore \"${ignore}\"") effectiveIgnores
+            )
+          } || exit 1
+      ''}
     fi
 
-    # 执行备份
-    for dir in ${toString effectivePaths}; do
-      # 检查路径是否存在
-      if [ ! -e "$dir" ]; then
-        log warn "Path does not exist, skipping: $dir"
-        continue
-      fi
-
-      log info "Backing up: $dir"
-      ${pkgs.kopia}/bin/kopia snapshot create \
-        "$dir" \
-        --tags=type:automated \
-        --progress || {
-        log error "Backup failed for $dir"
-        notify "Kopia Backup Failed" "Backup failed for $dir"
-        exit 1
-      }
-    done
-
-    # 每周日维护
-    if [ "$(date +%u)" -eq 7 ]; then
-      log info "Running full maintenance..."
-      ${pkgs.kopia}/bin/kopia maintenance run --full || {
-        log warn "Maintenance failed"
-        notify "Kopia Backup Warning" "Maintenance failed"
-      }
-    fi
-
-    log info "=== Backup Completed ==="
-    # notify "Kopia Backup" "Backup completed successfully"
+    ${pkgs.kopia}/bin/kopia policy set "${target}" \
+      --compression="${cfg.policy.compression}" \
+      ${
+        toString (
+          lib.concatMapStringsSep " \\\n      " (
+            retentionType: "--keep-${retentionType} ${toString (cfg.policy.retention.${retentionType})}"
+          ) (builtins.attrNames cfg.policy.retention)
+        )
+      } || exit 1
   '';
+
+  policySyncBody = ''
+    ${repoCheck}
+
+    ${policySyncCore}
+  '';
+
+  maintenanceBody = ''
+    ${repoCheck}
+
+    ${policySyncCore}
+
+    ${pkgs.kopia}/bin/kopia maintenance run --full
+  '';
+
+  # 手动入口共用前置：自行解密口令并指向仓库配置
+  cliPrelude = ''
+    KOPIA_PASSWORD="$(cat "''${KOPIA_PASSWORD_FILE:-"${kopiaPasswordPath}"}")"
+    export KOPIA_PASSWORD
+    KOPIA_CONFIG_PATH="''${KOPIA_CONFIG_PATH:-"${kopiaConfigPath}"}"
+    export KOPIA_CONFIG_PATH
+  '';
+
 in
 {
   config = {
@@ -172,51 +135,68 @@ in
       }
     ];
 
-    home.packages = with pkgs; [
-      kopia
-      (writeShellApplication {
-        name = "kopia-backup";
-        runtimeInputs = [
-          kopia
-          gum
-        ];
-        text = ''
-          # 设置环境变量（如果未设置）
-          export KOPIA_PASSWORD_FILE="''${KOPIA_PASSWORD_FILE:-"${config.sops.secrets.kopia-password.path}"}"
-          export KOPIA_CONFIG_PATH="''${KOPIA_CONFIG_PATH:-"${
-            config.sops.templates."kopia-repository.config".path
-          }"}"
-          ${backupScript}
-        '';
+    # 定时快照与维护接入 shelken.tasks：调度、抖动、日志、灵动岛与失败通知全部由任务系统提供
+    shelken.tasks = {
+      kopia-backup = {
+        when = cfg.calendarInterval;
+        jitter = 600;
+        island = true;
+        packages = [ pkgs.kopia ];
+        env = {
+          KOPIA_CONFIG_PATH = kopiaConfigPath;
+        };
+        secrets = {
+          KOPIA_PASSWORD = kopiaPasswordPath;
+        };
+        notify.title = "Kopia Backup";
+        script = backupBody;
+      };
+      kopia-maintenance = {
+        when = cfg.maintenanceWhen;
+        weekday = [ 0 ];
+        packages = [ pkgs.kopia ];
+        env.KOPIA_CONFIG_PATH = kopiaConfigPath;
+        secrets.KOPIA_PASSWORD = kopiaPasswordPath;
+        notify.title = "Kopia Maintenance";
+        script = maintenanceBody;
+      };
+    };
+
+    home.packages = [
+      pkgs.kopia
+      (pkgs.writeShellApplication {
+        name = "kopia-policy-sync";
+        text = cliPrelude + policySyncBody;
       })
-      (writeShellApplication {
+      (pkgs.writeShellApplication {
         name = "kopia-ui";
-        runtimeInputs = [ kopia ];
-        text = ''
-          KOPIA_PASSWORD="$(cat "''${KOPIA_PASSWORD_FILE:-"${config.sops.secrets.kopia-password.path}"}")"
-          export KOPIA_PASSWORD
-          export KOPIA_CONFIG_PATH="''${KOPIA_CONFIG_PATH:-"${
-            config.sops.templates."kopia-repository.config".path
-          }"}"
+        runtimeInputs = [ pkgs.kopia ];
+        text = cliPrelude + ''
           echo "Starting Kopia UI at http://localhost:51515"
           kopia server start --ui --insecure --without-password "$@"
         '';
       })
-    ];
-
-    launchd.agents.kopia-backup = mylib.mkLaunchCommand {
-      name = "kopia-backup";
-      commandFile = backupScript;
-      config = {
-        RunAtLoad = false;
-        Debug = true;
-        KeepAlive = false;
-        StartCalendarInterval = cfg.calendarInterval;
-        EnvironmentVariables = {
-          KOPIA_PASSWORD_FILE = "${config.sops.secrets.kopia-password.path}";
-          KOPIA_CONFIG_PATH = "${config.sops.templates."kopia-repository.config".path}";
-        };
-      };
-    };
+    ]
+    ++ lib.optional config.shelken.tasks.kopia-backup.enable (
+      pkgs.writeShellApplication {
+        name = "kopia-backup";
+        text = ''
+          if [ "''${1:-}" = "--dry-run" ]; then
+            ${cliPrelude}
+            for dir in ${lib.escapeShellArgs effectivePaths}; do
+              ${pkgs.kopia}/bin/kopia snapshot estimate --quiet "$dir"
+            done
+          else
+            exec ${config.shelken.tasks.kopia-backup.package}/bin/task-kopia-backup "$@"
+          fi
+        '';
+      }
+    )
+    ++ lib.optional config.shelken.tasks.kopia-maintenance.enable (
+      pkgs.writeShellApplication {
+        name = "kopia-maintenance";
+        text = ''exec ${config.shelken.tasks.kopia-maintenance.package}/bin/task-kopia-maintenance "$@"'';
+      }
+    );
   };
 }

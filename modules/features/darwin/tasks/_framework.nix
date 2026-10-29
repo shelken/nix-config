@@ -1,17 +1,21 @@
-# 声明式定时任务（hosts/<host>/tasks/<name>.nix，加文件即生效）
+# 声明式定时任务（hosts/<host>/tasks/<name>.nix 或模块内 shelken.tasks.<name>，加声明即生效）
 #
-# 任务文件形状（纯声明，不含层概念）：
+# 任务声明形状（纯声明，不含层概念）：
 #   {
 #     when = "3:15";          # 日历时间，可 "3:15" 或 [ "3:15" "15:15" ]，与 every 互斥
 #     # every = 7200;         # 或间隔秒数
 #     # user = true;          # 默认 true：home-manager agent + task-<name> 手动命令
 #     # packages = with pkgs; [ jq ]; # 运行时依赖，注入 PATH
+#     # secrets = { GH_TOKEN = secretPath "github/cli-token"; }; # sops 解密文件的变量注入
+#     # env = { EDITOR = "vim"; };    # 普通环境变量（明文）
+#     # jitter = 600;         # launchd 调度触发时的最大随机延迟秒数，手动运行不延迟
+#     # notify = { success = true; title = "Backup"; }; # 成功通知与自定义标题
 #     script = '' ... '';     # bash 脚本
 #   }
 #
 # 自动生成：launchd 定时任务（agent/daemon）+ 可执行脚本 + task-<name> 手动命令 + task 管理入口。
 # 手动命令：task run <name> 或 task-<name>。
-# 复杂服务（需要 secrets/policy/CLI 工具，如 kopia）不属此模型，走常规 module。
+# 字段与选项契约定义在 lib/tasks.nix 的 mkTaskType，darwin 层与 home 层共用同一份。
 {
   config,
   lib,
@@ -31,70 +35,7 @@ let
   # 用户家目录（task.nix 属 darwin 模块，但家目录由 users 模块解析，避免硬编码 /Users）
   userHome = config.users.users.${myvars.username}.home;
 
-  taskType =
-    { config, name, ... }:
-    let
-      d = tasksLib.taskDefaults; # 唯一默认值源（与 home 层 withDefaults 共享）
-    in
-    {
-      options = {
-        when = lib.mkOption {
-          type = lib.types.coercedTo lib.types.str (t: [ t ]) (lib.types.listOf lib.types.str);
-          default = d.when;
-          description = "日历时间 HH:MM（launchd StartCalendarInterval，睡眠错过唤醒后补跑）";
-          example = "3:15";
-        };
-        every = lib.mkOption {
-          type = lib.types.nullOr lib.types.int;
-          default = d.every;
-          description = "间隔秒数（launchd StartInterval），与 when 互斥";
-          example = 7200;
-        };
-        user = lib.mkOption {
-          type = lib.types.bool;
-          default = d.user;
-          description = "true: 用户态 home-manager agent；false: root launchd daemon";
-        };
-        packages = lib.mkOption {
-          type = lib.types.listOf lib.types.package;
-          default = d.packages;
-          description = "脚本依赖的 CLI 工具包列表，注入执行环境 PATH";
-        };
-        secrets = lib.mkOption {
-          type = lib.types.attrsOf lib.types.str;
-          default = d.secrets;
-          description = "任务需要的环境变量到 sops 解密文件路径的映射，自动在运行时注入环境变量";
-          example = lib.literalExpression ''
-            { GH_TOKEN = secretPath "github/cli-token"; }
-          '';
-        };
-        script = lib.mkOption {
-          type = lib.types.lines;
-          description = "bash 脚本内容";
-        };
-        island = lib.mkOption {
-          type = lib.types.bool;
-          default = d.island;
-          description = "是否在执行时通过灵动岛展示任务状态（执行中转圈，成功自动收回，失败常驻停留）；root 任务需图形会话在席才有人观看";
-        };
-        package = lib.mkOption {
-          type = lib.types.package;
-          readOnly = true;
-          description = "生成的可执行脚本（内部用）";
-        };
-      };
-      config = {
-        package = tasksLib.mkPackage name {
-          inherit (config)
-            user
-            packages
-            secrets
-            script
-            island
-            ;
-        };
-      };
-    };
+  taskType = tasksLib.mkTaskType;
 in
 {
   options.shelken.tasks = lib.mkOption {
@@ -115,10 +56,18 @@ in
         secretPath = secret: config.home-manager.users.${myvars.username}.sops.secrets.${secret}.path;
       };
 
-      assertions = lib.mapAttrsToList (name: t: {
-        assertion = (t.when != [ ]) != (t.every != null);
-        message = "shelken.tasks.${name}: when 与 every 必须二选一";
-      }) taskCfg;
+      assertions = lib.concatLists (
+        lib.mapAttrsToList (name: t: [
+          {
+            assertion = !(t.when != [ ] && t.every != null);
+            message = "shelken.tasks.${name}: when 与 every 不能同时设置";
+          }
+          {
+            assertion = t.weekday == [ ] || (t.when != [ ] && t.every == null);
+            message = "shelken.tasks.${name}: weekday 必须配合 when 使用，不能与 every 共用";
+          }
+        ]) taskCfg
+      );
 
       # root 任务：launchd daemon；手动执行 sudo task-<name>
       launchd.daemons = lib.mapAttrs (name: t: {
@@ -127,6 +76,10 @@ in
           Label = "space.ooooo.task-${name}";
           RunAtLoad = false;
           KeepAlive = false;
+          # 任务脚本据此区分「launchd 调度唤起」与「手动 sudo task-<name>」
+          EnvironmentVariables = {
+            SHELKEN_TASK_LAUNCHD = "1";
+          };
           StandardOutPath = "/Library/Logs/task-${name}.log";
           StandardErrorPath = "/Library/Logs/task-${name}.log";
         }
