@@ -17,26 +17,24 @@
 
     sops = {
       secrets.kopia-password = mylib.mkDefaultSecret { key = "kopia/password"; };
-      secrets.kopia-s3-host = mylib.mkDefaultSecret { key = "drive/s3/host"; };
-      secrets.kopia-s3-access-key-id = mylib.mkDefaultSecret { key = "drive/s3/access_key_id"; };
-      secrets.kopia-s3-secret-access-key = mylib.mkDefaultSecret {
-        key = "drive/s3/secret_access_key";
+      # WebDAV 入口域名：secret 只存裸域名，scheme 与 /dav 前缀在模板里拼
+      secrets.kopia-main-domain = mylib.mkDefaultSecret { key = "main-domain"; };
+      secrets.kopia-webdav-username = mylib.mkDefaultSecret { key = "drive/webdav/username"; };
+      secrets.kopia-webdav-password = mylib.mkDefaultSecret {
+        key = "drive/webdav/password";
       };
 
-      ## NOTE: kopia 的 s3 与文件系统存储结构不同，因此不同 repo 创建的无法直接连接，必须使用不同 repo
-      ## 不同 repo 之间同步使用子命令 `repository sync-to`
+      ## NOTE: kopia 仓库存储结构随后端类型而异（S3 与 WebDAV 互不兼容），
+      ## 载入旧库的数据不能直接连新库，迁移需在旧库上执行 repository sync-to
       templates."kopia-repository.config" = {
         content = ''
           {
             "storage": {
-              "type": "s3",
+              "type": "webdav",
               "config": {
-                "bucket": "kopia",
-                "prefix": "main/",
-                "endpoint": "${config.sops.placeholder.kopia-s3-host}",
-                "doNotUseTLS": false,
-                "accessKeyID": "${config.sops.placeholder.kopia-s3-access-key-id}",
-                "secretAccessKey": "${config.sops.placeholder.kopia-s3-secret-access-key}"
+                "url": "https://drive.${config.sops.placeholder.kopia-main-domain}/dav/backup/kopia/main",
+                "username": "${config.sops.placeholder.kopia-webdav-username}",
+                "password": "${config.sops.placeholder.kopia-webdav-password}"
               }
             },
             "caching": {
@@ -47,7 +45,7 @@
              },
             "hostname": "${hostname}",
             "username": "${myvars.username}",
-            "description": "Repository in S3: ${config.sops.placeholder.kopia-s3-host} kopia:main/",
+            "description": "Repository in WebDAV: drive.${config.sops.placeholder.kopia-main-domain} /dav/backup/kopia/main",
             "enableActions": false,
             "formatBlobCacheDuration": 900000000000
           }

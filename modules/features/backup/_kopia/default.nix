@@ -1,13 +1,11 @@
 {
   mylib,
   lib,
-  myvars,
   hostname,
   ...
 }:
 let
-  policyDefaults = import ./policy-defaults.nix { inherit hostname myvars; };
-  defaultPolicy = policyDefaults."${myvars.username}@${hostname}";
+  policyDefaults = import ./policy-defaults.nix;
 in
 {
   imports = [
@@ -15,16 +13,13 @@ in
     ./service.nix
   ];
 
-  # 默认配置：
-  # - enable 关闭
-  # - calendarInterval 每天两次，时间按 hostname 固定分布
-  # - policy 默认值见 ./policy-defaults.nix
-  # enable 已删除（实现加入 workstation 角色即开启）；
+  # 默认每天两次快照，时间按 hostname 固定分布，策略默认值见 ./policy-defaults.nix。
+  # 实现加入 workstation 角色即开启；
   # app/backupPaths/ignores 接口声明在 modules/features/backup/_options.nix（进 core，全平台共享），
   # 本文件只声明 kopia 后端自身的选项
   options.shelken.backup = {
     calendarInterval = lib.mkOption {
-      type = with lib.types; listOf (attrsOf int);
+      type = with lib.types; listOf str;
       default =
         let
           schedule = mylib.calcUniformSchedule {
@@ -32,81 +27,63 @@ in
             startHour = 2;
             endHour = 8;
           };
+          pad = n: lib.fixedWidthString 2 "0" (toString n);
         in
         [
-          {
-            Hour = schedule.hour;
-            Minute = schedule.minute;
-          }
-          {
-            Hour = schedule.hour + 12;
-            Minute = schedule.minute;
-          }
+          "${pad schedule.hour}:${pad schedule.minute}"
+          "${pad (schedule.hour + 12)}:${pad schedule.minute}"
         ];
-      description = "启动日历间隔，定义备份执行的时间";
+      description = "备份快照的日历时间（HH:MM），默认每天两次，按 hostname 均匀分布";
       example = [
-        {
-          Hour = 2;
-          Minute = 30;
-        }
-        {
-          Hour = 14;
-          Minute = 45;
-        }
+        "2:30"
+        "14:45"
       ];
     };
+    maintenanceWhen = lib.mkOption {
+      type = lib.types.str;
+      default = "5:00";
+      description = "每日策略同步与周日全量维护的日历时间（HH:MM）";
+      example = "5:00";
+    };
     policy = lib.mkOption {
-      type =
-        with lib.types;
-        attrsOf (
-          lib.types.submodule {
-            options = {
-              compression = lib.mkOption {
-                type = lib.types.str;
-                default = defaultPolicy.compression;
-                description = "压缩算法";
-                example = "zstd-fastest";
-              };
-              ignores = lib.mkOption {
-                type = with lib.types; listOf str;
-                default = defaultPolicy.ignores;
-                description = "忽略模式列表";
-                example = [
-                  "*.tmp"
-                  "node_modules"
-                  "*.log"
-                ];
-              };
-              retention = lib.mkOption {
-                type = with lib.types; attrsOf lib.types.int;
-                default = defaultPolicy.retention;
-                description = "保留策略";
-                example = {
-                  latest = 24;
-                  daily = 7;
-                  weekly = 4;
-                };
-              };
+      type = lib.types.submodule {
+        options = {
+          compression = lib.mkOption {
+            type = lib.types.str;
+            default = policyDefaults.compression;
+            description = "压缩算法";
+            example = "zstd-fastest";
+          };
+          ignores = lib.mkOption {
+            type = with lib.types; listOf str;
+            default = policyDefaults.ignores;
+            description = "忽略模式列表";
+            example = [
+              "*.tmp"
+              "node_modules"
+              "*.log"
+            ];
+          };
+          retention = lib.mkOption {
+            type = with lib.types; attrsOf lib.types.int;
+            default = policyDefaults.retention;
+            description = "保留策略";
+            example = {
+              latest = 24;
+              daily = 7;
+              weekly = 4;
             };
-          }
-        );
+          };
+        };
+      };
       default = policyDefaults;
       description = ''
-        备份策略配置，不支持 global 配置。
-        默认策略定义在 ./policy-defaults.nix。
+        本机备份策略，固定应用于 <user>@<host> 目标，默认值见 ./policy-defaults.nix。
+        用户级额外忽略模式见 modules/features/backup/_options.nix 的 ignores。
       '';
       example = {
-        "user@host" = {
-          compression = "zstd-fastest";
-          ignores = [
-            "node_modules"
-            ".cache"
-          ];
-        };
-        "user@host:/specific/path" = {
-          retention = {
-            daily = 30;
-          };
+        retention = {
+          daily = 30;
         };
       };
     };

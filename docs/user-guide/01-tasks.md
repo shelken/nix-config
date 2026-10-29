@@ -1,79 +1,161 @@
 # 声明式定时任务
 
-在 `hosts/<机器>/tasks/` 下加一个 nix 文件，构建切换后即自动生效：定时任务、可执行脚本、手动命令、统一管理 CLI 全部自动生成。
+声明一处任务，得到 `task-<名>` 命令、统一管理入口 `task`，以及自动落盘的日志。配置调度后，再由 launchd 自动触发
 
-## 快速开始
+两个声明位置，效果一致
 
-给 `mio` 加一个带依赖的用户任务，创建 `hosts/mio/tasks/backup-check.nix`：
+- `hosts/<机器>/tasks/<名>.nix`，机器专属
+- 任意模块里写 `shelken.tasks.<名>`，随功能一起下发
+
+字段名、默认值与脚本包装逻辑都在 `lib/tasks.nix`，本页不复述类型定义
+
+## 加一个机器专属任务
+
+新建 `hosts/mio/tasks/backup-check.nix`
 
 ```nix
 { pkgs, ... }:
 {
-  when = "3:15"; # 每天 3:15 执行（或 every = 7200 表示每 2 小时）
-  user = true; # 用户态任务（默认 true，root 任务设为 false）
+  when = "3:15";
   packages = with pkgs; [
-    jq
     curl
-  ]; # 自动注入 PATH
+  ];
   script = ''
-    echo "check ok"
+    curl --fail --silent https://example.com/health >/dev/null
   '';
 }
 ```
 
-`git add` 后 `just sw`，完成。
+`git add` 这个文件，再跑 `just sw`（新文件没进 git 的话 flake 看不到）。之后用 `task ls` 确认它已注册
 
-## 配置项
+文件名去掉 `.nix` 就是任务名，所以上面的任务叫 `backup-check`，日志落在 `~/Library/Logs/task-backup-check.log`
 
-| 字段       | 类型           | 默认值 | 说明                                                                  |
-| ---------- | -------------- | ------ | --------------------------------------------------------------------- |
-| `when`     | `"H:M"` 或列表 | 无     | 日历时间（launchd `StartCalendarInterval`）；睡眠错过的会在唤醒后补跑 |
-| `every`    | 整数（秒）     | 无     | 间隔执行（launchd `StartInterval`）；与 `when` 互斥、二选一           |
-| `user`     | bool           | `true` | `true`：用户态 LaunchAgent；`false`：root LaunchDaemon                |
-| `packages` | package 列表   | `[ ]`  | 依赖的 CLI 工具，注入隔离的运行时 PATH                                |
-| `secrets`  | 属性集         | `{ }`  | 环境变量到 `secretPath "sops/key"` 的映射，运行时按需注入             |
-| `script`   | bash 脚本      | 必填   | 脚本内容，经 shellcheck 校验打包                                      |
+## 在模块里声明任务
 
-## 统一管理命令 (`task`)
+功能模块在自己的配置旁边声明任务，`_kopia` 就是这样做的
 
-系统提供 `task` 命令，运行时读取当前已安装的 `space.ooooo.task-*` launchd plist：
-
-```bash
-# 1. 查看所有已注册任务、调度时间、权限层与日志路径
-task ls
-
-# 输出示例：
-# NAME TIER SCHEDULE LOG
-# ---- ---- -------- ---
-# loon root every 7200s /Library/Logs/task-loon.log
-# nix-gc root when 3:15 /Library/Logs/task-nix-gc.log
-
-# 2. 手动执行任务（root 任务自动引导 sudo）
-task run loon
-
-# 3. 实时追踪查看任务日志
-task log loon
+```nix
+shelken.tasks.kopia-backup = {
+  when = [ "6:39" "18:39" ];
+  jitter = 600;
+  island = true;
+  packages = [ pkgs.kopia ];
+  script = "kopia snapshot create $HOME/Code";
+};
 ```
 
-底层依然提供独立的 `task-<name>` 可执行文件（如 `task-loon`）。
+两个来源合并成同一份任务表，模块声明的任务和主机任务是同一种东西
 
-## 日志输出
+## 字段
 
-所有任务的标准输出与标准错误自动持久化：
+| 字段       | 类型                 | 默认值  | 作用                                                          |
+| ---------- | -------------------- | ------- | ------------------------------------------------------------- |
+| `enable`   | bool                 | `true`  | 是否部署任务，`false` 时保留声明，不安装 job 与手动命令       |
+| `when`     | `"H:M"` 或字符串列表 |         | 日历时间，机器睡眠错过的会在唤醒后补跑                        |
+| `weekday`  | 0 到 7 的整数列表    | `[ ]`   | 限制 `when` 的星期，空列表表示每天，0 与 7 都是周日           |
+| `every`    | 整数，秒             |         | 间隔时间，机器关机期间错过的不会补跑                          |
+| `user`     | bool                 | `true`  | `true` 生成用户态 LaunchAgent，`false` 生成 root LaunchDaemon |
+| `packages` | package 列表         | `[ ]`   | 脚本依赖的 CLI，注入运行时 PATH                               |
+| `secrets`  | 属性集               | `{ }`   | 环境变量到 sops 解密文件路径的映射，运行时读文件注入          |
+| `env`      | 属性集               | `{ }`   | 普通环境变量，明文写在这里                                    |
+| `jitter`   | 整数，秒或 `null`    | `null`  | 调度唤起后的最大随机延迟，取值 `1` 到 `32767`                 |
+| `notify`   | 属性集               | 见下    | `failure = true`、`success = false`、`title = null`           |
+| `island`   | bool                 | `false` | 执行期间在灵动岛显示状态                                      |
+| `script`   | bash                 | 必填    | 脚本内容，打包时过 shellcheck                                 |
 
-- **用户任务 (`user = true`)**：`~/Library/Logs/task-<name>.log`
-- **系统任务 (`user = false`)**：`/Library/Logs/task-<name>.log`
+写错字段名或漏写 `script` 会在构建时报错，不会静默按默认值部署
 
-## 现有任务示例
+## 触发时间
 
-```bash
-hosts/mio/tasks/loon.nix # 机器专属：每 2h 清理 Loon 日志（root）
-modules/features/darwin/tasks/_global/nix-gc.nix # 全设备默认：每天 3:15 nix GC（root）
+`when` 和 `every` 不能同时给，按需要选择
+
+- `when = "3:15"`：每天的日历时间，对应 launchd 的 `StartCalendarInterval`
+- `every = 7200`：间隔秒数，对应 `StartInterval`
+- 都不给：纯手动任务，`task ls` 显示 `manual`，用 `task run <名>` 执行
+
+`when` 在睡眠期间错过的触发会在唤醒后补跑，多次触发合并为一次。`every` 不补跑，关机期间错过的日历触发也不补跑
+
+按星期执行时，在 `when` 旁加 `weekday`。多个星期与多个时间逐一组合
+
+```nix
+when = "5:00";
+weekday = [ 0 ]; # 每周日 5:00，睡眠错过后在唤醒时补跑
 ```
 
-- 机器专属任务：放 `hosts/<host>/tasks/`
-- 全设备通用任务：放 `modules/features/darwin/tasks/_global/`
+`weekday` 必须配合非空的 `when` 使用，与 `every` 共用会在构建时报错。`task ls` 会显示星期，例如 `when Sun 05:00`
 
-## 边界
+## 临时禁用
 
-此模型只覆盖「定时跑一段脚本」。需要复杂生命周期或 policy 配置的重型服务仍走常规 module，例如 `modules/features/backup/_kopia/`
+在任务声明里设 `enable = false`，应用配置后，launchd job 与 `task-<名>` 命令会被移除，`task ls` 不再列出该任务
+
+声明仍保留。恢复时设回 `enable = true`，再应用配置
+
+## 抖动
+
+多台机器打同一个后端时用 `jitter` 错峰
+
+```nix
+jitter = 600; # 唤起后随机等 0 到 599 秒
+```
+
+手动 `task run` 不等，因为抖动只在 launchd 唤起时生效
+
+## 通知
+
+用户态任务失败时默认弹一条系统通知，点通知打开对应日志。想把成功也报出来，或者换个标题
+
+```nix
+notify = {
+  success = true;
+  title = "Kopia Backup";
+};
+```
+
+`title` 同时替换成功与失败两种通知的标题。只有 launchd 唤起的运行会发通知，手动 `task run` 保持安静。root 任务不发通知，图形会话不在席时也发不出来
+
+## 灵动岛
+
+`island = true` 让任务执行期间出现在刘海里：执行中转圈，成功自动收回，失败常驻
+
+灵动岛观察者跑在 `gui` 域，只有登录了图形会话才存在。任务本身在 `user` 域照常执行，两者互不影响
+
+## 日志
+
+| 任务类型 | 路径                           |
+| -------- | ------------------------------ |
+| 用户态   | `~/Library/Logs/task-<名>.log` |
+| root     | `/Library/Logs/task-<名>.log`  |
+
+开了灵动岛的任务会再写一份到 `~/Library/Logs/task-island/<名>.log`，供观察者读取。看日志用 `task log <名>`，它跟随真实日志文件
+
+## 命令
+
+```bash
+task              # 等同 task ls
+task ls           # 列出任务、调度、权限层与日志路径
+task run <名>     # 手动执行，root 任务自动引导 sudo
+task log <名>     # 跟随该任务的日志
+task-<名>         # 绕过 task，直接执行
+```
+
+`task` 运行时读已安装的 `space.ooooo.task-*` launchd plist，所以它只显示真正部署到这台机器的任务
+
+## 哪些任务写在哪
+
+| 位置                                     | 用途                   |
+| ---------------------------------------- | ---------------------- |
+| `hosts/<机器>/tasks/`                    | 机器专属               |
+| `modules/features/darwin/tasks/_global/` | 全设备默认的 root 任务 |
+| 任意模块的 `shelken.tasks.<名>`          | 功能自带               |
+
+只有 `user = true` 的任务会进用户层。在模块里声明 root 任务会在构建时报错，所以 root 任务要写在 darwin 层的两处目录里
+
+## 实现位置
+
+```text
+lib/tasks.nix                                  # 字段契约与脚本包装：mkTaskType、taskDefaults、mkPackage
+modules/features/darwin/tasks/_framework.nix   # root 任务转 LaunchDaemon
+modules/features/darwin/tasks/_user-tasks.nix  # 用户任务转 LaunchAgent，并安装 task CLI
+modules/features/darwin/tasks/_global/         # 全设备默认任务
+modules/features/darwin/tasks/_notify.nix      # 通知用的 terminal-notifier
+```

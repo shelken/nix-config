@@ -7,46 +7,25 @@
   homeDir,
 }:
 rec {
-  # 任务字段唯一默认值源：darwin submodule 的 option default 与 home 层
-  # withDefaults 都从这里取，新增字段只改这一处，杜绝两处默认漂移
+  # 任务字段唯一默认值源：darwin 与 home 两端共用的 mkTaskType submodule
+  # 都从这里取默认值，新增字段只改这一处，杜绝两处默认漂移
   taskDefaults = {
+    enable = true;
     user = true;
     when = [ ];
+    weekday = [ ];
     every = null;
     packages = [ ];
     secrets = { };
+    env = { };
+    jitter = null;
+    notify = {
+      failure = true;
+      success = false;
+      title = null;
+    };
     island = false;
   };
-
-  # 补齐 home 层裸声明缺省字段（显式值优先）；darwin 层经 submodule default
-  # 取同一份 taskDefaults，不再各自写字面量
-  withDefaults =
-    t: taskDefaults // (if builtins.isString (t.when or null) then t // { when = [ t.when ]; } else t);
-
-  # 任务字段白名单（对齐 darwin 层 taskType 选项）
-  taskFields = [
-    "when"
-    "every"
-    "user"
-    "packages"
-    "secrets"
-    "script"
-    "island"
-  ];
-
-  # 校验裸声明：拒绝未知字段 + when/every 互斥。home 层不走 submodule，
-  # 必须显式校验，否则拼写错误会静默按默认值部署
-  checkTask =
-    name: t:
-    let
-      unknown = builtins.filter (k: !(builtins.elem k taskFields)) (builtins.attrNames t);
-    in
-    if unknown != [ ] then
-      throw "task '${name}': 未知字段 ${builtins.toString unknown}（合法: ${builtins.concatStringsSep ", " taskFields}）"
-    else if (t.when or [ ]) != [ ] && (t.every or null) != null then
-      throw "task '${name}': when 与 every 必须二选一"
-    else
-      t;
 
   # "3:15" -> { Hour = 3; Minute = 15; }
   parseTime =
@@ -59,13 +38,21 @@ rec {
       Minute = lib.toIntBase10 (lib.elemAt parts 1);
     };
 
-  # when/every -> launchd 触发键
+  # 日历时间与星期组合；无调度时不生成触发键，保留纯手动入口
   mkTrigger =
     t:
     if t.every != null then
       { StartInterval = t.every; }
+    else if t.when == [ ] then
+      { }
     else
-      { StartCalendarInterval = map parseTime t.when; };
+      {
+        StartCalendarInterval =
+          if t.weekday == [ ] then
+            map parseTime t.when
+          else
+            lib.concatMap (day: map (time: (parseTime time) // { Weekday = day; }) t.when) t.weekday;
+      };
 
   # 动态任务管理 CLI 工具: task（运行时读取 launchd plist，不写死任务列表）
   mkTaskCli = pkgs.writeShellApplication {
@@ -109,10 +96,13 @@ rec {
                       intervals = data["StartCalendarInterval"]
                       if isinstance(intervals, dict):
                           intervals = [intervals]
-                      times = [
-                          f"{item.get('Hour', 0):02d}:{item.get('Minute', 0):02d}"
-                          for item in intervals
-                      ]
+                      days = ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                      times = []
+                      for item in intervals:
+                          time = f"{item.get('Hour', 0):02d}:{item.get('Minute', 0):02d}"
+                          if "Weekday" in item:
+                              time = f"{days[item['Weekday']]} {time}"
+                          times.append(time)
                       schedule = f"when {', '.join(times)}"
 
                   log_path = data.get("StandardOutPath", "")
@@ -232,8 +222,7 @@ rec {
     '';
   };
 
-  # 任务包装脚本：起止记录 + 失败通知。t 必须已经过 withDefaults/checkTask
-  # （darwin 层经 submodule），缺字段直接报错而非静默兜底
+  # 任务包装脚本：起止记录 + 抖动 + 通知。t 来自 mkTaskType submodule，字段已带默认值
   mkPackage =
     name: t:
     let
@@ -248,8 +237,27 @@ rec {
         '') t.secrets
       );
 
+      # 把任意文本原样塞进双引号 bash 串：转义反斜杠、双引号、$ 与反引号。
+      # 不用单引号包裹是为了避开 shellcheck 的 SC2016（连 info 级都会让构建失败）
+      quoteDouble = s: builtins.replaceStrings [ "\\" "\"" "$" "`" ] [ "\\\\" "\\\"" "\\$" "\\`" ] s;
+
+      envExports = lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (var: value: ''export ${var}="${quoteDouble value}"'') t.env
+      );
+
+      # 抖动只在 launchd 调度唤起时生效：手动 task run 本来就跳过，所以不需要额外的跳过开关。
+      # 放在包装脚本里、灵动岛标记之前：休眠期间任务还没开始，不应占着灵动岛
+      jitterBlock = lib.optionalString (t.jitter != null) ''
+        if [ "''${SHELKEN_TASK_LAUNCHD:-}" = "1" ]; then
+          jitter=$(( RANDOM % ${toString t.jitter} ))
+          echo "[$(date '+%Y-%m-%d %H:%M:%S')] Jitter delay: ''${jitter}s"
+          sleep "$jitter"
+        fi
+      '';
+
       runnerBin = pkgs.writeShellScript "task-${name}-runner" ''
         ${secretExports}
+        ${envExports}
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] ===== Task '${name}' Started ====="
         ${t.script}
       '';
@@ -258,6 +266,53 @@ rec {
         if t.user then "${homeDir}/Library/Logs/task-${name}.log" else "/Library/Logs/task-${name}.log";
 
       islandDir = "${homeDir}/Library/Logs/task-island";
+
+      # 通知：默认仅 launchd 调度唤起且非零退出时提示失败，可配置成功也通知与自定义标题。
+      # 标题来自配置，必须转义后再拼进脚本；消息是模板自己拼的，含运行期展开的变量
+      mkNotify =
+        {
+          fallbackTitle,
+          message,
+          sound,
+        }:
+        ''
+          ${pkgs.terminal-notifier}/bin/terminal-notifier \
+            -title "${quoteDouble (if t.notify.title != null then t.notify.title else fallbackTitle)}" \
+            -message "${message}" \
+            -sound ${sound} \
+            -group "task-${name}" \
+            -open "file://${canonicalLog}" \
+            2>/dev/null || true
+        '';
+
+      # 两个开关都关时整段不发，否则会留下空的 if/then/fi 让 bash 报语法错误
+      notifyOnExit =
+        if !t.user || !(t.notify.failure || t.notify.success) then
+          "" # root daemon 通常无图形会话；开关全关则不需要通知
+        else
+          ''
+            # 仅 launchd 调度触发时通知，手动 task run 调试保持静默
+            if [ "''${SHELKEN_TASK_LAUNCHD:-}" = "1" ]; then
+              ${lib.optionalString t.notify.failure ''
+                if [ "$code" -ne 0 ]; then
+                  ${mkNotify {
+                    fallbackTitle = "Task Failed: ${name}";
+                    message = "退出码 \${code}, 点击查看日志";
+                    sound = "Basso";
+                  }}
+                fi
+              ''}
+              ${lib.optionalString t.notify.success ''
+                if [ "$code" -eq 0 ]; then
+                  ${mkNotify {
+                    fallbackTitle = "Task Completed: ${name}";
+                    message = "执行成功, 点击查看日志";
+                    sound = "Glass";
+                  }}
+                fi
+              ''}
+            fi
+          '';
 
       executionBody =
         if t.island then
@@ -293,31 +348,124 @@ rec {
           if [ -d "${islandDir}" ] && [ -e "${islandDir}/${name}.marker" ]; then
             printf '%s' "$code" > "${islandDir}/${name}.exit"
           fi
-          ${lib.optionalString t.user ''
-            # 仅 launchd 触发且非零退出才发通知；手动 task run 调试保持静默
-            if [ "$code" -ne 0 ] && [ -n "''${XPC_SERVICE_NAME:-}" ]; then
-              ${pkgs.terminal-notifier}/bin/terminal-notifier \
-                -title "Task Failed: ${name}" \
-                -message "退出码 ''${code}, 点击查看日志" \
-                -sound Basso \
-                -group "task-${name}" \
-                -open "file://${homeDir}/Library/Logs/task-${name}.log" \
-                2>/dev/null || true
-            fi
-          ''}
+          ${notifyOnExit}
         }
         trap __on_exit EXIT
 
+        ${jitterBlock}
         ${executionBody}
       '';
     };
 
-  # 启用过滤（有调度才生成，无 when/every 的任务声明视为未启用）
-  enabled = lib.filterAttrs (_: t: t.when != [ ] || t.every != null);
+  # 任务声明 submodule：darwin 层（root daemon）与 home 层（user agent）共用同一份
+  # 选项契约，两端只能有一个定义源；默认值全部来自 taskDefaults
+  mkTaskType =
+    { name, config, ... }:
+    {
+      options = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = taskDefaults.enable;
+          description = "是否部署任务；false 保留声明，但不生成 launchd job 与手动命令";
+        };
+        when = lib.mkOption {
+          type = lib.types.coercedTo lib.types.str (t: [ t ]) (lib.types.listOf lib.types.str);
+          default = taskDefaults.when;
+          description = "日历时间 HH:MM（launchd StartCalendarInterval，睡眠错过唤醒后补跑）";
+          example = "3:15";
+        };
+        weekday = lib.mkOption {
+          type = lib.types.listOf (lib.types.ints.between 0 7);
+          default = taskDefaults.weekday;
+          description = "when 的星期限制，空列表表示每天；0 与 7 都是周日，不能用于 every 或纯手动任务";
+          example = [ 0 ];
+        };
+        every = lib.mkOption {
+          type = lib.types.nullOr lib.types.int;
+          default = taskDefaults.every;
+          description = "间隔秒数（launchd StartInterval），与 when 互斥";
+          example = 7200;
+        };
+        user = lib.mkOption {
+          type = lib.types.bool;
+          default = taskDefaults.user;
+          description = "true: 用户态 home-manager agent；false: root launchd daemon";
+        };
+        packages = lib.mkOption {
+          type = lib.types.listOf lib.types.package;
+          default = taskDefaults.packages;
+          description = "脚本依赖的 CLI 工具包列表，注入执行环境 PATH";
+        };
+        secrets = lib.mkOption {
+          type = lib.types.attrsOf lib.types.str;
+          default = taskDefaults.secrets;
+          description = "任务需要的环境变量到 sops 解密文件路径的映射，运行时读文件注入变量";
+          example = lib.literalExpression ''
+            { GH_TOKEN = secretPath "github/cli-token"; }
+          '';
+        };
+        env = lib.mkOption {
+          type = lib.types.attrsOf lib.types.str;
+          default = taskDefaults.env;
+          description = "任务运行时注入的普通环境变量（明文，勿放密钥）";
+          example = {
+            EDITOR = "vim";
+          };
+        };
+        jitter = lib.mkOption {
+          type = lib.types.nullOr (lib.types.ints.between 1 32767);
+          default = taskDefaults.jitter;
+          description = "launchd 调度触发时的最大随机延迟秒数（1 到 32767，上限来自 bash RANDOM），手动运行不延迟";
+          example = 600;
+        };
+        notify = lib.mkOption {
+          type = lib.types.submodule {
+            options = {
+              failure = lib.mkOption {
+                type = lib.types.bool;
+                default = taskDefaults.notify.failure;
+                description = "任务失败时发系统通知";
+              };
+              success = lib.mkOption {
+                type = lib.types.bool;
+                default = taskDefaults.notify.success;
+                description = "任务成功时发系统通知";
+              };
+              title = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = taskDefaults.notify.title;
+                description = "通知标题，null 使用默认标题";
+              };
+            };
+          };
+          default = taskDefaults.notify;
+          description = "系统通知行为（仅用户态任务与图形会话）";
+        };
+        script = lib.mkOption {
+          type = lib.types.lines;
+          description = "bash 脚本内容";
+        };
+        island = lib.mkOption {
+          type = lib.types.bool;
+          default = taskDefaults.island;
+          description = "是否在执行时通过灵动岛展示任务状态；root 任务需图形会话在席才有人观看";
+        };
+        package = lib.mkOption {
+          type = lib.types.package;
+          readOnly = true;
+          description = "生成的可执行脚本（内部用）";
+        };
+      };
+      config = {
+        # 直接传整份 config，新增字段不必同时改这里
+        package = mkPackage name config;
+      };
+    };
 
-  # user 任务（home 层 agent）
+  enabled = tasks: lib.filterAttrs (_: t: t.enable) tasks;
+
+  # 禁用任务在两层都不部署；无调度任务仍保留手动入口
   userTasks = tasks: lib.filterAttrs (_: t: t.user) (enabled tasks);
 
-  # root 任务（darwin 层 daemon）
   rootTasks = tasks: lib.filterAttrs (_: t: !t.user) (enabled tasks);
 }
