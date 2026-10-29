@@ -112,6 +112,8 @@ let
   maintenanceBody = ''
     ${repoCheck}
 
+    ${policySyncCore}
+
     ${pkgs.kopia}/bin/kopia maintenance run --full
   '';
 
@@ -123,14 +125,6 @@ let
     export KOPIA_CONFIG_PATH
   '';
 
-  # 定时任务的手动入口：直接 exec 任务脚本，口令注入、日志与退出码都由任务包装提供，
-  # 不再各留一份实现，避免两条路径的 shell 严格模式差异
-  mkTaskAlias =
-    name:
-    pkgs.writeShellApplication {
-      inherit name;
-      text = ''exec ${config.shelken.tasks.${name}.package}/bin/task-${name} "$@"'';
-    };
 in
 {
   config = {
@@ -157,14 +151,6 @@ in
         notify.title = "Kopia Backup";
         script = backupBody;
       };
-      kopia-policy-sync = {
-        when = cfg.maintenanceWhen;
-        packages = [ pkgs.kopia ];
-        env.KOPIA_CONFIG_PATH = kopiaConfigPath;
-        secrets.KOPIA_PASSWORD = kopiaPasswordPath;
-        notify.title = "Kopia Policy";
-        script = policySyncBody;
-      };
       kopia-maintenance = {
         when = cfg.maintenanceWhen;
         weekday = [ 0 ];
@@ -179,6 +165,10 @@ in
     home.packages = [
       pkgs.kopia
       (pkgs.writeShellApplication {
+        name = "kopia-policy-sync";
+        text = cliPrelude + policySyncBody;
+      })
+      (pkgs.writeShellApplication {
         name = "kopia-ui";
         runtimeInputs = [ pkgs.kopia ];
         text = cliPrelude + ''
@@ -187,12 +177,26 @@ in
         '';
       })
     ]
-    ++ map mkTaskAlias (
-      lib.filter (name: config.shelken.tasks.${name}.enable) [
-        "kopia-backup"
-        "kopia-policy-sync"
-        "kopia-maintenance"
-      ]
+    ++ lib.optional config.shelken.tasks.kopia-backup.enable (
+      pkgs.writeShellApplication {
+        name = "kopia-backup";
+        text = ''
+          if [ "''${1:-}" = "--dry-run" ]; then
+            ${cliPrelude}
+            for dir in ${lib.escapeShellArgs effectivePaths}; do
+              ${pkgs.kopia}/bin/kopia snapshot estimate --quiet "$dir"
+            done
+          else
+            exec ${config.shelken.tasks.kopia-backup.package}/bin/task-kopia-backup "$@"
+          fi
+        '';
+      }
+    )
+    ++ lib.optional config.shelken.tasks.kopia-maintenance.enable (
+      pkgs.writeShellApplication {
+        name = "kopia-maintenance";
+        text = ''exec ${config.shelken.tasks.kopia-maintenance.package}/bin/task-kopia-maintenance "$@"'';
+      }
     );
   };
 }
