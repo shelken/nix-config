@@ -8,4 +8,4 @@
 
 ## 使用场景
 
-在对应 NixOS 虚拟机主机配置中（如 `hosts/vm/` 或相关主机 `default.nix`）通过 `disko` 模块引入，配合 `just gen-image` 或系统安装流程声明式格式化磁盘
+在对应 NixOS 虚拟机主机配置中通过 `disko` 模块引入，在系统安装部署阶段（如使用 `disko-install` 或 `nix run github:nix-community/disko`）进行声明式磁盘分区与格式化
