@@ -43,7 +43,7 @@
     },
     "cursor-plugins": {
         "cargoLock": null,
-        "date": "2026-10-13",
+        "date": "2026-10-28",
         "extract": null,
         "name": "cursor-plugins",
         "passthru": null,
@@ -55,12 +55,12 @@
             "name": null,
             "owner": "cursor",
             "repo": "plugins",
-            "rev": "c86f349b102feb91f1966f8a6a60882a4e601b50",
-            "sha256": "sha256-ZAHr2k7EaGArxccdRqrAZ2hNk/90D2ZAim3qMBfcF5I=",
+            "rev": "6f6c9e62585436f69e560138d46709026fa5c69f",
+            "sha256": "sha256-Rq2nUBzdTGv6FOYWPpbF/2y3wJ51KszcRqoV4N/Oe0Y=",
             "sparseCheckout": [],
             "type": "github"
         },
-        "version": "c86f349b102feb91f1966f8a6a60882a4e601b50"
+        "version": "6f6c9e62585436f69e560138d46709026fa5c69f"
     },
     "diagram-design": {
         "cargoLock": null,
