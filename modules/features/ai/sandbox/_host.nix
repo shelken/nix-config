@@ -1,18 +1,19 @@
 # 宿主驱动与 CLI 深模块 (SandboxHost)
 # 职责：
-# 1. 宿主 microsandbox 驱动配置生成
-# 2. 接收原生的 sb.yaml 能力上限策略文件
+# 1. 接收单一 SandboxManifest 规约与原生 sb.yaml 上限策略
+# 2. 宿主 microsandbox 驱动配置生成
 # 3. 组装并打包 sb 与 omp-sb 命令行工具
 # 4. 导出宿主 sessionVariables
 {
   pkgs,
-  msbHome,
-  cacheDir ? "$HOME/.cache/microsandbox",
+  manifest,
+  guest,
   policyFile,
-  launcher,
-  guestStatus,
 }:
 let
+  msbHome = manifest.statePaths.msbHome;
+  cacheDir = manifest.statePaths.cacheDir;
+
   msbConfig = (pkgs.formats.json { }).generate "microsandbox-config.json" {
     version = 1;
     home = msbHome;
@@ -35,8 +36,8 @@ let
       export DEFAULT_MSB_CONFIG="${msbConfig}"
       export DEFAULT_MSB_HOME="${msbHome}"
       export DEFAULT_YAML="${policyFile}"
-      export LAUNCHER="${launcher}"
-      export GUEST_STATUS="${guestStatus}"
+      export LAUNCHER="${guest.launcher}"
+      export GUEST_STATUS="${guest.guestStatus}"
 
       ${builtins.readFile ./sb.sh}
     '';

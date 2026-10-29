@@ -8,6 +8,10 @@
 # 5. 串行化执行沙箱内工具与插件补齐 (sb sync)
 set -euo pipefail
 
+die() {
+  echo "[-] 错误: $*" >&2
+  exit 1
+}
 # 默认参数（由 Nix 运行时或外部环境注入）
 DEFAULT_MSB_CONFIG="${DEFAULT_MSB_CONFIG:-}"
 DEFAULT_MSB_HOME="${DEFAULT_MSB_HOME:-}"
@@ -44,8 +48,7 @@ release_sb_lock() {
 require_sb_lock() {
   local action="$1"
   acquire_sb_lock 300 && return 0
-  echo "[-] 错误: 主 VM sb-main 生命周期锁被其他进程长期持有，放弃本次${action}" >&2
-  exit 1
+  die "主 VM sb-main 生命周期锁被其他进程长期持有，放弃本次${action}"
 }
 
 # -----------------------------------------------------------------------------
@@ -55,8 +58,7 @@ find_msb() {
   if command -v msb >/dev/null 2>&1; then
     echo "msb"
   else
-    echo "[-] 错误: PATH 中没有 msb（用 mise 安装 microsandbox，并确认 mise 已激活）" >&2
-    exit 1
+    die "PATH 中没有 msb（用 mise 安装 microsandbox，并确认 mise 已激活）"
   fi
 }
 
@@ -525,12 +527,10 @@ ensure_vm_locked() {
       fi
     else
       if ! query_active_contexts "$vm_name"; then
-        echo "[-] 错误: 无法确认主 VM $vm_name 是否有上下文在运行，本次不重建。原因: $BUSY_ERROR" >&2
-        exit 1
+        die "无法确认主 VM $vm_name 是否有上下文在运行，本次不重建。原因: $BUSY_ERROR"
       fi
       if [[ "$BUSY_COUNT" -gt 0 ]]; then
-        echo "[-] 错误: 能力上限已变，主 VM 有 $BUSY_COUNT 个上下文在运行，全部退出后再启动即按新上限重建。" >&2
-        exit 1
+        die "能力上限已变，主 VM 有 $BUSY_COUNT 个上下文在运行，全部退出后再启动即按新上限重建。"
       fi
       echo "[sb] 检测到能力上限变化且主 VM $vm_name 空闲，正在重建 (保留数据盘 $vol_name)..." >&2
       "$MSB" stop "$vm_name" >/dev/null 2>&1 || true
@@ -606,12 +606,10 @@ case "$cmd" in
     require_sb_lock 删除
     if [[ "$force" -eq 0 ]]; then
       if ! query_active_contexts sb-main; then
-        echo "[-] 错误: 无法确认主 VM sb-main 是否有上下文在运行，拒绝删除。原因: $BUSY_ERROR" >&2
-        exit 1
+        die "无法确认主 VM sb-main 是否有上下文在运行，拒绝删除。原因: $BUSY_ERROR"
       fi
       if [[ "$BUSY_COUNT" -gt 0 ]]; then
-        echo "[-] 错误: 主 VM sb-main 有 $BUSY_COUNT 个上下文在运行，拒绝删除。可用 sb rm --force 强制" >&2
-        exit 1
+        die "主 VM sb-main 有 $BUSY_COUNT 个上下文在运行，拒绝删除。可用 sb rm --force 强制"
       fi
     fi
     echo "[sb] 正在删除主 VM sb-main (保留数据卷)..." >&2
@@ -725,16 +723,14 @@ EOF
     done
 
     if [[ $# -eq 0 ]]; then
-      echo "[-] 错误: sb run 需要提供待执行的命令。示例: sb run git status" >&2
-      exit 1
+      die "sb run 需要提供待执行的命令。示例: sb run git status"
     fi
 
     current_cwd="$(pwd -P)"
     plan_json="$(resolve_and_validate_plan "$current_cwd" "$YAML_FILE")"
     project_root="$(jq -r '.project_root' <<< "$plan_json")"
     if [[ "$(approval_state "$project_root")" == "unapproved" ]]; then
-      echo "[-] 错误: $project_root/.sandbox.yaml 未批准，或批准后已变更。先执行 sb plan 查看授权内容，确认后执行 sb trust" >&2
-      exit 1
+      die "$project_root/.sandbox.yaml 未批准，或批准后已变更。先执行 sb plan 查看授权内容，确认后执行 sb trust"
     fi
     ctx_id="ctx_$(date +%s)_$RANDOM"
 
