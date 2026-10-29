@@ -82,9 +82,7 @@ describe("omp-guard — 纯内存函数测试 (In-Memory Audit)", () => {
       );
       expect(result.block).toBe(true);
       if (result.block) {
-        expect(result.reason).toBe(
-          "! FORBIDDEN COMMAND\ncommand: env\nreason: 禁止直接批量读取环境变量",
-        );
+        expect(result.reason).toContain("reason: 禁止直接批量读取环境变量");
       }
     });
 
@@ -899,6 +897,117 @@ describe("omp-guard — 误报回归 (guard-fix)", () => {
         home: HOME,
       }).policy;
       expect(evaluateGuard({ tool: "bash", command, cwd: CWD, home: HOME }, policy).block).toBe(true);
+    }
+  });
+});
+
+describe("#171 环境模板精确授权", () => {
+  const template = "compose/demo/.env.tpl";
+
+  it("授权模板支持读取、编辑、搜索与显式暂存", () => {
+    const policy = buildPolicy({
+      projectSource: `allow_template_paths:\n  - "${template}"\n`,
+      cwd: CWD,
+      home: HOME,
+    }).policy;
+    const cases: GuardInput[] = [
+      { tool: "read", path: `${template}:1:raw`, cwd: CWD, home: HOME },
+      { tool: "write", path: template, cwd: CWD, home: HOME },
+      { tool: "edit", path: template, cwd: CWD, home: HOME },
+      { tool: "edit", input: `[${template}#ABCD]\nPUT 1.=1:\n+KEY=bws://demo/KEY\n`, cwd: CWD, home: HOME },
+      { tool: "ast_edit", paths: [template], cwd: CWD, home: HOME },
+      { tool: "grep", path: template, cwd: CWD, home: HOME },
+      { tool: "glob", path: template, cwd: CWD, home: HOME },
+      { tool: "bash", command: `git add -- ${template}`, cwd: CWD, home: HOME },
+    ];
+    for (const input of cases) {
+      expect([input, evaluateGuard(input, policy)]).toEqual([input, { block: false }]);
+    }
+  });
+
+  it("未授权模板和真实环境文件在各入口继续受保护", () => {
+    const policy = buildPolicy({
+      projectSource: `allow_template_paths:\n  - "${template}"\n`,
+      cwd: CWD,
+      home: HOME,
+    }).policy;
+    for (const file of [".env", "compose/demo/.env", "compose/demo/.env.production", "compose/other/.env.tpl"]) {
+      for (const tool of ["read", "write", "edit", "grep", "glob"]) {
+        expect([tool, file, evaluateGuard({ tool, path: file, cwd: CWD, home: HOME }, policy).block]).toEqual([tool, file, true]);
+      }
+      expect(evaluateGuard({ tool: "ast_edit", paths: [template, file], cwd: CWD, home: HOME }, policy).block).toBe(true);
+      expect(evaluateGuard({ tool: "edit", input: `[${file}#ABCD]\nPUT 1.=1:\n+x\n`, cwd: CWD, home: HOME }, policy).block).toBe(true);
+      expect(evaluateGuard({ tool: "bash", command: `git add -- ${file}`, cwd: CWD, home: HOME }, policy).block).toBe(true);
+    }
+    expect(evaluateGuard({ tool: "read", path: template, cwd: CWD, home: HOME }, createBuiltinPolicy()).block).toBe(true);
+    expect(evaluateGuard({ tool: "edit", input: `[${template}#ABCD]\nMV compose/demo/.env\n`, cwd: CWD, home: HOME }, policy).block).toBe(true);
+    expect(evaluateGuard({ tool: "read", path: ".env.tpl", cwd: path.join(CWD, "elsewhere"), home: HOME }, policy).block).toBe(true);
+  });
+
+  it("精确暂存授权不扩大到通配或全仓暂存", () => {
+    const policy = buildPolicy({
+      globalSource: "deny_commands:\n  - git add -A\n  - git add .\n",
+      projectSource: `allow_template_paths:\n  - "${template}"\n`,
+      cwd: CWD,
+      home: HOME,
+    }).policy;
+    for (const command of [`git add -- ${template}`, `git add -A -- ${template}`]) {
+      expect(evaluateGuard({ tool: "bash", command, cwd: CWD, home: HOME }, policy).block).toBe(false);
+    }
+    for (const command of ["git add .", "git add -A", "git add -- compose/demo/.env.*", `git add -- ${template} compose/demo/.env`]) {
+      expect(evaluateGuard({ tool: "bash", command, cwd: CWD, home: HOME }, policy).block).toBe(true);
+    }
+  });
+
+  it("自定义拒绝优先并报告实际配置文件", () => {
+    for (const layer of ["globalSource", "projectSource"] as const) {
+      const config = { globalPath: "/config/global/permissions.yaml", projectPath: "/config/project/.omp/permissions.yml" };
+      const policy = buildPolicy({
+        projectSource: `allow_template_paths:\n  - "${template}"\n`,
+        [layer]: `allow_template_paths:\n  - "${template}"\ndeny_paths:\n  - "${template}"\n`,
+        permissionPaths: config,
+        cwd: CWD,
+        home: HOME,
+      }).policy;
+      const result = evaluateGuard({ tool: "read", path: template, cwd: CWD, home: HOME }, policy);
+      expect(result.block).toBe(true);
+      if (result.block) {
+        expect(result.reason).toContain(`path: ${template}`);
+        expect(result.reason).toContain(`config: ${layer === "globalSource" ? config.globalPath : config.projectPath}#deny_paths`);
+      }
+    }
+    const result = evaluateGuard({ tool: "read", path: template, cwd: CWD, home: HOME }, createBuiltinPolicy());
+    expect(result.block).toBe(true);
+    if (result.block) expect(result.reason).toContain("config: guard.ts#BUILTIN_PATHS");
+  });
+
+  it("拒绝通配、目录及真实环境文件授权，支持项目撤回模板授权", () => {
+    for (const file of ["**/.env.tpl", ".env", ".env.production", "compose/demo/"]) {
+      const built = buildPolicy({ projectSource: `allow_template_paths:\n  - "${file}"\n`, cwd: CWD, home: HOME });
+      expect(built.errors.join("\n")).toContain("allow_template_paths 仅支持确切的 .env.tpl 文件路径");
+      expect(evaluateGuard({ tool: "read", path: "compose/demo/.env.production", cwd: CWD, home: HOME }, built.policy).block).toBe(true);
+    }
+    const policy = buildPolicy({
+      globalSource: `allow_template_paths:\n  - "${template}"\n`,
+      projectSource: `allow_template_paths:\n  - "-${template}"\n`,
+      cwd: CWD,
+      home: HOME,
+    }).policy;
+    expect(evaluateGuard({ tool: "read", path: template, cwd: CWD, home: HOME }, policy).block).toBe(true);
+  });
+
+  it("授权模板不能通过软链接访问真实环境文件", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "guard-template-links-"));
+    try {
+      writeFileSync(path.join(dir, ".env"), "FAKE_SECRET=example\n");
+      symlinkSync(".env", path.join(dir, ".env.tpl"));
+      const policy = buildPolicy({ projectSource: 'allow_template_paths:\n  - ".env.tpl"\n', cwd: dir, home: HOME }).policy;
+      for (const tool of ["read", "write", "edit", "grep", "glob"]) {
+        expect(evaluateGuard({ tool, path: ".env.tpl", cwd: dir, home: HOME }, policy).block).toBe(true);
+      }
+      expect(evaluateGuard({ tool: "bash", command: "git add -- .env.tpl", cwd: dir, home: HOME }, policy).block).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });
