@@ -13,7 +13,7 @@
 
 ## 后果
 
-- 登记为 mise 的工具，宿主也要 `mise install`；原本由 Nix 安装的同名工具迁到 mise
+- 登记为 mise 的工具，宿主也要执行 `mise install`；原本由 Nix 安装的同名工具迁到 mise
 - `nixfmt`、`deadnix`、`statix` 没有 mise 来源，只留在宿主 Nix，不进沙箱
-- 沙箱基础环境（bash、coreutils、curl、git、mise 等）不登记为共享工具，否则宿主会被 GNU `coreutils`、Nix 版 `bash` 覆盖 macOS 自带的同名命令
-- 沙箱的 Nix 部分实测解压后约 642 MiB（基础 CLI）加 309 MiB（运行时），低于原来的约 1.1 GiB
+- 沙箱基础环境（bash、coreutils、curl、git、mise 等）不登记为共享工具，避免宿主上的 macOS 自带命令被 GNU `coreutils` 或 Nix 版 `bash` 覆盖
+- 沙箱的 Nix 部分实测解压后约 642 MiB（基础 CLI）加 309 MiB（运行时），低于原本的约 1.1 GiB

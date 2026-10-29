@@ -1,11 +1,11 @@
 ## 目录说明
 
-- `functions/` — 存放 zsh 函数脚本，目录已加入 `fpath`，所有函数通过 `autoload` 按需加载
+- `functions/`：存放 zsh 函数脚本，目录已加入 `fpath`，所有函数通过 `autoload` 按需加载
 - prompt 由 `../starship.nix` 管理（Starship，配色来自 catppuccin/nix）
 
 ## 特定配置
 
-`$HOME/.specific.zsh` 是凭据**覆盖层**：基座值来自仓库 `modules/features/secrets/secrets.nix` 的 `opSecretMap`（`op://` 引用，由 1Password 解析），覆盖层只放临时差异。`sec-run` 运行目标命令时把两者交给 `op run` 注入，主终端默认不加载。
+`$HOME/.specific.zsh` 是凭据**覆盖层**：基座值来自仓库 `modules/features/secrets/secrets.nix` 的 `opSecretMap`（`op://` 引用，由 1Password 解析），覆盖层只放临时差异；`sec-run` 运行目标命令时把两者交给 `op run` 注入，主终端默认不加载
 
 - 临时换值/切换备用账号：`sec-env add KEY "op://Personal/<条目>/credential"`
 - 回落到基座值：注释掉或 `sec-env del KEY`
@@ -16,7 +16,7 @@
 
 ### `akv`
 
-查询 `shelken-homelab` Azure Key Vault 中的 secret 值。
+查询 `shelken-homelab` Azure Key Vault 中的 secret 值
 
 **用法：**
 
@@ -36,7 +36,7 @@ akv --help | -h      # 显示帮助
 
 ### `down_gh_files`
 
-从 GitHub 页面 URL 直接下载文件或目录到当前路径，无需手动拼接 API 地址。
+从 GitHub 页面 URL 直接下载文件或目录到当前路径，无需手动拼接 API 地址
 
 **用法：**
 
@@ -48,7 +48,7 @@ down_gh_files <github-url>
 
 ### `cpa-warm`
 
-按 3 并发批量发送 CPA warm 请求。
+按 3 并发批量发送 CPA warm 请求
 
 **用法：**
 
@@ -72,7 +72,7 @@ cpa-warm [--apiurl <url>] [--model <model>] [--envkey <ENV_VAR_NAME>] [--max <n>
 
 ### `cpa-eval`
 
-用糖果题测试 CPA 模型回答能力。
+用糖果题测试 CPA 模型回答能力
 
 **用法：**
 

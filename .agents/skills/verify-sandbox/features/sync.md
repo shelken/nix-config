@@ -36,5 +36,5 @@ Preconditions:
 ## Gotchas
 
 - `sb sync` 写真实共用层；不要为了测试引入新工具
-- 私有插件装不上时 `sb sync` 的 `rc` 非零（宿主上 `SB_POSTINSTALL_STRICT=1` 直接 `exit 1`）。bun 对私有 git 依赖会先打几行 `Authentication failed`，再通过 `gh auth git-credential` 重试；最终 `rc` 为 `0` 且插件目录有内容时可忽略这些行
+- 私有插件装不上时 `sb sync` 的 `rc` 非零（guest 侧 `sync-guest.sh` 设 `SB_POSTINSTALL_STRICT=1`，`exit 1`；宿主激活不设这个变量，只警告）。bun 对私有 git 依赖会先打几行 `Authentication failed`，再通过 `gh auth git-credential` 重试；最终 `rc` 为 `0` 且插件目录有内容时可忽略这些行
 - 验证终端行为时必须用 `script -q /dev/null <命令>` 分配 pty；直接 `$V run` 或管道调用的 stdin 不是终端，这类 bug 测不出来

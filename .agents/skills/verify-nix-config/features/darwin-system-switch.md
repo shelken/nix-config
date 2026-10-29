@@ -37,5 +37,5 @@ Preconditions:
 - 此入口会应用工作树中的全部系统改动，目标 feature 构建成功不能替代完整 diff 审查
 - switch 可能需要 sudo 和 launchd，不能放入无交互后台进程
 - Homebrew、系统 LaunchDaemon 与系统设置只由完整 switch 应用，`just hm` 无法验证这些副作用；Home Manager 自己会写用户级偏好和 `~/Library/LaunchAgents`，这些在 `just hm` 里就会变
-- 完整 switch 会执行 `brew bundle --force-cleanup`：本仓库 `cleanup = "uninstall"`（`hosts/mio/default.nix`），所有不在生成的 Brewfile 里的 Homebrew 包都会被卸载。预览用 `HOMEBREW_NO_AUTO_UPDATE=1 brew bundle cleanup --file="$(nix path-info --recursive <待 switch 的 toplevel> | grep Brewfile | head -1)"`，不带 `--force` 只列清单、不卸载；没有包会被卸载时没有任何包名输出（实测只有与清单无关的 tap 警告）。不带 `HOMEBREW_NO_AUTO_UPDATE=1` 它会先更新 Homebrew 自身。zsh 里的 `brew-diff` 读的是 `/run/current-system` 的 Brewfile，即当前已应用的，不是待 switch 的那份
+- 完整 switch 会执行 `brew bundle --force-cleanup`：本仓库 `cleanup = "uninstall"`（`hosts/mio/default.nix`），所有不在生成的 Brewfile 里的 Homebrew 包都会被卸载。预览用 `HOMEBREW_NO_AUTO_UPDATE=1 brew bundle cleanup --file="$(nix path-info --recursive <待 switch 的 toplevel> | grep Brewfile | head -1)"`，不带 `--force` 只列清单、不卸载；没有包会被卸载时没有任何包名输出（实测只有与清单无关的 tap 警告）。不带 `HOMEBREW_NO_AUTO_UPDATE=1` 它会先更新 Homebrew 自身。`just brew-diff`（仓库 justfile）读的是 `/run/current-system` 的 Brewfile，即当前已应用的，不是待 switch 的那份
 - 自动 rollback 不属于 cleanup；失败时保留 proof，先诊断再决定是否经授权回滚

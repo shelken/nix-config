@@ -116,4 +116,4 @@ modules/features/backup/_kopia/service.nix     # 两个任务、手动策略同�
 modules/features/backup/_kopia/policy-defaults.nix  # 默认策略
 ```
 
-定时如何生成、日志落在哪、通知与灵动岛的行为见[声明式定时任务](01-tasks.md)
+定时如何生成、日志落在哪、通知与灵动岛的行为见 [声明式定时任务](01-tasks.md)

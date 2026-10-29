@@ -1,7 +1,8 @@
 # Overlay
 
-如果有将全局替换某个包或者直接引入包的需要。
+用于全局替换包定义、固定依赖版本或引入自定义包
 
-- 固定某个包使用的依赖的版本，参考[maven.nix](./maven.nix)
-  ~~- 替换nixpkgs下某个已存在的包，参考[tmux.nix](./tmux.nix)~~
-- 创建不存在的某个包，参考[dotfiles.nix](./dotfiles.nix)
+## 参考示例
+
+- 固定某个包所使用的依赖版本：参考 [maven.nix](./maven.nix)
+- 引入自定义外部 flake 包：参考 [dotfiles.nix](./dotfiles.nix)

@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <a href="https://nixos.org/"><img src="https://img.shields.io/badge/NixOS-25.11-informational.svg?label=&style=for-the-badge&logo=nixos&color=EED49F&logoColor=D9E0EE&labelColor=363A4F"></a>
+  <a href="https://nixos.org/"><img src="https://img.shields.io/badge/NixOS-26.11-informational.svg?label=&style=for-the-badge&logo=nixos&color=EED49F&logoColor=D9E0EE&labelColor=363A4F"></a>
   <a href="https://github.com/shelken/nix-config"><img src="https://img.shields.io/github/repo-size/shelken/nix-config?style=for-the-badge&logo=github&labelColor=363A4F&color=8AADF4"></a>
   <a href="https://github.com/shelken/nix-config/commits"><img src="https://img.shields.io/github/last-commit/shelken/nix-config?logo=nixos&labelColor=363a4f&color=f5a97f&style=for-the-badge"></a>
   <a href="https://github.com/shelken/dotfiles.nix"><img src="https://img.shields.io/github/last-commit/shelken/dotfiles.nix?label=dotfiles&logoColor=363a4f&color=C6A0F6&style=for-the-badge&labelColor=363a4f"></a>
@@ -102,59 +102,60 @@ sudo darwin-uninstaller
 
 ## 常见问题
 
-### 变更 Homebrew 的清华源 remote 为 官方
+### 切换 Homebrew 远程仓库为官方源
 
 ```bash
 git -C "$(brew --repo)" remote set-url origin https://github.com/Homebrew/brew
 ```
 
-### 启用 secret 时，无法引入 `shelken/secrets.nix`
+### 启用 secret 时无法拉取私有仓库
 
-优先用 Git + HTTPS：将 flake input 改为 `git+https://github.com/shelken/secrets.nix.git`，Nix 会走本机 Git HTTPS 认证。
+优先使用 Git + HTTPS 协议：将 flake input 修改为 `git+https://github.com/shelken/secrets.nix.git`，走本机 Git HTTPS 凭据
 
-如果继续使用 `github:shelken/secrets.nix`，私有仓库需要 Nix access token。Determinate Nix 的系统配置入口是：
+若保留 `github:shelken/secrets.nix` 写法，私有仓库需配置 Nix access token，在 Determinate Nix 自定义配置中声明：
 
 ```text
 /etc/nix/nix.custom.conf
 ```
 
-### font 文件 一直在等lock
+### Font 文件提示等待 lock 锁
 
-解决：`sudo rm -rf /nix/store/**.lock`
+清理 store 锁文件：
 
-### wezterm 在 mac 上颜色显示错误
+```bash
+sudo rm -rf /nix/store/**.lock
+```
 
-尝试在`wezterm.lua`中配置`front_end = "WebGpu"`。
+### WezTerm 在 macOS 上颜色渲染异常
 
-### `Operation not permitted`?
+在 `wezterm.lua` 中配置前端引擎：`front_end = "WebGpu"`
+
+### 提示 `Operation not permitted`
 
 ![](assets/imgs/README_2024-09-19_01-08-46.png)
 
-给nix完整的磁盘访问权限
+给 nix 完整的磁盘访问权限
 
-### 安装Homebrew错误?(即使设置http代理)
+### 安装 Homebrew 错误（即使设置 http 代理）
 
-尝试使用热点数据和使用Quantumult X来代理
+尝试使用热点数据和使用 Quantumult X 来代理
 
 ### Homebrew Cask 已安装，但每次 `brew bundle` 仍然重复安装
 
-例如 `squirrel-app` 改名自 `squirrel`，如果 `Caskroom`
-里残留旧目录，会导致 Homebrew 每次都判定未安装。
-
-解决：
+因包更名（例如 `squirrel` 改为 `squirrel-app`）导致 `Caskroom` 残留历史目录时，Homebrew 会判定未安装。清理旧目录：
 
 ```bash
 rm -rf "$(brew --prefix)/Caskroom/squirrel"
 brew info squirrel-app
 ```
 
-### go 编译出错
+### Go 模块拉取失败
 
 ![](assets/imgs/README_2024-11-16_21-25-22.png)
 
-尝试使用热点数据和使用Quantumult X来代理
+尝试使用热点数据和使用 Quantumult X 来代理
 
-### 手动删除某个`/nix/store`中的编译结果出现`No such file or directory`时
+### 手动删除 `/nix/store` 条目后提示 `No such file or directory`
 
 ```shell
 sudo darwin-rebuild switch --flake .#sakamoto --show-trace --verbose
@@ -163,13 +164,13 @@ Using saved setting for 'experimental-features = nix-command flakes' from ~/.loc
 /run/current-system/sw/bin/darwin-rebuild: line 248: /nix/store/8jfid13h8p5gmy7llb4kvp0m357lswd0-darwin-system-25.11.8df64f8/activate: No such file or directory
 ```
 
-解决：理论上不是问题，只要随便一个变化就能跳过。如果想解决，可以随便加个小变化让版本切换。然后gc掉所有版本。然后执行
+解决：理论上不是问题，只要随便加个小改动让版本切换，然后 gc 掉所有版本，随后执行：
 
 ```shell
 nix store delete /nix/store/8jfid13h8p5gmy7llb4kvp0m357lswd0-darwin-system-25.11.8df64f8
 ```
 
-然后把变化撤销，重新switch
+然后把改动撤销，重新 switch
 
 # 部署
 
