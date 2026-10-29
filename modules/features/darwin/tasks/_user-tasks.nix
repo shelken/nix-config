@@ -67,10 +67,18 @@ in
     );
 
     assertions =
-      lib.mapAttrsToList (name: t: {
-        assertion = (t.when != [ ]) != (t.every != null);
-        message = "shelken.tasks.${name}: when 与 every 必须二选一";
-      }) taskCfg
+      lib.concatLists (
+        lib.mapAttrsToList (name: t: [
+          {
+            assertion = !(t.when != [ ] && t.every != null);
+            message = "shelken.tasks.${name}: when 与 every 不能同时设置";
+          }
+          {
+            assertion = t.weekday == [ ] || (t.when != [ ] && t.every == null);
+            message = "shelken.tasks.${name}: weekday 必须配合 when 使用，不能与 every 共用";
+          }
+        ]) taskCfg
+      )
       ++ [
         # 用户层只生成 LaunchAgent，root 任务在这里会被静默丢弃，改成构建期报错
         {

@@ -109,17 +109,9 @@ let
     ${policySyncCore}
   '';
 
-  # 维护体：每天让策略收敛一次（幂等、无变化不写）。全量维护只在周日跑，但那个门禁
-  # 只管定时调度：手动运行 kopia-maintenance 时应当真的执行维护，随时可用
   maintenanceBody = ''
     ${repoCheck}
 
-    ${policySyncCore}
-
-    if [ "''${SHELKEN_TASK_LAUNCHD:-}" = "1" ] && [ "$(date +%u)" -ne 7 ]; then
-      echo "Not Sunday, skipping scheduled full maintenance"
-      exit 0
-    fi
     ${pkgs.kopia}/bin/kopia maintenance run --full
   '';
 
@@ -130,17 +122,6 @@ let
     KOPIA_CONFIG_PATH="''${KOPIA_CONFIG_PATH:-"${kopiaConfigPath}"}"
     export KOPIA_CONFIG_PATH
   '';
-
-  mkKopiaCli =
-    {
-      name,
-      runtimeInputs,
-      body,
-    }:
-    pkgs.writeShellApplication {
-      inherit name runtimeInputs;
-      text = cliPrelude + body;
-    };
 
   # 定时任务的手动入口：直接 exec 任务脚本，口令注入、日志与退出码都由任务包装提供，
   # 不再各留一份实现，避免两条路径的 shell 严格模式差异
@@ -176,8 +157,17 @@ in
         notify.title = "Kopia Backup";
         script = backupBody;
       };
+      kopia-policy-sync = {
+        when = cfg.maintenanceWhen;
+        packages = [ pkgs.kopia ];
+        env.KOPIA_CONFIG_PATH = kopiaConfigPath;
+        secrets.KOPIA_PASSWORD = kopiaPasswordPath;
+        notify.title = "Kopia Policy";
+        script = policySyncBody;
+      };
       kopia-maintenance = {
         when = cfg.maintenanceWhen;
+        weekday = [ 0 ];
         packages = [ pkgs.kopia ];
         env.KOPIA_CONFIG_PATH = kopiaConfigPath;
         secrets.KOPIA_PASSWORD = kopiaPasswordPath;
@@ -188,24 +178,21 @@ in
 
     home.packages = [
       pkgs.kopia
-      (mkTaskAlias "kopia-backup")
-      (mkTaskAlias "kopia-maintenance")
-      (mkKopiaCli {
-        name = "kopia-policy-sync";
-        runtimeInputs = [
-          pkgs.kopia
-          pkgs.jq
-        ];
-        body = policySyncBody;
-      })
-      (mkKopiaCli {
+      (pkgs.writeShellApplication {
         name = "kopia-ui";
         runtimeInputs = [ pkgs.kopia ];
-        body = ''
+        text = cliPrelude + ''
           echo "Starting Kopia UI at http://localhost:51515"
           kopia server start --ui --insecure --without-password "$@"
         '';
       })
-    ];
+    ]
+    ++ map mkTaskAlias (
+      lib.filter (name: config.shelken.tasks.${name}.enable) [
+        "kopia-backup"
+        "kopia-policy-sync"
+        "kopia-maintenance"
+      ]
+    );
   };
 }

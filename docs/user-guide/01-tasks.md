@@ -1,6 +1,6 @@
 # 声明式定时任务
 
-声明一处任务，得到四样东西：launchd 定时触发、`task-<名>` 命令、统一管理入口 `task`，以及自动落盘的日志
+声明一处任务，得到 `task-<名>` 命令、统一管理入口 `task`，以及自动落盘的日志。配置调度后，再由 launchd 自动触发
 
 两个声明位置，效果一致
 
@@ -50,7 +50,9 @@ shelken.tasks.kopia-backup = {
 
 | 字段       | 类型                 | 默认值  | 作用                                                          |
 | ---------- | -------------------- | ------- | ------------------------------------------------------------- |
+| `enable`   | bool                 | `true`  | 是否部署任务，`false` 时保留声明，不安装 job 与手动命令       |
 | `when`     | `"H:M"` 或字符串列表 |         | 日历时间，机器睡眠错过的会在唤醒后补跑                        |
+| `weekday`  | 0 到 7 的整数列表    | `[ ]`   | 限制 `when` 的星期，空列表表示每天，0 与 7 都是周日           |
 | `every`    | 整数，秒             |         | 间隔时间，机器关机期间错过的不会补跑                          |
 | `user`     | bool                 | `true`  | `true` 生成用户态 LaunchAgent，`false` 生成 root LaunchDaemon |
 | `packages` | package 列表         | `[ ]`   | 脚本依赖的 CLI，注入运行时 PATH                               |
@@ -65,9 +67,28 @@ shelken.tasks.kopia-backup = {
 
 ## 触发时间
 
-`when` 和 `every` 必须二选一，同时给或者都不给都会让构建失败
+`when` 和 `every` 不能同时给，按需要选择
 
-`when` 映射到 launchd 的 `StartCalendarInterval`，`every` 映射到 `StartInterval`。两者的区别只在睡眠与关机期间：`when` 的触发会被补跑，`every` 不会
+- `when = "3:15"`：每天的日历时间，对应 launchd 的 `StartCalendarInterval`
+- `every = 7200`：间隔秒数，对应 `StartInterval`
+- 都不给：纯手动任务，`task ls` 显示 `manual`，用 `task run <名>` 执行
+
+`when` 在睡眠期间错过的触发会在唤醒后补跑，多次触发合并为一次。`every` 不补跑，关机期间错过的日历触发也不补跑
+
+按星期执行时，在 `when` 旁加 `weekday`。多个星期与多个时间逐一组合
+
+```nix
+when = "5:00";
+weekday = [ 0 ]; # 每周日 5:00，睡眠错过后在唤醒时补跑
+```
+
+`weekday` 必须配合非空的 `when` 使用，与 `every` 共用会在构建时报错。`task ls` 会显示星期，例如 `when Sun 05:00`
+
+## 临时禁用
+
+在任务声明里设 `enable = false`，应用配置后，launchd job 与 `task-<名>` 命令会被移除，`task ls` 不再列出该任务
+
+声明仍保留。恢复时设回 `enable = true`，再应用配置
 
 ## 抖动
 

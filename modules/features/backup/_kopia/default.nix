@@ -13,11 +13,8 @@ in
     ./service.nix
   ];
 
-  # 默认配置：
-  # - enable 关闭
-  # - calendarInterval 每天两次，时间按 hostname 固定分布
-  # - policy 默认值见 ./policy-defaults.nix
-  # enable 已删除（实现加入 workstation 角色即开启）；
+  # 默认每天两次快照，时间按 hostname 固定分布，策略默认值见 ./policy-defaults.nix。
+  # 实现加入 workstation 角色即开启；
   # app/backupPaths/ignores 接口声明在 modules/features/backup/_options.nix（进 core，全平台共享），
   # 本文件只声明 kopia 后端自身的选项
   options.shelken.backup = {
@@ -45,7 +42,7 @@ in
     maintenanceWhen = lib.mkOption {
       type = lib.types.str;
       default = "5:00";
-      description = "全量维护（kopia maintenance run --full）的日历时间（HH:MM）";
+      description = "每日策略同步与周日全量维护的日历时间（HH:MM）";
       example = "5:00";
     };
     policy = lib.mkOption {

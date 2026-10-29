@@ -56,10 +56,18 @@ in
         secretPath = secret: config.home-manager.users.${myvars.username}.sops.secrets.${secret}.path;
       };
 
-      assertions = lib.mapAttrsToList (name: t: {
-        assertion = (t.when != [ ]) != (t.every != null);
-        message = "shelken.tasks.${name}: when 与 every 必须二选一";
-      }) taskCfg;
+      assertions = lib.concatLists (
+        lib.mapAttrsToList (name: t: [
+          {
+            assertion = !(t.when != [ ] && t.every != null);
+            message = "shelken.tasks.${name}: when 与 every 不能同时设置";
+          }
+          {
+            assertion = t.weekday == [ ] || (t.when != [ ] && t.every == null);
+            message = "shelken.tasks.${name}: weekday 必须配合 when 使用，不能与 every 共用";
+          }
+        ]) taskCfg
+      );
 
       # root 任务：launchd daemon；手动执行 sudo task-<name>
       launchd.daemons = lib.mapAttrs (name: t: {

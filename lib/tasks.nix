@@ -10,8 +10,10 @@ rec {
   # 任务字段唯一默认值源：darwin 与 home 两端共用的 mkTaskType submodule
   # 都从这里取默认值，新增字段只改这一处，杜绝两处默认漂移
   taskDefaults = {
+    enable = true;
     user = true;
     when = [ ];
+    weekday = [ ];
     every = null;
     packages = [ ];
     secrets = { };
@@ -36,13 +38,21 @@ rec {
       Minute = lib.toIntBase10 (lib.elemAt parts 1);
     };
 
-  # when/every -> launchd 触发键
+  # 日历时间与星期组合；无调度时不生成触发键，保留纯手动入口
   mkTrigger =
     t:
     if t.every != null then
       { StartInterval = t.every; }
+    else if t.when == [ ] then
+      { }
     else
-      { StartCalendarInterval = map parseTime t.when; };
+      {
+        StartCalendarInterval =
+          if t.weekday == [ ] then
+            map parseTime t.when
+          else
+            lib.concatMap (day: map (time: (parseTime time) // { Weekday = day; }) t.when) t.weekday;
+      };
 
   # 动态任务管理 CLI 工具: task（运行时读取 launchd plist，不写死任务列表）
   mkTaskCli = pkgs.writeShellApplication {
@@ -86,10 +96,13 @@ rec {
                       intervals = data["StartCalendarInterval"]
                       if isinstance(intervals, dict):
                           intervals = [intervals]
-                      times = [
-                          f"{item.get('Hour', 0):02d}:{item.get('Minute', 0):02d}"
-                          for item in intervals
-                      ]
+                      days = ("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                      times = []
+                      for item in intervals:
+                          time = f"{item.get('Hour', 0):02d}:{item.get('Minute', 0):02d}"
+                          if "Weekday" in item:
+                              time = f"{days[item['Weekday']]} {time}"
+                          times.append(time)
                       schedule = f"when {', '.join(times)}"
 
                   log_path = data.get("StandardOutPath", "")
@@ -350,11 +363,22 @@ rec {
     { name, config, ... }:
     {
       options = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = taskDefaults.enable;
+          description = "是否部署任务；false 保留声明，但不生成 launchd job 与手动命令";
+        };
         when = lib.mkOption {
           type = lib.types.coercedTo lib.types.str (t: [ t ]) (lib.types.listOf lib.types.str);
           default = taskDefaults.when;
           description = "日历时间 HH:MM（launchd StartCalendarInterval，睡眠错过唤醒后补跑）";
           example = "3:15";
+        };
+        weekday = lib.mkOption {
+          type = lib.types.listOf (lib.types.ints.between 0 7);
+          default = taskDefaults.weekday;
+          description = "when 的星期限制，空列表表示每天；0 与 7 都是周日，不能用于 every 或纯手动任务";
+          example = [ 0 ];
         };
         every = lib.mkOption {
           type = lib.types.nullOr lib.types.int;
@@ -438,9 +462,10 @@ rec {
       };
     };
 
-  # 任务归属：user 任务进 home 层，root 任务进 darwin 层。
-  # 此处不再过滤「无调度」的声明，when/every 二选一由各层的断言保证
-  userTasks = tasks: lib.filterAttrs (_: t: t.user) tasks;
+  enabled = tasks: lib.filterAttrs (_: t: t.enable) tasks;
 
-  rootTasks = tasks: lib.filterAttrs (_: t: !t.user) tasks;
+  # 禁用任务在两层都不部署；无调度任务仍保留手动入口
+  userTasks = tasks: lib.filterAttrs (_: t: t.user) (enabled tasks);
+
+  rootTasks = tasks: lib.filterAttrs (_: t: !t.user) (enabled tasks);
 }

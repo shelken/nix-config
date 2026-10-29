@@ -35,10 +35,11 @@ shelken.backup.backupPaths = [
 
 ## 什么时候跑
 
-| 任务                | 默认时间                                              | 做什么                                            |
-| ------------------- | ----------------------------------------------------- | ------------------------------------------------- |
-| `kopia-backup`      | 2:00 到 8:00 之间按 hostname 取两个相隔 12 小时的时刻 | 连仓库，逐路径 `kopia snapshot create`            |
-| `kopia-maintenance` | 5:00                                                  | 收敛策略；周日再跑 `kopia maintenance run --full` |
+| 任务                | 默认时间                                              | 做什么                                 |
+| ------------------- | ----------------------------------------------------- | -------------------------------------- |
+| `kopia-backup`      | 2:00 到 8:00 之间按 hostname 取两个相隔 12 小时的时刻 | 连仓库，逐路径 `kopia snapshot create` |
+| `kopia-policy-sync` | 每天 5:00                                             | 收敛备份策略                           |
+| `kopia-maintenance` | 周日 5:00                                             | `kopia maintenance run --full`         |
 
 改时间
 
@@ -47,9 +48,9 @@ shelken.backup.calendarInterval = [ "3:10" "15:10" ];
 shelken.backup.maintenanceWhen = "5:30";
 ```
 
-快照任务带 0 到 600 秒的随机抖动，避免多台机器同时压同一个后端；抖动只在 launchd 唤起时生效，手动跑不等待。维护任务不带抖动、不上灵动岛，它每天只做策略收敛这类元数据操作，不搬数据
+快照任务带 0 到 599 秒的随机抖动，避免多台机器同时压同一个后端；抖动只在 launchd 唤起时生效，手动跑不等待。策略同步与维护任务不带抖动、不上灵动岛
 
-快照任务执行期间会出现在灵动岛，失败时发系统通知（标题 `Kopia Backup`，维护任务是 `Kopia Maintenance`），点通知打开日志
+快照任务执行期间会出现在灵动岛。三个任务失败时都会发系统通知，标题分别为 `Kopia Backup`、`Kopia Policy`、`Kopia Maintenance`，点通知打开日志
 
 `kopia-backup` 的抖动窗口最大 10 分钟，也就是说 `when` 到实际开始快照之间可能隔这么久
 
@@ -59,17 +60,17 @@ shelken.backup.maintenanceWhen = "5:30";
 task run kopia-backup      # 手动触发一次快照
 kopia-backup               # 同上，薄别名
 task log kopia-backup      # 跟随日志
-kopia-maintenance          # 手动跑维护（策略收敛加固全量维护，不看星期几）
+kopia-maintenance          # 手动执行全量维护
 kopia-policy-sync          # 只收敛策略，让 ignores 改动立刻生效
 ```
 
-`kopia-maintenance` 与 `kopia-policy-sync` 手动跑时不看周日门禁：门禁只拦 launchd 定时触发，手动执行总是真的执行
+周日维护由 launchd 的 `Weekday = 0` 调度，机器睡眠错过后会在唤醒时补跑。手动执行不受星期限制
 
 ## 改策略
 
 改 `shelken.backup.policy` 或 `shelken.backup.ignores` 之后，策略会在两种时机落到仓库
 
-- 每天 5:00 由 `kopia-maintenance` 收敛一次
+- 每天 5:00 由 `kopia-policy-sync` 收敛一次
 - 快照前发现目标策略还不存在时补同步一次，避免新库或新设备的首个快照按默认策略把 `node_modules` 之类传上去
 
 想立刻生效就用 `kopia-policy-sync`。收敛是幂等的，忽略项会先比对再写，没有变化不产生写操作
@@ -79,7 +80,7 @@ kopia-policy-sync          # 只收敛策略，让 ignores 改动立刻生效
 | 项       | 值                                                                                |
 | -------- | --------------------------------------------------------------------------------- |
 | 后端     | WebDAV，`https://drive.<main-domain>/dav/backup/kopia/main`                       |
-| 本地缓存 | `~/.cache/kopia/main`，内容与元数据各 5GB                                         |
+| 本地缓存 | `~/.cache/kopia/main`，内容与元数据各 1 GiB                                       |
 | sops 键  | `kopia/password`、`main-domain`、`drive/webdav/username`、`drive/webdav/password` |
 
 `main-domain` 只存裸域名，URL 与 `/dav/backup/kopia/main` 前缀在 `_kopia/secrets.nix` 的模板里拼。仓库口令与连接配置由 sops 渲染到本机文件，路径见 `_kopia/secrets.nix`
@@ -110,7 +111,7 @@ modules/features/backup/default.nix            # 挂到 workstation 角色
 modules/features/backup/_options.nix           # backupPaths / app / ignores 接口
 modules/features/backup/_kopia/default.nix     # calendarInterval / maintenanceWhen / policy
 modules/features/backup/_kopia/secrets.nix     # sops 键与仓库连接模板
-modules/features/backup/_kopia/service.nix     # 三个脚本体、两个任务声明、手动入口
+modules/features/backup/_kopia/service.nix     # 三个脚本体、三个任务声明、手动入口
 modules/features/backup/_kopia/policy-defaults.nix  # 默认策略
 ```
 
