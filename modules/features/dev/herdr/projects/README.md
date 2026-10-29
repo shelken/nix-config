@@ -5,7 +5,7 @@
 
 `~/.config/herdr/plugins/config/cloudmanic.herdr-plus/projects`
 
-改完立刻生效，无需 reinstall 插件。打开：`prefix+p`（或 action `cloudmanic.herdr-plus.projects`）。
+修改后立刻生效，无需重新安装插件；打开快捷键为 `prefix+p`（或执行 action `cloudmanic.herdr-plus.projects`）
 
 ---
 
@@ -21,7 +21,7 @@
 | `env`         | 否   | 注入环境变量表，例如 `FOO = "bar"`                                       |
 | `[[tabs]]`    | 否\* | 多 tab 布局。与顶层 `command` 二选一                                     |
 
-\* 至少要有顶层 `command` 或 `[[tabs]]` 之一。
+\* 必须在顶层 `command` 与 `[[tabs]]` 中声明至少一项
 
 ---
 
@@ -70,8 +70,8 @@ split = "right"
 
 ## Worktree 模式
 
-Projects 列表里可用 **Ctrl+g** 以 git worktree 方式打开（需仓库已是 git）。  
-字段仍同上；具体行为以 herdr-plus 文档为准。
+Projects 列表中支持通过 **Ctrl+g** 以 git worktree 模式打开（要求目标仓库为 Git 仓库）
+字段定义保持一致，具体行为以 herdr-plus 官方文档为准
 
 ---
 

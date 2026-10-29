@@ -1,6 +1,6 @@
 # 凭据管理架构 (Secrets & SOPS)
 
-本项目使用 [sops-nix](https://github.com/Mic92/sops-nix) 配合 [age](https://github.com/FiloSottile/age) 进行系统与用户凭据的加解密管理。
+本项目使用 [sops-nix](https://github.com/Mic92/sops-nix) 配合 [age](https://github.com/FiloSottile/age) 进行系统与用户凭据的加解密管理
 
 > 敏感凭据源密文独立存储在外部私有仓库：[secrets.nix](https://github.com/shelken/secrets.nix)
 
@@ -8,13 +8,13 @@
 
 ## 1. 核心设计原则
 
-- **职责解耦（心智清晰）**：
-  - **网络登录归 SSH**：使用各自主机与个人的 SSH 密钥对，由 `just rotate ssh`（在 `secrets.nix` 仓库执行）闭环管理。
-  - **配置解密归 Age**：使用独立的原生 Age 根密钥，由 `~/.config/sops/age/keys.txt` 提供解密私钥，公钥声明在 `secrets.nix/.sops.yaml`。
-  - 两套密钥完全独立，轮换 SSH 密钥绝不影响 SOPS 解密，反之亦然。
+- **职责解耦**：
+  - **网络登录归 SSH**：使用各主机与个人的 SSH 密钥对，由 `just rotate ssh`（在 `secrets.nix` 仓库执行）闭环管理
+  - **配置解密归 Age**：使用独立的原生 Age 根密钥，由 `~/.config/sops/age/keys.txt` 提供解密私钥，公钥声明在 `secrets.nix/.sops.yaml`
+  - 两套密钥完全独立，轮换 SSH 密钥不影响 SOPS 解密，反之亦然
 - **配置集中收敛**：
-  - 系统内所有用户态凭据与 SOPS 选项统一收敛在 `modules/features/secrets/secrets.nix`。
-  - 明确声明密钥路径：`sops.age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt"`。
+  - 系统内所有用户态凭据与 SOPS 选项统一收敛在 `modules/features/secrets/secrets.nix`
+  - 明确声明密钥路径：`sops.age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt"`
 
 ---
 

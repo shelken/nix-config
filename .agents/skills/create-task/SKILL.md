@@ -9,19 +9,21 @@ description: 当需要在特定机器（如 mio）或全部机器上创建、修
 
 ## 任务规范
 
-- **机器专属任务**: 存放于 「hosts/<host>/tasks/<name>.nix」
-- **全设备通用任务**: 存放于 「modules/features/darwin/tasks/_global/<name>.nix」, 文件写法与机器专属任务不同, 是完整 darwin 模块: 「{ pkgs, ... }: { shelken.tasks.<name> = { ... }; }」, 参考 「_global/nix-gc.nix」
-- **零接线约定**: 只要在对应目录下放置 nix 文件即自动注册, 无需在 host 主配置中添加任何引用代码
+- **机器专属任务**：存放于 `hosts/<host>/tasks/<name>.nix`
+- **全设备通用任务**：存放于 `modules/features/darwin/tasks/_global/<name>.nix`，文件为完整 darwin 模块：`{ pkgs, ... }: { shelken.tasks.<name> = { ... }; }`，参考 `_global/nix-gc.nix`
+- **零接线约定**：在对应目录下放置 nix 文件即自动注册，无需在 host 主配置中添加任何引用代码
 
 ## 字段定义与规则
 
-| 字段         | 类型         | 默认值   | 约束与说明                                                                               |
-| ------------ | ------------ | -------- | ---------------------------------------------------------------------------------------- |
-| 「when」     | 字符串或列表 | 无       | 日历时间, 如 「"3:15"」 或 「[ "3:15" "15:15" ]」; 睡眠唤醒后自动补跑; 与 「every」 互斥 |
-| 「every」    | 整数(秒)     | 无       | 固定间隔执行, 如 「7200」 表示每 2 小时; 与 「when」 互斥                                |
-| 「user」     | 布尔值       | 「true」 | 「true」 为用户态 LaunchAgent, 「false」 为系统 root 态 LaunchDaemon                     |
-| 「packages」 | package 列表 | 「[ ]」  | 脚本依赖的 CLI 工具, 自动注入隔离的运行时 PATH, 脚本内直接裸调命令                       |
-| 「script」   | bash 脚本    | 必填     | 脚本正文, 构建期经 `bash -n` 语法检查 (shellcheck 只覆盖框架生成的包装脚本, 不含正文)    |
+| 字段       | 类型         | 默认值  | 约束与说明                                                                             |
+| ---------- | ------------ | ------- | -------------------------------------------------------------------------------------- |
+| `when`     | 字符串或列表 | 无      | 日历时间，如 `"3:15"` 或 `[ "3:15" "15:15" ]`；睡眠唤醒后自动补跑；与 `every` 互斥     |
+| `every`    | 整数（秒）   | 无      | 固定间隔执行，如 `7200` 表示每 2 小时；与 `when` 互斥                                  |
+| `user`     | 布尔值       | `true`  | `true` 为用户态 LaunchAgent，`false` 为系统 root 态 LaunchDaemon                       |
+| `island`   | 布尔值       | `false` | 是否在灵动岛显示任务运行状态                                                           |
+| `packages` | package 列表 | `[ ]`   | 脚本依赖的 CLI 工具，自动注入隔离的运行时 PATH，脚本内直接调用命令                     |
+| `secrets`  | 属性集       | `{ }`   | 环境变量到 `secretPath "sops/key"` 的映射，运行时按需注入                              |
+| `script`   | bash 脚本    | 必填    | 脚本正文，构建期经 `bash -n` 语法检查（shellcheck 只覆盖框架生成的包装脚本，不含正文） |
 
 ## 创建流程
 
@@ -72,7 +74,7 @@ task log <name>
 
 ## 常见排坑指南
 
-- 新建任务在 「task ls」 中未列出 -> 新建文件未执行 「git add」, Flake 处于未追踪状态而忽略了该文件
-- 脚本内命令报 「command not found」 -> 在任务文件的 「packages」 列表中声明该工具包, 避免硬编码 store 绝对路径
-- 时间格式解析报错 -> 「when」 必须为 「"H:M"」 格式, 不支持标准 cron 表达式
-- root 任务清理日志失败 -> 检查日志目录权限, 确保 「user = false」 并在手动测试时使用 「sudo task-<name>」
+- 新建任务在 `task ls` 中未列出：新建文件未执行 `git add`，Flake 处于未追踪状态忽略了该文件
+- 脚本内命令报 `command not found`：在任务文件的 `packages` 列表中声明该工具包，避免硬编码 store 绝对路径
+- 时间格式解析报错：`when` 必须为 `"H:M"` 格式，不支持标准 cron 表达式
+- root 任务清理日志失败：检查日志目录权限，确认 `user = false`，并在手动测试时使用 `sudo task-<name>`

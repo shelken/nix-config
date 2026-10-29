@@ -1,6 +1,6 @@
 # 声明式定时任务
 
-在 `hosts/<机器>/tasks/` 下加一个 nix 文件，构建切换后即自动生效：定时任务、可执行脚本、手动命令、统一管理 CLI 全部自动生成。
+在 `hosts/<机器>/tasks/` 下加一个 nix 文件，构建切换后即自动生效：定时任务、可执行脚本、手动命令、统一管理 CLI 全部自动生成
 
 ## 快速开始
 
@@ -21,18 +21,19 @@
 }
 ```
 
-`git add` 后 `just sw`，完成。
+`git add` 后执行 `just sw` 即可生效
 
 ## 配置项
 
-| 字段       | 类型           | 默认值 | 说明                                                                  |
-| ---------- | -------------- | ------ | --------------------------------------------------------------------- |
-| `when`     | `"H:M"` 或列表 | 无     | 日历时间（launchd `StartCalendarInterval`）；睡眠错过的会在唤醒后补跑 |
-| `every`    | 整数（秒）     | 无     | 间隔执行（launchd `StartInterval`）；与 `when` 互斥、二选一           |
-| `user`     | bool           | `true` | `true`：用户态 LaunchAgent；`false`：root LaunchDaemon                |
-| `packages` | package 列表   | `[ ]`  | 依赖的 CLI 工具，注入隔离的运行时 PATH                                |
-| `secrets`  | 属性集         | `{ }`  | 环境变量到 `secretPath "sops/key"` 的映射，运行时按需注入             |
-| `script`   | bash 脚本      | 必填   | 脚本内容，经 shellcheck 校验打包                                      |
+| 字段       | 类型           | 默认值  | 说明                                                                  |
+| ---------- | -------------- | ------- | --------------------------------------------------------------------- |
+| `when`     | `"H:M"` 或列表 | 无      | 日历时间（launchd `StartCalendarInterval`）；睡眠错过的会在唤醒后补跑 |
+| `every`    | 整数（秒）     | 无      | 间隔执行（launchd `StartInterval`）；与 `when` 互斥、二选一           |
+| `user`     | bool           | `true`  | `true`：用户态 LaunchAgent；`false`：root LaunchDaemon                |
+| `island`   | bool           | `false` | 是否在灵动岛显示任务运行状态                                          |
+| `packages` | package 列表   | `[ ]`   | 依赖的 CLI 工具，注入隔离的运行时 PATH                                |
+| `secrets`  | 属性集         | `{ }`   | 环境变量到 `secretPath "sops/key"` 的映射，运行时按需注入             |
+| `script`   | bash 脚本      | 必填    | 脚本内容，经 shellcheck 校验打包                                      |
 
 ## 统一管理命令 (`task`)
 
@@ -55,7 +56,7 @@ task run loon
 task log loon
 ```
 
-底层依然提供独立的 `task-<name>` 可执行文件（如 `task-loon`）。
+底层依然提供独立的 `task-<name>` 可执行文件（如 `task-loon`）
 
 ## 日志输出
 
@@ -76,4 +77,4 @@ modules/features/darwin/tasks/_global/nix-gc.nix # 全设备默认：每天 3:15
 
 ## 边界
 
-此模型只覆盖「定时跑一段脚本」。需要复杂生命周期或 policy 配置的重型服务仍走常规 module，例如 `modules/features/backup/_kopia/`
+此模型只覆盖「定时跑一段脚本」；需要复杂生命周期或 policy 配置的重型服务仍走常规 module，例如 `modules/features/backup/_kopia/`

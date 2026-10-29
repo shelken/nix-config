@@ -1,6 +1,6 @@
 # Otty Configuration
 
-**archived不使用仅存档**
+**已归档（仅作配置参考，日常未启用）**
 
 ## 配置说明
 
@@ -8,9 +8,9 @@
 
 修改 `config.toml` 或字体变量后执行 `just hm`
 
-## 踩坑
+## 注意事项
 
-- `otty config reload` 与 `⌘⌃,`（reload_config）快捷键都不可靠，构建后用 Settings → Advanced → Config File → Reload Config，或命令面板 `Reload Config`
+- `otty config reload` 与 `⌘⌃,`（reload_config）快捷键不可靠，配置更新后建议通过 Settings → Advanced → Config File → Reload Config 或命令面板 `Reload Config` 重载
 
 ## 与 kitty 的对应
 

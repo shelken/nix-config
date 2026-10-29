@@ -15,9 +15,9 @@
 
 ## 修改配置
 
-1. 改动 `modules/features/<分类>/<功能>`（一个软件的系统侧与用户态配置都在这里）或 `hosts/<机器>/`（机器专属），具体写法见 [功能与角色](02-features.md)
-2. `just bd` 验证构建
-3. `just sw` 切换生效（新文件先 `git add`，否则 flake 检测不到）
+1. 修改 `modules/features/<分类>/<功能>`（软件的系统侧与用户态配置）或 `hosts/<主机>/`（机器专属），具体写法见 [功能与角色](02-features.md)
+2. 运行 `just bd` 验证构建
+3. 运行 `just sw` 切换生效；新增文件需先执行 `git add`，否则 flake 无法检测
 
 ## 进一步阅读
 

@@ -54,10 +54,10 @@
 
 几条规则：
 
-- 只有 Home Manager 部分的软件也照上面写，用 `darwin.<角色>.imports` 加入；同名的 `homeManager.<名>` 会自动跟进
-- 同一个功能只能有一条导入路径：加入了角色，就不要再在主机里导入，反之亦然。重复导入会报 option 重复声明，或让列表出现两份
-- 配置文件用 `mylib.mkConfigFile config ./文件`，路径相对当前文件。开启 `shelken.dotfiles.liveEdit` 的主机会软链到仓库里的源文件，改完不用重新构建
-- 功能大了就改成目录：`modules/features/<分类>/<名>/default.nix` 做入口，私有片段用 `_` 开头命名（如 `_hm.nix`），不会被自动导入
+- 只有 Home Manager 部分的软件也按上述方式编写，通过 `darwin.<角色>.imports` 加入，同名的 `homeManager.<名>` 会自动跟进
+- 同一个功能只能有一条导入路径：加入角色后勿在主机中重复导入，反之亦然；重复导入会导致 option 重复声明或列表重复
+- 配置文件使用 `mylib.mkConfigFile config ./文件`，路径相对当前文件；开启 `shelken.dotfiles.liveEdit` 的主机会软链到仓库源文件，修改后无需重新构建
+- 功能较复杂时可组织为目录：以 `modules/features/<分类>/<名>/default.nix` 作为入口，私有片段以 `_` 开头命名（如 `_hm.nix`），不会被自动导入
 
 ## 给某台主机加可选功能
 
@@ -82,7 +82,7 @@ NixOS 主机用 `self.modules.nixos.<名>`
 
 ## 调整主机参数
 
-参数写在主机文件的 `shelken` 下，没写就用默认值
+参数写在主机文件的 `shelken` 属性集下，未指定时采用默认值
 
 | 选项                        | 写在          | 默认值         | 作用                                                                           |
 | --------------------------- | ------------- | -------------- | ------------------------------------------------------------------------------ |
@@ -96,9 +96,9 @@ NixOS 主机用 `self.modules.nixos.<名>`
 
 ## 新增一台主机
 
-1. 复制一台同类主机的目录，比如 darwin 桌面机复制 `hosts/ling/`，改 `hostname`，在 `imports` 里选角色
-2. 在 `flake.nix` 的 `hosts` 里照抄一条同类主机的 `mkHost`，改成新目录
-3. 需要 sops 密钥时，按 README「初始化」第 0 步把新机器的公钥加入 secrets 仓库，再在 `default.nix` 写 `shelken.secrets.enable = true;`
-4. `git add hosts/<主机>`，运行 `just b <主机>` 构建
+1. 复制同类主机的目录（例如 darwin 桌面机可复制 `hosts/ling/`），修改 `hostname`，并在 `imports` 中指定角色
+2. 在 `flake.nix` 的 `hosts` 中参考同类主机配置对应的 `mkHost` 声明
+3. 若需要 sops 密钥，参考根目录 README「初始化」将新机器公钥加入 secrets 仓库，并在 `default.nix` 中配置 `shelken.secrets.enable = true;`
+4. 执行 `git add hosts/<主机>`，运行 `just b <主机>` 验证构建
 
 新增 `hosts/` 目录会改变其他主机的 kopia 备份时段：`mylib.calcUniformSchedule` 按 `hosts/` 下的目录数平均分配时间

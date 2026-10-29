@@ -102,59 +102,60 @@ sudo darwin-uninstaller
 
 ## 常见问题
 
-### 变更 Homebrew 的清华源 remote 为 官方
+### 切换 Homebrew 远程仓库为官方源
 
 ```bash
 git -C "$(brew --repo)" remote set-url origin https://github.com/Homebrew/brew
 ```
 
-### 启用 secret 时，无法引入 `shelken/secrets.nix`
+### 启用 secret 时无法拉取私有仓库
 
-优先用 Git + HTTPS：将 flake input 改为 `git+https://github.com/shelken/secrets.nix.git`，Nix 会走本机 Git HTTPS 认证。
+优先使用 Git + HTTPS 协议：将 flake input 修改为 `git+https://github.com/shelken/secrets.nix.git`，走本机 Git HTTPS 凭据
 
-如果继续使用 `github:shelken/secrets.nix`，私有仓库需要 Nix access token。Determinate Nix 的系统配置入口是：
+若保留 `github:shelken/secrets.nix` 写法，私有仓库需配置 Nix access token，在 Determinate Nix 自定义配置中声明：
 
 ```text
 /etc/nix/nix.custom.conf
 ```
 
-### font 文件 一直在等lock
+### Font 文件提示等待 lock 锁
 
-解决：`sudo rm -rf /nix/store/**.lock`
+清理 store 锁文件：
 
-### wezterm 在 mac 上颜色显示错误
+```bash
+sudo rm -rf /nix/store/**.lock
+```
 
-尝试在`wezterm.lua`中配置`front_end = "WebGpu"`。
+### WezTerm 在 macOS 上颜色渲染异常
 
-### `Operation not permitted`?
+在 `wezterm.lua` 中配置前端引擎：`front_end = "WebGpu"`
+
+### 提示 `Operation not permitted`
 
 ![](assets/imgs/README_2024-09-19_01-08-46.png)
 
-给nix完整的磁盘访问权限
+在系统设置中为 nix 相关守护进程赋予「完全磁盘访问权限」
 
-### 安装Homebrew错误?(即使设置http代理)
+### Homebrew 安装失败或下载超时
 
-尝试使用热点数据和使用Quantumult X来代理
+检查代理工具配置或尝试更换网络热点连接
 
-### Homebrew Cask 已安装，但每次 `brew bundle` 仍然重复安装
+### Homebrew Cask 虽已安装但每次重复构建
 
-例如 `squirrel-app` 改名自 `squirrel`，如果 `Caskroom`
-里残留旧目录，会导致 Homebrew 每次都判定未安装。
-
-解决：
+因包更名（例如 `squirrel` 改为 `squirrel-app`）导致 `Caskroom` 残留历史目录时，Homebrew 会判定未安装。清理旧目录：
 
 ```bash
 rm -rf "$(brew --prefix)/Caskroom/squirrel"
 brew info squirrel-app
 ```
 
-### go 编译出错
+### Go 模块拉取失败
 
 ![](assets/imgs/README_2024-11-16_21-25-22.png)
 
-尝试使用热点数据和使用Quantumult X来代理
+检查代理网络分流或切换至直连网络环境
 
-### 手动删除某个`/nix/store`中的编译结果出现`No such file or directory`时
+### 手动删除 `/nix/store` 条目后提示 `No such file or directory`
 
 ```shell
 sudo darwin-rebuild switch --flake .#sakamoto --show-trace --verbose
@@ -163,13 +164,13 @@ Using saved setting for 'experimental-features = nix-command flakes' from ~/.loc
 /run/current-system/sw/bin/darwin-rebuild: line 248: /nix/store/8jfid13h8p5gmy7llb4kvp0m357lswd0-darwin-system-25.11.8df64f8/activate: No such file or directory
 ```
 
-解决：理论上不是问题，只要随便一个变化就能跳过。如果想解决，可以随便加个小变化让版本切换。然后gc掉所有版本。然后执行
+向配置中加入任意临时修改使 generation 发生变化，触发重新构建与 switch，随后删除失效路径并执行垃圾回收：
 
 ```shell
 nix store delete /nix/store/8jfid13h8p5gmy7llb4kvp0m357lswd0-darwin-system-25.11.8df64f8
 ```
 
-然后把变化撤销，重新switch
+恢复临时改动后重新执行 `just sw`
 
 # 部署
 

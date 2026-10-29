@@ -1,28 +1,23 @@
-# hammerspoon
+# Hammerspoon
 
-## 问题
+提供基于 Lua 的 macOS 桌面辅助与窗口管理能力，作为可选功能按需导入
 
-- 窗口管理器paperwm不能很好解决窗口切换，例如窗口一直漂移和光标到哪个窗口就整个横移
-- 无法一键去除所有快捷键进入远程模式，且与parsec不能很好配合
-- 目前aerospace的问题在于大小调整和layout调整的便携性。
+## 组件与功能
 
-## 组件
+- **平铺窗口管理（PaperWM）**：基于滚动画布模型的窗口管理实现，作为 AeroSpace 的备选方案
+- **应用快捷键绑定**：全局快速唤醒与切换指定 App
+- **[自动输入法切换](config/input-change.lua)**：依据当前前台 App 自动在英文与 Rime 输入法间切换，可作为 TypeSwitch 的备选
 
-- 窗口管理器（PaperWM）(替代 aerospace)
-- 常用 app 快捷键 (替代 aerospace)
-- [根据 app 自动切换输入法](config/input-change.lua)（目前为 `ABC|RIME`）(替代 typeswitch)
+## 启用与配置
 
-## 使用
-
-窗口管理与其他没有兼容如有必要，需注意窗口管理器冲突（当前默认平铺窗口管理器为 aerospace，由 `shelken.wm.manager` 控制）
-
-配置
+Hammerspoon 属于可选功能，未默认挂载到任何系统角色；若要启用需在主机配置中显式导入：
 
 ```nix
-# hosts/<主机>/default.nix：导入可选功能
+# hosts/<主机>/default.nix：导入系统侧模块
 imports = [ self.modules.darwin.hammerspoon ];
 
-# hosts/<主机>/home.nix：开启窗口管理（该选项声明在 HM 侧）
+# hosts/<主机>/home.nix：启用 Hammerspoon 内部的窗口管理配置（HM 侧选项）
 shelken.tools.hammerspoon.wm.enable = true;
-# 注意：窗口管理器二选一选项 shelken.wm.manager 默认启用 aerospace
 ```
+
+注意：系统默认的平铺窗口管理器为 AeroSpace（由 `shelken.wm.manager` 控制），启用 Hammerspoon 的窗口管理前需确认避免窗口管理快捷键冲突

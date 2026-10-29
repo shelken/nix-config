@@ -1,6 +1,6 @@
 # Agent 沙箱日常使用
 
-让 OMP 在一台 Linux 虚拟机里干活：它只看得到当前项目，访问不了家里其他服务，`rm -rf` 删不到别的仓库。宿主 macOS 不受影响
+让 OMP 在 Linux 虚拟机中运行：隔离环境仅能访问当前项目，无法触碰局域网其他服务，宿主环境不受破坏
 
 机制和配置字段见 [沙箱 README](../../modules/features/ai/sandbox/README.md)，设计原因见其中的「设计决策」
 
@@ -28,9 +28,9 @@
    omp-sb
    ```
 
-第一次启动会自动完成三件事，耗时几分钟：创建数据卷、创建主 VM、执行一次 `sb sync` 安装 omp、pi、codex 等工具。之后再启动只需几秒
+首次启动会自动完成三项初始化，耗时数分钟：创建数据卷、拉起主 VM，并执行一次 `sb sync` 安装 omp、pi、codex 等工具；后续启动仅需数秒
 
-更新插件清单后运行 `sb sync`。每次同步都会恢复缺失的 OMP 插件，删除清单外插件和旧登记表。清单未变时也会重建插件。Bun 的锁文件和下载缓存保留，已有缓存可以复用；缓存缺少所需内容时会下载。安装先在临时目录完成，替换失败时恢复旧插件。
+更新插件清单后运行 `sb sync`。每次同步均会恢复缺失的 OMP 插件，移除清单外插件与陈旧登记项。即使清单未变也会重新校验插件完整性。Bun 锁文件与下载缓存保留以供复用，缓存未命中时自动拉取。安装过程优先在临时目录完成，出现替换异常时自动回滚至先前可用状态
 
 `omp-sb` 的参数原样转给 OMP：
 
@@ -101,19 +101,19 @@ paths:
 写好后先看清单，再批准：
 
 ```bash
-sb plan    # 看这个项目会拿到哪些授权，最后一行是批准状态
-sb trust   # 确认无误后批准
+sb plan    # 查看项目授权清单，末行显示批准状态
+sb trust   # 确认无误后执行批准
 ```
 
 没有批准，或批准后 `.sandbox.yaml` 又改了，`omp-sb` 直接报错，不会弹提示：
 
 ```
-[-] 错误: /Users/me/Code/my-app/.sandbox.yaml 未批准，或批准后已变更。先执行 sb plan 查看授权内容，确认后执行 sb trust
+[-] 错误: ~/Code/my-app/.sandbox.yaml 未批准，或批准后已变更。先执行 sb plan 查看授权内容，确认后执行 sb trust
 ```
 
-批准只看文件内容，不看路径：同一份 `.sandbox.yaml` 在所有 worktree 里只批准一次，只改注释或格式也不用重新批准。Agent 改了文件内容，下次启动就会要求重新批准
+批准基于文件内容哈希而非固定路径：同一份 `.sandbox.yaml` 在各 worktree 间仅需批准一次，仅变更格式或注释也无需重新批准；若 Agent 修改了内容哈希，下次启动将强制要求重新批准
 
-GitHub token 等 secret 不需要写进 `.sandbox.yaml`：沙箱里只有占位符，请求发往 `sb.yaml` 允许的域名时才在出口替换成真实值
+GitHub token 等 secret 无需写入 `.sandbox.yaml`：沙箱中仅保留占位符，仅在发往 `sb.yaml` 放行域名的出口流量中动态替换为真实凭据
 
 ## 场景四：沙箱里缺工具
 
@@ -173,15 +173,17 @@ sb plan
 ```
 
 ```
-项目根: /Users/me/Code/my-app
+项目根: ~/Code/my-app
 额外路径:
   无
 导入文件:
-  /Users/me/.kube/home-ops.yaml → ~/.kube/home-ops.yaml
+  ~/.kube/home-ops.yaml → ~/.kube/home-ops.yaml
 放行的私网目标:
   192.168.69.46:443（sb.yaml 默认放行）
 放行的宿主端口:
   host:tcp:3425
+批准状态:
+  approved
 ```
 
 沙箱里连不上某个内网地址、读不到某个文件时，先看这里有没有列出。`.sandbox.yaml` 写错或超出上限时它会和启动一样报错
