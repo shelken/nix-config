@@ -21,7 +21,7 @@ description: 当需要在特定机器（如 mio）或全部机器上创建、修
 | 「every」    | 整数(秒)     | 无       | 固定间隔执行, 如 「7200」 表示每 2 小时; 与 「when」 互斥                                |
 | 「user」     | 布尔值       | 「true」 | 「true」 为用户态 LaunchAgent, 「false」 为系统 root 态 LaunchDaemon                     |
 | 「packages」 | package 列表 | 「[ ]」  | 脚本依赖的 CLI 工具, 自动注入隔离的运行时 PATH, 脚本内直接裸调命令                       |
-| 「script」   | bash 脚本    | 必填     | 脚本正文, 构建期自动通过 shellcheck 静态检查                                             |
+| 「script」   | bash 脚本    | 必填     | 脚本正文, 构建期经 `bash -n` 语法检查 (shellcheck 只覆盖框架生成的包装脚本, 不含正文)    |
 
 ## 创建流程
 
@@ -52,7 +52,7 @@ just bd
 
 ### 3. 查看调度表
 
-构建成功后检查任务是否正确列出:
+`task ls` 读的是已部署的 launchd 任务（用户态 `~/Library/LaunchAgents`、root 态 `/Library/LaunchDaemons`），`just bd` 只构建不部署。应用后（用户态任务 `just hm`、root 任务 `just sw`，均需用户授权）检查任务是否正确列出:
 
 ```bash
 task ls

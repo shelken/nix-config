@@ -9,7 +9,7 @@
 ## 1. 核心设计原则
 
 - **职责解耦（心智清晰）**：
-  - **网络登录归 SSH**：使用各自主机与个人的 SSH 密钥对，由 `just rotate ssh` 闭环管理。
+  - **网络登录归 SSH**：使用各自主机与个人的 SSH 密钥对，由 `just rotate ssh`（在 `secrets.nix` 仓库执行）闭环管理。
   - **配置解密归 Age**：使用独立的原生 Age 根密钥，由 `~/.config/sops/age/keys.txt` 提供解密私钥，公钥声明在 `secrets.nix/.sops.yaml`。
   - 两套密钥完全独立，轮换 SSH 密钥绝不影响 SOPS 解密，反之亦然。
 - **配置集中收敛**：

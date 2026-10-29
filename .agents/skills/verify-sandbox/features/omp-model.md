@@ -27,7 +27,7 @@ Preconditions:
 - **列出 provider。** 运行 `$V run providers -- $V sb run bash -c 'omp models | grep -E "^[a-z].*\([0-9]+\)$"'`。输出含 `cpa`、`commandcode-local`，宿主服务在跑时还含 `mp`
 - **单轮对话。** 运行 `$V run chat -- timeout 120 $V sb run omp --model="$MODEL" -p '只回复两个字母：OK'`。`chat.out` 含 `OK`，`chat.rc` 为 `0`
 - **数据库位置。** 运行 `$V msb exec sb-main -- ls /data/xdg/data/omp`。列出 `agent.db`、`models.db`
-- **pi 沙箱清单。** 运行 `$V run pi-settings -- $V sb run cat /data/home/.pi/agent/settings.json`。`pi-settings.rc` 为 `0`，输出不含 `simple-plannotator` 或 `sandboxExclude`
+- **pi 沙箱清单。** 运行 `$V run pi-settings -- $V sb run cat /root/.pi/agent/settings.json`。`pi-settings.rc` 为 `0`，输出不含 `simple-plannotator` 或 `sandboxExclude`
 - **pi 首启装包与冷缓存对话。** 清空运行状态：`$V msb exec sb-main -- rm -rf /data/home/.pi/agent/npm /data/home/.pi/agent/git /data/home/.pi/agent/cache`。运行 `$V run pi-first -- timeout 300 $V sb run pi --model "$MODEL" -p '只回复 OK'`。`pi-first.out` 含 `OK`，`rc` 为 `0`。运行 `$V msb exec sb-main -- find /data/home/.pi/agent -type d -name node-pty`，输出为空。保留已安装的包，继续验证下一次对话
 - **pi 对话。** 运行 `$V run pi-chat -- timeout 150 $V sb run pi --model "$MODEL" -p '只回复 OK'`。`pi-chat.out` 含 `OK`，`rc` 为 `0`，stderr 没有装包进度
 - **并发首启。** 新数据卷上同时启动多个 pi，只有一部分成功，其余报 `Model "…" not found`；装完之后同时启动多个全部成功，没有查根因。验证并发时先单独首启一次，再并发

@@ -19,7 +19,10 @@
 配置
 
 ```nix
-imports = [ config.flake.modules.darwin.hammerspoon ];
+# hosts/<主机>/default.nix：导入可选功能
+imports = [ self.modules.darwin.hammerspoon ];
+
+# hosts/<主机>/home.nix：开启窗口管理（该选项声明在 HM 侧）
 shelken.tools.hammerspoon.wm.enable = true;
 # 注意：窗口管理器二选一选项 shelken.wm.manager 默认启用 aerospace
 ```

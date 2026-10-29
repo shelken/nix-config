@@ -5,7 +5,7 @@
 
 `~/.config/herdr/plugins/config/cloudmanic.herdr-plus/projects`
 
-改完立刻生效，无需 reinstall 插件。打开：`prefix+up`（或 action `cloudmanic.herdr-plus.projects`）。
+改完立刻生效，无需 reinstall 插件。打开：`prefix+p`（或 action `cloudmanic.herdr-plus.projects`）。
 
 ---
 

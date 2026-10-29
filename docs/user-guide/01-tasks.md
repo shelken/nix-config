@@ -45,7 +45,7 @@ task ls
 # 输出示例：
 # NAME TIER SCHEDULE LOG
 # ---- ---- -------- ---
-# loon root every 7200s /Library/Logs/task-loon.log
+# loon root every 86400s /Library/Logs/task-loon.log
 # nix-gc root when 3:15 /Library/Logs/task-nix-gc.log
 
 # 2. 手动执行任务（root 任务自动引导 sudo）
@@ -67,7 +67,7 @@ task log loon
 ## 现有任务示例
 
 ```bash
-hosts/mio/tasks/loon.nix # 机器专属：每 2h 清理 Loon 日志（root）
+hosts/mio/tasks/loon.nix # 机器专属：每 24h 清理 Loon 日志（root）
 modules/features/darwin/tasks/_global/nix-gc.nix # 全设备默认：每天 3:15 nix GC（root）
 ```
 
