@@ -4,8 +4,7 @@
   guest,
 }:
 let
-  template = import ./_template.nix { inherit (pkgs) lib; };
-
+  # microsandbox 驱动配置（由 Nix 编译期确定）
   msbConfig = (pkgs.formats.json { }).generate "microsandbox-config.json" {
     version = 1;
     home = spec.paths.msbHome;
@@ -13,15 +12,8 @@ let
     sandbox_defaults.disable_metrics_sample = true;
   };
 
-  # 宿主 CLI：逻辑在 sb.sh，Nix 注入所需路径与依赖（shellcheck 在构建期对最终产物生效）
-  sbText = template ./sb.sh {
-    MSB_CONFIG = msbConfig;
-    MSB_HOME = spec.paths.msbHome;
-    DEFAULT_YAML = spec.policyFile;
-    LAUNCHER = guest.launcher;
-    GUEST_STATUS = guest.guestStatus;
-  };
-
+  # 宿主 CLI：Nix 原生 writeShellApplication 打包（无模板引擎）
+  # 将编译期生成的配置与 guest 派生包路径作为默认环境注入
   sb = pkgs.writeShellApplication {
     name = "sb";
     runtimeInputs = [
@@ -31,7 +23,15 @@ let
       pkgs.git
       pkgs.util-linux
     ];
-    text = sbText;
+    text = ''
+      export DEFAULT_MSB_CONFIG="${msbConfig}"
+      export DEFAULT_MSB_HOME="${spec.paths.msbHome}"
+      export DEFAULT_YAML="${spec.policyFile}"
+      export LAUNCHER="${guest.launcher}"
+      export GUEST_STATUS="${guest.guestStatus}"
+
+      ${builtins.readFile ./sb.sh}
+    '';
   };
 
   ompSb = pkgs.writeShellScriptBin "omp-sb" ''

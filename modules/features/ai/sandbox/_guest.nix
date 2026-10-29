@@ -11,8 +11,6 @@ let
   toolsCfg = spec.tools;
   hostCommandsCfg = spec.hostCommands;
 
-  template = import ./_template.nix { inherit (linuxPkgs) lib; };
-
   # 沙箱基础环境（不登记为共享工具，理由见 ADR 0003）:
   # bash, coreutils, curl, git, mise, bubblewrap, iproute2, iptables, jq, gnused, findutils, gawk, openssh
   # 不带 C 工具链：沙箱里排除了依赖 node-pty 的 simple-plannotator，没有需要现场编译的原生依赖。
@@ -69,18 +67,20 @@ let
     tools = spec.miseTools;
   };
 
-  # 生成沙箱内执行的 sync 步骤（由 sb sync 调用）
-  postInstallSteps = lib.concatStringsSep "\n" (
-    lib.concatMap (
-      name:
-      let
-        tool = toolsCfg.${name};
-      in
-      lib.optional (tool.postInstall != null) ''
-        echo "[sb sync] 执行 ${name} postInstall..."
-        ${tool.postInstall}
-      ''
-    ) (builtins.attrNames toolsCfg)
+  # 编译期生成的工具 postInstall 执行钩子（替代旧有的字符串替换宏）
+  postInstallHook = linuxPkgs.writeShellScript "sandbox-guest-postinstall-hook" (
+    lib.concatStringsSep "\n" (
+      lib.concatMap (
+        name:
+        let
+          tool = toolsCfg.${name};
+        in
+        lib.optional (tool.postInstall != null) ''
+          echo "[sb sync] 执行 ${name} postInstall..."
+          ${tool.postInstall}
+        ''
+      ) (builtins.attrNames toolsCfg)
+    )
   );
 
   # 统一 guest 环境文件：sync-guest.sh、launcher、wrapper 入口统一 source 本文件，单一事实来源
@@ -119,9 +119,7 @@ let
     export PATH="$MISE_SHIMS_DIR:${guestBinPath}"
   '';
 
-  # sync 脚本正文在独立文件 sync-guest.sh；Nix 只做占位符替换（不引入 IFD）。
-  # guest 侧用 Linux 版 writeShellApplication 打包，构建期同样过 shellcheck；
-  # 源文件自带 shebang 供直接阅读/检查，打包时去掉（writeShellApplication 写自己的 shebang）。
+  # sync 脚本：Linux 版 writeShellApplication 封包，无模板替换
   syncGuestScript = "${
     linuxPkgs.writeShellApplication {
       name = "sync-guest";
@@ -131,17 +129,15 @@ let
         git
         mise
       ];
-      text = lib.removePrefix "#!/usr/bin/env bash\n" (
-        template ./sync-guest.sh {
-          git_config = gitConfig;
-          postinstall_steps = postInstallSteps;
-        }
-      );
+      text = ''
+        export SB_GIT_CONFIG="${gitConfig}"
+        export SB_POSTINSTALL_HOOK="${postInstallHook}"
+        ${lib.removePrefix "#!/usr/bin/env bash\n" (builtins.readFile ./sync-guest.sh)}
+      '';
     }
   }/bin/sync-guest";
 
-  # guest 侧状态查询脚本（sb status 调用）：正文在 guest-status.sh，
-  # 只用 PATH 里的 mise/jq，不注入任何 Nix 路径。
+  # guest 状态探测脚本：Linux 版 writeShellApplication 封包，无模板替换
   guestStatus = "${
     linuxPkgs.writeShellApplication {
       name = "guest-status";
@@ -155,8 +151,7 @@ let
     }
   }/bin/guest-status";
 
-  # launcher 隔离执行器：正文在 launcher.sh，Linux 版 writeShellApplication 打包。
-  # 在 guest 内以 root 建网络命名空间与 bubblewrap 视图，运行命令，退出清理。
+  # launcher 隔离执行器：Linux 版 writeShellApplication 封包，无模板替换
   launcherTools = with linuxPkgs; [
     bashInteractive
     coreutils
@@ -172,12 +167,11 @@ let
     linuxPkgs.writeShellApplication {
       name = "sb-launcher";
       runtimeInputs = launcherTools;
-      text = linuxPkgs.lib.removePrefix "#!/usr/bin/env bash\n" (
-        template ./launcher.sh {
-          guest_bin_path = guestBinPath;
-          git_config = gitConfig;
-        }
-      );
+      text = ''
+        export SB_GUEST_BIN_PATH="${guestBinPath}"
+        export SB_GIT_CONFIG="${gitConfig}"
+        ${linuxPkgs.lib.removePrefix "#!/usr/bin/env bash\n" (builtins.readFile ./launcher.sh)}
+      '';
     }
   }/bin/sb-launcher";
 in

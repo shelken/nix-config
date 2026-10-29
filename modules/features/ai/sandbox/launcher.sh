@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export PATH="/data/xdg/data/mise/shims:@guest_bin_path@"
+export PATH="/data/xdg/data/mise/shims:${SB_GUEST_BIN_PATH:-/usr/local/bin:/usr/bin:/bin}"
 export HOME="${HOME:-/root}"
 
 CONTEXTS_DIR="/run/sandbox/contexts"
@@ -513,7 +513,7 @@ fi
 # 唯一来源：/run/sandbox-config/current/guest-env.sh（generator 单一生成）。
 # 缺少该文件说明 VM 未挂载生成配置：不加载工具环境，也不维护第二份回退。
 export GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
-export GIT_CONFIG_GLOBAL="@git_config@"
+export GIT_CONFIG_GLOBAL="${SB_GIT_CONFIG:-}"
 if [[ -f /run/sandbox-config/current/guest-env.sh ]]; then
   # shellcheck source=/dev/null
   source /run/sandbox-config/current/guest-env.sh
