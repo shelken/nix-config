@@ -232,12 +232,12 @@ rec {
         lib.mapAttrsToList (var: value: ''export ${var}="${quoteDouble value}"'') t.env
       );
 
-      # 抖动只在 launchd 调度唤起时生效；手动 task run 调试无延迟，CANCEL_JITTER=true 强制跳过。
+      # 抖动只在 launchd 调度唤起时生效：手动 task run 本来就跳过，所以不需要额外的跳过开关。
       # 放在包装脚本里、灵动岛标记之前：休眠期间任务还没开始，不应占着灵动岛
-      jitterBlock = lib.optionalString (t.jitter != null && t.jitter > 0) ''
-        if [ "''${SHELKEN_TASK_LAUNCHD:-}" = "1" ] && [ "''${CANCEL_JITTER:-}" != "true" ]; then
+      jitterBlock = lib.optionalString (t.jitter != null) ''
+        if [ "''${SHELKEN_TASK_LAUNCHD:-}" = "1" ]; then
           jitter=$(( RANDOM % ${toString t.jitter} ))
-          echo "[$(date '+%Y-%m-%d %H:%M:%S')] Jitter delay: ''${jitter}s（跳过请设 CANCEL_JITTER=true）"
+          echo "[$(date '+%Y-%m-%d %H:%M:%S')] Jitter delay: ''${jitter}s"
           sleep "$jitter"
         fi
       '';
@@ -389,9 +389,9 @@ rec {
           };
         };
         jitter = lib.mkOption {
-          type = lib.types.nullOr lib.types.int;
+          type = lib.types.nullOr (lib.types.ints.between 1 32767);
           default = taskDefaults.jitter;
-          description = "launchd 调度触发时的最大随机延迟秒数，手动运行不延迟";
+          description = "launchd 调度触发时的最大随机延迟秒数（1 到 32767，上限来自 bash RANDOM），手动运行不延迟";
           example = 600;
         };
         notify = lib.mkOption {
@@ -433,27 +433,14 @@ rec {
         };
       };
       config = {
-        package = mkPackage name {
-          inherit (config)
-            user
-            packages
-            secrets
-            env
-            jitter
-            notify
-            script
-            island
-            ;
-        };
+        # 直接传整份 config，新增字段不必同时改这里
+        package = mkPackage name config;
       };
     };
 
-  # 启用过滤（有调度才生成，无 when/every 的任务声明视为未启用）
-  enabled = lib.filterAttrs (_: t: t.when != [ ] || t.every != null);
+  # 任务归属：user 任务进 home 层，root 任务进 darwin 层。
+  # 此处不再过滤「无调度」的声明，when/every 二选一由各层的断言保证
+  userTasks = tasks: lib.filterAttrs (_: t: t.user) tasks;
 
-  # user 任务（home 层 agent）
-  userTasks = tasks: lib.filterAttrs (_: t: t.user) (enabled tasks);
-
-  # root 任务（darwin 层 daemon）
-  rootTasks = tasks: lib.filterAttrs (_: t: !t.user) (enabled tasks);
+  rootTasks = tasks: lib.filterAttrs (_: t: !t.user) tasks;
 }

@@ -56,7 +56,7 @@ shelken.tasks.kopia-backup = {
 | `packages` | package 列表         | `[ ]`   | 脚本依赖的 CLI，注入运行时 PATH                               |
 | `secrets`  | 属性集               | `{ }`   | 环境变量到 sops 解密文件路径的映射，运行时读文件注入          |
 | `env`      | 属性集               | `{ }`   | 普通环境变量，明文写在这里                                    |
-| `jitter`   | 整数，秒或 `null`    | `null`  | 调度唤起后的最大随机延迟                                      |
+| `jitter`   | 整数，秒或 `null`    | `null`  | 调度唤起后的最大随机延迟，取值 `1` 到 `32767`                 |
 | `notify`   | 属性集               | 见下    | `failure = true`、`success = false`、`title = null`           |
 | `island`   | bool                 | `false` | 执行期间在灵动岛显示状态                                      |
 | `script`   | bash                 | 必填    | 脚本内容，打包时过 shellcheck                                 |
@@ -77,7 +77,7 @@ shelken.tasks.kopia-backup = {
 jitter = 600; # 唤起后随机等 0 到 599 秒
 ```
 
-手动 `task run` 不等；`CANCEL_JITTER=true` 也能跳过
+手动 `task run` 不等，因为抖动只在 launchd 唤起时生效
 
 ## 通知
 
