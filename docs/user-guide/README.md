@@ -8,3 +8,4 @@
 | [01-tasks.md](01-tasks.md)                 | 声明式定时任务：主机任务与模块任务               |
 | [02-features.md](02-features.md)           | 功能与角色：加软件、启用可选功能、调参数、加主机 |
 | [03-agent-sandbox.md](03-agent-sandbox.md) | Agent 沙箱：在隔离 VM 里同时跑多个 OMP           |
+| [04-backup.md](04-backup.md)               | 备份：kopia 快照、策略、手动入口与恢复           |
