@@ -34,7 +34,6 @@ export type Policy = {
   paths: Rule[];
   /** 确切路径只读授权：只影响读取，写入与执行一律不放行 */
   allow_read_paths: Rule[];
-  allow_template_paths: Rule[];
 };
 
 /** 判别联合类型：确保不同工具输入参数在类型系统层级完全收窄 */
@@ -67,7 +66,6 @@ export type ParsedLayer = {
   commandOps: LayerOp[];
   pathOps: LayerOp[];
   allowReadOps: LayerOp[];
-  allowTemplateOps: LayerOp[];
   errors: string[];
 };
 
@@ -1342,18 +1340,17 @@ function protectedLinkTarget(
   return false;
 }
 
-/** 精确文件授权；链接展开后落到被禁目标的条目按受禁处理。 */
-function isExactPathAllowed(
+/** 确切路径只读授权：只认精确路径；链接展开后落到被禁目标的条目按受禁处理 */
+function isReadAllowed(
   candidate: string,
-  rules: Rule[],
   policy: Policy,
   cwd: string,
   home: string,
 ): boolean {
-  if (rules.length === 0) return false;
+  if (policy.allow_read_paths.length === 0) return false;
   const C = normPath(candidate, cwd, home);
   const realC = resolveReal(C);
-  for (const rule of rules) {
+  for (const rule of policy.allow_read_paths) {
     // 相对条目只接受构建期展开出的绝对形态，避免换目录后同名文件被当作已授权
     if (!path.isAbsolute(rule.value) && !stillHasHomeToken(rule.value)) continue;
     const A = absoluteForm(rule.value, cwd, home);
@@ -1370,18 +1367,21 @@ function isExactPathAllowed(
   return false;
 }
 
-function isTemplateAllowed(
+function isEnvTemplate(
   candidate: string,
   rule: Rule,
-  policy: Policy,
   cwd: string,
   home: string,
 ): boolean {
   if (rule.source !== "builtin") return false;
   if (rule.pattern !== ".env.*" && rule.pattern !== "**/.env.*") return false;
   const C = normPath(candidate, cwd, home);
-  if (!policy.allow_template_paths.some((entry) => entry.value === C)) return false;
-  return isExactPathAllowed(candidate, policy.allow_template_paths, policy, cwd, home);
+  if (path.basename(C) !== ".env.tpl") return false;
+  try {
+    return lstatSync(C).isFile();
+  } catch (error) {
+    return isMissingPathError(error);
+  }
 }
 
 /** 只读授权只适用于单条直接读取命令：无管道、无重定向、无 wrapper、无动态展开 */
@@ -1432,7 +1432,7 @@ function bashHitExemptable(
 
   return (
     allowReadExempt &&
-    isExactPathAllowed(word.value, policy.allow_read_paths, policy, cwd, home) &&
+    isReadAllowed(word.value, policy, cwd, home) &&
     isPureReadCommand(cmd, soleCommand)
   );
 }
@@ -1460,7 +1460,7 @@ function hasBlockingPathHit(
         return false;
       }
       if (!pathRuleMatchesFull(token, rule.value, cwd, home)) return false;
-      if (!word.glob && !word.dynamic && isTemplateAllowed(token, rule, policy, cwd, home)) return false;
+      if (!word.glob && !word.dynamic && isEnvTemplate(token, rule, cwd, home)) return false;
       return !bashHitExemptable(
         cmd,
         idx,
@@ -1694,13 +1694,13 @@ export function evaluateGuard(
         if (!pathRuleMatchesFull(variant, rule.value, input.cwd, input.home)) {
           continue;
         }
-        if (isTemplateAllowed(stripOmpSelector(variant), rule, policy, input.cwd, input.home)) {
+        if (isEnvTemplate(stripOmpSelector(variant), rule, input.cwd, input.home)) {
           continue;
         }
         // 选择器（:50-200、:raw 等）剥离后判定授权，确切授权路径才命中
         if (
           readOnlyTool &&
-          isExactPathAllowed(stripOmpSelector(variant), policy.allow_read_paths, policy, input.cwd, input.home)
+          isReadAllowed(stripOmpSelector(variant), policy, input.cwd, input.home)
         ) {
           continue;
         }
@@ -1782,7 +1782,6 @@ type FallbackYamlDoc = {
   deny_commands: Array<string | Record<string, string>>;
   deny_paths: Array<string | Record<string, string>>;
   allow_read_paths: Array<string | Record<string, string>>;
-  allow_template_paths: Array<string | Record<string, string>>;
 };
 
 /** 纯正则轻量级 fallback 解析器（仅在宿主环境完全无 YAML 解析器时启用） */
@@ -1791,10 +1790,9 @@ export function parseSimpleYamlFallback(source: string): FallbackYamlDoc {
     deny_commands: [],
     deny_paths: [],
     allow_read_paths: [],
-    allow_template_paths: [],
   };
   const lines = source.split(/\r?\n/);
-  let currentKey: "deny_commands" | "deny_paths" | "allow_read_paths" | "allow_template_paths" | null = null;
+  let currentKey: "deny_commands" | "deny_paths" | "allow_read_paths" | null = null;
   let currentItem: Record<string, string> | null = null;
 
   for (let line of lines) {
@@ -1825,12 +1823,6 @@ export function parseSimpleYamlFallback(source: string): FallbackYamlDoc {
 
     if (trimmed.startsWith("allow_read_paths:")) {
       currentKey = "allow_read_paths";
-      currentItem = null;
-      continue;
-    }
-
-    if (trimmed.startsWith("allow_template_paths:")) {
-      currentKey = "allow_template_paths";
       currentItem = null;
       continue;
     }
@@ -1896,7 +1888,7 @@ export function parseLayerYaml(source: string): ParseLayerResult {
   if (doc == null) {
     return {
       ok: true,
-      layer: { commandOps: [], pathOps: [], allowReadOps: [], allowTemplateOps: [], errors: [] },
+      layer: { commandOps: [], pathOps: [], allowReadOps: [], errors: [] },
     };
   }
 
@@ -1908,7 +1900,6 @@ export function parseLayerYaml(source: string): ParseLayerResult {
   const commands = parseListOps(root.deny_commands, "pattern");
   const paths = parseListOps(root.deny_paths, "path");
   const allowRead = parseListOps(root.allow_read_paths, "path");
-  const allowTemplate = parseListOps(root.allow_template_paths, "path");
 
   // 只读授权必须逐个文件指定；通配条目报配置错误并丢弃，防止批量放行
   const allowReadOps: LayerOp[] = [];
@@ -1922,21 +1913,11 @@ export function parseLayerYaml(source: string): ParseLayerResult {
     allowReadOps.push(op);
   }
 
-  const allowTemplateOps: LayerOp[] = [];
-  for (const op of allowTemplate.ops) {
-    if (/[*?\[]/.test(op.value) || path.basename(op.value) !== ".env.tpl") {
-      allowTemplate.errors.push(`allow_template_paths 仅支持确切的 .env.tpl 文件路径: ${op.value}`);
-      continue;
-    }
-    allowTemplateOps.push(op);
-  }
-
   const layer: ParsedLayer = {
     commandOps: commands.ops,
     pathOps: paths.ops,
     allowReadOps,
-    allowTemplateOps,
-    errors: [...commands.errors, ...paths.errors, ...allowRead.errors, ...allowTemplate.errors],
+    errors: [...commands.errors, ...paths.errors, ...allowRead.errors],
   };
 
   const dr = root.default_reason;
@@ -2017,7 +1998,6 @@ export function buildPolicy(input: {
   let commands = materializeRules(BUILTIN_COMMANDS, "command", ctx);
   let paths = materializeRules(BUILTIN_PATHS, "path", ctx);
   let allowReadPaths: Rule[] = [];
-  let allowTemplatePaths: Rule[] = [];
   let default_reason: string | undefined;
 
   const permissionPaths = input.permissionPaths ?? getPermissionPaths(ctx.cwd, path.join(ctx.home, ".omp/agent"));
@@ -2051,13 +2031,6 @@ export function buildPolicy(input: {
       ctx,
       `${config}#allow_read_paths`,
     );
-    allowTemplatePaths = applyOps(
-      allowTemplatePaths,
-      parsed.layer.allowTemplateOps,
-      "path",
-      ctx,
-      `${config}#allow_template_paths`,
-    );
   }
 
   const policy: Policy = {
@@ -2065,7 +2038,6 @@ export function buildPolicy(input: {
     commands,
     paths,
     allow_read_paths: allowReadPaths,
-    allow_template_paths: allowTemplatePaths,
   };
 
   return { policy, errors };
