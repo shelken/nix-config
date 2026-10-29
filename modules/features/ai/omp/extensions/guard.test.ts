@@ -903,7 +903,7 @@ describe("omp-guard — 误报回归 (guard-fix)", () => {
 
 describe("#171 通用路径例外", () => {
   const template = "compose/demo/.env.tpl";
-  const exception = `deny_paths:\n  - "-${template}"\n`;
+  const exception = `deny_paths:\n  - "!${template}"\n`;
 
   it("默认策略继续拒绝模板，显式负规则放行各工具入口", () => {
     const policy = buildPolicy({ projectSource: exception, cwd: CWD, home: HOME }).policy;
@@ -939,10 +939,10 @@ describe("#171 通用路径例外", () => {
 
   it("路径例外适用于任意文件，并按声明顺序及配置层级覆盖", () => {
     for (const [globalSource, projectSource, expected] of [
-      ['deny_paths:\n  - "private/*"\n', 'deny_paths:\n  - "-private/schema.json"\n', false],
-      ['deny_paths:\n  - "private/*"\n  - "-private/schema.json"\n', 'deny_paths:\n  - "private/*"\n', true],
-      ['', 'deny_paths:\n  - "private/*"\n  - "-private/schema.json"\n  - "private/*"\n', true],
-      ['', 'deny_paths:\n  - "private/*"\n  - "-private/schema.json"\n', false],
+      ['deny_paths:\n  - "private/*"\n', 'deny_paths:\n  - "!private/schema.json"\n', false],
+      ['deny_paths:\n  - "private/*"\n  - "!private/schema.json"\n', 'deny_paths:\n  - "private/*"\n', true],
+      ['', 'deny_paths:\n  - "private/*"\n  - "!private/schema.json"\n  - "private/*"\n', true],
+      ['', 'deny_paths:\n  - "private/*"\n  - "!private/schema.json"\n', false],
     ] as const) {
       const policy = buildPolicy({ globalSource, projectSource, cwd: CWD, home: HOME }).policy;
       for (const tool of ["read", "write"]) {
@@ -954,7 +954,7 @@ describe("#171 通用路径例外", () => {
 
   it("显式模板规则与全仓暂存禁令分别生效", () => {
     const policy = buildPolicy({
-      globalSource: 'deny_commands:\n  - git add -A\n  - git add .\ndeny_paths:\n  - "-.env.tpl"\n  - "-**/.env.tpl"\n',
+      globalSource: 'deny_commands:\n  - git add -A\n  - git add .\ndeny_paths:\n  - "!.env.tpl"\n  - "!**/.env.tpl"\n',
       cwd: CWD,
       home: HOME,
     }).policy;
@@ -964,7 +964,7 @@ describe("#171 通用路径例外", () => {
     for (const command of [`git add -- ${template}`, `git add -A -- ${template}`]) {
       expect(evaluateGuard({ tool: "bash", command, cwd: CWD, home: HOME }, policy).block).toBe(false);
     }
-    for (const command of ["git add .", "git add -A", "git add -- compose/demo/.env.*"]) {
+    for (const command of ["git add .", "git add -A", "git add -- compose/demo/.env.*", "git add -- compose/$(printf demo)/.env.tpl"]) {
       expect(evaluateGuard({ tool: "bash", command, cwd: CWD, home: HOME }, policy).block).toBe(true);
     }
   });
@@ -991,7 +991,7 @@ describe("#171 通用路径例外", () => {
     try {
       writeFileSync(path.join(dir, ".env"), "FAKE_SECRET=example\n");
       symlinkSync(".env", path.join(dir, ".env.tpl"));
-      const policy = buildPolicy({ projectSource: 'deny_paths:\n  - "-.env.tpl"\n', cwd: dir, home: HOME }).policy;
+      const policy = buildPolicy({ projectSource: 'deny_paths:\n  - "!.env.tpl"\n', cwd: dir, home: HOME }).policy;
       for (const tool of ["read", "write", "edit", "grep", "glob"]) {
         expect(evaluateGuard({ tool, path: ".env", cwd: dir, home: HOME }, policy).block).toBe(true);
         expect(evaluateGuard({ tool, path: ".env.tpl", cwd: dir, home: HOME }, policy).block).toBe(true);
@@ -999,6 +999,17 @@ describe("#171 通用路径例外", () => {
       expect(evaluateGuard({ tool: "bash", command: "git add -- .env.tpl", cwd: dir, home: HOME }, policy).block).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("减号只删除同名规则，移除否定规则后恢复拒绝", () => {
+    for (const [rules, expected] of [
+      ['  - "private/*"\n  - "-private/schema.json"\n', true],
+      ['  - "private/*"\n  - "-private/*"\n', false],
+      ['  - "private/*"\n  - "!private/schema.json"\n  - "-!private/schema.json"\n', true],
+    ] as const) {
+      const policy = buildPolicy({ projectSource: `deny_paths:\n${rules}`, cwd: CWD, home: HOME }).policy;
+      expect(evaluateGuard({ tool: "write", path: "private/schema.json", cwd: CWD, home: HOME }, policy).block).toBe(expected);
     }
   });
 });

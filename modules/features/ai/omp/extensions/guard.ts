@@ -26,7 +26,6 @@ export type Rule = {
   source?: "builtin" | "user";
   pattern?: string;
   config?: string;
-  exclude?: boolean;
 };
 
 export type Policy = {
@@ -1224,11 +1223,14 @@ export function expandRuleValues(
   cwd: string,
 ): string[] {
   const out = new Set<string>();
+  const negated = kind === "path" && value.startsWith("!");
+  const prefix = negated ? "!" : "";
+  const pattern = negated ? value.slice(1) : value;
   out.add(value);
-  const expanded = expandHomeInText(value, home);
-  out.add(expanded);
+  const expanded = expandHomeInText(pattern, home);
+  out.add(prefix + expanded);
   if (kind === "path" && !stillHasHomeToken(expanded)) {
-    out.add(absoluteForm(expanded, cwd, home));
+    out.add(prefix + absoluteForm(expanded, cwd, home));
   }
   return [...out];
 }
@@ -1303,7 +1305,7 @@ function protectedLinkTarget(
 ): boolean {
   const hits = (p: string, origin: string) =>
     policy.paths.some((rule) => {
-      if (rule.exclude) return false;
+      if (rule.value.startsWith("!")) return false;
       const R = absoluteForm(rule.value, cwd, home);
       // 共享目录链接只改变路径写法，不扩大原有的确切授权
       if (R === origin || R.startsWith(origin + path.sep)) return false;
@@ -1382,9 +1384,11 @@ function blockingPathRule(
   let denied: Rule | undefined;
   let excluded = false;
   for (const rule of policy.paths) {
-    if (rule.exclude && !allowExceptions) continue;
-    if (!pathRuleMatchesFull(candidate, rule.value, cwd, home, !rule.exclude)) continue;
-    if (rule.exclude) {
+    const negated = rule.value.startsWith("!");
+    if (negated && !allowExceptions) continue;
+    const pattern = negated ? rule.value.slice(1) : rule.value;
+    if (!pathRuleMatchesFull(candidate, pattern, cwd, home, !negated)) continue;
+    if (negated) {
       excluded = true;
     } else {
       denied = rule;
@@ -1944,10 +1948,15 @@ export function applyOps(
       ctx.home,
       ctx.cwd,
     )) {
+      if (kind === "path" && value.startsWith("!") && !path.isAbsolute(value.slice(1))) continue;
       const next: Rule = { value, reason: op.reason, source: "user", pattern: op.value, config };
       const i = out.findIndex((r) => r.value === value);
-      if (i >= 0) out[i] = next;
-      else out.push(next);
+      if (i < 0) out.push(next);
+      else if (kind === "command") out[i] = next;
+      else {
+        out.splice(i, 1);
+        out.push(next);
+      }
     }
   }
   return out;
@@ -1993,19 +2002,7 @@ export function buildPolicy(input: {
       default_reason = parsed.layer.default_reason;
     }
     commands = applyOps(commands, parsed.layer.commandOps, "command", ctx, `${config}#deny_commands`);
-    for (const op of parsed.layer.pathOps) {
-      for (const value of expandRuleValues(op.value, "path", ctx.home, ctx.cwd)) {
-        if (op.type === "remove" && !path.isAbsolute(value)) continue;
-        paths.push({
-          value,
-          exclude: op.type === "remove",
-          reason: op.type === "add" ? op.reason : undefined,
-          source: "user",
-          pattern: op.value,
-          config: `${config}#deny_paths`,
-        });
-      }
-    }
+    paths = applyOps(paths, parsed.layer.pathOps, "path", ctx, `${config}#deny_paths`);
     allowReadPaths = applyOps(
       allowReadPaths,
       parsed.layer.allowReadOps,
