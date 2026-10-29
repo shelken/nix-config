@@ -29,7 +29,11 @@ deny_commands:
     reason: "你他妈有病吗"
 
 
+# 路径规则：普通值拒绝，带 - 前缀的值声明例外；最后匹配的规则生效。
 deny_paths:
+  # 仅为 Compose 模板声明例外，真实环境文件继续拒绝。
+  - "-compose/*/.env.tpl"
+
   # --- personal shell secrets ---
   - path: "~/.specific.zsh"
     reason: "personal shell secrets"

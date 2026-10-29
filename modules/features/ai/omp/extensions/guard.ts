@@ -26,6 +26,7 @@ export type Rule = {
   source?: "builtin" | "user";
   pattern?: string;
   config?: string;
+  exclude?: boolean;
 };
 
 export type Policy = {
@@ -1237,6 +1238,7 @@ export function pathRuleMatchesFull(
   ruleValue: string,
   cwd: string,
   home: string,
+  followSymlinks = true,
 ): boolean {
   const C = normPath(candidate, cwd, home);
   const R = absoluteForm(ruleValue, cwd, home);
@@ -1244,6 +1246,7 @@ export function pathRuleMatchesFull(
     ? new RegExp(`^${globToRegExpSource(R)}$`)
     : undefined;
   if (re ? re.test(C) : C === R) return true;
+  if (!followSymlinks) return false;
   const realC = resolveReal(C);
   if (realC !== C && (re ? re.test(realC) : realC === R)) return true;
   if (re) {
@@ -1300,6 +1303,7 @@ function protectedLinkTarget(
 ): boolean {
   const hits = (p: string, origin: string) =>
     policy.paths.some((rule) => {
+      if (rule.exclude) return false;
       const R = absoluteForm(rule.value, cwd, home);
       // 共享目录链接只改变路径写法，不扩大原有的确切授权
       if (R === origin || R.startsWith(origin + path.sep)) return false;
@@ -1367,21 +1371,30 @@ function isReadAllowed(
   return false;
 }
 
-function isEnvTemplate(
+/** 后匹配的路径规则覆盖前者；例外不能扩大到受保护的链接目标。 */
+function blockingPathRule(
   candidate: string,
-  rule: Rule,
+  policy: Policy,
   cwd: string,
   home: string,
-): boolean {
-  if (rule.source !== "builtin") return false;
-  if (rule.pattern !== ".env.*" && rule.pattern !== "**/.env.*") return false;
-  const C = normPath(candidate, cwd, home);
-  if (path.basename(C) !== ".env.tpl") return false;
-  try {
-    return lstatSync(C).isFile();
-  } catch (error) {
-    return isMissingPathError(error);
+  allowExceptions = true,
+): Rule | undefined {
+  let denied: Rule | undefined;
+  let excluded = false;
+  for (const rule of policy.paths) {
+    if (rule.exclude && !allowExceptions) continue;
+    if (!pathRuleMatchesFull(candidate, rule.value, cwd, home, !rule.exclude)) continue;
+    if (rule.exclude) {
+      excluded = true;
+    } else {
+      denied = rule;
+      excluded = false;
+    }
   }
+  if (denied && excluded && !protectedLinkTarget(normPath(candidate, cwd, home), policy, cwd, home)) {
+    return undefined;
+  }
+  return denied;
 }
 
 /** 只读授权只适用于单条直接读取命令：无管道、无重定向、无 wrapper、无动态展开 */
@@ -1437,41 +1450,27 @@ function bashHitExemptable(
   );
 }
 
-function hasBlockingPathHit(
+function bashBlockingPathRule(
   nodes: ShellCmd[],
-  rule: Rule,
   policy: Policy,
   cwd: string,
   home: string,
   allowReadExempt: boolean,
-): boolean {
+): Rule | undefined {
   const soleCommand = nodes.length === 1;
-  return nodes.some((cmd) =>
-    cmd.words.some((word, idx) => {
+  for (const cmd of nodes) {
+    for (let idx = 0; idx < cmd.words.length; idx++) {
+      const word = cmd.words[idx];
       const token = word.value;
-      if (token.startsWith("-")) return false;
-      if (
-        !(
-          token.includes("/") ||
-          token === ".env" ||
-          token.startsWith(".env.")
-        )
-      ) {
-        return false;
+      if (token.startsWith("-")) continue;
+      if (!(token.includes("/") || token === ".env" || token.startsWith(".env."))) continue;
+      const rule = blockingPathRule(token, policy, cwd, home, !word.glob && !word.dynamic);
+      if (rule && !bashHitExemptable(cmd, idx, policy, cwd, home, allowReadExempt, soleCommand)) {
+        return rule;
       }
-      if (!pathRuleMatchesFull(token, rule.value, cwd, home)) return false;
-      if (!word.glob && !word.dynamic && isEnvTemplate(token, rule, cwd, home)) return false;
-      return !bashHitExemptable(
-        cmd,
-        idx,
-        policy,
-        cwd,
-        home,
-        allowReadExempt,
-        soleCommand,
-      );
-    }),
-  );
+    }
+  }
+  return undefined;
 }
 
 /** 扫描自由文本中的命令替换；无引用 heredoc 正文会在展开阶段执行其中的替换 */
@@ -1521,7 +1520,7 @@ export function resolveBlockReason(
       : "PATH";
   const targetKey = kind === "command" ? "command" : "path";
   const config = rule.config ?? `guard.ts#BUILTIN_${kind === "command" ? "COMMANDS" : "PATHS"}`;
-  const targetLine = `${targetKey}: ${rule.value}\nconfig: ${config}`;
+  const targetLine = `${targetKey}: ${rule.pattern ?? rule.value}\nconfig: ${config}`;
   let detail = ruleReason;
   if (
     detail === undefined &&
@@ -1583,22 +1582,12 @@ export function evaluateGuard(
         };
       }
     }
-    for (const rule of policy.paths) {
-      if (
-        hasBlockingPathHit(
-          nodes,
-          rule,
-          policy,
-          input.cwd,
-          input.home,
-          allowReadExempt,
-        )
-      ) {
-        return {
-          block: true,
-          reason: resolveBlockReason(rule, "path", policy.default_reason),
-        };
-      }
+    const pathRule = bashBlockingPathRule(nodes, policy, input.cwd, input.home, allowReadExempt);
+    if (pathRule) {
+      return {
+        block: true,
+        reason: resolveBlockReason(pathRule, "path", policy.default_reason),
+      };
     }
 
     // 嵌套脚本不再享有只读授权，避免借外层包装扩大授权范围
@@ -1682,34 +1671,15 @@ export function evaluateGuard(
     input.tool === "read" || input.tool === "grep" || input.tool === "glob";
 
   for (const rawCandidate of candidateList) {
-    const pathValue = expandHomeInText(rawCandidate, input.home);
-    const candidateVariants = [pathValue];
-    const stripped = stripOmpSelector(pathValue);
-    if (stripped !== pathValue && stripped.trim() !== "") {
-      candidateVariants.push(stripped.trim());
-    }
-
-    for (const variant of candidateVariants) {
-      for (const rule of policy.paths) {
-        if (!pathRuleMatchesFull(variant, rule.value, input.cwd, input.home)) {
-          continue;
-        }
-        if (isEnvTemplate(stripOmpSelector(variant), rule, input.cwd, input.home)) {
-          continue;
-        }
-        // 选择器（:50-200、:raw 等）剥离后判定授权，确切授权路径才命中
-        if (
-          readOnlyTool &&
-          isReadAllowed(stripOmpSelector(variant), policy, input.cwd, input.home)
-        ) {
-          continue;
-        }
-        return {
-          block: true,
-          reason: resolveBlockReason(rule, "path", policy.default_reason),
-        };
-      }
-    }
+    const expanded = expandHomeInText(rawCandidate, input.home);
+    const candidate = input.tool === "read" ? stripOmpSelector(expanded) : expanded;
+    const rule = blockingPathRule(candidate, policy, input.cwd, input.home);
+    if (!rule) continue;
+    if (readOnlyTool && isReadAllowed(candidate, policy, input.cwd, input.home)) continue;
+    return {
+      block: true,
+      reason: resolveBlockReason(rule, "path", policy.default_reason),
+    };
   }
 
   return { block: false };
@@ -2023,7 +1993,19 @@ export function buildPolicy(input: {
       default_reason = parsed.layer.default_reason;
     }
     commands = applyOps(commands, parsed.layer.commandOps, "command", ctx, `${config}#deny_commands`);
-    paths = applyOps(paths, parsed.layer.pathOps, "path", ctx, `${config}#deny_paths`);
+    for (const op of parsed.layer.pathOps) {
+      for (const value of expandRuleValues(op.value, "path", ctx.home, ctx.cwd)) {
+        if (op.type === "remove" && !path.isAbsolute(value)) continue;
+        paths.push({
+          value,
+          exclude: op.type === "remove",
+          reason: op.type === "add" ? op.reason : undefined,
+          source: "user",
+          pattern: op.value,
+          config: `${config}#deny_paths`,
+        });
+      }
+    }
     allowReadPaths = applyOps(
       allowReadPaths,
       parsed.layer.allowReadOps,

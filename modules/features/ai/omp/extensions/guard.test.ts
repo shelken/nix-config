@@ -901,13 +901,13 @@ describe("omp-guard — 误报回归 (guard-fix)", () => {
   });
 });
 
-describe("#171 环境模板路径规则", () => {
+describe("#171 通用路径例外", () => {
   const template = "compose/demo/.env.tpl";
+  const exception = `deny_paths:\n  - "-${template}"\n`;
 
-  it("内置规则放行模板读取、编辑、搜索与显式暂存", () => {
-    const policy = createBuiltinPolicy();
+  it("默认策略继续拒绝模板，显式负规则放行各工具入口", () => {
+    const policy = buildPolicy({ projectSource: exception, cwd: CWD, home: HOME }).policy;
     const cases: GuardInput[] = [
-      { tool: "read", path: ".env.tpl", cwd: CWD, home: HOME },
       { tool: "read", path: `${template}:1:raw`, cwd: CWD, home: HOME },
       { tool: "write", path: template, cwd: CWD, home: HOME },
       { tool: "edit", path: template, cwd: CWD, home: HOME },
@@ -918,73 +918,85 @@ describe("#171 环境模板路径规则", () => {
       { tool: "bash", command: `git add -- ${template}`, cwd: CWD, home: HOME },
     ];
     for (const input of cases) {
+      expect([input, evaluateGuard(input, createBuiltinPolicy()).block]).toEqual([input, true]);
       expect([input, evaluateGuard(input, policy)]).toEqual([input, { block: false }]);
     }
+    expect(evaluateGuard({ tool: "write", path: `${template}:raw`, cwd: CWD, home: HOME }, policy).block).toBe(true);
+    expect(evaluateGuard({ tool: "read", path: template, cwd: path.join(CWD, "elsewhere"), home: HOME }, policy).block).toBe(true);
   });
 
-  it("真实环境文件、模板备份与凭据目录仍受保护", () => {
-    const policy = createBuiltinPolicy();
-    for (const file of [".env", "compose/demo/.env", "compose/demo/.env.production", `${template}.bak`, `${HOME}/.ssh/.env.tpl`]) {
+  it("精确例外不放行真实环境文件、其他模板或混合输入", () => {
+    const policy = buildPolicy({ projectSource: exception, cwd: CWD, home: HOME }).policy;
+    for (const file of [".env", "compose/demo/.env", "compose/demo/.env.production", "compose/other/.env.tpl", `${template}.bak`]) {
       for (const tool of ["read", "write", "edit", "grep", "glob"]) {
         expect([tool, file, evaluateGuard({ tool, path: file, cwd: CWD, home: HOME }, policy).block]).toEqual([tool, file, true]);
       }
       expect(evaluateGuard({ tool: "ast_edit", paths: [template, file], cwd: CWD, home: HOME }, policy).block).toBe(true);
-      expect(evaluateGuard({ tool: "edit", input: `[${file}#ABCD]\nPUT 1.=1:\n+x\n`, cwd: CWD, home: HOME }, policy).block).toBe(true);
-      expect(evaluateGuard({ tool: "bash", command: `git add -- ${file}`, cwd: CWD, home: HOME }, policy).block).toBe(true);
+      expect(evaluateGuard({ tool: "bash", command: `git add -- ${template} ${file}`, cwd: CWD, home: HOME }, policy).block).toBe(true);
     }
     expect(evaluateGuard({ tool: "edit", input: `[${template}#ABCD]\nMV compose/demo/.env\n`, cwd: CWD, home: HOME }, policy).block).toBe(true);
   });
 
-  it("模板规则不扩大到通配或全仓暂存", () => {
+  it("路径例外适用于任意文件，并按声明顺序及配置层级覆盖", () => {
+    for (const [globalSource, projectSource, expected] of [
+      ['deny_paths:\n  - "private/*"\n', 'deny_paths:\n  - "-private/schema.json"\n', false],
+      ['deny_paths:\n  - "private/*"\n  - "-private/schema.json"\n', 'deny_paths:\n  - "private/*"\n', true],
+      ['', 'deny_paths:\n  - "private/*"\n  - "-private/schema.json"\n  - "private/*"\n', true],
+      ['', 'deny_paths:\n  - "private/*"\n  - "-private/schema.json"\n', false],
+    ] as const) {
+      const policy = buildPolicy({ globalSource, projectSource, cwd: CWD, home: HOME }).policy;
+      for (const tool of ["read", "write"]) {
+        expect(evaluateGuard({ tool, path: "private/schema.json", cwd: CWD, home: HOME }, policy).block).toBe(expected);
+        expect(evaluateGuard({ tool, path: "private/secret.json", cwd: CWD, home: HOME }, policy).block).toBe(true);
+      }
+    }
+  });
+
+  it("显式模板规则与全仓暂存禁令分别生效", () => {
     const policy = buildPolicy({
-      globalSource: "deny_commands:\n  - git add -A\n  - git add .\n",
+      globalSource: 'deny_commands:\n  - git add -A\n  - git add .\ndeny_paths:\n  - "-.env.tpl"\n  - "-**/.env.tpl"\n',
       cwd: CWD,
       home: HOME,
     }).policy;
+    for (const file of [".env.tpl", template, "compose/other/.env.tpl"]) {
+      expect(evaluateGuard({ tool: "write", path: file, cwd: CWD, home: HOME }, policy).block).toBe(false);
+    }
     for (const command of [`git add -- ${template}`, `git add -A -- ${template}`]) {
       expect(evaluateGuard({ tool: "bash", command, cwd: CWD, home: HOME }, policy).block).toBe(false);
     }
-    for (const command of ["git add .", "git add -A", "git add -- compose/demo/.env.*", `git add -- ${template} compose/demo/.env`]) {
+    for (const command of ["git add .", "git add -A", "git add -- compose/demo/.env.*"]) {
       expect(evaluateGuard({ tool: "bash", command, cwd: CWD, home: HOME }, policy).block).toBe(true);
     }
   });
 
-  it("自定义拒绝优先并报告实际配置文件", () => {
-    for (const layer of ["globalSource", "projectSource"] as const) {
-      for (const pattern of [template, "**/.env.*"]) {
-        const config = { globalPath: "/config/global/permissions.yaml", projectPath: "/config/project/.omp/permissions.yml" };
-        const policy = buildPolicy({
-          [layer]: `deny_paths:\n  - "${pattern}"\n`,
-          permissionPaths: config,
-          cwd: CWD,
-          home: HOME,
-        }).policy;
-        const result = evaluateGuard({ tool: "read", path: template, cwd: CWD, home: HOME }, policy);
-        expect(result.block).toBe(true);
-        if (result.block) {
-          expect(result.reason).toContain(`path: ${pattern}`);
-          expect(result.reason).toContain(`config: ${layer === "globalSource" ? config.globalPath : config.projectPath}#deny_paths`);
-        }
-      }
-    }
-    const result = evaluateGuard({ tool: "read", path: "compose/demo/.env.production", cwd: CWD, home: HOME }, createBuiltinPolicy());
+  it("后续拒绝规则覆盖例外并报告实际配置来源", () => {
+    const config = { globalPath: "/config/global/permissions.yaml", projectPath: "/config/project/.omp/permissions.yml" };
+    const policy = buildPolicy({
+      globalSource: exception,
+      projectSource: `deny_paths:\n  - "${template}"\n`,
+      permissionPaths: config,
+      cwd: CWD,
+      home: HOME,
+    }).policy;
+    const result = evaluateGuard({ tool: "read", path: template, cwd: CWD, home: HOME }, policy);
     expect(result.block).toBe(true);
-    if (result.block) expect(result.reason).toContain("config: guard.ts#BUILTIN_PATHS");
+    if (result.block) {
+      expect(result.reason).toContain(`path: ${template}`);
+      expect(result.reason).toContain(`config: ${config.projectPath}#deny_paths`);
+    }
   });
 
-  it("模板目录与软链接不能绕过环境文件保护", () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "guard-template-links-"));
+  it("路径例外不能通过软链接访问受保护目标", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "guard-path-exceptions-"));
     try {
       writeFileSync(path.join(dir, ".env"), "FAKE_SECRET=example\n");
-      mkdirSync(path.join(dir, "directory/.env.tpl"), { recursive: true });
       symlinkSync(".env", path.join(dir, ".env.tpl"));
-      const policy = buildPolicy({ cwd: dir, home: HOME }).policy;
-      for (const file of [".env.tpl", "directory/.env.tpl"]) {
-        for (const tool of ["read", "write", "edit", "grep", "glob"]) {
-          expect(evaluateGuard({ tool, path: file, cwd: dir, home: HOME }, policy).block).toBe(true);
-        }
-        expect(evaluateGuard({ tool: "bash", command: `git add -- ${file}`, cwd: dir, home: HOME }, policy).block).toBe(true);
+      const policy = buildPolicy({ projectSource: 'deny_paths:\n  - "-.env.tpl"\n', cwd: dir, home: HOME }).policy;
+      for (const tool of ["read", "write", "edit", "grep", "glob"]) {
+        expect(evaluateGuard({ tool, path: ".env", cwd: dir, home: HOME }, policy).block).toBe(true);
+        expect(evaluateGuard({ tool, path: ".env.tpl", cwd: dir, home: HOME }, policy).block).toBe(true);
       }
+      expect(evaluateGuard({ tool: "bash", command: "git add -- .env.tpl", cwd: dir, home: HOME }, policy).block).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
