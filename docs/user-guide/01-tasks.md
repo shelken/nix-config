@@ -127,7 +127,7 @@ task-<名>         # 绕过 task，直接执行
 | `modules/features/darwin/tasks/_global/` | 全设备默认的 root 任务 |
 | 任意模块的 `shelken.tasks.<名>`          | 功能自带               |
 
-只有 `user = true` 的任务会进用户层，所以 root 任务要写在 darwin 层的两处目录里
+只有 `user = true` 的任务会进用户层。在模块里声明 root 任务会在构建时报错，所以 root 任务要写在 darwin 层的两处目录里
 
 ## 实现位置
 

@@ -27,6 +27,12 @@ let
   backupBody = ''
     ${repoCheck}
 
+    # 目标策略还没落进这个库（首次部署或新设备）时先同步一次，
+    # 否则首个快照会按默认策略把 node_modules、target、.build 之类一并传上去
+    if ! ${pkgs.kopia}/bin/kopia policy export "${target}" >/dev/null 2>&1; then
+      ${policySyncCore}
+    fi
+
     ${lib.optionalString (effectivePaths == [ ]) ''
       echo "No backup paths configured, skipping backup"
       exit 0
@@ -48,20 +54,25 @@ let
     ''}
   '';
 
-  # 策略收敛体：ignores 先比对再写（无变化不产生写操作），压缩与保留每次幂等声明
-  policySyncBody = ''
-    ${repoCheck}
-
-    current=$(${pkgs.kopia}/bin/kopia policy export "${target}" 2>/dev/null) || {
-      # target 不存在是首次部署的正常状态（交给 policy set 创建）；其他错误则终止
-      if ${pkgs.kopia}/bin/kopia policy export "${target}" 2>&1 | grep -q "policy not found"; then
-        current=""
-      else
-        echo "Failed to read policy for ${target}" >&2
-        exit 1
-      fi
-    }
-    currentIgnores=$(printf '%s' "''${current:-}" | ${pkgs.jq}/bin/jq -c '."${target}".files.ignore // [] | sort') || {
+  # 策略收敛核心：ignores 先比对再写（无变化不产生写操作），压缩与保留每次幂等声明。
+  # 快照前补同步与独立命令共用，因此不含仓库连接检查
+  policySyncCore = ''
+    # 一次 export 同时拿输出和退出码：写成 cmd | grep 时，管道在 pipefail 下整体判失败，
+    # 首次部署（目标策略还不存在）会被误判成读取失败
+    policyJson=""
+    if ! policyJson=$(${pkgs.kopia}/bin/kopia policy export "${target}" 2>&1); then
+      case "$policyJson" in
+        *"policy not found"*)
+          # 首次部署的正常状态，交给下面的 policy set 创建
+          policyJson=""
+          ;;
+        *)
+          echo "$policyJson" >&2
+          exit 1
+          ;;
+      esac
+    fi
+    currentIgnores=$(printf '%s' "$policyJson" | ${pkgs.jq}/bin/jq -c '."${target}".files.ignore // [] | sort') || {
       echo "Failed to parse policy for ${target}" >&2
       exit 1
     }
@@ -92,13 +103,21 @@ let
       } || exit 1
   '';
 
-  # 维护体：每天让策略收敛一次（幂等、无变化不写），全量维护只在周日执行。
-  # 维护任务天天调度，脚本自己判日，因此手动运行也安全
-  maintenanceBody = ''
-    ${policySyncBody}
+  policySyncBody = ''
+    ${repoCheck}
 
-    if [ "$(date +%u)" -ne 7 ]; then
-      echo "Not Sunday, skipping full maintenance"
+    ${policySyncCore}
+  '';
+
+  # 维护体：每天让策略收敛一次（幂等、无变化不写）。全量维护只在周日跑，但那个门禁
+  # 只管定时调度：手动运行 kopia-maintenance 时应当真的执行维护，随时可用
+  maintenanceBody = ''
+    ${repoCheck}
+
+    ${policySyncCore}
+
+    if [ "''${SHELKEN_TASK_LAUNCHD:-}" = "1" ] && [ "$(date +%u)" -ne 7 ]; then
+      echo "Not Sunday, skipping scheduled full maintenance"
       exit 0
     fi
     ${pkgs.kopia}/bin/kopia maintenance run --full

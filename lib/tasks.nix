@@ -224,15 +224,20 @@ rec {
         '') t.secrets
       );
 
+      # 把任意文本原样塞进双引号 bash 串：转义反斜杠、双引号、$ 与反引号。
+      # 不用单引号包裹是为了避开 shellcheck 的 SC2016（连 info 级都会让构建失败）
+      quoteDouble = s: builtins.replaceStrings [ "\\" "\"" "$" "`" ] [ "\\\\" "\\\"" "\\$" "\\`" ] s;
+
       envExports = lib.concatStringsSep "\n" (
-        lib.mapAttrsToList (var: value: "export ${var}=${lib.escapeShellArg value}") t.env
+        lib.mapAttrsToList (var: value: ''export ${var}="${quoteDouble value}"'') t.env
       );
 
-      # 抖动只在 launchd 调度唤起时生效；手动 task run 调试无延迟，CANCEL_JITTER=true 强制跳过
+      # 抖动只在 launchd 调度唤起时生效；手动 task run 调试无延迟，CANCEL_JITTER=true 强制跳过。
+      # 放在包装脚本里、灵动岛标记之前：休眠期间任务还没开始，不应占着灵动岛
       jitterBlock = lib.optionalString (t.jitter != null && t.jitter > 0) ''
         if [ "''${SHELKEN_TASK_LAUNCHD:-}" = "1" ] && [ "''${CANCEL_JITTER:-}" != "true" ]; then
           jitter=$(( RANDOM % ${toString t.jitter} ))
-          echo "Jitter delay: ''${jitter}s（跳过请设 CANCEL_JITTER=true）"
+          echo "[$(date '+%Y-%m-%d %H:%M:%S')] Jitter delay: ''${jitter}s（跳过请设 CANCEL_JITTER=true）"
           sleep "$jitter"
         fi
       '';
@@ -241,7 +246,6 @@ rec {
         ${secretExports}
         ${envExports}
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] ===== Task '${name}' Started ====="
-        ${jitterBlock}
         ${t.script}
       '';
 
@@ -250,34 +254,48 @@ rec {
 
       islandDir = "${homeDir}/Library/Logs/task-island";
 
-      # 通知：默认仅 launchd 调度唤起且非零退出时提示失败，可配置成功也通知与自定义标题
-      notifyTitle = if t.notify.title != null then t.notify.title else null;
+      # 通知：默认仅 launchd 调度唤起且非零退出时提示失败，可配置成功也通知与自定义标题。
+      # 标题来自配置，必须转义后再拼进脚本；消息是模板自己拼的，含运行期展开的变量
+      mkNotify =
+        {
+          fallbackTitle,
+          message,
+          sound,
+        }:
+        ''
+          ${pkgs.terminal-notifier}/bin/terminal-notifier \
+            -title "${quoteDouble (if t.notify.title != null then t.notify.title else fallbackTitle)}" \
+            -message "${message}" \
+            -sound ${sound} \
+            -group "task-${name}" \
+            -open "file://${canonicalLog}" \
+            2>/dev/null || true
+        '';
 
-      mkNotify = fallbackTitle: message: ''
-        ${pkgs.terminal-notifier}/bin/terminal-notifier \
-          -title "${if notifyTitle != null then notifyTitle else fallbackTitle}" \
-          -message "${message}" \
-          -sound Basso \
-          -group "task-${name}" \
-          -open "file://${canonicalLog}" \
-          2>/dev/null || true
-      '';
-
+      # 两个开关都关时整段不发，否则会留下空的 if/then/fi 让 bash 报语法错误
       notifyOnExit =
-        if !t.user then
-          "" # root daemon 通常无图形会话，通知只在用户态任务发
+        if !t.user || !(t.notify.failure || t.notify.success) then
+          "" # root daemon 通常无图形会话；开关全关则不需要通知
         else
           ''
             # 仅 launchd 调度触发时通知，手动 task run 调试保持静默
             if [ "''${SHELKEN_TASK_LAUNCHD:-}" = "1" ]; then
               ${lib.optionalString t.notify.failure ''
                 if [ "$code" -ne 0 ]; then
-                  ${mkNotify "Task Failed: ${name}" "退出码 \${code}, 点击查看日志"}
+                  ${mkNotify {
+                    fallbackTitle = "Task Failed: ${name}";
+                    message = "退出码 \${code}, 点击查看日志";
+                    sound = "Basso";
+                  }}
                 fi
               ''}
               ${lib.optionalString t.notify.success ''
                 if [ "$code" -eq 0 ]; then
-                  ${mkNotify "Task Completed: ${name}" "执行成功, 点击查看日志"}
+                  ${mkNotify {
+                    fallbackTitle = "Task Completed: ${name}";
+                    message = "执行成功, 点击查看日志";
+                    sound = "Glass";
+                  }}
                 fi
               ''}
             fi
@@ -321,6 +339,7 @@ rec {
         }
         trap __on_exit EXIT
 
+        ${jitterBlock}
         ${executionBody}
       '';
     };

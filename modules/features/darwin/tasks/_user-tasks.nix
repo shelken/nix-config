@@ -58,16 +58,26 @@ in
 
   config = {
     # 约定优于配置：hosts/<hostname>/tasks/ 自动加载，目录存在即接入，host 文件无需接线。
-    # feature 模块（如 kopia）在此基础上追加 shelken.tasks.<name>，由模块系统合并
-    shelken.tasks = mylib.loadTasks (mylib.relativeToRoot "hosts/${hostname}/tasks") {
-      inherit pkgs lib;
-      secretPath = secret: config.sops.secrets.${secret}.path;
-    };
+    # 只取 user 任务，root 任务由 darwin 层从同一目录另行加载
+    shelken.tasks = lib.filterAttrs (_: t: t.user or true) (
+      mylib.loadTasks (mylib.relativeToRoot "hosts/${hostname}/tasks") {
+        inherit pkgs lib;
+        secretPath = secret: config.sops.secrets.${secret}.path;
+      }
+    );
 
-    assertions = lib.mapAttrsToList (name: t: {
-      assertion = (t.when != [ ]) != (t.every != null);
-      message = "shelken.tasks.${name}: when 与 every 必须二选一";
-    }) taskCfg;
+    assertions =
+      lib.mapAttrsToList (name: t: {
+        assertion = (t.when != [ ]) != (t.every != null);
+        message = "shelken.tasks.${name}: when 与 every 必须二选一";
+      }) taskCfg
+      ++ [
+        # 用户层只生成 LaunchAgent，root 任务在这里会被静默丢弃，改成构建期报错
+        {
+          assertion = lib.all (t: t.user) (lib.attrValues taskCfg);
+          message = "shelken.tasks: Home Manager 层的任务必须 user = true；root 任务写到 hosts/<机器>/tasks/ 或 modules/features/darwin/tasks/_global/";
+        }
+      ];
 
     launchd.agents =
       lib.mapAttrs (
