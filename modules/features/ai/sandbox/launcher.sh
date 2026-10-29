@@ -33,10 +33,15 @@ is_starting() {
   (( $(date +%s) - st < STARTUP_GRACE_SECS ))
 }
 
+# 参数：本次启动的 ctx_id（可省）。该目录的 imports 由宿主刚复制完，starting 宽限一过就会被当成死目录误删
 sweep_dead_contexts() {
+  local keep="${1:-}" ctx_dir
   [[ -d "$CONTEXTS_DIR" ]] || return 0
   for ctx_dir in "$CONTEXTS_DIR"/*; do
     [[ -d "$ctx_dir" ]] || continue
+    if [[ -n "$keep" && "$ctx_dir" == "$CONTEXTS_DIR/$keep" ]]; then
+      continue
+    fi
     local meta="$ctx_dir/meta.json"
     if [[ ! -f "$meta" ]]; then
       if is_starting "$ctx_dir"; then
@@ -71,7 +76,7 @@ MOUNT_POINTS=()
 declared_dst() {
   local t="$1"
   if [[ "$t" == .config/* ]]; then
-    printf '%s/%s\n' "${XDG_CONFIG_HOME:-/data/xdg/config}" "${t#.config/}"
+    printf '/data/xdg/config/%s\n' "${t#.config/}"
   else
     printf '%s/%s\n' "$HOME" "$t"
   fi
@@ -88,27 +93,30 @@ backing_of() {
   printf '%s\n' "$path"
 }
 
+# 声明落点所属的「挂载根」：落点到根之间的每一级祖先都要钉成挂载点（内核拒绝改名挂载点本身，
+# 改名普通祖先会把下面的只读挂载一起移走，原位置能建出可写替身）。
+# .config/<X> 落在数据盘 /data/xdg/config 下，根必须是 /data，/data/xdg 与 /data/xdg/config 才会被钉住
 mount_root_of() {
   local path="$1" root
   for root in "${!AGENT_ROOTS[@]}"; do
-    if [[ "$path" == "$root" || "$path" == "$root/"* ]]; then
+    if [[ "$path" == "$root/"* ]]; then
       printf '%s\n' "$root"
       return 0
     fi
   done
-  if [[ "$path" == "${XDG_CONFIG_HOME:-/data/xdg/config}"* ]]; then
-    printf '%s\n' "${XDG_CONFIG_HOME:-/data/xdg/config}"
-    return 0
-  fi
-  return 1
+  [[ "$path" == /data/* ]] || return 1
+  printf '/data\n'
 }
 
+# bwrap 给文件型 ro-bind 留下的空文件、给目录型留下的空目录都是占位；软链永不当占位处理
 is_empty_placeholder() {
-  local dir="$1"
-  [[ -d "$dir" ]] || return 1
-  local entries
-  entries="$(find "$dir" -mindepth 1 -maxdepth 1 2>/dev/null | head -n 1 || true)"
-  [[ -z "$entries" ]]
+  local path="$1"
+  [[ ! -L "$path" ]] || return 1
+  if [[ -d "$path" ]]; then
+    [[ -z "$(ls -A "$path")" ]]
+  else
+    [[ -f "$path" && ! -s "$path" ]]
+  fi
 }
 
 resolve_conflict() {
@@ -325,7 +333,7 @@ shift 3
 
 # 1. 槽位锁分配与元数据发布
 acquire_slot_lock
-sweep_dead_contexts
+sweep_dead_contexts "$CTX_ID"
 
 declare -A USED_SLOTS=()
 for ctx_dir in "$CONTEXTS_DIR"/*; do
@@ -486,4 +494,5 @@ if [[ -f /run/sandbox-config/current/guest-env.sh ]]; then
 fi
 export MISE_OFFLINE=1
 
-exec ip netns exec "$NETNS" bwrap "${BWRAP_ARGS[@]}" -- "$@"
+# 不能 exec：bash 必须留到 bwrap 结束，EXIT trap (cleanup) 才会回收 netns/veth/iptables 与上下文目录
+ip netns exec "$NETNS" bwrap "${BWRAP_ARGS[@]}" -- "$@"

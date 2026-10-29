@@ -228,11 +228,18 @@ resolve_and_validate_plan() {
     done < <(jq -c '.imports[]? // empty' <<< "$cfg_json")
 
     if [[ ${#verified_imports[@]} -gt 0 ]]; then
-      imports_json="$(printf '%s\n' "${verified_imports[@]}" | jq -s '
+      # 命令替换里 set -e 不生效：jq 失败必须显式捕获，否则 imports_json 为空，
+      # 下面 jq --argjson 才报一串无关错误并以非 1 退出，丢掉统一的错误前缀
+      local imports_err
+      if ! imports_json="$(printf '%s\n' "${verified_imports[@]}" | jq -s '
         (map(.target) | group_by(.) | map(select(length > 1)) | first) as $dup
         | if $dup then error("imports 的 target 重复: \($dup[0])") else . end
         | (map(.dir) | unique) as $dirs
-        | map(. as $i | $i + {stage: ($dirs | index($i.dir))})')"
+        | map(. as $i | $i + {stage: ($dirs | index($i.dir))})' 2>&1)"; then
+        imports_err="$imports_json"
+        echo "[-] 错误: ${imports_err#*): }" >&2
+        return 1
+      fi
     fi
 
     local -a verified_network=()

@@ -16,7 +16,9 @@
       devTools = config.shelken.dev.tools;
       miseTools = config.shelken.dev.miseTools;
       writableRoots = config.shelken.dev.sandbox.writableRoots;
-      hostCommands = {
+      # 本模块自己登记的宿主控制命令；computer-use、spawn-subagent、iphone 由各自模块登记，
+      # guest 命令桩必须取合并后的 config.shelken.dev.sandbox.hostCommands
+      selfHostCommands = {
         sb = "sb 是宿主沙箱管理 CLI，沙箱内部无法嵌套管理沙箱 VM";
         just = "just hm / just sw 是宿主系统切换命令，沙箱内无法修改宿主系统配置";
       };
@@ -50,9 +52,9 @@
           pkgs
           lib
           nixpkgs
-          hostCommands
           gitConfig
           ;
+        inherit (config.shelken.dev.sandbox) hostCommands;
         tools = devTools;
       };
 
@@ -74,7 +76,7 @@
       config = lib.mkIf config.shelken.dev.ai.sandbox.enable {
         inherit (sandboxConfig) assertions;
 
-        shelken.dev.sandbox.hostCommands = hostCommands;
+        shelken.dev.sandbox.hostCommands = selfHostCommands;
         programs.mise.globalConfig.tools.microsandbox = "0.7.7";
 
         home.sessionVariables = host.sessionVariables;

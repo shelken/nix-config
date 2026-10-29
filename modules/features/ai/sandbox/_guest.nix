@@ -68,7 +68,8 @@ let
 
   # 编译期生成的工具 postInstall 执行钩子（替代旧有的字符串替换宏）
   postInstallHook = linuxPkgs.writeShellScript "sandbox-guest-postinstall-hook" (
-    lib.concatStringsSep "\n" (
+    "set -euo pipefail\n"
+    + lib.concatStringsSep "\n" (
       lib.concatMap (
         name:
         let
