@@ -17,7 +17,8 @@
 
     sops = {
       secrets.kopia-password = mylib.mkDefaultSecret { key = "kopia/password"; };
-      secrets.kopia-webdav-url = mylib.mkDefaultSecret { key = "drive/url"; };
+      # WebDAV 入口域名：secret 只存裸域名，scheme 与 /dav 前缀在模板里拼
+      secrets.kopia-main-domain = mylib.mkDefaultSecret { key = "main-domain"; };
       secrets.kopia-webdav-username = mylib.mkDefaultSecret { key = "drive/webdav/username"; };
       secrets.kopia-webdav-password = mylib.mkDefaultSecret {
         key = "drive/webdav/password";
@@ -31,7 +32,7 @@
             "storage": {
               "type": "webdav",
               "config": {
-                "url": "${config.sops.placeholder.kopia-webdav-url}/dav/backup/kopia/main",
+                "url": "https://drive.${config.sops.placeholder.kopia-main-domain}/dav/backup/kopia/main",
                 "username": "${config.sops.placeholder.kopia-webdav-username}",
                 "password": "${config.sops.placeholder.kopia-webdav-password}"
               }
@@ -44,7 +45,7 @@
              },
             "hostname": "${hostname}",
             "username": "${myvars.username}",
-            "description": "Repository in WebDAV: ${config.sops.placeholder.kopia-webdav-url} /dav/backup/kopia/main",
+            "description": "Repository in WebDAV: drive.${config.sops.placeholder.kopia-main-domain} /dav/backup/kopia/main",
             "enableActions": false,
             "formatBlobCacheDuration": 900000000000
           }
