@@ -5,7 +5,7 @@
 
 `~/.config/herdr/plugins/config/cloudmanic.herdr-plus/projects`
 
-修改后立刻生效，无需重新安装插件；打开快捷键为 `prefix+p`（或执行 action `cloudmanic.herdr-plus.projects`）
+修改后立刻生效，无需重新安装插件；打开快捷键为 `prefix+p`（默认 prefix 为 `Alt+x`，或执行 action `cloudmanic.herdr-plus.projects`）
 
 ---
 
@@ -71,6 +71,7 @@ split = "right"
 ## Worktree 模式
 
 Projects 列表中支持通过 **Ctrl+g** 以 git worktree 模式打开（要求目标仓库为 Git 仓库）
+
 字段定义保持一致，具体行为以 herdr-plus 官方文档为准
 
 ---

@@ -97,7 +97,7 @@ NixOS 主机用 `self.modules.nixos.<名>`
 ## 新增一台主机
 
 1. 复制同类主机的目录（例如 darwin 桌面机可复制 `hosts/ling/`），修改 `hostname`，并在 `imports` 中指定角色
-2. 在 `flake.nix` 的 `hosts` 中参考同类主机配置对应的 `mkHost` 声明
+2. 在 `flake.nix` 的 `hosts` 里照抄一条同类主机的 `mkHost`，改成新目录
 3. 若需要 sops 密钥，参考根目录 README「初始化」将新机器公钥加入 secrets 仓库，并在 `default.nix` 中配置 `shelken.secrets.enable = true;`
 4. 执行 `git add hosts/<主机>`，运行 `just b <主机>` 验证构建
 

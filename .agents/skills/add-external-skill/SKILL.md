@@ -1,6 +1,6 @@
 ---
 name: add-external-skill
-description: 引入外部 skill 时使用，指导从 GitHub 仓库拉取、配置 nvfetcher、引用至 skill.nix 并补全 CLI
+description: 获取外部 skill 时使用
 ---
 
 ## 使用时机
@@ -23,9 +23,9 @@ description: 引入外部 skill 时使用，指导从 GitHub 仓库拉取、配�
 
 若该 skill 依赖特定 CLI 工具，且 `modules/features/ai/cli.nix` 尚未定义：
 
-1. 检索 nixpkgs 是否已有该 CLI：`nix-search-tv print | grep <cmd-cli-name>`；若有则优先使用 nixpkgs 来源，加入 `home.packages`
-2. 若无官方包，根据 skill 文档指引使用 `bunx`、`npx` 或 `uvx` 封装，确保命令别名与 skill 中的调用名完全一致
-3. 执行 `just hm` 并验证 CLI 能否正常调用
+1. 检索 nixpkgs 是否已有该 CLI：`nix-search-tv print | grep <cmd-cli-name>`；若有优先使用 nixpkgs 来源，在 `home.packages` 直接使用
+2. 若 nixpkgs 里没有，则根据 skill 文档指引，使用 `bunx`、`npx` 或 `uvx` 直接封装（参考 `modules/features/ai/cli.nix` 现有例子），且确保在 shell 中的名字与 skill 中定义的一致（例如包原名为 `bilibili-cli`，skill 示例中调用 `bili`，则封装后的命令即为 `bili`）
+3. 执行 `just hm` 验证新安装的 CLI 是否能正常调用
 
 ## 注意事项
 

@@ -134,13 +134,13 @@ sudo rm -rf /nix/store/**.lock
 
 ![](assets/imgs/README_2024-09-19_01-08-46.png)
 
-在系统设置中为 nix 相关守护进程赋予「完全磁盘访问权限」
+给 nix 完整的磁盘访问权限
 
-### Homebrew 安装失败或下载超时
+### 安装 Homebrew 错误（即使设置 http 代理）
 
-检查代理工具配置或尝试更换网络热点连接
+尝试使用热点数据和使用 Quantumult X 来代理
 
-### Homebrew Cask 虽已安装但每次重复构建
+### Homebrew Cask 已安装，但每次 `brew bundle` 仍然重复安装
 
 因包更名（例如 `squirrel` 改为 `squirrel-app`）导致 `Caskroom` 残留历史目录时，Homebrew 会判定未安装。清理旧目录：
 
@@ -153,7 +153,7 @@ brew info squirrel-app
 
 ![](assets/imgs/README_2024-11-16_21-25-22.png)
 
-检查代理网络分流或切换至直连网络环境
+尝试使用热点数据和使用 Quantumult X 来代理
 
 ### 手动删除 `/nix/store` 条目后提示 `No such file or directory`
 
@@ -164,13 +164,13 @@ Using saved setting for 'experimental-features = nix-command flakes' from ~/.loc
 /run/current-system/sw/bin/darwin-rebuild: line 248: /nix/store/8jfid13h8p5gmy7llb4kvp0m357lswd0-darwin-system-25.11.8df64f8/activate: No such file or directory
 ```
 
-向配置中加入任意临时修改使 generation 发生变化，触发重新构建与 switch，随后删除失效路径并执行垃圾回收：
+解决：理论上不是问题，只要随便加个小改动让版本切换，然后 gc 掉所有版本，随后执行：
 
 ```shell
 nix store delete /nix/store/8jfid13h8p5gmy7llb4kvp0m357lswd0-darwin-system-25.11.8df64f8
 ```
 
-恢复临时改动后重新执行 `just sw`
+然后把改动撤销，重新 switch
 
 # 部署
 

@@ -20,4 +20,4 @@ imports = [ self.modules.darwin.hammerspoon ];
 shelken.tools.hammerspoon.wm.enable = true;
 ```
 
-注意：系统默认的平铺窗口管理器为 AeroSpace（由 `shelken.wm.manager` 控制），启用 Hammerspoon 的窗口管理前需确认避免窗口管理快捷键冲突
+注意：系统默认的平铺窗口管理器为 AeroSpace（由 `shelken.wm.manager` 控制），启用 Hammerspoon 的窗口管理前需确认避免快捷键冲突；另外当前 `home.nix` 中的窗口管理串接逻辑存在历史未验证项，开启 `wm.enable` 前建议先核验配置实现

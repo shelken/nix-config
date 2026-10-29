@@ -30,10 +30,10 @@
 | `when`     | `"H:M"` 或列表 | 无      | 日历时间（launchd `StartCalendarInterval`）；睡眠错过的会在唤醒后补跑 |
 | `every`    | 整数（秒）     | 无      | 间隔执行（launchd `StartInterval`）；与 `when` 互斥、二选一           |
 | `user`     | bool           | `true`  | `true`：用户态 LaunchAgent；`false`：root LaunchDaemon                |
-| `island`   | bool           | `false` | 是否在灵动岛显示任务运行状态                                          |
+| `island`   | bool           | `false` | 是否在灵动岛显示任务运行状态（运行中转圈，成功自动收回，失败常驻）    |
 | `packages` | package 列表   | `[ ]`   | 依赖的 CLI 工具，注入隔离的运行时 PATH                                |
 | `secrets`  | 属性集         | `{ }`   | 环境变量到 `secretPath "sops/key"` 的映射，运行时按需注入             |
-| `script`   | bash 脚本      | 必填    | 脚本内容，经 shellcheck 校验打包                                      |
+| `script`   | bash 脚本      | 必填    | 脚本内容；构建期只做 `bash -n` 语法检查，不跑 shellcheck              |
 
 ## 统一管理命令 (`task`)
 
@@ -44,10 +44,10 @@
 task ls
 
 # 输出示例：
-# NAME TIER SCHEDULE LOG
-# ---- ---- -------- ---
-# loon root every 86400s /Library/Logs/task-loon.log
-# nix-gc root when 3:15 /Library/Logs/task-nix-gc.log
+# NAME               TIER   SCHEDULE                 LOG
+# ----               ----   --------                 ---
+# loon               root   every 86400s             /Library/Logs/task-loon.log
+# nix-gc             root   when 03:15               /Library/Logs/task-nix-gc.log
 
 # 2. 手动执行任务（root 任务自动引导 sudo）
 task run loon
@@ -60,10 +60,12 @@ task log loon
 
 ## 日志输出
 
-所有任务的标准输出与标准错误自动持久化：
+launchd 触发的任务，标准输出与标准错误写入日志文件：
 
 - **用户任务 (`user = true`)**：`~/Library/Logs/task-<name>.log`
 - **系统任务 (`user = false`)**：`/Library/Logs/task-<name>.log`
+
+`task run` 与直接执行 `task-<name>` 在当前终端前台运行，输出只显示在终端，不写入这些日志文件；`task log` 只能查看 launchd 触发后的输出记录
 
 ## 现有任务示例
 

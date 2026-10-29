@@ -8,4 +8,4 @@
 
 ## 使用场景
 
-在对应 NixOS 虚拟机主机配置中通过 `disko` 模块引入，在系统安装部署阶段（如使用 `disko-install` 或 `nix run github:nix-community/disko`）进行声明式磁盘分区与格式化
+在对应 NixOS 虚拟机主机配置中（如 `hosts/vm/arm-test-1/default.nix`）通过 `disko` 模块与本配置引入，在通过 `just nixos-anywhere <host> <目标IP>` 远程安装部署时进行声明式磁盘分区与格式化

@@ -1,13 +1,14 @@
 ---
 name: update-owned-inputs
-description: 更新、修改或同步自身维护的外部 input 或其上游源码仓库时使用（如 dotfiles.nix、secrets.nix、dot-astro-nvim 等），指导先改上游推送、等待联动 Action 完成后回当前仓库更新 flake.lock 并验证
+description: 当用户要更新、修改、同步自己维护的外部 input 或其上游源码仓库时使用，尤其适用于 `dotfiles.nix`、`secrets.nix`、`dot-astro-nvim` 等，以及“先改上游再回当前项目更新 flake.lock”“等 action 跑完再 upp”这类场景
 ---
 
 # 外部 input 工作流
 
 ## 先确认仓库
 
-先检查当前项目 `flake.nix` 里属于用户自己维护的 input
+先检查当前项目 `flake.nix` 里属于用户自己维护的 input。
+
 需要本地源码时，统一先在 `~/Code` 中检索并确认对应仓库，不预先假定路径
 
 ## 项目一句话说明
