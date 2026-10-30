@@ -38,7 +38,7 @@
 ```text
 modules/
 ├── features/<分类>/<功能>   # 一个软件的系统侧与用户态配置
-├── profiles/                # 角色链 core ⊂ tui ⊂ gui ⊂ desktop ⊂ workstation，附加角色 homelab
+├── profiles/                # 角色链 core ⊂ tui ⊂ gui ⊂ desktop ⊂ workstation，并列的 server，附加角色 homelab
 └── flake/                   # homeManager.<名> 自动挂到同名系统模块
 hosts/<主机>/                # 选角色、少数单机功能与参数
 ```
