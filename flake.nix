@@ -62,32 +62,6 @@
       };
       mkHost = cfg: cfg // args;
       hosts = {
-        pve155 = mkHost {
-          type = "nixos";
-          system = "x86_64-linux";
-          nixos-modules = map mylib.relativeToRoot [
-            "hosts/pve155"
-            # 可选功能按需加入 imports，例如 Hyprland（仓库默认桌面是 niri）：
-            # self.modules.nixos.hyprland
-          ];
-        };
-        pve156 = mkHost {
-          type = "nixos";
-          system = "x86_64-linux";
-          nixos-modules = map mylib.relativeToRoot [
-            "hosts/pve156"
-          ];
-        };
-        arm-test-1 = mkHost {
-          type = "nixos";
-          system = "aarch64-linux";
-          nixos-modules = map mylib.relativeToRoot [
-            "hosts/vm/arm-test-1"
-          ];
-          home-modules = map mylib.relativeToRoot [
-            "hosts/vm/arm-test-1/home.nix"
-          ];
-        };
         # Lima 里的 Ubuntu → NixOS 接管演练机（nixos-anywhere + disko + facter）
         # 放在 hosts/vm/ 下不新增 hosts/ 顶层目录，不影响 calcUniformSchedule 的备份时段
         lima-test = mkHost {

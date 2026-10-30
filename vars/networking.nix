@@ -9,8 +9,6 @@ let
     workstations = {
       user = "shelken";
       hosts = {
-        # pve155 = "192.168.6.155";
-        # pve156 = "192.168.6.156";
         yuuko = "192.168.6.11";
         sakamoto = "192.168.6.144";
         mio = "192.168.6.248";
