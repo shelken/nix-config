@@ -10,7 +10,7 @@
 - `../common.nix`：与演练机 `vps-test` 共用的配置：BIOS + ext4 分区、sops 口令、sysctl、防火墙、tailscale、docker、NTP、DNS
 - `docs/adr/0005-server-role-and-core-baseline.md`：为什么是 `server` 角色与系统层 sops
 - 口令哈希在 `secrets` 仓库的 `sops/secrets/hosts/vps-cc.yaml`，只有管理员和 vps-cc 自己的 age 密钥能解
-- 不用 nixos-facter：真机实测是标准 qemu 虚拟机（virtio 网卡与磁盘），驱动由 nixpkgs 的 `qemu-guest.nix` 提供，见 `../common.nix`；facter 报告含序列号与 MAC，仓库是公开的，不提交
+- 不用 nixos-facter：虚拟机的社区做法是导入 nixpkgs 的 `qemu-guest.nix`（官方 nixos-anywhere-examples 对 KVM 云主机同样如此），真机实测是标准 qemu 虚拟机（virtio 网卡与磁盘）；facter 或 `hardware-configuration.nix` 留给以后的物理机，见 `../common.nix`
 
 ## 演练（vps-test）
 

@@ -5,7 +5,7 @@
 ## 布局
 
 - `modules/features/<分类>/<功能>`: 一个软件或服务一个功能，同时写 nix-darwin、NixOS、Home Manager 部分；结构规则见 `docs/adr/0004-dendritic-feature-modules.md`
-- `modules/profiles/`: 角色链 `core ⊂ tui ⊂ gui ⊂ desktop ⊂ workstation` 与附加角色 `homelab`
+- `modules/profiles/`: 角色链 `core ⊂ tui ⊂ gui ⊂ desktop ⊂ workstation`，与它并列的服务器角色 `server`（只含 `core`，NixOS 专用，主机放在 `hosts/vps/`），以及附加角色 `homelab`
 - `modules/flake/`: flake-parts 胶水（`homeManager.<名>` 自动挂到同名系统模块）
 - `hosts/<hostname>/default.nix`: 机器配置，`.host-profile` 记录当前机器对应 flake 中的名字
 - `vars/`: 全局变量（用户名、邮箱等）
