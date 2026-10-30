@@ -30,12 +30,13 @@
   # 用户级配置~/.config/nix/nix.conf不要配置substituters覆盖
   # 调整这个时先确保这个和lock分离, 先让这个switch,再更新
   environment.etc."nix/nix.custom.conf".text = ''
-    substituters = https://icache.int.ooooo.space/cache.nixos.org https://icache.int.ooooo.space/nix-community.cachix.org https://cache.nixos.org https://nix-community.cachix.org https://mirrors.ustc.edu.cn/nix-channels/store https://install.determinate.systems
+    substituters = https://icache.int.ooooo.space/cache.nixos.org https://icache.int.ooooo.space/nix-community.cachix.org https://cache.nixos.org https://nix-community.cachix.org https://install.determinate.systems
     extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
     fallback = true
-    # 离线/被墙的 substituter 连接快速失败（部署日志里 USTC 5s 超时即此问题）；
-    # ssh 远程 builder 的连接超时不归此设置管，走 NIX_SSHOPTS。
-    connect-timeout = 3
+    # 整数秒，覆盖 DNS+TCP+TLS；遇丢包黑洞源的最坏等待上限 ≈ attempts × connect-timeout
+    connect-timeout = 2
+    # 总尝试次数（1 = 不重试）。遇死源直接跳过并 fallback 到后续可用源
+    filetransfer-retry-attempts = 1
     builders-use-substitutes = true
     trusted-users = shelken nixos
     # Linux 构建由 Determinate 的 Native Linux Builder 提供，这里不配 builders / extra-platforms：
