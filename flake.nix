@@ -88,6 +88,15 @@
             "hosts/vm/arm-test-1/home.nix"
           ];
         };
+        # Lima 里的 Ubuntu → NixOS 接管演练机（nixos-anywhere + disko + facter）
+        # 放在 hosts/vm/ 下不新增 hosts/ 顶层目录，不影响 calcUniformSchedule 的备份时段
+        lima-test = mkHost {
+          type = "nixos";
+          system = "aarch64-linux";
+          nixos-modules = map mylib.relativeToRoot [
+            "hosts/vm/lima-test"
+          ];
+        };
         work-test = mkHost {
           type = "nixos";
           system = "x86_64-linux";
@@ -347,7 +356,7 @@
 
     # disko
     disko = {
-      url = "github:nix-community/disko/v1.11.0";
+      url = "github:nix-community/disko/v1.13.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

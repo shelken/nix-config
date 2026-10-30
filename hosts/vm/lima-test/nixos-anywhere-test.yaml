@@ -1,0 +1,36 @@
+minimumLimaVersion: 2.0.0
+
+base:
+  - template:_images/ubuntu-26.04 # 只继承镜像，不继承默认挂载
+
+vmType: vz
+arch: default
+cpus: 4
+memory: 8GiB # --build-on remote 在安装环境内存里构建
+disk: 30GiB
+
+plain: true # 不装 guest agent / containerd，不挂载，像一台独立服务器
+mounts: []
+
+networks:
+  - vzNAT: true # Mac 可直连 192.168.64.x
+
+ssh:
+  loadDotSSHPubKeys: false
+
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      install -d -m 700 /root/.ssh
+      install -m 600 "{{.Home}}/.ssh/authorized_keys" /root/.ssh/authorized_keys
+
+probes:
+  - mode: readiness
+    description: root 可用密钥登录，vzNAT 网卡已拿到地址
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      sudo test -s /root/.ssh/authorized_keys
+      ip -4 -o addr show dev lima0 | grep -q inet

@@ -52,12 +52,47 @@ deploy host mach:
 deploy host *args:
     @deploy --skip-checks .#{{ host }} {{ args }}
 
-# nixos-anywhere 部署
-nixos-anywhere host mach:
-    @nixos-anywhere -f .#{{ host }} --target-host {{ mach }} --build-on remote \
-    --option substituters https://proxy.ooooo.space/cache.nixos.org \
-    --debug \
-    --no-substitute-on-destination
+# Lima 演练机：按 hosts/vm/lima-test/nixos-anywhere-test.yaml 起一台 Ubuntu 当「待接管的 Linux」
+[macos]
+lima-target-up name="nixos-anywhere-test":
+    limactl start --name={{ name }} --tty=false hosts/vm/lima-test/nixos-anywhere-test.yaml
+    @echo "目标 IP: $(just lima-target-ip {{ name }})"
+
+# 演练机在 vzNAT 网卡（lima0）上的 IP，Mac 可直连
+[macos]
+lima-target-ip name="nixos-anywhere-test":
+    @limactl shell {{ name }} ip -4 -o addr show dev lima0 | awk '{print $4}' | cut -d/ -f1
+
+# 删掉演练机，从头再来
+[macos]
+lima-target-rm name="nixos-anywhere-test":
+    limactl delete --force {{ name }}
+
+kexec-cache arch="aarch64" release="":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  arch="{{ arch }}"
+  release="{{ release }}"
+  if [[ -z "$release" ]]; then
+      pkg=$(nix build --no-link --print-out-paths --inputs-from . nixpkgs#nixos-anywhere)
+      tmpl=$(grep -rhoa 'https://github.com/nix-community/nixos-images/releases/download/[^"]*' "$pkg" | sort -u | head -1 || true)
+      [[ -n "$tmpl" ]] || { echo "在 $pkg 里没找到默认 kexec 地址，请手动指定 release" >&2; exit 1; }
+      release=$(sed -E 's#.*/releases/download/([^/]+)/.*#\1#' <<<"$tmpl")
+  fi
+  url="https://github.com/nix-community/nixos-images/releases/download/${release}/nixos-kexec-installer-noninteractive-${arch}-linux.tar.gz"
+  dir="${XDG_CACHE_HOME:-$HOME/.cache}/nixos-anywhere"
+  file="$dir/${release}-${arch}-linux.tar.gz"
+  mkdir -p "$dir"
+  if [[ ! -s "$file" ]]; then
+      echo "下载 $url" >&2
+      curl -fL --retry 3 -o "$file.part" "$url"
+      mv "$file.part" "$file"
+  fi
+  if [[ ! -s "$file.version" ]]; then
+      { tar -tzf "$file" 2>/dev/null || true; } | grep -m1 -oE 'nixos-system-[^/]+' > "$file.version" || true
+  fi
+  echo "release: $release  安装环境: $(cat "$file.version")" >&2
+  echo "$file"
 
 # 格式化
 fmt:

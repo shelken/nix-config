@@ -37,4 +37,5 @@ extend-ignore-re = [
 
   # Nerd Font powerline 字形码点（modules/features/shell/starship.nix）
   "E0BA",
+  "facter"
 ]
