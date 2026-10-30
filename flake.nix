@@ -79,6 +79,11 @@
         vps-test = mkHost {
           type = "nixos";
           system = "x86_64-linux";
+          # 演练 deploy-rs 的推送与自动回滚；真正的地址用 --hostname、--ssh-opts 指定
+          deploy = {
+            sshUser = "root";
+            interactiveSudo = false;
+          };
           nixos-modules = map mylib.relativeToRoot [
             "hosts/vm/vps-test"
           ];

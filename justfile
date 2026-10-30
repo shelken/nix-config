@@ -72,7 +72,7 @@ lima-target-rm name="nixos-anywhere-test":
 # x86_64 BIOS 演练机：按 hosts/vm/vps-test/nixos-anywhere-vps.yaml 起一台对齐 VPS 规格的 Ubuntu
 [macos]
 lima-vps-up name="nixos-anywhere-vps":
-    nix shell nixpkgs#qemu -c limactl start --name={{ name }} --tty=false hosts/vm/vps-test/nixos-anywhere-vps.yaml
+    nix shell nixpkgs#qemu -c limactl start --name={{ name }} --tty=false --timeout=30m hosts/vm/vps-test/nixos-anywhere-vps.yaml
     @echo "SSH 端口: $(just lima-vps-port {{ name }})"
 
 # 演练机映射到 Mac 本机的 SSH 端口（qemu 用户态网络，没有可直连的 IP）

@@ -49,9 +49,6 @@
     # caddy、fluent-bit 等会监听大量文件
     "fs.inotify.max_user_instances" = 8192;
     "fs.inotify.max_user_watches" = 1048576;
-    # 地址是静态写的，不接受路由器通告
-    "net.ipv6.conf.all.accept_ra" = 0;
-    "net.ipv6.conf.default.accept_ra" = 0;
   };
 
   # 服务器在美国：国内 NTP 太远，覆盖 core 的默认值（列表选项会合并，所以要 mkForce）
@@ -63,6 +60,9 @@
     "127.0.0.1" # docker 里的 dnsmasq，转到 mosdns；容器没起来时直接拒绝连接，立刻落到下一个
     "8.8.8.8"
   ];
+  # openresolv 默认只把本机（127.0.0.1）解析器写进 resolv.conf，丢掉后面的 8.8.8.8；
+  # 而 127.0.0.1 要等 docker 里的 dnsmasq 起来才有人应答，起来之前（包括首次拉镜像）整机解析不了域名
+  networking.resolvconf.extraConfig = "resolv_conf_local_only=NO";
 
   services.openssh.ports = [ 60223 ];
 
