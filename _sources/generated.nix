@@ -43,15 +43,15 @@
   };
   diagram-design = {
     pname = "diagram-design";
-    version = "cdfdc9686cd7465da70b68b036581833b503810c";
+    version = "0cf73c3fcc56667ad91a9a04c439ac6ccfabc9d1";
     src = fetchFromGitHub {
       owner = "cathrynlavery";
       repo = "diagram-design";
-      rev = "cdfdc9686cd7465da70b68b036581833b503810c";
+      rev = "0cf73c3fcc56667ad91a9a04c439ac6ccfabc9d1";
       fetchSubmodules = false;
-      sha256 = "sha256-sIRMfRbZ2uj4MDLOLDzufM9wg4CtQi3sGtIfhLAJry8=";
+      sha256 = "sha256-4b+YYvC1Nu8Hbln6Q1n2TS0a4GRLANoXLl4x9g/B6MQ=";
     };
-    date = "2026-10-09";
+    date = "2026-10-27";
   };
   humanlayer-skills = {
     pname = "humanlayer-skills";
