@@ -18,7 +18,7 @@
         version = "latest";
         minimum_release_age = "0h";
       };
-      # 插件目录每次都与清单严格对齐：清单之外的条目删除，清单内的重新安装。
+      # 插件目录与清单严格对齐：与清单、锁文件及已装目录一致时直接跳过，不一致时重新安装。
       # 宿主激活与沙箱 sb sync 共用 install.sh。清单路径在运行时决定：guest 由 guest-env.sh 导出
       # SB_OMP_MANIFEST 指向沙箱版清单（已按 sandboxExclude 过滤），宿主没有该变量，用仓库原件。
       postInstall = ''

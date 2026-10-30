@@ -183,7 +183,7 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 
 - 跨 VM 的写锁：共用目录下的 `.sync.lock`
 - `mise install` 只补缺，不升级、不删除；不区分 VM 忙闲
-- 运行各工具的 `postInstall`，其中 OMP 插件按 [package.json](../omp/plugins/package.json) 执行：先装到暂存目录，装成功才把整个 `node_modules` 换成暂存结果（清单之外的条目因此消失），装失败时旧目录原样保留。私有依赖用 `GITHUB_TOKEN` 占位符认证，安装失败时 `sb sync` 以非零退出，原因见「设计决策」
+- 运行各工具的 `postInstall`，其中 OMP 插件按 [package.json](../omp/plugins/package.json) 执行：与清单、锁文件及已装目录一致时直接跳过，不一致时先装到暂存目录，装成功才把整个 `node_modules` 换成暂存结果（清单之外的条目因此消失），装失败时旧目录原样保留。私有依赖用 `GITHUB_TOKEN` 占位符认证，安装失败时 `sb sync` 以非零退出，原因见「设计决策」
 
 ## 配置与数据位置
 
