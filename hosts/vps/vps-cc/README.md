@@ -10,7 +10,7 @@
 - `../common.nix`：与演练机 `vps-test` 共用的配置：BIOS + ext4 分区、sops 口令、sysctl、防火墙、tailscale、docker、NTP、DNS
 - `docs/adr/0005-server-role-and-core-baseline.md`：为什么是 `server` 角色与系统层 sops
 - 口令哈希在 `secrets` 仓库的 `sops/secrets/hosts/vps-cc.yaml`，只有管理员和 vps-cc 自己的 age 密钥能解
-- 不提交 nixos-facter 报告：里面有序列号与 MAC，仓库是公开的。硬件用 `qemu-guest` 的 virtio 驱动，kexec 之后可以采集报告核对
+- 不用 nixos-facter：真机实测是标准 qemu 虚拟机（virtio 网卡与磁盘），驱动由 nixpkgs 的 `qemu-guest.nix` 提供，见 `../common.nix`；facter 报告含序列号与 MAC，仓库是公开的，不提交
 
 ## 演练（vps-test）
 
@@ -26,11 +26,12 @@ install -d -m 700 "$EXTRA/var/lib/sops-nix"
 install -m 600 <vps-cc 的 age 私钥文件> "$EXTRA/var/lib/sops-nix/key.txt"
 
 KEXEC=$(just kexec-cache x86_64 nixos-26.05)      # 必须 26.05，见下表
+# --build-on local：在 Mac 上经 linux-builder 构建 x86_64 系统；真机只有 2GiB 内存，不要在安装环境里构建
 # 阶段一：kexec。完成后 nixos-anywhere 会去连 Mac 自己的 22 端口，卡住，超时即可（Lima 只转发了 $P）
-timeout 200 just nixos-anywhere vps-test root@127.0.0.1 --ssh-port $P -i $KEY \
+timeout 200 nixos-anywhere -f .#vps-test --target-host root@127.0.0.1 --build-on local --ssh-port $P -i $KEY \
   --kexec "$KEXEC" --kexec-extra-flags '-c' --phases kexec
 # 阶段二：分区、安装、重启
-just nixos-anywhere vps-test root@127.0.0.1 --ssh-port $P -i $KEY \
+nixos-anywhere -f .#vps-test --target-host root@127.0.0.1 --build-on local --ssh-port $P -i $KEY \
   --phases disko,install,reboot --extra-files "$EXTRA"
 rm -r "$EXTRA"
 
@@ -104,7 +105,7 @@ chmod 600 "$EXTRA"/var/lib/tailscale/* "$EXTRA"/etc/ssh/*_key
 
 ```bash
 KEXEC=$(just kexec-cache x86_64 nixos-26.05)
-just nixos-anywhere vps-cc root@vps-cc --ssh-port 60223 \
+nixos-anywhere -f .#vps-cc --target-host root@vps-cc --build-on local --ssh-port 60223 \
   --kexec "$KEXEC" --kexec-extra-flags '-c' --phases kexec
 ```
 
@@ -123,7 +124,7 @@ ssh -p 22 root@vps-cc 'ls /sys/firmware/efi 2>&1; lsblk -o NAME,SIZE,TYPE,FSTYPE
 ### 3. 分区、安装、重启（这一步抹盘）
 
 ```bash
-just nixos-anywhere vps-cc root@vps-cc --ssh-port 22 \
+nixos-anywhere -f .#vps-cc --target-host root@vps-cc --build-on local --ssh-port 22 \
   --phases disko,install,reboot --extra-files "$EXTRA"
 rm -r "$EXTRA"
 ```

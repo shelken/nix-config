@@ -22,7 +22,9 @@
     self.modules.nixos.disko
     self.modules.nixos.sops
     self.modules.nixos.docker
-    # KVM 虚拟机的 virtio 驱动（x86_64 内核里它们是模块，必须进 initrd）
+    # nixpkgs 自带的文件（nixos/modules/profiles/qemu-guest.nix），不在本仓库
+    # 开机时内核要先认出系统盘才能挂根分区，而 virtio 磁盘与网卡驱动在内核里是模块，必须列进 initrd；
+    # 没有硬件报告（nixos-facter）时，靠它声明这些驱动，缺了就会开机找不到根分区
     (modulesPath + "/profiles/qemu-guest.nix")
   ];
 
@@ -104,6 +106,8 @@
   # 国外服务器连不上国内镜像源
   virtualisation.docker.daemon.settings.registry-mirrors = lib.mkForce [ ];
   # 业务数据目录，由 home-ops 的 compose 部署写入
+  # tmpfiles 是 systemd 的目录管理工具，不是临时文件：`d` 表示目录不存在就创建，已存在不动；
+  # 末尾 `-` 表示不按时间清理。目录在根分区上，重启不丢；这里只保证重装后目录存在且属主与原 Ubuntu 一致（root:root 755）
   systemd.tmpfiles.rules = [ "d /data/docker 0755 root root -" ];
 
   sops = {
