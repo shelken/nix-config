@@ -80,12 +80,6 @@ lima-vps-up name="nixos-anywhere-vps":
 lima-vps-port name="nixos-anywhere-vps":
     @limactl list {{ name }} --format '{{ "{{.SSHLocalPort}}" }}'
 
-# 默认在本机构建（x86_64 经 linux-builder），目标机内存小时不必在安装环境里求值
-# --extra-files <目录> 把目录里的文件按相同路径放进新系统（sops 的 age 私钥、tailscale 状态都靠它）
-# 接管：just nixos-anywhere <主机> <root@地址> [额外参数]，例如 --phases kexec、-i <密钥>、--ssh-port <端口>
-nixos-anywhere host target *args:
-    @nixos-anywhere -f .#{{ host }} --target-host {{ target }} --build-on local {{ args }}
-
 kexec-cache arch="aarch64" release="":
   #!/usr/bin/env bash
   set -euo pipefail

@@ -51,7 +51,7 @@
 - kexec 加 `--kexec-extra-flags '-c'`
 - 安装环境用 `nixos-26.05`（systemd 260）：`just kexec-cache x86_64 nixos-26.05`
 - `hosts/vps/common.nix` 设 `networking.resolvconf.extraConfig = "resolv_conf_local_only=NO"`，并去掉没有生效的 `accept_ra` sysctl
-- 补回 `just nixos-anywhere` 配方，默认 `--build-on local`
+- 不再用 `just nixos-anywhere` 包装，直接调用 `nixos-anywhere`，每次显式写 `--build-on`
 - 手册 `hosts/vps/vps-cc/README.md` 规定：装好后先做一次不改配置的 `just deploy vps-cc`，之后再做真实改动
 - 演练里卡住的重连用 `timeout` 包起来，直接跑下一阶段；真机上安装环境的 sshd 正好在 22
 

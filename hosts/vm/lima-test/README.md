@@ -7,7 +7,7 @@
 - `default.nix`：主机配置，角色 `tui`，导入可选功能 `disko`（`modules/features/nixos/disko.nix`）
 - `facter.json`：nixos-facter 硬件报告，安装时生成并提交；不存在时 `default.nix` 用 virtio 兜底内核模块
 - `nixos-anywhere-test.yaml`：Lima 模板，声明目标机（Ubuntu 26.04、vz、plain 模式、vzNAT 网卡、root 授权 Lima 密钥）
-- `justfile` 里的 `lima-target-up` / `lima-target-ip` / `lima-target-rm` / `nixos-anywhere`
+- `justfile` 里的 `lima-target-up` / `lima-target-ip` / `lima-target-rm`
 
 ## 安装步骤
 
@@ -23,7 +23,7 @@ KEY=~/.lima/_config/user          # Lima 自己的密钥，模板的 provision �
 limactl shell nixos-anywhere-test lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS
 
 # 3. 第一阶段：只做 kexec，把 Ubuntu 换成内存里的 NixOS 安装环境，磁盘不动
-just nixos-anywhere lima-test root@$IP -i $KEY --phases kexec
+nixos-anywhere -f .#lima-test --target-host root@$IP --build-on remote -i $KEY --phases kexec
 ssh -i $KEY root@$IP 'cat /etc/os-release | head -2; lsblk'   # 应该看到 NixOS，vda 还在
 
 # 4. 采集硬件报告并提交（flake 只看得见 git 跟踪的文件）
@@ -35,7 +35,7 @@ git add hosts/vm/lima-test/facter.json
 nix eval .#nixosConfigurations.lima-test.config.fileSystems --apply 'fs: builtins.mapAttrs (_: v: v.device) fs'
 
 # 6. 第二阶段：分区格式化 → 构建安装 → 重启
-just nixos-anywhere lima-test root@$IP -i $KEY --phases disko,install,reboot
+nixos-anywhere -f .#lima-test --target-host root@$IP --build-on remote -i $KEY --phases disko,install,reboot
 
 # 7. 重启后用自己的密钥登录（root 与 shelken 的 authorized_keys 来自 vars 的 mainSshAuthorizedKeys）
 ssh root@$IP 'nixos-version; findmnt -t btrfs; swapon'
@@ -49,7 +49,7 @@ ssh root@$IP 'nixos-version; findmnt -t btrfs; swapon'
 ## 排障
 
 - **kexec 后 ssh 一直连不上**：先看 Mac 上 `/var/db/dhcpd_leases`，安装环境可能拿到了新 IP，换 IP 后从下一个阶段继续；超过几分钟仍无响应，可能是 vz 下 kexec 不顺，删掉实例改用 qemu 重来：`limactl start --vm-type=qemu --set '.networks=[{"lima":"shared"}]' hosts/vm/lima-test/nixos-anywhere-test.yaml`（vzNAT 只支持 vz，qemu 要换成 socket_vmnet 的 shared 网络，需先装 socket_vmnet）
-- **构建**：`just nixos-anywhere` 默认 `--build-on local`，经 linux-builder 在本机构建（先 `linux-builder` 启动它）；想在安装环境的内存里构建，追加 `--build-on remote` 并给演练机更多内存
+- **构建阶段内存不足**：`--build-on remote` 在安装环境里构建，内存加到 12G，或启动 linux-builder 后把 `--build-on` 改成 `local`
 - **重启后进不了系统**：`limactl start` 的串口日志在 `~/.lima/nixos-anywhere-test/serial*.log`；ESP 里应有 `\EFI\BOOT\BOOTAA64.EFI`
 
 ## 日常更新
