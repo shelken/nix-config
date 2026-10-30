@@ -136,6 +136,11 @@ unchanged_manifest_repairs_plugins() {
     [[ ! -e "$plugins/node_modules/hand-installed" ]] &&
     [[ ! -e "$plugins/omp-plugins.lock.json" ]]
 }
+unchanged_state_skips_install() {
+  run_activation 0 || return 1
+  activate_home 1 strict || return 1
+  grep -q '跳过安装' "$home/out"
+}
 
 removed_dependency_is_cleaned() {
   run_activation 0 || return 1
@@ -172,6 +177,7 @@ check "激活成功退出" run_activation 0
 check "暂存安装的插件文件进入最终目录" installed_plugins_match_manifest
 check "落盘的 package.json 可写" installed_manifest_is_writable
 check "清单未变：恢复缺失插件并删除额外插件和登记表" unchanged_manifest_repairs_plugins
+check "清单与已装目录一致：跳过安装且不调用 bun" unchanged_state_skips_install
 check "清单移除依赖：保留其余插件并删除移除的插件" removed_dependency_is_cleaned
 for failure in install missing swap; do
   check "$failure 失败：宿主保留完整旧状态并继续激活" failed_update_preserves_state "$failure"
