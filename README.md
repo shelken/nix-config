@@ -73,7 +73,7 @@ git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-con
 
 # 4. 选择 flake.nix 中定义的机器配置
 # Darwin: mio / sakamoto / yuuko / ling
-# NixOS: pve155 / pve156 / arm-test-1 / work-test
+# NixOS: vps-cc / lima-test / work-test
 PROFILE=mio
 printf 'PROFILE=%s\n' "$PROFILE" > .host-profile
 
@@ -179,10 +179,8 @@ nix store delete /nix/store/8jfid13h8p5gmy7llb4kvp0m357lswd0-darwin-system-25.11
 ## example
 
 ```bash
-# 1 deploy pve156 config on host(pve156)
-just deploy pve156 shelken@pve156
-# 2
-just deploy pve156 shelken@192.168.6.156
+# 远程部署：主机表里带 deploy 标记的主机
+just deploy vps-cc
 ```
 
 # 构建镜像

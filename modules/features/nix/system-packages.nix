@@ -57,11 +57,10 @@
     {
       # mkBefore：与迁移前的顺序一致——基础包先于 darwin/nixos 其余模块贡献的包，
       # system-path 开 ignoreCollisions，同路径冲突时排前的包胜出
+      # NixOS 只留基线：网络诊断与 trace 工具在 features/nixos/system-tools.nix（tui）
       environment.systemPackages = lib.mkBefore (
         with pkgs;
         [
-          tealdeer # a very fast version of tldr
-          just
           neovim
           git # used by nix flakes
           # git-lfs # used by huggingface models
@@ -81,13 +80,8 @@
           jq # A lightweight and flexible command-line JSON processor
           # yj
 
-          # networking tools
-          mtr # A network diagnostic tool
-          iperf3
           wget
           curl
-          socat # replacement of openbsd-netcat
-          nmap # A utility for network discovery and security auditing
 
           # misc
           file
@@ -96,5 +90,8 @@
           rsync
         ]
       );
+
+      # replace default editor with neovim
+      environment.variables.EDITOR = "nvim";
     };
 }

@@ -4,14 +4,15 @@
 
 ## 角色
 
-| 角色          | 包含                                       | 主机                      |
-| ------------- | ------------------------------------------ | ------------------------- |
-| `core`        | 所有主机都需要的基础                       | pve155、pve156            |
-| `tui`         | `core` + 终端开发工具                      | work-test                 |
-| `gui`         | `tui` + 桌面环境与图形应用                 | ling、arm-test-1（NixOS） |
-| `desktop`     | `gui` + 日常桌面机共有的软件（仅 darwin）  | yuuko、sakamoto           |
-| `workstation` | `desktop` + 主力机个人工作流               | mio                       |
-| `homelab`     | 附加角色：兼做服务器的软件，叠加在主角色上 | yuuko、sakamoto           |
+| 角色          | 包含                                       | 主机            |
+| ------------- | ------------------------------------------ | --------------- |
+| `core`        | 所有主机共有的基线：能登录、能用 nix       | 被其他角色包含  |
+| `server`      | `core` + 常驻服务器职责（仅 NixOS）        | vps-cc          |
+| `tui`         | `core` + 终端开发工具                      | work-test       |
+| `gui`         | `tui` + 桌面环境与图形应用                 | ling            |
+| `desktop`     | `gui` + 日常桌面机共有的软件（仅 darwin）  | yuuko、sakamoto |
+| `workstation` | `desktop` + 主力机个人工作流               | mio             |
+| `homelab`     | 附加角色：兼做服务器的软件，叠加在主角色上 | yuuko、sakamoto |
 
 主机的角色写在 `hosts/<主机>/default.nix` 的 `imports` 里，例如 `imports = [ self.modules.darwin.workstation ];`
 
