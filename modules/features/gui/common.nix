@@ -16,7 +16,6 @@
     "appcleaner"
     "the-unarchiver"
     "parsec"
-    "mac-mouse-fix"
 
     # network
     "tailscale-app"
