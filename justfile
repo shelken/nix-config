@@ -213,6 +213,29 @@ hm-dev-build *args:
 hm-dev *args:
     nh home switch -c {{ profile }} . -v --show-activation-logs -- --override-input secrets path:{{ local_secrets_dir }} {{ args }}
 
+# 在真实 just hm 运行时逐项打印激活耗时（会应用配置，不改任何 Nix 配置）
+[macos]
+hm-timing *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    trace="$(mktemp)"
+    hook="$(mktemp)"
+    trap 'rm -f "$trace" "$hook"' EXIT
+    cat > "$hook" <<'BASH'
+    case "$0" in */activate)
+      unset BASH_ENV
+      trap 'case "$BASH_COMMAND" in
+        "_iNote \"Activating %s\" "*) printf "HM_TIMING %s %s\n" "$EPOCHREALTIME" "${BASH_COMMAND##* }" >&2 ;;
+        # shortcut: 末项结束依赖当前 HM 的 GC-root 尾声，升级 HM 后需核对。
+        run\ --silence\ nix-store\ --realise*currentGenGcPath*) printf "HM_TIMING %s END\n" "$EPOCHREALTIME" >&2 ;;
+      esac' DEBUG
+    esac
+    BASH
+    status=0
+    env BASH_ENV="$hook" just hm {{ args }} 2>&1 | tee "$trace" | awk '$1 != "HM_TIMING" { print; fflush() }' || status=$?
+    awk '$1 == "HM_TIMING" { if(p) printf "%8.1f ms  %s\n",($2-p)*1000,n; p=$2; n=$3; gsub(/"/,"",n) }' "$trace" | sort -k1 -rn
+    exit "$status"
+
 # 更新整个输入
 up:
     @nix flake update
