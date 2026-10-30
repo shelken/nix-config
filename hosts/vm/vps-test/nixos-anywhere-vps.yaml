@@ -1,0 +1,36 @@
+minimumLimaVersion: 2.0.0
+
+base:
+  - template:_images/ubuntu-26.04 # 只继承镜像，不继承默认挂载
+
+# 对齐 vps-cc：x86_64、legacy BIOS、2 核、2GiB 内存
+# qemu 在 Apple Silicon 上是软件模拟（TCG），很慢，只用来验证引导、网络、SSH 与 docker 守护进程
+vmType: qemu
+arch: x86_64
+firmware:
+  legacyBIOS: true
+cpus: 2
+memory: 2GiB
+disk: 20GiB
+
+plain: true # 不装 guest agent / containerd，不挂载，像一台独立服务器
+mounts: []
+
+ssh:
+  loadDotSSHPubKeys: false
+
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      install -d -m 700 /root/.ssh
+      install -m 600 "{{.Home}}/.ssh/authorized_keys" /root/.ssh/authorized_keys
+
+probes:
+  - mode: readiness
+    description: root 可用密钥登录
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      sudo test -s /root/.ssh/authorized_keys

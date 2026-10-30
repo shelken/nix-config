@@ -10,9 +10,7 @@ in
     imports = [ nixos.core ];
 
     # 登录日志已由主机自己的采集链路收走，本地只留近期的
-    services.journald.extraConfig = ''
-      SystemMaxUse=200M
-    '';
+    services.journald.settings.Journal.SystemMaxUse = "200M";
 
     # 小内存机器：内存里压缩的 swap，不占磁盘 I/O
     zramSwap.enable = true;
