@@ -31,15 +31,15 @@
   };
   cursor-plugins = {
     pname = "cursor-plugins";
-    version = "6f6c9e62585436f69e560138d46709026fa5c69f";
+    version = "4dd1d05818d19792e7cd6e818f1667f95f7e1dbe";
     src = fetchFromGitHub {
       owner = "cursor";
       repo = "plugins";
-      rev = "6f6c9e62585436f69e560138d46709026fa5c69f";
+      rev = "4dd1d05818d19792e7cd6e818f1667f95f7e1dbe";
       fetchSubmodules = false;
-      sha256 = "sha256-Rq2nUBzdTGv6FOYWPpbF/2y3wJ51KszcRqoV4N/Oe0Y=";
+      sha256 = "sha256-QW55Vg593fNhoQ2dUlr/HLV/5OkGORLZfencXEInbWk=";
     };
-    date = "2026-10-28";
+    date = "2026-10-29";
   };
   diagram-design = {
     pname = "diagram-design";
