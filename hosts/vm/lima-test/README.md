@@ -49,7 +49,7 @@ ssh root@$IP 'nixos-version; findmnt -t btrfs; swapon'
 ## 排障
 
 - **kexec 后 ssh 一直连不上**：先看 Mac 上 `/var/db/dhcpd_leases`，安装环境可能拿到了新 IP，换 IP 后从下一个阶段继续；超过几分钟仍无响应，可能是 vz 下 kexec 不顺，删掉实例改用 qemu 重来：`limactl start --vm-type=qemu --set '.networks=[{"lima":"shared"}]' hosts/vm/lima-test/nixos-anywhere-test.yaml`（vzNAT 只支持 vz，qemu 要换成 socket_vmnet 的 shared 网络，需先装 socket_vmnet）
-- **构建阶段内存不足**：`--build-on remote` 在安装环境里构建，内存加到 12G，或启动 linux-builder 后把透传参数改成 `--build-on local`
+- **构建**：`just nixos-anywhere` 默认 `--build-on local`，经 linux-builder 在本机构建（先 `linux-builder` 启动它）；想在安装环境的内存里构建，追加 `--build-on remote` 并给演练机更多内存
 - **重启后进不了系统**：`limactl start` 的串口日志在 `~/.lima/nixos-anywhere-test/serial*.log`；ESP 里应有 `\EFI\BOOT\BOOTAA64.EFI`
 
 ## 日常更新
