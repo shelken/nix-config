@@ -68,6 +68,24 @@ lima-target-ip name="nixos-anywhere-test":
 lima-target-rm name="nixos-anywhere-test":
     limactl delete --force {{ name }}
 
+# qemu 软件模拟，较慢；qemu 由 nix 临时提供，不装进系统
+# x86_64 BIOS 演练机：按 hosts/vm/vps-test/nixos-anywhere-vps.yaml 起一台对齐 VPS 规格的 Ubuntu
+[macos]
+lima-vps-up name="nixos-anywhere-vps":
+    nix shell nixpkgs#qemu -c limactl start --name={{ name }} --tty=false hosts/vm/vps-test/nixos-anywhere-vps.yaml
+    @echo "SSH 端口: $(just lima-vps-port {{ name }})"
+
+# 演练机映射到 Mac 本机的 SSH 端口（qemu 用户态网络，没有可直连的 IP）
+[macos]
+lima-vps-port name="nixos-anywhere-vps":
+    @limactl list {{ name }} --format '{{ "{{.SSHLocalPort}}" }}'
+
+# 默认在本机构建（x86_64 经 linux-builder），目标机内存小时不必在安装环境里求值
+# --extra-files <目录> 把目录里的文件按相同路径放进新系统（sops 的 age 私钥、tailscale 状态都靠它）
+# 接管：just nixos-anywhere <主机> <root@地址> [额外参数]，例如 --phases kexec、-i <密钥>、--ssh-port <端口>
+nixos-anywhere host target *args:
+    @nixos-anywhere -f .#{{ host }} --target-host {{ target }} --build-on local {{ args }}
+
 kexec-cache arch="aarch64" release="":
   #!/usr/bin/env bash
   set -euo pipefail

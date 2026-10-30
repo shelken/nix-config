@@ -62,6 +62,27 @@
       };
       mkHost = cfg: cfg // args;
       hosts = {
+        # Ubuntu → NixOS 接管后的美国 VPS；放在 hosts/vps/ 下，所有 VPS 统一归这里
+        vps-cc = mkHost {
+          type = "nixos";
+          system = "x86_64-linux";
+          # root + 密钥部署：激活不需要口令，也不必给 shelken 配免密 sudo
+          deploy = {
+            sshUser = "root";
+            interactiveSudo = false;
+          };
+          nixos-modules = map mylib.relativeToRoot [
+            "hosts/vps/vps-cc"
+          ];
+        };
+        # vps-cc 的 x86_64 BIOS 演练机（Lima + qemu）
+        vps-test = mkHost {
+          type = "nixos";
+          system = "x86_64-linux";
+          nixos-modules = map mylib.relativeToRoot [
+            "hosts/vm/vps-test"
+          ];
+        };
         # Lima 里的 Ubuntu → NixOS 接管演练机（nixos-anywhere + disko + facter）
         # 放在 hosts/vm/ 下不新增 hosts/ 顶层目录，不影响 calcUniformSchedule 的备份时段
         lima-test = mkHost {
@@ -125,7 +146,8 @@
       darwinHosts = lib.filterAttrs (_: v: v.type == "darwin") hosts;
       nixosHosts = lib.filterAttrs (_: v: v.type == "nixos") hosts;
 
-      deployHosts = lib.filterAttrs (_: v: v.deploy or false) hosts;
+      # deploy 为 true 或带参数的属性集都算部署目标
+      deployHosts = lib.filterAttrs (_: v: (v.deploy or false) != false) hosts;
     in
     flake-parts.lib.mkFlake { inherit inputs; } {
       # 同名即同一功能：一个功能的 darwin / homeManager / nixos 部分写在同一文件或同一目录；
