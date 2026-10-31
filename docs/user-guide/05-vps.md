@@ -144,6 +144,7 @@ nixos-anywhere -f .#<主机> --target-host root@<主机> --build-on local --ssh-
 ## 日常更新
 
 ```bash
+just plan <主机> deploy             # 先看这次要编译、下载什么
 just deploy <主机>                  # 构建、推送、激活，30 秒内确认不了就回滚
 just deploy <主机> --dry-activate   # 只看激活会改什么
 ```
@@ -167,6 +168,7 @@ modules/features/nixos/{journald,zram}.nix  # 加入 server 的日志上限与 z
 modules/features/nixos/disko.nix       # shelken.disko 选项与两种布局
 modules/features/nixos/sops.nix        # 系统层 sops，age 私钥固定在 /var/lib/sops-nix/key.txt
 lib/deployNode.nix                     # deploy-rs 节点：hostname 即主机名
+lib/deployRsLib.nix                    # deploy-rs 的 lib，激活器换成 nixpkgs 的缓存包
 hosts/vps/common.nix                   # VPS 共有配置
 hosts/vps/vps-cc/README.md             # vps-cc 切换实录、演练、核对清单
 justfile                               # deploy、kexec-cache、lima-vps-up

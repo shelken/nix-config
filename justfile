@@ -34,10 +34,9 @@ add:
 brew-diff:
     @brew bundle cleanup --file=$(nix path-info /run/current-system --recursive 2>/dev/null | grep Brewfile | head -1)
 
-# 查看本次构建哪些需要编译、哪些直接下载
-[macos]
-build-dry host=profile:
-    @nix build ".#darwinConfigurations.{{ host }}.system" --dry-run
+# 构建前摘要：要真编译什么、要下载多少；kind 为 system（默认）、home、deploy
+plan host=profile kind="system":
+    @utils/script/nix-plan {{ host }} {{ kind }}
 
 # nixos deploy
 [linux]
