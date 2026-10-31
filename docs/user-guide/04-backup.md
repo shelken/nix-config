@@ -1,6 +1,6 @@
 # 备份
 
-kopia 每天两次把主机上的重要目录快照到自己的 139 WebDAV 仓库，周日先同步策略，再做一次全量维护
+kopia 每天两次把主机上的重要目录快照到自己的 139 WebDAV 仓库，周日同步一次策略。仓库维护由 sakamoto 上常驻的 kopia server 负责，本机不定时维护
 
 `workstation` 角色自带备份（目前只有 mio），前提是主机开了 `shelken.secrets.enable`。实现全在 `modules/features/backup/`
 
@@ -38,18 +38,18 @@ shelken.backup.backupPaths = [
 | 任务                | 默认时间                                              | 做什么                                 |
 | ------------------- | ----------------------------------------------------- | -------------------------------------- |
 | `kopia-backup`      | 2:00 到 8:00 之间按 hostname 取两个相隔 12 小时的时刻 | 连仓库，逐路径 `kopia snapshot create` |
-| `kopia-maintenance` | 周日 5:00                                             | 同步策略，再执行全量维护               |
+| `kopia-policy-sync` | 周日 5:00                                             | 收敛策略                               |
 
 改时间
 
 ```nix
 shelken.backup.calendarInterval = [ "3:10" "15:10" ];
-shelken.backup.maintenanceWhen = "5:30";
+shelken.backup.policySyncWhen = "5:30";
 ```
 
-快照任务带 0 到 599 秒的随机抖动，避免多台机器同时压同一个后端；抖动只在 launchd 唤起时生效，手动跑不等待。维护任务不带抖动、不上灵动岛
+快照任务带 0 到 599 秒的随机抖动，避免多台机器同时压同一个后端；抖动只在 launchd 唤起时生效，手动跑不等待。策略同步任务不带抖动、不上灵动岛
 
-快照任务执行期间会出现在灵动岛。两个任务失败时都会发系统通知，标题分别为 `Kopia Backup`、`Kopia Maintenance`，点通知打开日志
+快照任务执行期间会出现在灵动岛。两个任务失败时都会发系统通知，标题分别为 `Kopia Backup`、`Kopia Policy Sync`，点通知打开日志
 
 `kopia-backup` 的抖动窗口最大 10 分钟，也就是说 `when` 到实际开始快照之间可能隔这么久
 
@@ -60,17 +60,19 @@ task run kopia-backup      # 手动触发一次快照
 kopia-backup               # 同上
 kopia-backup --dry-run     # 只读预估所有备份来源的文件数与原始大小
 task log kopia-backup      # 跟随日志
-kopia-maintenance          # 同步策略后执行全量维护
 kopia-policy-sync          # 只收敛策略，让 ignores 改动立刻生效
+kopia-maintenance          # 全量维护，只有仓库的维护所有者能执行
 ```
 
-周日维护由 launchd 的 `Weekday = 0` 调度，机器睡眠错过后会在唤醒时补跑。手动执行不受星期限制
+周日策略同步由 launchd 的 `Weekday = 0` 调度，机器睡眠错过后会在唤醒时补跑。手动执行不受星期限制
+
+kopia 一个仓库只有一个维护所有者。共享的 `main` 仓库由 sakamoto 上的 kopia server 持有，它自己按计划跑快速与全量维护。在其他机器执行 `kopia-maintenance` 会报 `maintenance must be run by designated user`，查看所有者用 `kopia maintenance info`
 
 `kopia-backup --dry-run` 只读扫描所有备份来源，输出当前仓库策略筛选后的文件数和原始大小。实际上传量还会受去重与压缩影响；修改忽略规则后，先运行 `kopia-policy-sync` 再预估
 
 ## 改策略
 
-改 `shelken.backup.policy` 或 `shelken.backup.ignores` 之后，可用 `kopia-policy-sync` 手动同步。策略同步没有独立定时任务，周日维护前会同步一次
+改 `shelken.backup.policy` 或 `shelken.backup.ignores` 之后，可用 `kopia-policy-sync` 手动同步，否则要等周日的定时同步
 
 快照前发现目标策略还不存在时，也会补同步一次，避免新库或新设备的首个快照按默认策略把 `node_modules` 之类传上去
 
@@ -110,9 +112,9 @@ kopia-ui                   # 本地打开 kopia 界面，已带好口令与仓�
 ```text
 modules/features/backup/default.nix            # 挂到 workstation 角色
 modules/features/backup/_options.nix           # backupPaths / app / ignores 接口
-modules/features/backup/_kopia/default.nix     # calendarInterval / maintenanceWhen / policy
+modules/features/backup/_kopia/default.nix     # calendarInterval / policySyncWhen / policy
 modules/features/backup/_kopia/secrets.nix     # sops 键与仓库连接模板
-modules/features/backup/_kopia/service.nix     # 两个任务、手动策略同步、备份与预估入口
+modules/features/backup/_kopia/service.nix     # 两个任务、手动维护、备份与预估入口
 modules/features/backup/_kopia/policy-defaults.nix  # 默认策略
 ```
 

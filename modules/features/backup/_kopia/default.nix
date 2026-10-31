@@ -39,10 +39,10 @@ in
         "14:45"
       ];
     };
-    maintenanceWhen = lib.mkOption {
+    policySyncWhen = lib.mkOption {
       type = lib.types.str;
       default = "5:00";
-      description = "周日策略同步与全量维护的日历时间（HH:MM）";
+      description = "周日策略同步的日历时间（HH:MM）";
       example = "5:00";
     };
     policy = lib.mkOption {

@@ -109,10 +109,10 @@ let
     ${policySyncCore}
   '';
 
+  # 只做手动入口：共享 main 仓库的维护所有者是 sakamoto 上常驻的 kopia server，
+  # 它按自身计划跑快速与全量维护；其他客户端执行会被 kopia 以非所有者拒绝
   maintenanceBody = ''
     ${repoCheck}
-
-    ${policySyncCore}
 
     ${pkgs.kopia}/bin/kopia maintenance run --full
   '';
@@ -151,22 +151,22 @@ in
         notify.title = "Kopia Backup";
         script = backupBody;
       };
-      kopia-maintenance = {
-        when = cfg.maintenanceWhen;
+      kopia-policy-sync = {
+        when = cfg.policySyncWhen;
         weekday = [ 0 ];
         packages = [ pkgs.kopia ];
         env.KOPIA_CONFIG_PATH = kopiaConfigPath;
         secrets.KOPIA_PASSWORD = kopiaPasswordPath;
-        notify.title = "Kopia Maintenance";
-        script = maintenanceBody;
+        notify.title = "Kopia Policy Sync";
+        script = policySyncBody;
       };
     };
 
     home.packages = [
       pkgs.kopia
       (pkgs.writeShellApplication {
-        name = "kopia-policy-sync";
-        text = cliPrelude + policySyncBody;
+        name = "kopia-maintenance";
+        text = cliPrelude + maintenanceBody;
       })
       (pkgs.writeShellApplication {
         name = "kopia-ui";
@@ -192,10 +192,10 @@ in
         '';
       }
     )
-    ++ lib.optional config.shelken.tasks.kopia-maintenance.enable (
+    ++ lib.optional config.shelken.tasks.kopia-policy-sync.enable (
       pkgs.writeShellApplication {
-        name = "kopia-maintenance";
-        text = ''exec ${config.shelken.tasks.kopia-maintenance.package}/bin/task-kopia-maintenance "$@"'';
+        name = "kopia-policy-sync";
+        text = ''exec ${config.shelken.tasks.kopia-policy-sync.package}/bin/task-kopia-policy-sync "$@"'';
       }
     );
   };

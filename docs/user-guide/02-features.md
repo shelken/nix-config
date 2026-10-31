@@ -93,7 +93,7 @@ NixOS 主机用 `self.modules.nixos.<名>`
 | `dotfiles.liveEdit`         | `home.nix`    | `false`          | 配置文件软链到本地仓库，改完即时生效；远程部署机保持关闭                          |
 | `backup.backupPaths`        | `home.nix`    | `[ ]`            | kopia 额外备份的路径（`workstation`）                                             |
 | `backup.calendarInterval`   | `home.nix`    | 按 hostname 分布 | kopia 快照时间，`"H:M"` 列表；默认 `2:00` 到 `8:00` 间取两个时刻（`workstation`） |
-| `backup.maintenanceWhen`    | `home.nix`    | `"5:00"`         | kopia 每日策略收敛的时间，全量维护只在周日跑（`workstation`）                     |
+| `backup.policySyncWhen`     | `home.nix`    | `"5:00"`         | kopia 周日策略同步的时间（`workstation`）                                         |
 | `dev.ai.sandbox.enable`     | `home.nix`    | `false`          | 安装 agent 沙箱（`workstation`）                                                  |
 | `neovim.minimal`            | `home.nix`    | `false`          | 只装 neovim，不带配置                                                             |
 
