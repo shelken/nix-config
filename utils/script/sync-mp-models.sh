@@ -3,7 +3,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MODELS_FILE="${SCRIPT_DIR}/models.yml"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+MODELS_FILE="${REPO_ROOT}/modules/features/ai/omp/models.yml"
 
 # 是否在生成的 override 里输出 reasoning: true（1=输出，0=不输出）
 # 宿主能从上游 supported_reasoning_levels 自行推导推理能力，故默认不输出

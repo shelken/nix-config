@@ -5,28 +5,22 @@
 
 ## Guard 权限
 
-权限文件：全局 `~/.omp/agent/permissions.yml`，当前项目 `.omp/permissions.yml`。也支持 `.yaml`；同目录同时存在时优先使用 `.yml`。
+拦截范围、内置规则与实现结构见 `extensions/guard/README.md`
+
+权限文件：全局 `~/.omp/agent/permissions.yml`，项目 `.omp/permissions.yml`，也支持 `.yaml`。规则按「内置 → 全局 → 项目」叠加，`-值` 删除同名规则。修改后开启新会话生效
+
+- 命令规则按词前缀匹配：`git add -A` 只命中这一步命令，`git add -- 文件` 照旧执行
+- 路径规则只有拒绝语义，没有放行语法；要收紧内置例外，追加更窄的拒绝规则即可
 
 ```yaml
-allow_read_paths:
-  - path: "~/.ssh/config"
-```
-
-`allow_read_paths` 仅授予读取权限。
-
-`deny_paths` 使用有序 glob：普通模式拒绝匹配路径，`!pattern` 取消之前匹配的拒绝，最后匹配的规则生效。`-pattern` 保留删除同名规则的原有语义。
-
-```yaml
+default_reason: "BLOCKED BY USER"
+deny_commands:
+  - pattern: "git add -A"
+    reason: "请显式指定文件"
 deny_paths:
-  - "!compose/demo/.env.tpl"
+  - path: "~/.specific.zsh"
+    reason: "personal shell secrets"
+  - "-~/.zsh_history"
 ```
 
-否定模式适用于读取、写入、两种 `edit` 输入、`ast_edit`、搜索和精确 Git 暂存。相对否定模式固定到配置加载时的项目目录，不跟随规则自身的软链接，也不能借链接授权受保护目标。
-
-仓库权限文件通过 `!compose/*/.env.tpl` 声明 Compose 模板范围；匹配代码不识别模板文件名。内置默认仍拒绝模板，真实 `.env`、`.env.production`、`.env.tpl.bak` 和其他目录的模板继续受保护。项目层可添加拒绝规则，或用 `-!compose/*/.env.tpl` 删除全局否定规则。
-
-`deny_commands` 的删除语义和 `allow_read_paths` 的只读语义保持原样，路径否定模式不影响全仓暂存禁令。
-
-拒绝信息中的 `path` / `command` 指明命中规则，`config` 指明规则来源：内置规则标为 `guard.ts#BUILTIN_PATHS` / `guard.ts#BUILTIN_COMMANDS`，用户规则标为实际权限文件路径及配置键。
-
-配置修改后开启新会话生效。
+拒绝信息给出命中规则（`command:` / `path:`）与来源（`config:`）：内置规则标为 `guard#BUILTIN_*`，用户规则标为权限文件路径及配置键

@@ -233,7 +233,7 @@ wez-test:
 
 # 同步 magpie 模型能力差集到 omp models.yml
 mp-sync:
-    @{{ justfile_directory() }}/modules/features/ai/omp/sync-mp-models.sh
+    @{{ justfile_directory() }}/utils/script/sync-mp-models.sh
 # 清除历史；默认`3d`; 三天前
 [linux]
 wipe duration="3d":
