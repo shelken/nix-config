@@ -110,6 +110,27 @@ fmt:
     @deadnix -e
     @nix fmt .
 
+# 清空 linux-builder VM 的 guest 磁盘，下次启动得到空 Nix store
+# 磁盘是稀疏文件，只会涨不会缩；只有在肯重新下载/重编译时才值得重置
+[macos]
+builder-reset:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # 与 modules/features/darwin/linux-builder/darwin.nix 里的状态目录保持一致
+    dir="$HOME/.local/state/linux-builder"
+    disk="$dir/nixos.qcow2"
+    if [[ ! -e "$disk" ]]; then
+        echo "没有 $disk，已经是干净的" >&2
+        exit 0
+    fi
+    if pgrep -f "$dir/vzvm.json" >/dev/null; then
+        echo "linux-builder 正在运行：先到它的终端按 Ctrl-C 停机，再重跑 just builder-reset" >&2
+        exit 1
+    fi
+    echo "当前磁盘实占：$(du -h "$disk" | cut -f1)" >&2
+    rm -f "$disk"
+    echo "已删除 $disk；下次运行 linux-builder 会重建空磁盘，Nix store 需重新填充" >&2
+
 # 清理无用的包
 gc duration="1d":
     # @nix run nixpkgs#nh -- clean all -a -K {{ duration }}

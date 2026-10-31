@@ -14,6 +14,7 @@
 # 启停手动：
 #   启动：linux-builder        （首次会要一次 sudo 密码，用来安装连接密钥）
 #   停止：在该终端按 Ctrl-C    （vzvm 会先让 guest 优雅关机）
+#   重置：just builder-reset   （删掉 guest 磁盘，下次启动是空 store；运行中会拒绝执行）
 # VM 没启动时，Linux 构建会因连不上 linux-builder 而失败。
 #
 # 可选功能：要用的主机在 imports 里加 self.modules.darwin.linux-builder
