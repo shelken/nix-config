@@ -11,7 +11,7 @@
     "@shelken/pi-auto-model-prompts": "npm:@shelken/pi-auto-model-prompts@0.3.1",
     "pi-trae-provider": "git+ssh://git@github.com/shelken/pi-trae-provider.git#main",
     "pi-zed-provider": "git+ssh://git@github.com/shelken/pi-zed-provider.git#main",
-    "pi-commandcode-provider": "npm:pi-commandcode-provider@0.7.10",
+    "pi-commandcode-provider": "npm:pi-commandcode-provider@0.7.11",
     "pi-intercom": "npm:pi-intercom@0.18.1",
     "@shelken/pi-sounds": "npm:@shelken/pi-sounds@0.1.0"
   }
