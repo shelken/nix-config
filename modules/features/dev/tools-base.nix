@@ -1,4 +1,4 @@
-# 共享工具登记表：第一批 Nix 条目（rg/fd/jq/gh/node/python3/uv，ADR 0003）
+# 共享工具登记表：dev 侧条目（Nix 基础工具与运行时 + mise 工具，ADR 0003）
 # 登记表接口与宿主生成器在 dev/tools.nix；此处与 ai 侧 mise 条目（ai/tools.nix）共用一张表。
 { config, ... }:
 {
@@ -13,5 +13,8 @@
     node.package = "nodejs";
     python3 = { };
     uv = { };
+
+    # mise 共享工具：项目 git hook 运行器（各项目不再在 mise.toml 里声明本体）
+    prek.mise = "0.5.9";
   };
 }
