@@ -9,6 +9,7 @@ let
 in
 rec {
   deployNode = import ./deployNode.nix;
+  deployRsLib = import ./deployRsLib.nix;
   macosSystem = import ./macosSystem.nix;
   nixosSystem = import ./nixosSystem.nix;
   mkTasksLib = import ./tasks.nix;
@@ -40,9 +41,7 @@ rec {
       walk =
         value:
         if builtins.isAttrs value then
-          lib.mapAttrs (
-            k: v: if k == "baseUrl" && builtins.isString v then rewrite v else walk v
-          ) value
+          lib.mapAttrs (k: v: if k == "baseUrl" && builtins.isString v then rewrite v else walk v) value
         else if builtins.isList value then
           map walk value
         else
