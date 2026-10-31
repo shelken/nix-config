@@ -122,10 +122,11 @@ gc duration="1d":
 # @nix-collect-garbage -d
 # @sudo nix-collect-garbage -d
 
-# 清理所有(系统/项目)
+# 不加 --keep-one 会把 direnv gcroot 一并清掉，devshell 每次进项目都要重新构建
+# 清理所有(系统/项目)，每个 direnv 项目保留一个 gcroot
 gc-all:
     # @nix run nixpkgs#nh -- clean all -a
-    @nh clean all -a
+    @nh clean all -a --keep-one
     @nix store gc
 
 # 生成镜像

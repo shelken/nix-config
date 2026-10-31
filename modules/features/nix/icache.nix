@@ -6,6 +6,11 @@
 # 必须用覆盖语义的 `substituters`：nix 按列表顺序逐个试源，`extra-substituters` 只会追加到末尾，
 # 等于 icache 永不命中。列表不在这里重复维护 —— on 时现取系统列表拼在前面。
 #
+# 关闭 builders-use-substitutes：置 true 时 linux-builder 用自己那份 nix.conf（只有 cache.nixos.org）
+# 自己去 substitute 输入，永远碰不到内网 icache；置 false 则本机经 icache 取输入，再通过本地 ssh 推给 builder。
+# off 删掉文件即回落到系统层的 true，家外 builder 自己下载。
+# 这里被 darwin / nixos 的 HM 模块共用，NixOS 主机没有 builder 时该设置无副作用。
+#
 # 系统层已摘掉 icache（darwin: features/darwin/nix/_module.nix，nixos: features/nix/nix-settings.nix）；
 # daemon 不重读系统 nix.conf，首次 switch 后用 `sudo launchctl kickstart -k system/systems.determinate.nix-daemon`
 # 重启一次，之后 on/off 即时生效。root 跑的 nix（sudo / nixos-rebuild）读不到用户级配置，仍走系统列表。
@@ -44,6 +49,7 @@ in
               {
                 echo "# 由 nix-icache 生成"
                 echo "substituters = $mirrors $system"
+                echo "builders-use-substitutes = false"
               } > "$conf.tmp"
               mv "$conf.tmp" "$conf"
               echo "icache: on"
