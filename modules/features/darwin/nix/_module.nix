@@ -29,6 +29,9 @@
   # trusted-public-keys 主文件用 extra- 追加，这里也用 extra- 追加即可。
   # 用户级只有 icache 开关会覆盖 substituters，见 features/nix/icache.nix
   # 调整这个时先确保这个和lock分离, 先让这个switch,再更新
+  # 包突然开始本地编译时，先确认缓存里有目标路径（`nix path-info --store <缓存> <路径>`）、
+  # 当前配置信任该缓存，不要先回退 flake.lock。改完用 `nix config show substituters`、
+  # `nix config show trusted-public-keys` 看最终合并值，不要只看生成的文件
   environment.etc."nix/nix.custom.conf".text = ''
     substituters = https://cache.nixos.org https://nix-community.cachix.org https://install.determinate.systems
     extra-trusted-public-keys = nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=

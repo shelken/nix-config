@@ -11,7 +11,7 @@
 - `docs/adr/0005-server-role-and-core-baseline.md`：为什么是 `server` 角色与系统层 sops
 - 口令哈希在 `secrets` 仓库的 `sops/secrets/hosts/vps-cc.yaml`，只有管理员和 vps-cc 自己的 age 密钥能解
 - 不用 nixos-facter：虚拟机的社区做法是导入 nixpkgs 的 `qemu-guest.nix`（官方 nixos-anywhere-examples 对 KVM 云主机同样如此），真机实测是标准 qemu 虚拟机（virtio 网卡与磁盘）；facter 或 `hardware-configuration.nix` 留给以后的物理机，见 `../common.nix`
-- `default.nix` 里还对网卡设了 `accept_ra = 0`、`autoconf = 0`：服务商的路由器会发路由通告，内核据此生成自动 IPv6 地址并排在静态地址之前，监听通配地址的 UDP 服务（hysteria2、derp 的 STUN）回包会用错误的源地址，见 `postmortems/006-vps-cc-cutover-findings.md`
+- `default.nix` 里还对网卡设了 `accept_ra = 0`、`autoconf = 0`：服务商的路由器会发路由通告，内核据此生成自动 IPv6 地址并排在静态地址之前，监听通配地址的 UDP 服务（hysteria2、derp 的 STUN）回包会用错误的源地址，原因与处理见 `default.nix` 的注释
 
 ## 要带过去的三类状态
 
@@ -75,14 +75,14 @@ limactl delete --force nixos-anywhere-vps
 
 ### 演练里遇到的问题
 
-| 现象                                                                      | 原因                                                                                                                                     | 处理                                                                                   |
-| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| kexec 报 `PEFILE: Unsigned PE binary`                                     | Ubuntu 内核拒绝 `kexec_file_load` 加载未签名内核                                                                                         | `--kexec-extra-flags '-c'` 走旧的 `kexec_load`                                         |
-| disko 报 `/dev/disk/by-partlabel/disk-main-root does not exist`，每次必现 | disko 脚本用 nixpkgs 的 systemd 262 的 `udevadm settle`，而默认 kexec 安装环境是 25.05（systemd 257），settle 提前返回，符号链接还没出现 | 用 `nixos-26.05` 的 kexec 安装环境：`just kexec-cache x86_64 nixos-26.05`              |
-| 装好后 `/etc/resolv.conf` 只有 `127.0.0.1`，整机解析不了域名              | openresolv 默认只写本机解析器；而 127.0.0.1 要等 docker 里的 dnsmasq 起来才有人应答，首次拉镜像就死锁                                    | `networking.resolvconf.extraConfig = "resolv_conf_local_only=NO"`（已在 `common.nix`） |
-| 第一次 `deploy` 后配置变坏，自动回滚报 `No such file or directory`        | nixos-anywhere 装的那一代没有 deploy-rs 的激活器，回滚找不到目标                                                                         | 装好后先用**不改任何配置**的 `just deploy vps-cc` 部署一次，再做真实改动               |
-| `deploy` 时「Connection reset by peer」                                   | 防火墙规则重载的瞬间，慢速模拟让 SSH 等待连接被拒；真机上这个窗口只有毫秒                                                                | 仅演练环境的现象；真机若遇到，重跑一次                                                 |
-| kexec 之后 nixos-anywhere 重连默认的 22 端口                              | 安装环境的 sshd 在 22，旧系统在 60223                                                                                                    | 真机上正好；演练里 Lima 只转发了一个端口，所以卡住                                     |
+| 现象                                                                      | 原因                                                                                                                                     | 处理                                                                                                                                                                                                         |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| kexec 报 `PEFILE: Unsigned PE binary`                                     | Ubuntu 内核拒绝 `kexec_file_load` 加载未签名内核                                                                                         | `--kexec-extra-flags '-c'` 走旧的 `kexec_load`                                                                                                                                                               |
+| disko 报 `/dev/disk/by-partlabel/disk-main-root does not exist`，每次必现 | disko 脚本用 nixpkgs 的 systemd 262 的 `udevadm settle`，而默认 kexec 安装环境是 25.05（systemd 257），settle 提前返回，符号链接还没出现 | 用 `nixos-26.05` 的 kexec 安装环境：`just kexec-cache x86_64 nixos-26.05`。选版本前用 `nix eval --raw .#nixosConfigurations.<主机>.config.systemd.package.version` 查 flake 的 systemd，安装环境取同一发布线 |
+| 装好后 `/etc/resolv.conf` 只有 `127.0.0.1`，整机解析不了域名              | openresolv 默认只写本机解析器；而 127.0.0.1 要等 docker 里的 dnsmasq 起来才有人应答，首次拉镜像就死锁                                    | `networking.resolvconf.extraConfig = "resolv_conf_local_only=NO"`（已在 `common.nix`）                                                                                                                       |
+| 第一次 `deploy` 后配置变坏，自动回滚报 `No such file or directory`        | nixos-anywhere 装的那一代没有 deploy-rs 的激活器，回滚找不到目标                                                                         | 装好后先用**不改任何配置**的 `just deploy vps-cc` 部署一次，再做真实改动                                                                                                                                     |
+| `deploy` 时「Connection reset by peer」                                   | 防火墙规则重载的瞬间，慢速模拟让 SSH 等待连接被拒；真机上这个窗口只有毫秒                                                                | 仅演练环境的现象；真机若遇到，重跑一次                                                                                                                                                                       |
+| kexec 之后 nixos-anywhere 重连默认的 22 端口                              | 安装环境的 sshd 在 22，旧系统在 60223                                                                                                    | 真机上正好；演练里 Lima 只转发了一个端口，所以卡住                                                                                                                                                           |
 
 ## 切换（真机）
 
@@ -185,6 +185,7 @@ cd ~/Code/active/home-ops && task compose:deploy:vps
 - [ ] crowdsec-firewall-bouncer 在 `INPUT`、`FORWARD`、`DOCKER-USER` 里确实加了规则：`iptables -S | grep -i crowdsec`；若没有，说明它的 iptables 与 NixOS 防火墙不兼容，需要处理
 - [ ] derp、hysteria2、anytls 能正常使用；kopia 下一次备份成功
 - [ ] IPv6：网卡上只有静态地址（`accept_ra`、`autoconf` 为 0），`ip -6 route get <公网 IPv6>` 的 `src` 是固定地址；独立客户端经固定 IPv6 能连上 hysteria2（见 nix-config #182）
+- [ ] 日志驱动：NixOS 默认 `journald`，不接受 compose `logging.options` 里的 `max-size`、`max-file`；接管前对比 `docker info` 的日志驱动与 compose 的 `logging`（见 home-ops #1728）
 - [ ] 观察一两天，再决定清理 home-ops 的 ansible（那是另一个仓库的单独改动）
 - [ ] 稳定后删除本机的随装目录（含 age 私钥、SSH 主机私钥、tailscale 状态）；数据包留到确认不会回滚
 
@@ -203,14 +204,14 @@ just deploy vps-cc
 
 deploy-rs 用 root + 密钥推送，激活后新开一个 SSH 连接确认，30 秒内连不上就自动回滚。防火墙、网络、sshd 的改动尤其要依赖它
 
-部署前 Mac 上的 `linux-builder` 必须在运行，x86_64-linux 的构建靠它。构建之后再改已跟踪文件，会让一串系统组装层的小派生重建（nix-config #181）。
+部署前 Mac 上的 `linux-builder` 必须在运行，x86_64-linux 的构建靠它。构建之后再改已跟踪文件，会让一串系统组装层的小派生重建（nix-config #181）。想知道会不会重建，用 `nix build <路径> --dry-run`；判断某个工具会不会在本机编译，先 `nix path-info --store https://cache.nixos.org <路径>` 查缓存，`--dry-run` 只列清单、不下载。
 
 ## 切换后发现的问题
 
-记录在 `postmortems/006-vps-cc-cutover-findings.md`，各自的 issue：
+各自的 issue：
 
-- 自动 IPv6 地址导致 UDP 回包源地址错误：nix-config #182
+- 自动 IPv6 地址导致 UDP 回包源地址错误：nix-config #182（已关闭，修复在 `default.nix`）
 - compose 的 `logging.options` 与 NixOS 默认的 journald 日志驱动不兼容：home-ops #1728
 - 构建的系统与实际部署的系统不是同一个：nix-config #181
-- deploy-rs 激活器要从源码编译：nix-config #184；本机磁盘紧张：nix-config #185
+- deploy-rs 激活器要从源码编译：nix-config #184（已关闭）；本机磁盘紧张：nix-config #185
 - 执行记录与第 7 步核对清单：nix-config #183

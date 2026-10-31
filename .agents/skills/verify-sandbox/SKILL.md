@@ -74,4 +74,8 @@ $V cleanup
 
 - `sb sync` 写宿主真实共用 mise 层（设计如此，只补缺）。验证中不要 `mise use -g` 引入新工具再 sync，除非任务需要
 - 家里的模型服务在 `$GATEWAY_ADDR`，靠 `sb.yaml` 的 `network.default_grant` 放行；用 IP 直连会因缺 SNI 失败，测试用 `$GATEWAY_URL` 的域名
-- Determinate 的 Native Linux Builder 不可用时，`setup` 构建失败，见 `postmortems/004-*`
+- Determinate 的 Native Linux Builder 不可用时，`setup` 构建失败。先看 `determinate-nixd version` 的特性列表是否含 `native-linux-builder`，没有就重新 `determinate-nixd auth login`，不改仓库。验证 builder 要真实构建并读产物里的 `uname -m`，不凭 `system-features`，也不用缓存里已有的包
+  ```bash
+  nix build --no-link --print-out-paths --impure --expr \
+    '(builtins.getFlake "nixpkgs").legacyPackages.x86_64-linux.runCommand "probe-${toString builtins.currentTime}" {} "echo hi > $out; uname -m >> $out"'
+  ```

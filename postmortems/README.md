@@ -1,8 +1,6 @@
 # Postmortems
 
-- [001 · Determinate Nix 迁移后丢失 nix-community 信任配置](./001-determinate-nix-lost-community-cache-trust.md)
-- [002 · Determinate Nix 配置合并导致 custom.conf 修改未生效](./002-nix-conf-merge-semantics.md)
-- [003 · computer-use AX 树遍历饥饿与虚假播放确认](./003-computer-use-ax-starvation-and-false-confirmation.md)
-- [004 · Determinate 登录后 Native Linux Builder 未启用，被误判为仓库问题](./004-determinate-native-builder-not-enabled.md)
-- [005 · nixos-anywhere 接管 x86_64 BIOS VPS 的演练：五个会在真机出事的坑](./005-nixos-anywhere-vps-rehearsal-pitfalls.md)
-- [006 · vps-cc 切换后发现的问题：自动 IPv6 回包、日志驱动、重建与激活器编译](./006-vps-cc-cutover-findings.md)
+只保留根因不显然、会复发、护栏落不进代码的事故，写法见 `postmortem` 技能。已有的教训分别在对应代码的注释、功能目录的 README 和 `docs/user-guide/`，排障时先按症状查那里
+
+| 症状关键词 | 组件 | 报告 |
+| ---------- | ---- | ---- |
