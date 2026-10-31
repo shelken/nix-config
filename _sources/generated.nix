@@ -55,15 +55,15 @@
   };
   humanlayer-skills = {
     pname = "humanlayer-skills";
-    version = "653b6411c1f70c275a18e37673b042ff99f67ceb";
+    version = "69d5fc61d6ca6f7056d283a2ee2a045be741a1d6";
     src = fetchFromGitHub {
       owner = "humanlayer";
       repo = "skills";
-      rev = "653b6411c1f70c275a18e37673b042ff99f67ceb";
+      rev = "69d5fc61d6ca6f7056d283a2ee2a045be741a1d6";
       fetchSubmodules = false;
-      sha256 = "sha256-W3dFEdIi4sz4CAZvaj1xjtN7xTRebF/WHOTQYCIe2Xo=";
+      sha256 = "sha256-I/FEGMmJvmkxAzdHEBnacrG5TcP4Y46Kk9lqkKE834M=";
     };
-    date = "2026-10-08";
+    date = "2026-10-31";
   };
   kitty-icon = {
     pname = "kitty-icon";
