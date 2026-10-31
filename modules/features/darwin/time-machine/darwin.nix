@@ -31,6 +31,15 @@
           "~/.vscode"
           "~/Library/Developer"
           "~/go/pkg/mod"
+          "~/.npm"
+          "~/.cargo/registry"
+          "~/.cargo/git"
+          # 可重装的工具链与运行时
+          "~/.local/share/mise"
+          "~/.local/share/uv"
+          "~/.npm-global"
+          "~/.rustup/toolchains"
+          "~/.lmstudio/extensions"
         ];
         example = [ "~/some-vm-disks" ];
         description = ''
