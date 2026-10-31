@@ -4,8 +4,6 @@
 
 default_reason: "BLOCKED BY USER (GLOBAL)"
 
-allow_read_paths: []
-
 deny_commands:
   - pattern: "git add -A"
     reason: "请显式指定文件"
@@ -17,6 +15,10 @@ deny_commands:
     reason: "禁止 tccutil reset 所有"
   - pattern: "/bin/rm"
     reason: "不要尝试绕过rm"
+  - pattern: "find /"
+    reason: "全盘遍历改为用 find 工具，或指定具体子目录"
+  - pattern: "find ~"
+    reason: "全盘遍历改为用 find 工具，或指定具体子目录"
   # - pattern: "nix run"
     # reason: "不准使用nix run"
   # - pattern: "nix shell"
@@ -29,6 +31,7 @@ deny_commands:
     reason: "你他妈有病吗"
 
 
+# 路径规则：值为拒绝目标；`-值` 删除同名规则（内置规则同样可删）。
 deny_paths:
   # --- personal shell secrets ---
   - path: "~/.specific.zsh"

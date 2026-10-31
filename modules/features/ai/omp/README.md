@@ -5,11 +5,24 @@
 
 ## Guard 权限
 
-只读豁免写在权限文件中：全局 `~/.omp/agent/permissions.yaml`，当前项目用 `.omp/permissions.yaml`
+拦截范围、内置规则与实现结构见 `extensions/guard/README.md`
+
+权限文件：全局 `~/.omp/agent/permissions.yml`，项目 `.omp/permissions.yml`，也支持 `.yaml`。规则按「内置 → 全局 → 项目」叠加，修改后开启新会话生效
+
+- `-值` 只删除同名**路径规则**与**用户命令规则**（路径规则含内置的 `.env`、`~/.ssh/*` 等条目）
+- 内置命令检查（`rm` 全量删除、下载执行、环境变量全量导出、裸设备）由代码实现，权限文件既不能关闭也不能改写理由
+- 命令规则按词前缀匹配：`git add -A` 只命中这一步命令，`git add -- 文件` 照旧执行
+- 路径规则只有拒绝语义，没有放行语法；要收紧内置例外，追加更窄的拒绝规则即可
 
 ```yaml
-allow_read_paths:
-  - path: "~/.ssh/config"
+default_reason: "BLOCKED BY USER"
+deny_commands:
+  - pattern: "git add -A"
+    reason: "请显式指定文件"
+deny_paths:
+  - path: "~/.specific.zsh"
+    reason: "personal shell secrets"
+  - "-~/.zsh_history"
 ```
 
-配置修改后开启新会话生效；授权仅用于读取
+拒绝信息给出命中规则（`command:` / `path:`）与来源（`config:`）：内置规则标为 `guard#BUILTIN_*`，用户规则标为权限文件路径及配置键

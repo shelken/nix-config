@@ -12,9 +12,9 @@
       linkOmp = rel: mylib.mkConfigFile config (./. + "/${rel}");
 
       # 沙箱内 loopback 指向 VM 自身，模型地址统一改为宿主网关
-      sandboxModels =
-        (pkgs.formats.yaml { }).generate "omp-sandbox-models.yml"
-          (mylib.rewriteLoopbackBaseUrls "host.microsandbox.internal" (mylib.readYaml pkgs ./models.yml));
+      sandboxModels = (pkgs.formats.yaml { }).generate "omp-sandbox-models.yml" (
+        mylib.rewriteLoopbackBaseUrls "host.microsandbox.internal" (mylib.readYaml pkgs ./models.yml)
+      );
 
       # 沙箱专用插件清单：顶层 sandboxExclude 列出沙箱里不装的依赖。
       # 排除即不装，装什么完全由清单决定；宿主读原清单，不受影响。
@@ -22,8 +22,9 @@
       sandboxExclude = ompManifest.sandboxExclude or [ ];
       unknownExcludes = builtins.filter (n: !(ompManifest.dependencies ? ${n})) sandboxExclude;
       sandboxManifest =
-        assert lib.assertMsg (unknownExcludes == [ ])
-          "omp plugins/package.json 的 sandboxExclude 有 dependencies 里不存在的条目: ${toString unknownExcludes}";
+        assert lib.assertMsg (
+          unknownExcludes == [ ]
+        ) "omp plugins/package.json 的 sandboxExclude 有 dependencies 里不存在的条目: ${toString unknownExcludes}";
         (pkgs.formats.json { }).generate "omp-sandbox-plugin-manifest.json" (
           builtins.removeAttrs ompManifest [ "sandboxExclude" ]
           // {
@@ -31,17 +32,20 @@
           }
         );
 
-      # 扩展目录内除 *.test.ts 外的 .ts 逐个软链；目录内还含测试与 AGENTS.md，不能整目录软链
-      extensionFiles = builtins.attrNames (
+      # 扩展目录内除 *.test.ts 外的 .ts 逐个软链；子目录整体软链（目录扩展的入口是 index.ts，
+      # omp 只加载 index.ts，目录里的测试、文档不会被当成扩展）
+      extensionEntries = builtins.attrNames (
         lib.filterAttrs (
-          name: type: type == "regular" && lib.hasSuffix ".ts" name && !lib.hasSuffix ".test.ts" name
+          name: type:
+          type == "directory"
+          || (type == "regular" && lib.hasSuffix ".ts" name && !lib.hasSuffix ".test.ts" name)
         ) (builtins.readDir ./extensions)
       );
       extensionLinks = lib.listToAttrs (
         map (name: {
           name = ".omp/agent/extensions/${name}";
           value = linkOmp "extensions/${name}";
-        }) extensionFiles
+        }) extensionEntries
       );
     in
     {
