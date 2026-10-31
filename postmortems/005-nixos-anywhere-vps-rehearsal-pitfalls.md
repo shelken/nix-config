@@ -50,7 +50,7 @@
 
 - kexec 加 `--kexec-extra-flags '-c'`
 - 安装环境用 `nixos-26.05`（systemd 260）：`just kexec-cache x86_64 nixos-26.05`
-- `hosts/vps/common.nix` 设 `networking.resolvconf.extraConfig = "resolv_conf_local_only=NO"`，并去掉没有生效的 `accept_ra` sysctl
+- `hosts/vps/common.nix` 设 `networking.resolvconf.extraConfig = "resolv_conf_local_only=NO"`。`accept_ra` 的 `all`、`default` 设置没有生效，当时直接去掉了，这在真机上带来了自动 IPv6 地址，见 006
 - 不再用 `just nixos-anywhere` 包装，直接调用 `nixos-anywhere`，每次显式写 `--build-on`
 - 手册 `hosts/vps/vps-cc/README.md` 规定：装好后先做一次不改配置的 `just deploy vps-cc`，之后再做真实改动
 - 演练里卡住的重连用 `timeout` 包起来，直接跑下一阶段；真机上安装环境的 sshd 正好在 22
@@ -58,7 +58,7 @@
 ## 预防
 
 - 接管真机前，先用规格对齐的演练机完整走完 kexec、disko、install、reboot、deploy，规格至少包括架构、固件（BIOS 或 UEFI）、网络是否静态、内存
-- 用 nixos-anywhere 前先 `nix eval` 出 flake 的 systemd 版本，kexec 安装环境选不低于它的 nixos-images 发布：`nix eval --raw .#nixosConfigurations.<主机>.config.systemd.package.version`，对照 `gh api repos/nix-community/nixos-images/releases`
+- 用 nixos-anywhere 前先 `nix eval` 出 flake 的 systemd 版本，kexec 安装环境选与 flake 的 nixpkgs 同一发布线的 nixos-images（已验证：安装环境 `nixos-26.05` 的 systemd 260 装 systemd 262 的系统成功，`nixos-25.05` 的 257 失败）：`nix eval --raw .#nixosConfigurations.<主机>.config.systemd.package.version`，对照 `gh api repos/nix-community/nixos-images/releases`
 - 任何会让本机解析器（127.0.0.1）排在 `networking.nameservers` 第一位的配置，同时设 `resolv_conf_local_only=NO`，并在演练机里执行 `cat /etc/resolv.conf` 与 `getent hosts cache.nixos.org`
 - 把 deploy-rs 加到刚由 nixos-anywhere 装好的主机时，第一次部署必须是不改配置的版本，确认 `Deployment confirmed.` 之后才允许部署防火墙、网络、sshd 的改动
 - 交接文档里写「已有」的命令或配方，用 `just --list` 或 `grep` 核实，再往下用

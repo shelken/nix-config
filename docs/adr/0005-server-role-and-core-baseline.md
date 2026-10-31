@@ -20,3 +20,5 @@
 - `docs/user-guide/02-features.md` 与 `GLOSSARY.md` 的角色表要带上 `server`；`AGENTS.md` 里的角色链描述也要更新
 - 新增 `hosts/vps/` 目录会让 `calcUniformSchedule` 的备份时段整体平移一次
 - 每台使用系统 sops 的服务器都要在 `secrets` 仓库里单独建一个 age 密钥和一个密文文件
+- 机器第一次开机就要读的状态（age 私钥、tailscale 节点身份、SSH 主机密钥）只能在安装时用 `--extra-files` 放进新系统，不能事后补；这份清单没有声明在配置里，见 `hosts/vps/vps-cc/README.md`
+- age 私钥可以替换：每台主机的密文同时写给了管理员公钥，丢了就换一把、`sops updatekeys`、刷新 `secrets` 输入，不需要另存备份
