@@ -153,6 +153,17 @@
 
       # deploy 为 true 或带参数的属性集都算部署目标
       deployHosts = lib.filterAttrs (_: v: (v.deploy or false) != false) hosts;
+
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+      ];
+
+      deployLib = mylib.deployRsLib {
+        inherit lib systems;
+        inherit (inputs) nixpkgs deploy-rs;
+      };
     in
     flake-parts.lib.mkFlake { inherit inputs; } {
       # 同名即同一功能：一个功能的 darwin / homeManager / nixos 部分写在同一文件或同一目录；
@@ -166,11 +177,7 @@
         ])
       ];
 
-      systems = [
-        "x86_64-linux"
-        "aarch64-linux"
-        "aarch64-darwin"
-      ];
+      inherit systems;
 
       flake = {
         nixosConfigurations = lib.mapAttrs (_: v: mylib.nixosSystem v) nixosHosts;
@@ -212,7 +219,7 @@
           nodes = lib.mapAttrs (
             name: v:
             mylib.deployNode {
-              deploy-rs = inputs.deploy-rs;
+              inherit deployLib;
               inherit name;
               configuration =
                 if v.type == "darwin" then self.darwinConfigurations.${name} else self.nixosConfigurations.${name};
@@ -262,9 +269,7 @@
             # deploy-rs 部署配置校验（schema/激活脚本检查）；
             # 只在原生系统启用，跨系统会让 nix flake check 尝试交叉构建
           }
-          // lib.optionalAttrs (system == "aarch64-darwin") (
-            inputs.deploy-rs.lib.${system}.deployChecks self.deploy
-          );
+          // lib.optionalAttrs (system == "aarch64-darwin") (deployLib.${system}.deployChecks self.deploy);
 
           # Development Shells
           devShells.default = pkgs.mkShellNoCC {

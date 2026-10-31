@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# 构建前摘要：这次要真编译什么、要下载多少，其中多少是编译工具链。
+# 只调用 nix build --dry-run 与 nix derivation show，不构建、不下载。
+#
+# 分类依据派生本身：
+#   源码下载  带 outputHash 的固定输出派生（fetchurl、fetchFromGitHub 等）
+#   生成      带 buildCommand 或没有 src：配置文件、包装脚本、系统组装层
+#   编译      其余带 src 的派生；按输入里的工具链名标注语言
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+用法: nix-plan <主机> [system|home|deploy]
+      nix-plan --installable <flake 安装目标>
+
+  system  darwin 或 NixOS 系统（默认）
+  home    该主机的 Home Manager 激活包（just hm 构建的内容）
+  deploy  deploy-rs 部署 profile（含激活器）
+EOF
+}
+
+[[ $# -ge 1 ]] || {
+  usage
+  exit 1
+}
+
+if [[ $1 == --installable ]]; then
+  installable=${2:?缺少安装目标}
+else
+  host=$1
+  kind=${2:-system}
+  case $kind in
+  system)
+    if nix eval --json .#darwinConfigurations --apply "c: c ? \"$host\"" 2>/dev/null | grep -q true; then
+      installable=".#darwinConfigurations.$host.system"
+    else
+      installable=".#nixosConfigurations.$host.config.system.build.toplevel"
+    fi
+    ;;
+  home) installable=".#homeConfigurations.$host.activationPackage" ;;
+  deploy) installable=".#deploy.nodes.$host.profiles.system.path" ;;
+  *)
+    usage
+    exit 1
+    ;;
+  esac
+fi
+
+log=$(mktemp)
+trap 'rm -f "$log"' EXIT
+echo "求值 $installable ..." >&2
+nix build "$installable" --dry-run 2>"$log" || {
+  cat "$log" >&2
+  exit 1
+}
+
+# 两段清单：will be built 下的 .drv，will be fetched 下的路径
+built=$(awk '/will be built:$/ {f=1; next} /will be fetched/ {f=0} f && /^ +\/nix\/store\// {print $1}' "$log")
+fetched=$(awk '/will be fetched/ {f=1; next} /will be built:$/ {f=0} f && /^ +\/nix\/store\// {print $1}' "$log")
+fetch_summary=$(grep -oE 'will be fetched \([^)]*\)' "$log" | sed -E 's/will be fetched \((.*)\)/\1/' || true)
+
+if [[ -z $built && -z $fetched ]]; then
+  echo "无需编译，无需下载"
+  exit 0
+fi
+
+name_of() { sed -E 's#^/nix/store/[a-z0-9]{32}-##; s#\.drv$##'; }
+
+if [[ -n $built ]]; then
+  # 一次取出全部派生，按上面的规则分类；输出「类别<TAB>工具链<TAB>名字」
+  # shellcheck disable=SC2086
+  classified=$(nix derivation show $built 2>/dev/null | jq -r '
+    (.derivations // .) | to_entries[] | .value as $d |
+    ($d.inputs.drvs // $d.inputDrvs // {} | keys | map(sub("^[a-z0-9]{32}-"; "")) | join(" ")) as $in |
+    (if $d.env.outputHash then "fetch"
+     elif ($d.env.buildCommand or (($d.env.src // $d.env.srcs // "") == "")) then "gen"
+     else "build" end) as $kind |
+    (if $kind != "build" then "-"
+     elif ($in | test("(^| )(rustc|cargo)-")) then "rust"
+     elif ($in | test("(^| )go-[0-9]")) then "go"
+     elif ($in | test("(^| )ghc-")) then "haskell"
+     elif ($in | test("(^| )(swift|swiftpm)-")) then "swift"
+     elif ($in | test("(^| )zig-")) then "zig"
+     elif ($in | test("(^| )(openjdk|jdk|gradle|maven)")) then "java"
+     elif ($in | test("(^| )nodejs-")) then "node"
+     elif ($in | test("(^| )python3[0-9.]*-")) then "python"
+     else "c/其他" end) as $tc |
+    "\($kind)\t\($tc)\t\(.key | sub("^[a-z0-9]{32}-"; "") | sub("\\.drv$"; ""))"')
+
+  n_all=$(wc -l <<<"$built" | tr -d ' ')
+  n_build=$(grep -c $'^build\t' <<<"$classified" || true)
+  n_fetch=$(grep -c $'^fetch\t' <<<"$classified" || true)
+  n_gen=$(grep -c $'^gen\t' <<<"$classified" || true)
+  echo "将构建 $n_all 个派生：编译 $n_build，源码下载 $n_fetch，生成 $n_gen"
+  if [[ $n_build -gt 0 ]]; then
+    grep $'^build\t' <<<"$classified" | awk -F'\t' '{printf "  编译  %-8s %s\n", $2, $3}' | sort
+  fi
+else
+  echo "将构建 0 个派生"
+fi
+
+if [[ -n $fetched ]]; then
+  n_fetched=$(wc -l <<<"$fetched" | tr -d ' ')
+  echo "将下载 $n_fetched 个路径（$fetch_summary）"
+  # 只认「工具名[-wrapper|-auditable]-版本号」，排除同名前缀的 hook 脚本与 crate
+  toolchain=$(name_of <<<"$fetched" | grep -E '^(rustc|cargo|llvm|clang|gcc|go|ghc|swift|zig|cmake|meson|ninja|openjdk|jdk|nodejs)(-wrapper|-auditable)?-[0-9]' | sort || true)
+  if [[ -n $toolchain ]]; then
+    echo "  其中编译工具链（说明有东西要现编）："
+    awk '{print "    " $0}' <<<"$toolchain"
+  fi
+fi
