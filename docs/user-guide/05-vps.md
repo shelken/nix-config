@@ -21,7 +21,7 @@ flowchart LR
 
 x86_64 的系统在 Mac 上构建，靠 `linux-builder`，装机和部署前它必须在运行
 
-它的启停与重置见 `modules/features/darwin/linux-builder/darwin.nix` 头部注释：guest 磁盘是只涨不缩的稀疏文件，`just builder-reset` 会删掉它，下次启动是空 store（VM 必须在已停机状态下执行）
+它的启停与重置见 `modules/features/darwin/linux-builder/darwin.nix` 头部注释：`linux-builder status` 看状态，`linux-builder stop` 停机（原终端已关闭也能停），guest 磁盘是只涨不缩的稀疏文件，`just builder-reset` 会删掉它，下次启动是空 store（VM 必须在已停机状态下执行）
 
 ## 一台 VPS 由哪些文件组成
 

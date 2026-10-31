@@ -123,8 +123,8 @@ builder-reset:
         echo "没有 $disk，已经是干净的" >&2
         exit 0
     fi
-    if pgrep -f "$dir/vzvm.json" >/dev/null; then
-        echo "linux-builder 正在运行：先到它的终端按 Ctrl-C 停机，再重跑 just builder-reset" >&2
+    if pids="$(pgrep -f "$dir/vzvm.json")"; then
+        echo "linux-builder 正在运行（PID $pids）：运行 linux-builder stop 停机（原终端已关闭也能停），再重跑 just builder-reset" >&2
         exit 1
     fi
     echo "当前磁盘实占：$(du -h "$disk" | cut -f1)" >&2
