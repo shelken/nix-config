@@ -5,3 +5,4 @@
 - [003 · computer-use AX 树遍历饥饿与虚假播放确认](./003-computer-use-ax-starvation-and-false-confirmation.md)
 - [004 · Determinate 登录后 Native Linux Builder 未启用，被误判为仓库问题](./004-determinate-native-builder-not-enabled.md)
 - [005 · nixos-anywhere 接管 x86_64 BIOS VPS 的演练：五个会在真机出事的坑](./005-nixos-anywhere-vps-rehearsal-pitfalls.md)
+- [006 · vps-cc 切换后发现的问题：自动 IPv6 回包、日志驱动、重建与激活器编译](./006-vps-cc-cutover-findings.md)

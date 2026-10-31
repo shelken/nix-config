@@ -11,6 +11,24 @@
 - `docs/adr/0005-server-role-and-core-baseline.md`：为什么是 `server` 角色与系统层 sops
 - 口令哈希在 `secrets` 仓库的 `sops/secrets/hosts/vps-cc.yaml`，只有管理员和 vps-cc 自己的 age 密钥能解
 - 不用 nixos-facter：虚拟机的社区做法是导入 nixpkgs 的 `qemu-guest.nix`（官方 nixos-anywhere-examples 对 KVM 云主机同样如此），真机实测是标准 qemu 虚拟机（virtio 网卡与磁盘）；facter 或 `hardware-configuration.nix` 留给以后的物理机，见 `../common.nix`
+- `default.nix` 里还对网卡设了 `accept_ra = 0`、`autoconf = 0`：服务商的路由器会发路由通告，内核据此生成自动 IPv6 地址并排在静态地址之前，监听通配地址的 UDP 服务（hysteria2、derp 的 STUN）回包会用错误的源地址，见 `postmortems/006-vps-cc-cutover-findings.md`
+
+## 要带过去的三类状态
+
+装机会抹掉整块盘。不在 Nix 配置里、又在旧盘上的东西，都要自己带过去，区别只在「什么时候要」：
+
+| 类       | 是什么                           | 什么时候要                     | 怎么带               |
+| -------- | -------------------------------- | ------------------------------ | -------------------- |
+| 业务数据 | `/data/docker`                   | 容器启动前，装好后             | 打包备份，装好后恢复 |
+| 机器身份 | `tailscaled.state`、SSH 主机密钥 | 开机瞬间：服务一启动就读       | `--extra-files`      |
+| 解密钥匙 | 该主机的 age 私钥                | 开机瞬间：系统激活时解口令哈希 | `--extra-files`      |
+
+`--extra-files <目录>` 把本机目录的内容原样复制到新系统的根目录，发生在 install 阶段、第一次开机之前。目录结构就是目标路径：`<目录>/var/lib/sops-nix/key.txt` 变成 `/var/lib/sops-nix/key.txt`，文件默认属主 root。它只在安装时单向复制一次，不是备份，也不是同步。
+
+- 为什么不能装好后再补：tailscaled 与 sshd 启动时就读身份文件，缺了会生成新的。tailscale 会注册成新节点、地址变化；SSH 客户端会报主机密钥变更
+- 其余机密都走 sops 加密交付。只有解开 sops 的那把钥匙没法再用 sops 交付，只能带过去，这是官方文档里 `--extra-files` 的典型用法
+- age 私钥丢了不丢数据：密文同时写给了管理员公钥，换一把新的、`sops updatekeys`、刷新 `secrets` 输入，再装即可，不需要另存
+- 这份清单没有声明在 Nix 配置里：tailscale 与 SSH 主机密钥的路径靠 nixpkgs 默认值，见 nix-config #183
 
 ## 演练（vps-test）
 
@@ -51,7 +69,7 @@ limactl delete --force nixos-anywhere-vps
 | zramSwap、BBR、inotify、journald 200M                                     | 通过                                                                               |
 | 防火墙放行清单与 `common.nix` 一致                                        | 通过                                                                               |
 | docker 守护进程启动、晚于 tailscaled、能拉镜像                            | 通过                                                                               |
-| deploy-rs 推送更新，配置把 SSH 堵死后自动回滚                             | 通过，前提见下表第 5 行                                                            |
+| deploy-rs 推送更新，配置把 SSH 堵死后自动回滚                             | 通过，前提见下表「第一次 `deploy` 后配置变坏」一行                                 |
 
 没有在演练里测：compose 业务容器、crowdsec-firewall-bouncer 与 NixOS 防火墙的配合、tailscale 登录、真实 KVM 下的 kexec
 
@@ -68,7 +86,7 @@ limactl delete --force nixos-anywhere-vps
 
 ## 切换（真机）
 
-每一步先停下确认。命令里的 `vps-cc` 是你 `~/.ssh/config` 里的别名（端口 60223）
+每一步先停下确认。命令里的 `vps-cc` 是你 `~/.ssh/specific` 里的别名（端口 60223）
 
 ### 0. 准备
 
@@ -81,7 +99,7 @@ tar -tzf ~/vps-cc-backup/data-docker.tgz | head -3
 # 看一眼最近一次 kopia 快照时间（例如 kopia 的 Web 界面，或 docker exec kopia 里列快照）
 ```
 
-- [ ] 确认能登录服务商网页 VNC 控制台，并知道 root 口令在 1Password 的位置
+- [ ] 确认能登录服务商网页 VNC 控制台。装机后 root 的口令是 `secrets` 里哈希对应的**新口令**，不是服务商给的旧口令，先确认你记得它
 - [ ] 确认 `secrets` 仓库已推送，`nix flake metadata` 里的 `secrets` 是含 `hosts/vps-cc/network.nix` 的那一版
 - [ ] `nix build .#nixosConfigurations.vps-cc.config.system.build.toplevel` 通过
 
@@ -140,7 +158,7 @@ ssh vps-cc 'stat -c "%U %a %n" /var/lib/sops-nix/key.txt /var/lib/tailscale/tail
 - [ ] `tailscale status` 里还是原来的节点名与地址
 - [ ] 你自己在机器上执行一次 `sudo -k true`，确认新口令正确
 
-连不上时：用 VNC 控制台以 root 登录（口令在 1Password），看 `ip a`、`journalctl -b -u network-addresses-eth0 -u sshd`。
+连不上时：用 VNC 控制台以 root 和新口令登录，看 `ip a`、`journalctl -b -u network-addresses-eth0 -u sshd`。
 
 ### 5. 先做一次「不改配置」的 deploy
 
@@ -166,7 +184,9 @@ cd ~/Code/active/home-ops && task compose:deploy:vps
 - [ ] tailscale 上绑定的端口（node-exporter、caddy 管理口、kopia、openlist）可从 tailnet 访问
 - [ ] crowdsec-firewall-bouncer 在 `INPUT`、`FORWARD`、`DOCKER-USER` 里确实加了规则：`iptables -S | grep -i crowdsec`；若没有，说明它的 iptables 与 NixOS 防火墙不兼容，需要处理
 - [ ] derp、hysteria2、anytls 能正常使用；kopia 下一次备份成功
+- [ ] IPv6：网卡上只有静态地址（`accept_ra`、`autoconf` 为 0），`ip -6 route get <公网 IPv6>` 的 `src` 是固定地址；独立客户端经固定 IPv6 能连上 hysteria2（见 nix-config #182）
 - [ ] 观察一两天，再决定清理 home-ops 的 ansible（那是另一个仓库的单独改动）
+- [ ] 稳定后删除本机的随装目录（含 age 私钥、SSH 主机私钥、tailscale 状态）；数据包留到确认不会回滚
 
 ## 回滚
 
@@ -182,3 +202,15 @@ just deploy vps-cc
 ```
 
 deploy-rs 用 root + 密钥推送，激活后新开一个 SSH 连接确认，30 秒内连不上就自动回滚。防火墙、网络、sshd 的改动尤其要依赖它
+
+部署前 Mac 上的 `linux-builder` 必须在运行，x86_64-linux 的构建靠它。构建之后再改已跟踪文件，会让一串系统组装层的小派生重建（nix-config #181）。
+
+## 切换后发现的问题
+
+记录在 `postmortems/006-vps-cc-cutover-findings.md`，各自的 issue：
+
+- 自动 IPv6 地址导致 UDP 回包源地址错误：nix-config #182
+- compose 的 `logging.options` 与 NixOS 默认的 journald 日志驱动不兼容：home-ops #1728
+- 构建的系统与实际部署的系统不是同一个：nix-config #181
+- deploy-rs 激活器要从源码编译：nix-config #184；本机磁盘紧张：nix-config #185
+- 执行记录与第 7 步核对清单：nix-config #183
