@@ -495,6 +495,11 @@ deny_paths:
       "git add \\\n-A",
       "git add -u",
       "git add",
+      // 尾部斜杠与 `./` 写法仍是同一个全树目标
+      "git add ./",
+      "git add ../",
+      "git add ..",
+      "git add -- -n .",
     ]) {
       expect(command(line, policy).block).toBe(true);
     }
@@ -505,10 +510,14 @@ deny_paths:
       "git add docs/ -A",
       "git add -u src/main.ts",
       "git add docs/",
+      "git add -- ../x.md",
       "git add -p",
       "git add --patch",
       "git add -N src/new.ts",
       "git add --dry-run -A",
+      // 预览选项在任意位置都压过全树判定
+      "git add . --dry-run",
+      "git add --pathspec-from-file=list --dry-run",
     ]) {
       expect(command(line, policy).block).toBe(false);
     }
@@ -545,6 +554,20 @@ deny_paths:
     expect(toolPath("read", "/tmp/unrelated/private.txt", policy).block).toBe(false);
     expect(toolPath("read", "nested/.env", policy).block).toBe(true);
     expect(toolPath("read", "/tmp/unrelated/.env", policy).block).toBe(true);
+  });
+
+  it("命令名撞上对象原型属性时按普通命令处理", () => {
+    expectAllowed("./constructor --help");
+    expectAllowed("./toString env");
+    expectAllowed("./constructor env -0");
+    expectAllowed("./valueOf");
+  });
+
+  it("内置命令检查不可被 `-值` 关闭", () => {
+    const policy = policyFor('deny_commands:\n  - "-env"\n  - "-printenv"\n  - "-rm -rf *"\n');
+    expect(command("env", policy).block).toBe(true);
+    expect(command("printenv", policy).block).toBe(true);
+    expect(command("rm -rf /", policy).block).toBe(true);
   });
 
   it("配置解析失败时 fail-open 并报错，不丢内置规则", () => {

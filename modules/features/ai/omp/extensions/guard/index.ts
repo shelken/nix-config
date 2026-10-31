@@ -31,6 +31,7 @@ import {
   downloadPipeExecutes,
   embeddedScripts,
   executesStdinProgram,
+  lookup,
   operandWords,
   patternWords,
   scanSubsInText,
@@ -164,7 +165,7 @@ function builtinCommandHit(cmd: ShellCmd, home: string): BuiltinHit | null {
 // ============================================================================
 
 /** 元数据查询与字面回显不算读取；重定向目标与命令替换仍参与判定 */
-const METADATA_HEADS: Record<string, true> = {
+const METADATA_HEADS: Record<string, true> = lookup<true>({
   ls: true,
   stat: true,
   test: true,
@@ -172,7 +173,7 @@ const METADATA_HEADS: Record<string, true> = {
   "[[": true,
   echo: true,
   printf: true,
-};
+});
 
 /** 元数据查询与字面回显不算读取；接了管道就不能豁免：下游（xargs、cat 之类）可能真的读内容 */
 function isMetadataCommand(cmd: ShellCmd): boolean {
@@ -238,7 +239,7 @@ function resolveBlockReason(rule: Rule, kind: "command" | "path", defaultReason?
 }
 
 /** Git 全局选项；带独立取值的选项连同后一个词一起跳过 */
-const GIT_GLOBAL_VALUE_OPTIONS: Record<string, true> = {
+const GIT_GLOBAL_VALUE_OPTIONS: Record<string, true> = lookup<true>({
   "-C": true,
   "-c": true,
   "--git-dir": true,
@@ -246,11 +247,11 @@ const GIT_GLOBAL_VALUE_OPTIONS: Record<string, true> = {
   "--namespace": true,
   "--config-env": true,
   "--super-prefix": true,
-};
+});
 
 /**
- * `git add -A` / `git add .` 只看暂存范围：没有显式路径，或路径本身是通配、
- * 变量、`.`、`:/` 时算全仓；写了具体文件的调用照旧放行（`-p` 等预览选项不落暂存）。
+ * `git add -A` / `git add .` 只看暂存范围：没有显式路径，或路径归一化后是 `.`、`..`、`:/`、
+ * 通配、变量时算全仓；写了具体文件的调用照旧放行。`--` 之后一律当路径，预览选项压过全树判定。
  */
 function gitAddIsFullScope(words: ShellWord[]): boolean {
   const args = operandWords(words);
@@ -263,22 +264,34 @@ function gitAddIsFullScope(words: ShellWord[]): boolean {
   }
   if (argv[i] !== "add") return false;
 
+  let preview = false;
+  let indirect = false;
+  let fullScope = false;
   let hasPaths = false;
+  let afterSeparator = false;
   for (const word of args.slice(i + 1)) {
     const arg = word.value;
-    if (arg === "--") continue;
-    if (arg.startsWith("-")) {
+    if (!afterSeparator && arg === "--") {
+      afterSeparator = true;
+      continue;
+    }
+    if (!afterSeparator && arg.startsWith("-")) {
       if (arg === "--patch" || arg === "--interactive" || arg === "--dry-run" || /^-[a-zA-Z]*[pin]/.test(arg)) {
-        return false;
+        preview = true;
+        continue;
       }
-      if (arg === "--pathspec-from-file" || arg.startsWith("--pathspec-from-file=")) return true;
+      if (arg === "--pathspec-from-file" || arg.startsWith("--pathspec-from-file=")) indirect = true;
       continue;
     }
     hasPaths = true;
+    // 折叠重复斜杠、去掉尾部斜杠后，`.` / `..` / 空串都是全树
+    const normalized = arg.replace(/\/{2,}/g, "/").replace(/\/+$/, "");
     // 动态取值与通配无法静态确认范围
-    if (word.dynamic || word.glob) return true;
-    if (arg === "." || arg === "./" || arg === ".." || arg === ":/" || arg === "") return true;
+    if (word.dynamic || word.glob || arg === ":/") fullScope = true;
+    else if (normalized === "" || normalized === "." || normalized === "..") fullScope = true;
   }
+  if (preview) return false;
+  if (indirect || fullScope) return true;
   return !hasPaths;
 }
 

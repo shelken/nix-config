@@ -28,7 +28,12 @@ type ShellToken =
   /** heredoc 正文；quoted 仅表示不做替换展开，正文仍可能被解释器当作程序；owner 是所属命令首 token 下标 */
   | { kind: "heredoc"; value: string; quoted: boolean; owner: number };
 
-const CONTROL_OPS: Record<string, true> = {
+/** 查表用无原型对象：命令名可能撞上 `constructor`、`toString` 这类继承属性 */
+export function lookup<T>(entries: Record<string, T>): Record<string, T> {
+  return Object.assign(Object.create(null), entries);
+}
+
+const CONTROL_OPS: Record<string, true> = lookup<true>({
   "|": true,
   "||": true,
   "&&": true,
@@ -37,7 +42,7 @@ const CONTROL_OPS: Record<string, true> = {
   "\n": true,
   "(": true,
   ")": true,
-};
+});
 
 /** 扫描 $() 的平衡括号正文（感知引号与转义） */
 function scanCommandSub(input: string, openParen: number): { body: string; end: number } {
@@ -353,9 +358,9 @@ function stripLeadingAssignments(words: string[]): string[] {
 
 /**
  * 包装器命令：值为带独立取值的选项（要连后一个词一起跳过）。
- * 不在表里的命令本身就是被检查的目标；严格等于真，避免继承属性（constructor 等）混进来。
+ * 不在表里的命令本身就是被检查的目标。
  */
-const WRAPPER_VALUE_FLAGS: Record<string, string[]> = {
+const WRAPPER_VALUE_FLAGS: Record<string, string[]> = lookup<string[]>({
   env: ["-u", "--unset", "-C", "--chdir", "-S", "--split-string"],
   sudo: ["-u", "-g", "-p", "--user", "--group", "--prompt"],
   doas: ["-u", "-g"],
@@ -371,7 +376,7 @@ const WRAPPER_VALUE_FLAGS: Record<string, string[]> = {
   watch: [],
   xargs: [],
   time: [],
-};
+});
 
 /** 剥离包装器命令（如 sudo, env, nohup, timeout 等）与前置变量赋值 */
 export function stripWrappers(words: string[]): string[] {
@@ -459,18 +464,18 @@ export function argvMatches(args: string[], patternWords: string[]): boolean {
   return true;
 }
 
-const DOWNLOADERS: Record<string, true> = { curl: true, wget: true };
+const DOWNLOADERS: Record<string, true> = lookup<true>({ curl: true, wget: true });
 
-const SHELLS: Record<string, true> = {
+const SHELLS: Record<string, true> = lookup<true>({
   sh: true,
   bash: true,
   zsh: true,
   dash: true,
   ash: true,
   ksh: true,
-};
+});
 
-const SCRIPT_RUNNERS: Record<string, true> = {
+const SCRIPT_RUNNERS: Record<string, true> = lookup<true>({
   node: true,
   bun: true,
   deno: true,
@@ -479,14 +484,14 @@ const SCRIPT_RUNNERS: Record<string, true> = {
   php: true,
   lua: true,
   luajit: true,
-};
+});
 
 /** 显式 stdin 操作数：出现即等于把管道体或 heredoc 当程序 */
-const STDIN_PATHS: Record<string, true> = {
+const STDIN_PATHS: Record<string, true> = lookup<true>({
   "/dev/stdin": true,
   "/dev/fd/0": true,
   "/proc/self/fd/0": true,
-};
+});
 
 /**
  * 内联程序标志按解释器区分：shell 只有 -c 给程序（-e/-x/-u 仍是选项，脚本仍来自 stdin），
