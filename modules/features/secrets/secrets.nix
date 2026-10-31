@@ -60,7 +60,6 @@
         MODELSCOPE_API_TOKEN = "Personal/MODELSCOPE_API_TOKEN";
         OMLX_API_KEY = "Personal/OMLX_API_KEY";
         OPENCODE_API_KEY = "Personal/OPENCODE_API_KEY";
-        SANDVAULT_ARGS = "Personal/SANDVAULT_ARGS";
         WX_PI_API_KEY = "Personal/WX_PI_API_KEY";
       };
 
