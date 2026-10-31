@@ -25,3 +25,4 @@
 - `docs/adr/` 只放与 nix、本仓库、dotconfig 有关的决策；具体软件或脚本的设计放在其代码目录的 `README.md`
 - 创建、修改或测试机器特定定时任务时使用 `.agents/skills/create-task/`
 - 修改或新增 `modules/features/ai/skills/` 下的技能前，先读该目录的 `README.md`，其中规定外部拷贝技能的来源记录
+- 项目为公开项目, 不要在 ISSUE/PR/提交中/代码中 包含任何个人敏感信息/设备运行环境数据
