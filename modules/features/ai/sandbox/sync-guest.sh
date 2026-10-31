@@ -18,7 +18,7 @@ if [[ -d "$SB_MISE_LAYER/data" ]]; then
   export MISE_DOWNLOADS_DIR="$SB_MISE_LAYER/data/downloads"
   mkdir -p "$MISE_DATA_DIR" "$MISE_CACHE_DIR" "$MISE_DOWNLOADS_DIR"
 fi
-export GIT_CONFIG_GLOBAL="@git_config@"
+export GIT_CONFIG_GLOBAL="${SB_GIT_CONFIG:-}"
 
 # guest 的 HTTPS 出口由 msb 重签证书，只信任镜像里的 /etc/ssl/certs/ca-certificates.crt（内容就是 msb 的 CA）。
 # Nix 的公共 CA bundle 会报「self-signed certificate in certificate chain」，所以没有回落
@@ -52,6 +52,7 @@ mise reshim
 
 # 2. 运行共享工具 postInstall 步骤（插件装到暂存目录，成功后整体替换）
 echo "[sb sync] 2. 执行工具 postInstall (重放插件清单)..."
-@postinstall_steps@
-
+if [[ -n "${SB_POSTINSTALL_HOOK:-}" && -x "${SB_POSTINSTALL_HOOK:-}" ]]; then
+  "$SB_POSTINSTALL_HOOK"
+fi
 echo "[sb sync] 工具与插件补齐成功。"
