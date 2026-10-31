@@ -24,7 +24,6 @@
     "openai/gpt-6-astra:high",
     "openai/gpt-6.1-sol:high",
     "trae/glm-5.3:high",
-    "zcode-local/glm-5.3-flash:high",
     "zed/anthropic/claude-sonnet-5-5:high"
   ],
   "extensions": [],
