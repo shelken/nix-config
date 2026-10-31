@@ -81,7 +81,7 @@ ip link show <网卡>         # MTU
 
 `common.nix` 目前按 vps-cc 写：`sops.defaultSopsFile` 指向 `vps-cc.yaml`，sshd 端口、防火墙放行都是 vps-cc 的。加第二台时，把这些挪进各主机自己的 `default.nix`
 
-服务商会发 IPv6 路由通告时，保留 vps-cc 里那段 `accept_ra = 0`、`autoconf = 0`，否则自动地址会抢走 UDP 回包的源地址（`postmortems/006-vps-cc-cutover-findings.md`）
+服务商会发 IPv6 路由通告时，保留 vps-cc 里那段 `accept_ra = 0`、`autoconf = 0`，否则自动地址会抢走 UDP 回包的源地址，原因见 `hosts/vps/vps-cc/default.nix` 的注释
 
 ### 4. 注册并构建
 
@@ -96,7 +96,7 @@ nix build .#nixosConfigurations.<主机>.config.system.build.toplevel
 
 ### 5. 先演练（可选，换了固件或架构时强烈建议）
 
-`vps-test` 是 x86_64 BIOS 的 Lima 演练机，与 vps-cc 共用 `common.nix`，完整走一遍约 20 分钟，命令见 `hosts/vps/vps-cc/README.md` 的「演练」一节。演练暴露过的坑记在 `postmortems/005-nixos-anywhere-vps-rehearsal-pitfalls.md`
+`vps-test` 是 x86_64 BIOS 的 Lima 演练机，与 vps-cc 共用 `common.nix`，完整走一遍约 20 分钟，命令见 `hosts/vps/vps-cc/README.md` 的「演练」一节。演练暴露过的坑与处理见同一节的「演练里遇到的问题」
 
 ## 装机
 
