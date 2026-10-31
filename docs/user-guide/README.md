@@ -2,10 +2,11 @@
 
 本仓库各功能模块的使用指南索引
 
-| 文档                                       | 说明                                             |
-| ------------------------------------------ | ------------------------------------------------ |
-| [00-quickstart.md](00-quickstart.md)       | 快速上手：常用命令与工作流                       |
-| [01-tasks.md](01-tasks.md)                 | 声明式定时任务：主机任务与模块任务               |
-| [02-features.md](02-features.md)           | 功能与角色：加软件、启用可选功能、调参数、加主机 |
-| [03-agent-sandbox.md](03-agent-sandbox.md) | Agent 沙箱：在隔离 VM 里同时跑多个 OMP           |
-| [04-backup.md](04-backup.md)               | 备份：kopia 快照、策略、手动入口与恢复           |
+| 文档                                       | 说明                                                 |
+| ------------------------------------------ | ---------------------------------------------------- |
+| [00-quickstart.md](00-quickstart.md)       | 快速上手：常用命令与工作流                           |
+| [01-tasks.md](01-tasks.md)                 | 声明式定时任务：主机任务与模块任务                   |
+| [02-features.md](02-features.md)           | 功能与角色：加软件、启用可选功能、调参数、加主机     |
+| [03-agent-sandbox.md](03-agent-sandbox.md) | Agent 沙箱：在隔离 VM 里同时跑多个 OMP               |
+| [04-backup.md](04-backup.md)               | 备份：kopia 快照、策略、手动入口与恢复               |
+| [05-vps.md](05-vps.md)                     | VPS：nixos-anywhere 接管、disko 分区、deploy-rs 部署 |
