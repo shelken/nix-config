@@ -19,15 +19,6 @@ src.git      = "https://github.com/forrestchang/andrej-karpathy-skills"
 src.branch   = "main"
 fetch.github = "forrestchang/andrej-karpathy-skills"
 
-[anti-slop]
-src.github_tag = "dmmulroy/anti-slop"
-fetch.github   = "dmmulroy/anti-slop"
-
-[diagram-design]
-src.git      = "https://github.com/cathrynlavery/diagram-design"
-src.branch   = "main"
-fetch.github = "cathrynlavery/diagram-design"
-
 [humanlayer-skills]
 src.git      = "https://github.com/humanlayer/skills"
 src.branch   = "main"
@@ -55,13 +46,3 @@ fetch.github = "cloudflare/security-audit-skill"
 [zjstatus]
 src.github = "dj95/zjstatus"
 fetch.url  = "https://github.com/dj95/zjstatus/releases/download/$ver/zjstatus.wasm"
-
-[yazi-plugins]
-src.git      = "https://github.com/yazi-rs/plugins"
-src.branch   = "main"
-fetch.github = "yazi-rs/plugins"
-
-[projects-yazi]
-src.git      = "https://github.com/MasouShizuka/projects.yazi"
-src.branch   = "main"
-fetch.github = "MasouShizuka/projects.yazi"

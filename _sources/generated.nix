@@ -18,17 +18,6 @@
     };
     date = "2026-04-20";
   };
-  anti-slop = {
-    pname = "anti-slop";
-    version = "v0.1.2";
-    src = fetchFromGitHub {
-      owner = "dmmulroy";
-      repo = "anti-slop";
-      rev = "v0.1.2";
-      fetchSubmodules = false;
-      sha256 = "sha256-K+nxeaH2h33Ixjn5HbFTw2n2d+s12SpKbVP90tkyj9A=";
-    };
-  };
   cursor-plugins = {
     pname = "cursor-plugins";
     version = "6f6c9e62585436f69e560138d46709026fa5c69f";
@@ -40,18 +29,6 @@
       sha256 = "sha256-Rq2nUBzdTGv6FOYWPpbF/2y3wJ51KszcRqoV4N/Oe0Y=";
     };
     date = "2026-10-28";
-  };
-  diagram-design = {
-    pname = "diagram-design";
-    version = "cdfdc9686cd7465da70b68b036581833b503810c";
-    src = fetchFromGitHub {
-      owner = "cathrynlavery";
-      repo = "diagram-design";
-      rev = "cdfdc9686cd7465da70b68b036581833b503810c";
-      fetchSubmodules = false;
-      sha256 = "sha256-sIRMfRbZ2uj4MDLOLDzufM9wg4CtQi3sGtIfhLAJry8=";
-    };
-    date = "2026-10-09";
   };
   humanlayer-skills = {
     pname = "humanlayer-skills";
@@ -99,18 +76,6 @@
     };
     date = "2026-10-27";
   };
-  projects-yazi = {
-    pname = "projects-yazi";
-    version = "181ebafba6320244ffd132f0e234b2a523b5ee00";
-    src = fetchFromGitHub {
-      owner = "MasouShizuka";
-      repo = "projects.yazi";
-      rev = "181ebafba6320244ffd132f0e234b2a523b5ee00";
-      fetchSubmodules = false;
-      sha256 = "sha256-pe1ygeaKtSRUkWhxpq3VMoVFUmqBbEGbO2dTbio6bcw=";
-    };
-    date = "2026-09-19";
-  };
   reverse-skill = {
     pname = "reverse-skill";
     version = "v1.0.1";
@@ -133,18 +98,6 @@
       sha256 = "sha256-oVVACjotkHvllQGxEP8yWaEt4c3GxT0d909TUM5P3NM=";
     };
     date = "2026-09-14";
-  };
-  yazi-plugins = {
-    pname = "yazi-plugins";
-    version = "6229767f7fef39a2a78f5cee9122cc4dfb43f327";
-    src = fetchFromGitHub {
-      owner = "yazi-rs";
-      repo = "plugins";
-      rev = "6229767f7fef39a2a78f5cee9122cc4dfb43f327";
-      fetchSubmodules = false;
-      sha256 = "sha256-/BNGoWziHIZ9i+RoTWGq/q3ZowNCyHGBOWiz8v2/vOE=";
-    };
-    date = "2026-10-02";
   };
   zjstatus = {
     pname = "zjstatus";

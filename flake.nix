@@ -43,6 +43,10 @@
         in
         inputs
         // {
+          # 所有模块统一用 `inputs.<name>` 取 flake 输入，包括 flake = false 的静态资源；
+          # 不把每个带连字符的 input 展平成裸参数，模块参数表保持稳定。
+          inherit inputs;
+
           # 主输入即 unstable channel；HM 模块沿用 pkgs-unstable 变量名，与 pkgs 同源
           pkgs-unstable = pkgs;
 
@@ -392,6 +396,24 @@
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    ###########################################################
+
+    # 静态资源：他人维护、本仓库只锁版本并原样使用的文件树（外部 skill、图标、词库），
+    # 不提供 nix 代码，所以 flake = false。
+    # 写 git+https 而不是 github:，因为 github fetcher 拒绝同时给 ref 与 rev；
+    # Renovate 的 nix manager 只在 original 同时有 ref 与 rev 时按 input 开 digest PR
+    # 替换这里的 rev（ref 写默认分支名，不带 refs/heads/ 前缀）。
+    # shallow=1：静态资源只要一棵树，不需要历史。
+    anti-slop = {
+      url = "git+https://github.com/dmmulroy/anti-slop?ref=main&rev=e8c4880471b23ab7f216fba7b27d173a6ef07d4c&shallow=1";
+      flake = false;
+    };
+
+    diagram-design = {
+      url = "git+https://github.com/cathrynlavery/diagram-design?ref=main&rev=cdfdc9686cd7465da70b68b036581833b503810c&shallow=1";
+      flake = false;
     };
   };
 }

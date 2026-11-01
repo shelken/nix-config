@@ -20,27 +20,6 @@
         },
         "version": "2c606141936f1eeef17fa3043a72095b4765b9c2"
     },
-    "anti-slop": {
-        "cargoLock": null,
-        "date": null,
-        "extract": null,
-        "name": "anti-slop",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "dmmulroy",
-            "repo": "anti-slop",
-            "rev": "v0.1.2",
-            "sha256": "sha256-K+nxeaH2h33Ixjn5HbFTw2n2d+s12SpKbVP90tkyj9A=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "v0.1.2"
-    },
     "cursor-plugins": {
         "cargoLock": null,
         "date": "2026-10-28",
@@ -61,27 +40,6 @@
             "type": "github"
         },
         "version": "6f6c9e62585436f69e560138d46709026fa5c69f"
-    },
-    "diagram-design": {
-        "cargoLock": null,
-        "date": "2026-10-09",
-        "extract": null,
-        "name": "diagram-design",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "cathrynlavery",
-            "repo": "diagram-design",
-            "rev": "cdfdc9686cd7465da70b68b036581833b503810c",
-            "sha256": "sha256-sIRMfRbZ2uj4MDLOLDzufM9wg4CtQi3sGtIfhLAJry8=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "cdfdc9686cd7465da70b68b036581833b503810c"
     },
     "humanlayer-skills": {
         "cargoLock": null,
@@ -167,27 +125,6 @@
         },
         "version": "59db609eb1e18aaf59b63284d0e52255aff0c63c"
     },
-    "projects-yazi": {
-        "cargoLock": null,
-        "date": "2026-09-19",
-        "extract": null,
-        "name": "projects-yazi",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "MasouShizuka",
-            "repo": "projects.yazi",
-            "rev": "181ebafba6320244ffd132f0e234b2a523b5ee00",
-            "sha256": "sha256-pe1ygeaKtSRUkWhxpq3VMoVFUmqBbEGbO2dTbio6bcw=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "181ebafba6320244ffd132f0e234b2a523b5ee00"
-    },
     "reverse-skill": {
         "cargoLock": null,
         "date": null,
@@ -229,27 +166,6 @@
             "type": "github"
         },
         "version": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8"
-    },
-    "yazi-plugins": {
-        "cargoLock": null,
-        "date": "2026-10-02",
-        "extract": null,
-        "name": "yazi-plugins",
-        "passthru": null,
-        "pinned": false,
-        "src": {
-            "deepClone": false,
-            "fetchSubmodules": false,
-            "leaveDotGit": false,
-            "name": null,
-            "owner": "yazi-rs",
-            "repo": "plugins",
-            "rev": "6229767f7fef39a2a78f5cee9122cc4dfb43f327",
-            "sha256": "sha256-/BNGoWziHIZ9i+RoTWGq/q3ZowNCyHGBOWiz8v2/vOE=",
-            "sparseCheckout": [],
-            "type": "github"
-        },
-        "version": "6229767f7fef39a2a78f5cee9122cc4dfb43f327"
     },
     "zjstatus": {
         "cargoLock": null,
