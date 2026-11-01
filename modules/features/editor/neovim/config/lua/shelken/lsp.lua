@@ -21,28 +21,6 @@ vim.lsp.config("yamlls", {
 })
 vim.lsp.enable(languages.lsp)
 
-require("blink.cmp").setup({
-  keymap = {
-    preset = "enter",
-    ["<Tab>"] = { "select_next", "snippet_forward", "fallback" },
-    ["<S-Tab>"] = { "select_prev", "snippet_backward", "fallback" },
-  },
-  completion = { documentation = { auto_show = true } },
-  signature = { enabled = true },
-  -- 命令行补全默认要按 Tab 才弹出；改为边输边弹，Tab 确认（原 cmp-cmdline 习惯）
-  cmdline = {
-    keymap = {
-      preset = "cmdline",
-      ["<Tab>"] = { "select_and_accept", "show_and_insert" },
-      ["<Down>"] = { "select_next", "fallback" },
-      ["<Up>"] = { "select_prev", "fallback" },
-    },
-    completion = { menu = { auto_show = true } },
-  },
-})
--- blink 接管补全菜单，关掉 options.lua 里给 minimal 用的内置 autocomplete
-vim.o.autocomplete = false
-
 local conform = require("conform")
 conform.setup({
   formatters_by_ft = languages.formatters,

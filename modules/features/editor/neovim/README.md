@@ -4,20 +4,20 @@
 
 ## 两层
 
-| 层               | 谁有                                         | 内容                                                                                               |
-| ---------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `neovim-minimal` | 所有主机（core，含服务器）                   | nvim、`config/` 的选项、`baseGrammars` 的 treesitter 高亮、内置 `autocomplete`（当前 buffer 的词） |
-| `neovim`         | tui 及以上，`shelken.neovim.minimal = false` | 再加 `_languages.nix` 的工具、LSP、其余语法和插件；blink.cmp 接管补全                              |
+| 层               | 谁有                                         | 内容                                                                                                                                |
+| ---------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `neovim-minimal` | 所有主机（core，含服务器）                   | nvim、选项与键位、`_languages.nix` 全部语法的高亮、外观与补全（noice 居中命令行、blink.cmp、markview、mini.icons）、透明 catppuccin |
+| `neovim`         | tui 及以上，`shelken.neovim.minimal = false` | 再加语言工具、LSP / conform / nvim-lint 与功能类插件（snacks、gitsigns、which-key、flash、mini.surround、yazi、grug-far）           |
 
-两层共用一份 `config/`：`init.lua` 只在 Nix 注入了 `vim.g.nix_languages`（完整层）时加载 `lsp.lua` 与 `plugins.lua`。
+两层共用一份 `config/`：`init.lua` 总是加载 `options` / `keymaps` / `ui`，只在 Nix 注入了 `vim.g.nix_languages`（完整层）时加载 `lsp` / `plugins`。插件放哪层的原则：不依赖外部命令的外观与补全进 minimal，依赖语言工具或 rg 等命令的留在完整层。
 
 ## 文件
 
-| 文件             | 作用                                                        |
-| ---------------- | ----------------------------------------------------------- |
-| `default.nix`    | 两层的 HM 模块；`baseGrammars` 决定没有语言工具时也有的高亮 |
-| `_languages.nix` | 语言表：每种语言的工具包、LSP、formatter、linter、语法      |
-| `config/`        | `~/.config/nvim`，普通 Lua，经 `mylib.mkConfigFile` 部署    |
+| 文件             | 作用                                                     |
+| ---------------- | -------------------------------------------------------- |
+| `default.nix`    | 两层的 HM 模块；各层插件列表与 catppuccin 集成           |
+| `_languages.nix` | 语言表：每种语言的工具包、LSP、formatter、linter、语法   |
+| `config/`        | `~/.config/nvim`，普通 Lua，经 `mylib.mkConfigFile` 部署 |
 
 ## 加一门语言
 

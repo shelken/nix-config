@@ -18,9 +18,6 @@ opt.tabstop = 2
 opt.updatetime = 300
 opt.timeoutlen = 400
 opt.confirm = true
--- 内置补全：边打字边弹出当前 buffer 的词，不依赖插件
-opt.autocomplete = true
-opt.completeopt = { "menuone", "noselect", "popup" }
 
 vim.filetype.add({
   pattern = {
