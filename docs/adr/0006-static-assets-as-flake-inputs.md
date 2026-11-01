@@ -16,6 +16,6 @@
 
 - `ref` 必须写默认分支名（不带 `refs/heads/` 前缀）：git-refs datasource 的 release version 去掉了这个前缀，写全了 `getDigest` 就匹配不到，PR 不会出现
 - `shallow=1` 让锁定信息里没有 `revCount`；静态资源只需要一棵树，不受影响
-- 含 `.gitattributes` eol 规则的仓库内容会与 nvfetcher 的 tarball 不同：当前 `reverse-skill` 的 23 个 `*.ps1` 在 git 输入下是 LF，而旧 tarball 是 CRLF
+- 含 `.gitattributes` eol 规则的仓库在 git 输入下与 tarball 内容不同：`reverse-skill` 的 23 个 `*.ps1` 会从 CRLF 变 LF，该源已因此移除；其余源的 narHash 与 nvfetcher 的 tarball 一致
 - skill 类静态资源逐 input 人工合并，非 skill 静态资源（雾凇拼音、kitty 图标）的 digest 更新自动合并；不写 rev 的 flake 依赖仍靠每周一次的 lockFileMaintenance
 - 上游 skill 内容变化时，一个 workflow 会按 `flake.skillSourceDirs` 把「已启用目录」内的文件 diff 贴进 Renovate PR

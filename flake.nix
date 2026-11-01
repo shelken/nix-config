@@ -431,11 +431,6 @@
       flake = false;
     };
 
-    reverse-skill = {
-      url = "git+https://github.com/zhaoxuya520/reverse-skill?ref=main&rev=9c28c6ca1062a1a076e28baf40f241dbb4cf5dc2&shallow=1";
-      flake = false;
-    };
-
     # 霧凇拼音
     rime-main = {
       url = "git+https://github.com/iDvel/rime-ice?ref=main&rev=da1fbe602e38f26db846fa10120ee64c2b0324c0&shallow=1";

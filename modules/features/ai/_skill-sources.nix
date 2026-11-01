@@ -95,12 +95,6 @@
     frontmatter.setup-pstack.disable-model-invocation = true;
   };
 
-  reverse-skill = {
-    input = "reverse-skill";
-    base = ".";
-    skills.reverse-skill = "skills";
-  };
-
   security-audit-skill = {
     input = "security-audit-skill";
     base = ".";

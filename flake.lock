@@ -601,25 +601,6 @@
         "type": "github"
       }
     },
-    "reverse-skill": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1786185153,
-        "narHash": "sha256-Rr903Czwk66A4RTZHv4pj7t4OAuA4U2I2HOX+clzEJI=",
-        "ref": "main",
-        "rev": "9c28c6ca1062a1a076e28baf40f241dbb4cf5dc2",
-        "shallow": true,
-        "type": "git",
-        "url": "https://github.com/zhaoxuya520/reverse-skill"
-      },
-      "original": {
-        "ref": "main",
-        "rev": "9c28c6ca1062a1a076e28baf40f241dbb4cf5dc2",
-        "shallow": true,
-        "type": "git",
-        "url": "https://github.com/zhaoxuya520/reverse-skill"
-      }
-    },
     "rime-main": {
       "flake": false,
       "locked": {
@@ -662,7 +643,6 @@
         "nixos-generators": "nixos-generators",
         "nixpkgs": "nixpkgs",
         "nixpkgs-darwin": "nixpkgs-darwin",
-        "reverse-skill": "reverse-skill",
         "rime-main": "rime-main",
         "secrets": "secrets",
         "security-audit-skill": "security-audit-skill",

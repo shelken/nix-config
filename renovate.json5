@@ -67,7 +67,6 @@
         "humanlayer-skills",
         "llamaparse-agent-skills",
         "mattpocock-skills",
-        "reverse-skill",
         "security-audit-skill",
       ],
       commitMessageTopic: "{{depName}}",
