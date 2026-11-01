@@ -37,5 +37,8 @@ extend-ignore-re = [
 
   # Nerd Font powerline 字形码点（modules/features/shell/starship.nix）
   "E0BA",
-  "facter"
+  "facter",
+
+  # AstroNvim 的「最近文件」键位（modules/features/editor/neovim/config）
+  "<leader>fo"
 ]

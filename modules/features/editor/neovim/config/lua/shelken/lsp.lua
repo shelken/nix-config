@@ -1,5 +1,5 @@
--- 语言表由 Nix 生成（见 _languages.nix）；裸跑 nvim 时为空
-local languages = vim.g.nix_languages or { lsp = {}, formatters = {}, linters = {} }
+-- 只在完整层加载（见 init.lua）；语言表由 Nix 生成，见 _languages.nix
+local languages = vim.g.nix_languages
 
 vim.diagnostic.config({
   virtual_text = true,
@@ -30,6 +30,8 @@ require("blink.cmp").setup({
   completion = { documentation = { auto_show = true } },
   signature = { enabled = true },
 })
+-- blink 接管补全菜单，关掉 options.lua 里给 minimal 用的内置 autocomplete
+vim.o.autocomplete = false
 
 local conform = require("conform")
 conform.setup({
@@ -38,7 +40,11 @@ conform.setup({
 })
 vim.keymap.set({ "n", "x" }, "<leader>lf", function()
   conform.format({ lsp_format = "fallback" })
-end, { desc = "Format" })
+end, { desc = "Format buffer" })
+-- 与 Neovim 自带的 gra / grn 等并存，沿用 AstroNvim 习惯
+vim.keymap.set({ "n", "x" }, "<leader>la", vim.lsp.buf.code_action, { desc = "LSP code action" })
+vim.keymap.set("n", "<leader>lr", vim.lsp.buf.rename, { desc = "Rename current symbol" })
+vim.keymap.set("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
 
 local lint = require("lint")
 lint.linters_by_ft = languages.linters
