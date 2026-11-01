@@ -136,6 +136,35 @@ resolve_conflict() {
   exit 1
 }
 
+# 声明删除或改名后，旧落点的空占位留在数据盘，工具会把它当真文件加载（OMP 读到空的 guard.ts 报
+# 「does not export a valid factory function」）。记录上次布局用的清单，删掉新清单里已经没有的空占位；
+# 旧数据盘没有记录时，用保留的历史发布清单代替。别的上下文可能正把它当挂载点用，所以只在独占时清理
+LAYOUT_STATE=/data/home/.declared-paths
+prune_stale_placeholders() {
+  local others="$1" list="$2" t dst a
+  local -a previous=()
+  [[ "$others" -eq 0 ]] || return 0
+  if [[ -f "$LAYOUT_STATE" ]]; then
+    previous=("$LAYOUT_STATE")
+  else
+    previous=(/run/sandbox-config/v*/declared-paths)
+  fi
+  while IFS= read -r t; do
+    [[ -n "$t" ]] || continue
+    dst="$(declared_dst "$t")"
+    # 不在当前可写根或 /data 下的落点映射不到数据盘，跳过，避免误删 guest 自己的文件
+    mount_root_of "$dst" >/dev/null || continue
+    a="$(backing_of "$dst")"
+    if [[ -e "$a" ]] && is_empty_placeholder "$a"; then
+      rm -rf "$a"
+    fi
+  done < <(LC_ALL=C comm -23 <(cat "${previous[@]}" 2>/dev/null | LC_ALL=C sort -u) <(LC_ALL=C sort -u "$list"))
+  # 没有可写根的发布（如冒烟测试）不会建 /data/home
+  mkdir -p "${LAYOUT_STATE%/*}"
+  cp "$list" "$LAYOUT_STATE.tmp"
+  mv "$LAYOUT_STATE.tmp" "$LAYOUT_STATE"
+}
+
 # 布局结果：bwrap 参数，以及需要变成挂载点的目录（导入目标不得落在其下）
 LAYOUT_ARGS=()
 MOUNT_POINTS=()
@@ -194,6 +223,7 @@ prepare_declared_layout() {
   for root in "${!AGENT_ROOTS[@]}"; do
     LAYOUT_ARGS+=(--bind "${AGENT_ROOTS[$root]}" "$root")
   done
+  prune_stale_placeholders "$others" "$list"
 
   while IFS= read -r t; do
     [[ -n "$t" ]] || continue

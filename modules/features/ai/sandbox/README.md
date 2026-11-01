@@ -322,6 +322,7 @@ PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 - launcher 只解析一次 `current`，清单与挂载源来自同一版本目录；源缺失直接报错并指出路径，不跳过
 - 嵌套声明项的祖先目录（如 `extensions/`、`intercom/`、`/data/xdg/config/<X>`），以及 `/root` 和各根的上层目录（由 `writable-roots` 推出，如 `/root/.omp`、`/root/.pi`），也都做成挂载点。内核只拒绝改名挂载点本身，改名普通祖先会把下面的只读挂载一起移走，原位置就能建出可写的同名替身（实测，经上下文路径或 `/data` 后备路径都成立）。做成挂载点后改名一律 `Device or resource busy`。`imports` 的目标也不得落在这些挂载点或根下，同样由清单推出
 - 挂载点在数据卷上留下空文件或空目录占位。声明从文件改成目录（或反过来）时，旧占位会让 bwrap 报 `Destination is not a file` 而起不来。launcher 在启动锁内检查：类型不符的空占位，没有别的上下文在运行时删除；有别的上下文时报错，占位是它们的挂载点，类型要变就等全部退出后再整理；非空内容一律报错，不自动删，里面可能是别的上下文的运行状态
+- 声明删除或改名后，旧落点的空占位不再被挂载遮住，工具会把它当真文件加载：`extensions/guard.ts` 改成 `extensions/guard/` 后，OMP 读到空的 `guard.ts`，报「Extension does not export a valid factory function」。launcher 把上次布局用的清单记在 `/data/home/.declared-paths`，启动锁内没有别的上下文时，删除新清单里已经没有的空占位，再写入新清单；有别的上下文时这次跳过，等下次独占启动。旧数据卷没有这份记录时，用 `/run/sandbox-config` 下保留的历史版本清单代替。非空内容不删，可能是运行状态
 - 发布脚本保留旧版本 7 天。挂载钉住启动时的版本目录，立即删除旧版本会让运行中的上下文读不到复制来的条目（live-edit 主机上的 `settings.json`、`AGENTS.md` 等，实测）
 
 考虑过的替代方案：
