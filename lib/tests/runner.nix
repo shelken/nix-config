@@ -16,10 +16,14 @@ let
     lib = pkgs.lib;
     inherit mylib;
   };
+  mkConfigLinkTests = import ./mkConfigLink.nix {
+    lib = pkgs.lib;
+    inherit mylib;
+  };
 in
 {
-  inherit calcUniformScheduleTests;
+  inherit calcUniformScheduleTests mkConfigLinkTests;
 
   # 检查所有测试是否通过
-  allPassed = calcUniformScheduleTests.allPassed && true;
+  allPassed = calcUniformScheduleTests.allPassed && mkConfigLinkTests.allPassed;
 }

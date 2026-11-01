@@ -9,3 +9,5 @@
 3. home-manager 缺少现成配置时，使用 `mylib.mkConfigFile config ./x` 或 `mylib.mkConfigLink config ./x`（路径字面量，相对当前功能文件）；开发机开启 `shelken.dotfiles.liveEdit` 可实现即时生效，远程部署机自动采用 Nix Store 路径保障自包含与原子回滚
 4. 本地已有现存配置时，需先提示用户并确认处理策略
 5. 软件若会自动写入大量动态配置，优先采用「读取后合并覆盖」，默认不进行全量静态声明管理
+
+`liveEdit = false` 时，辅助函数将目标文件或目录单独复制到 Nix store。无关的仓库文件变化不会改变该配置来源；返回路径仍保留 store 依赖，供 Home Manager 和 sandbox 配置清单引用。不要通过字符串插值仓库根路径来构造单个配置文件的来源，否则整个仓库会进入其依赖。
