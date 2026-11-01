@@ -53,6 +53,9 @@ in
       };
 
       xdg.configFile.nvim = mylib.mkConfigFile config ./config;
+
+      # 透出终端背景（原 AstroNvim 配置同样开启）
+      catppuccin.nvim.settings.transparent_background = true;
     };
 
   flake.modules.homeManager.neovim =
@@ -110,6 +113,24 @@ in
               markview-nvim
             ];
         };
+
+        # catppuccin 的 auto_integrations 只认 vim.pack / lazy / pckr，识别不了 Nix 放进 packpath 的插件，需显式列出
+        catppuccin.nvim.settings.integrations =
+          lib.genAttrs
+            [
+              "blink_cmp"
+              "flash"
+              "gitsigns"
+              "grug_far"
+              "markview"
+              "mini"
+              "noice"
+              "snacks"
+              "which_key"
+            ]
+            (_: {
+              enabled = true;
+            });
       };
     };
 }
