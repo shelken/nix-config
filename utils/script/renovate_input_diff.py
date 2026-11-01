@@ -113,6 +113,8 @@ def input_blocks(
         lines.append(f"新增 input，锁定 `{short(after_rev)}`")
     elif after is None:
         lines.append(f"移除 input，原锁定 `{short(before_rev)}`")
+    elif before_rev == after_rev:
+        lines.append(f"input 定义变了，rev 未变（`{short(after_rev)}`）")
     else:
         lines.append(f"`{short(before_rev)}` → `{short(after_rev)}`")
     if repo and before_rev and after_rev and before_rev != after_rev:

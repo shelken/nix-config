@@ -84,6 +84,13 @@ body = "\n\n".join(blocks)
 assert "新增 input" in body
 assert calls == []
 
+# URL 变了但 rev 没变（例如 github: 换 git+https:）：说明 rev 未变，也不查文件
+retargeted = dict(base["nodes"]["demo-skill"])
+retargeted["original"] = {**retargeted["original"], "type": "github", "url": "https://github.com/example/demo-skill"}
+body = "\n\n".join(module.input_blocks("demo-skill", base["nodes"]["demo-skill"], retargeted, ["skills/demo"], "token"))
+assert "rev 未变" in body
+assert calls == []
+
 # 启用目录内没有改动时给出说明，不列文件
 calls.clear()
 
