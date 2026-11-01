@@ -28,6 +28,7 @@
   packageRules: [
     {
       matchManagers: ["github-actions"],
+      // Actions 使用完整 SHA + major 标签注释（# vN），由 Renovate 更新版本和 digest。
       pinDigests: true,
       automerge: true,
       automergeType: "pr",

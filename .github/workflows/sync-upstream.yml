@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       input:
-        type: string
+        type: choice
         description: flake input to be synced
         options:
           - dotfiles
@@ -16,23 +16,23 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@main
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: main
           submodules: true
           fetch-depth: 0
           token: "${{ secrets.GITHUB_TOKEN }}"
 
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - uses: DeterminateSystems/flake-checker-action@main
+      - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
+      - uses: DeterminateSystems/magic-nix-cache-action@84c0677f58dcedf3b91f8223ce36a9ea5b3c84b7 # v15
+      - uses: DeterminateSystems/flake-checker-action@786422608c7bded2bbc9741ad9f91356842bf520 # v14
 
       - name: update flake upstream input
         shell: bash
         run: |
           nix flake lock --update-input ${{ inputs.input }}
 
-      - uses: EndBug/add-and-commit@main
+      - uses: EndBug/add-and-commit@cc9c08ba6c8df3b93a8f2db63e89b98368ae2ae8 # v11
         with:
           add: flake.lock
           commit: --signoff
