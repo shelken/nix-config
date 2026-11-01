@@ -3,11 +3,12 @@
 vim.g.mapleader = " "
 vim.g.maplocalleader = ","
 
-require("vim._core.ui2").enable({})
-
 require("shelken.options")
 require("shelken.keymaps")
 if vim.g.nix_languages then
   require("shelken.lsp")
   require("shelken.plugins")
+else
+  -- 完整层用 noice（居中命令行），两者接管同一组 UI 事件，只能开一个
+  require("vim._core.ui2").enable({})
 end

@@ -105,6 +105,9 @@ in
               mini-surround
               flash-nvim
               yazi-nvim
+              noice-nvim
+              nui-nvim
+              markview-nvim
             ];
         };
       };

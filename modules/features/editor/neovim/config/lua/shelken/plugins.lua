@@ -3,6 +3,13 @@ local map = vim.keymap.set
 require("mini.icons").setup()
 require("mini.icons").mock_nvim_web_devicons()
 
+-- 居中的命令行输入框（cmdline_popup），沿用原 AstroNvim 的 noice 配置
+require("noice").setup({
+  presets = { command_palette = false, long_message_to_split = true },
+})
+-- markdown 渲染（标题、列表、代码块、表格）；markview 打开 markdown 时自动挂上
+require("markview").setup()
+
 local snacks = require("snacks")
 -- 启动画面：chafa 把 gif 实时渲染成盲文字符画；ttl = 0 不缓存，保留动画
 local logo = vim.fn.stdpath("config") .. "/assets/mio.gif"
