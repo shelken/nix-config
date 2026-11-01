@@ -34,5 +34,5 @@ Preconditions:
 
 - 求值失败的一侧输出 `EVAL ERROR` 且退出码为 `0`；先确认基线本身能否求值，再归因到本次变更
 - `added`/`removed` 按去掉 hash 的名字比较，同名 derivation 的版本变化会落在 `real`
-- `mkConfigFile` 的软链目标在 `liveEdit = true` 的主机上是仓库工作区路径，移动文件才会让 `hm_*.drv` 进入 `real`；`liveEdit = false` 的主机取整仓快照，路径前缀同样会变，但表现不同。验证前缀替换时，路径在 derivation 的 `env.buildCommand` 里
+- `mkConfigFile` 的软链目标在 `liveEdit = true` 的主机上是仓库工作区路径，移动文件才会让 `hm_*.drv` 进入 `real`；`liveEdit = false` 的主机取 `modules/` 快照，`modules/` 内任一文件变化都会改变快照 hash，让引用它的 `hm_*.drv` 进入 `real`。验证前缀替换时，路径在 derivation 的 `env.buildCommand` 里
 - 只证明 derivation 层面等价；Homebrew 实际安装、launchd 运行状态等副作用仍需 build 或 switch 验证
