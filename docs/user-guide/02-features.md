@@ -95,7 +95,7 @@ NixOS 主机用 `self.modules.nixos.<名>`
 | `backup.calendarInterval`   | `home.nix`    | 按 hostname 分布 | kopia 快照时间，`"H:M"` 列表；默认 `2:00` 到 `8:00` 间取两个时刻（`workstation`） |
 | `backup.policySyncWhen`     | `home.nix`    | `"5:00"`         | kopia 周日策略同步的时间（`workstation`）                                         |
 | `dev.ai.sandbox.enable`     | `home.nix`    | `false`          | 安装 agent 沙箱（`workstation`）                                                  |
-| `neovim.minimal`            | `home.nix`    | `false`          | 只装 neovim，不带配置                                                             |
+| `neovim.minimal`            | `home.nix`    | `false`          | 保留高亮、补全与外观，不装语言工具、LSP 与功能类插件（`tui` 及以上）              |
 
 ## 新增一台主机
 

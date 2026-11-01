@@ -180,11 +180,6 @@ kitty-clean:
 ls-gen:
     @sudo darwin-rebuild --list-generations
 
-# 清除nvim
-nvim-clean:
-    # 变更原因：旧 AstroNvim v3 用户配置在 ~/.config/astronvim/lua/user，当前 v4 配置落在 ~/.config/nvim；两处都清理才符合这个任务名。
-    @rm -rf $HOME/.config/astronvim/lua/user $HOME/.config/nvim
-
 # hash 计算统一入口（见 utils/script/prefetch --help）
 prefetch *args:
     @{{ justfile_directory() }}/utils/script/prefetch {{ args }}

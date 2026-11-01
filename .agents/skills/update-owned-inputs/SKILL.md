@@ -1,6 +1,6 @@
 ---
 name: update-owned-inputs
-description: 当用户要更新、修改、同步自己维护的外部 input 或其上游源码仓库时使用，尤其适用于 `dotfiles.nix`、`secrets.nix`、`dot-astro-nvim` 等，以及“先改上游再回当前项目更新 flake.lock”“等 action 跑完再 upp”这类场景
+description: 当用户要更新、修改、同步自己维护的外部 input 或其上游源码仓库时使用，尤其适用于 `dotfiles.nix`、`secrets.nix` 等，以及“先改上游再回当前项目更新 flake.lock”“等 action 跑完再 upp”这类场景
 ---
 
 # 外部 input 工作流
@@ -13,14 +13,12 @@ description: 当用户要更新、修改、同步自己维护的外部 input 或
 
 ## 项目一句话说明
 
-- `dot-astro-nvim`：个人 AstroNvim 配置仓库，作为 `dotfiles.nix` 的上游源码
 - `dotfiles.nix`：将个人配置仓库封装为 flake packages，当前项目通过它获取上游源码
 - `secrets.nix`：个人 secrets 仓库，当前项目直接引用
 - `rime-auto-deploy`：rime 输入法配置仓库
 
 ## Action 一句话说明
 
-- `dot-astro-nvim` 的 `sync upstream trigger`：推送至 `main` 后触发 `dotfiles.nix` 的 `sync-upstream.yml`，自动更新对应 input 的 `flake.lock` 并提交
 - `dotfiles.nix` 的 `sync-upstream.yml`：接收 input 名称，执行 `nix flake lock --update-input` 并自动提交 `flake.lock`
 - `secrets.nix`：通常无联动 action
 
@@ -41,16 +39,15 @@ description: 当用户要更新、修改、同步自己维护的外部 input 或
 
 ## 例子
 
-### 改 `dot-astro-nvim`
+### 改 `dotfiles.nix` 的上游源码仓库
 
-1. 在 `~/Code` 搜索并定位 `dot-astro-nvim` 仓库
+1. 在 `~/Code` 搜索并定位该上游仓库
 2. 修改源码并完成本地测试
 3. 提交并推送至远程
-4. 等待 `dot-astro-nvim` 的 action 执行完成
-5. 等待 `dotfiles.nix` 触发的 action 执行完成
-6. 返回当前项目执行 `just upp dotfiles`
-7. 依据影响范围执行 `just hm` 或 `just sw`
-8. 检查 `flake.lock` diff 并提交当前项目
+4. 等待上游仓库与 `dotfiles.nix` 的联动 action（若有）执行完成
+5. 返回当前项目执行 `just upp dotfiles`
+6. 依据影响范围执行 `just hm` 或 `just sw`
+7. 检查 `flake.lock` diff 并提交当前项目
 
 ## 不要这样做
 
