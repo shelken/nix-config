@@ -1,11 +1,9 @@
-[services.sakamoto]
-type = "sftp"
+[sftp.sakamoto]
 host = "sakamoto.local"
 user = "shelken"
 port = 22
 
-[services.yuuko]
-type = "sftp"
+[sftp.yuuko]
 host = "yuuko.local"
 user = "shelken"
 port = 22

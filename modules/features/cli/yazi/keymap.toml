@@ -40,7 +40,3 @@ desc = "合并当前标签页到其他项目"
 on   = ["P", "M"]
 run  = "plugin projects 'merge all'"
 desc = "合并当前项目到其他项目"
-
-
-[tasks]
-prepend_keymap = []
