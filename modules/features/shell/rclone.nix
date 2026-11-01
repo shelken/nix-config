@@ -49,6 +49,7 @@
 
           # 检查模板文件是否存在，不存在则跳过（不能用 exit，会终止整个 activation）
           if [ -f "$RCLONE_TEMPLATE_PATH" ]; then
+            mkdir -p "$(dirname "$RCLONE_PATH")"
             cp -f $RCLONE_TEMPLATE_PATH $RCLONE_PATH
 
             RCLONE_DRIVE_DAV_PASSWORD=$(cat ${config.sops.secrets."drive/rclone/pass".path})
