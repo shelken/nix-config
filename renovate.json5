@@ -14,6 +14,14 @@
     enabled: true,
   },
 
+  // 不写 rev 的 flake 依赖（nixpkgs、nix-darwin、home-manager 等）只能靠 lock file maintenance
+  // 整体前进：一周一次，手动合并（同一次会带上所有能随 lock 移动的 input）
+  lockFileMaintenance: {
+    enabled: true,
+    schedule: ["before 4am on monday"],
+    automerge: false,
+  },
+
   // pi 的插件清单没有内置 manager 认识；omp 的 plugins/package.json 由内置 npm manager 处理（支持 npm: 别名）
   customManagers: [
     {
@@ -36,22 +44,45 @@
       groupName: "GitHub Actions Dependencies",
     },
     {
+      // nix manager 的 depName 是 flake input 名，不是仓库路径
       matchManagers: ["nix"],
-      matchDepNames: [
-        "nixos/nixpkgs",
-        "nixpkgs",
-        "nixpkgs-darwin",
-        "nixpkgs-unstable",
-        "nix-darwin/nix-darwin",
-        "nix-community/home-manager",
-      ],
+      matchDepNames: ["nixpkgs", "nixpkgs-darwin", "nix-darwin", "home-manager"],
       groupName: "Nix Core Inputs",
       automerge: false,
     },
     {
       matchManagers: ["nix"],
-      matchPackagePatterns: ["secrets", "dotfiles", "herdr"],
+      matchDepNames: ["secrets", "dotfiles"],
       enabled: false,
+    },
+    // 静态资源（flake.nix 里 flake = false 的 input，见 docs/adr/0006-static-assets-as-flake-inputs.md）：
+    // original 带 ref + rev，Renovate 只替换 flake.nix 里的 rev
+    {
+      description: "skill 类静态资源：上游内容会进 agent 上下文，每周合成一个 PR 手动合并",
+      matchManagers: ["nix"],
+      matchDepNames: [
+        "anti-slop",
+        "cursor-plugins",
+        "diagram-design",
+        "humanlayer-skills",
+        "llamaparse-agent-skills",
+        "mattpocock-skills",
+        "security-audit-skill",
+      ],
+      groupName: "skill static assets",
+      schedule: ["before 4am on monday"],
+      automerge: false,
+    },
+    {
+      description: "非 skill 静态资源（雾凇拼音、kitty 图标）：digest 更新直接合并",
+      matchManagers: ["nix"],
+      matchDepNames: ["rime-main", "kitty-icon"],
+      commitMessageTopic: "{{depName}}",
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: true,
+      // 仓库没有 PR 级构建，不等状态检查
+      ignoreTests: true,
     },
     // 同一插件在 pi 与 omp 两份清单里各钉一次，按插件名合成一个 PR
     {

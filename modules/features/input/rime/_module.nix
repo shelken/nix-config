@@ -1,6 +1,6 @@
 {
+  inputs,
   lib,
-  rime-main,
   pkgs,
   ...
 }:
@@ -21,7 +21,7 @@ in
 {
   home.file = {
     "${rimeDir}" = {
-      source = rime-main;
+      source = inputs.rime-main;
       recursive = true;
       force = true;
     };

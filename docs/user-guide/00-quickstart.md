@@ -14,6 +14,8 @@
 
 当前机器由仓库根目录的 `.host-profile`（`PROFILE=<主机>`）决定，首次设置见根目录 README「初始化」
 
+静态资源的 rev 钉在 `flake.nix` 里（见 [ADR 0006](../adr/0006-static-assets-as-flake-inputs.md)）：`just up` 不会推动它们，版本前进由 Renovate 开 PR，合并后才落进 `flake.lock`
+
 ## 修改配置
 
 1. 修改 `modules/features/<分类>/<功能>`（软件的系统侧与用户态配置）或 `hosts/<主机>/`（机器专属），具体写法见 [功能与角色](02-features.md)

@@ -50,8 +50,6 @@
           # 主输入即 unstable channel；HM 模块沿用 pkgs-unstable 变量名，与 pkgs 同源
           pkgs-unstable = pkgs;
 
-          sources = pkgs.callPackage ./_sources/generated.nix { };
-
           inherit mylib myvars system;
           inherit (myvars) username userfullname useremail;
         };
@@ -291,7 +289,6 @@
               # code formatter
               prettier
               nixos-anywhere
-              nvfetcher
               actionlint
               # nh # 不要引入，会把nix放进来
               # nix-prefetch-github # 已由 utils/script/prefetch 替代
@@ -385,12 +382,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    rime-main = {
-      # 霧凇拼音
-      url = "github:iDvel/rime-ice/main";
-      flake = false;
-    };
-
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -399,7 +390,7 @@
     ###########################################################
 
     # 静态资源：他人维护、本仓库只锁版本并原样使用的文件树（外部 skill、图标、词库），
-    # 不提供 nix 代码，所以 flake = false。
+    # 不提供 nix 代码，所以 flake = false。接入方式见 docs/adr/0006-static-assets-as-flake-inputs.md。
     # 写 git+https 而不是 github:，因为 github fetcher 拒绝同时给 ref 与 rev；
     # Renovate 的 nix manager 只在 original 同时有 ref 与 rev 时按 input 开 digest PR
     # 替换这里的 rev（ref 写默认分支名，不带 refs/heads/ 前缀）。
@@ -409,8 +400,45 @@
       flake = false;
     };
 
+    cursor-plugins = {
+      url = "git+https://github.com/cursor/plugins?ref=main&rev=6f6c9e62585436f69e560138d46709026fa5c69f&shallow=1";
+      flake = false;
+    };
+
     diagram-design = {
       url = "git+https://github.com/cathrynlavery/diagram-design?ref=main&rev=cdfdc9686cd7465da70b68b036581833b503810c&shallow=1";
+      flake = false;
+    };
+
+    humanlayer-skills = {
+      url = "git+https://github.com/humanlayer/skills?ref=main&rev=653b6411c1f70c275a18e37673b042ff99f67ceb&shallow=1";
+      flake = false;
+    };
+
+    # 终端图标
+    kitty-icon = {
+      url = "git+https://github.com/DinkDonk/kitty-icon?ref=main&rev=8fbd883a46f013a6fb62fc83694fde224f89d8f7&shallow=1";
+      flake = false;
+    };
+
+    llamaparse-agent-skills = {
+      url = "git+https://github.com/run-llama/llamaparse-agent-skills?ref=main&rev=a8d8b34ad6a815ba3257f921c5eccc9ca95e429f&shallow=1";
+      flake = false;
+    };
+
+    mattpocock-skills = {
+      url = "git+https://github.com/mattpocock/skills?ref=main&rev=59db609eb1e18aaf59b63284d0e52255aff0c63c&shallow=1";
+      flake = false;
+    };
+
+    # 霧凇拼音
+    rime-main = {
+      url = "git+https://github.com/iDvel/rime-ice?ref=main&rev=da1fbe602e38f26db846fa10120ee64c2b0324c0&shallow=1";
+      flake = false;
+    };
+
+    security-audit-skill = {
+      url = "git+https://github.com/cloudflare/security-audit-skill?ref=main&rev=c1c8a8c1471069fb0e188eeaff69b8e8db6564a8&shallow=1";
       flake = false;
     };
   };
