@@ -433,7 +433,7 @@
 
     # 霧凇拼音
     rime-main = {
-      url = "git+https://github.com/iDvel/rime-ice?ref=main&rev=da1fbe602e38f26db846fa10120ee64c2b0324c0&shallow=1";
+      url = "git+https://github.com/iDvel/rime-ice?ref=main&rev=99662ba01e3affa6a0f009174ca530b887bac3b6&shallow=1";
       flake = false;
     };
 
