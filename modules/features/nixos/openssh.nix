@@ -21,5 +21,10 @@
     # Add terminfo database of all known terminals to the system profile.
     # https://github.com/NixOS/nixpkgs/blob/nixos-24.05/nixos/modules/config/terminfo.nix
     environment.enableAllTerminfo = true;
+
+    # sshd 以登录用户身份读 /etc/ssh/authorized_keys.d/<用户>：/etc/ssh 不是 755 时，
+    # 普通用户读不到自己的公钥，只有 root 能登录。nixos-anywhere --extra-files 会原样带入
+    # 随装目录里 etc/ssh 的权限，NixOS 激活不改目录本身，这里每次激活与开机都纠正
+    systemd.tmpfiles.rules = [ "z /etc/ssh 0755 root root -" ];
   };
 }

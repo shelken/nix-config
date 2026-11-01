@@ -107,7 +107,9 @@ tar -tzf ~/vps-cc-backup/data-docker.tgz | head -3
 
 ```bash
 EXTRA=$(mktemp -d)
-install -d -m 700 "$EXTRA/var/lib/sops-nix" "$EXTRA/var/lib/tailscale" "$EXTRA/etc/ssh"
+install -d -m 700 "$EXTRA/var/lib/sops-nix" "$EXTRA/var/lib/tailscale"
+# etc/ssh 必须 755：目录权限会原样带到新系统，700 会让普通用户无法用公钥登录
+install -d -m 755 "$EXTRA/etc/ssh"
 install -m 600 <vps-cc 的 age 私钥文件> "$EXTRA/var/lib/sops-nix/key.txt"
 # tailscale 节点身份：保留节点名与 tailnet 地址
 ssh vps-cc 'cat /var/lib/tailscale/tailscaled.state' > "$EXTRA/var/lib/tailscale/tailscaled.state"
