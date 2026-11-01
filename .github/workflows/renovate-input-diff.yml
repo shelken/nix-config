@@ -21,13 +21,28 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # base 修订要当 git ref 求值（需要它的 def 与树都在本地）
+          fetch-depth: 0
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
 
-      # 已启用的 skill 目录：单一事实来源（modules/features/ai/_skill-sources.nix）经 flake 输出读出
-      - name: Collect enabled skill directories
-        run: nix eval --json .#skillSourceDirs > "$RUNNER_TEMP/skill-source-dirs.json"
+      # 已启用的 skill 目录：单一事实来源（modules/features/ai/_skill-sources.nix）经 flake 输出读出。
+      # base 与 head 各取一次，脚本用两者并集过滤：discover 的分组在上游删掉 skill 后，
+      # 旧目录只存在于 base 侧，只用 head 会把删除记录全过滤掉
+      - name: Collect enabled skill directories (head)
+        run: nix eval --json .#skillSourceDirs > "$RUNNER_TEMP/head-skill-dirs.json"
+
+      - name: Collect enabled skill directories (base)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if nix eval --json "git+file://$PWD?rev=$BASE_SHA#skillSourceDirs" > "$RUNNER_TEMP/base-skill-dirs.json"; then
+            exit 0
+          fi
+          echo "::warning::base 修订没有 skillSourceDirs（例如堆叠 PR 的 base 分支早于本功能），只用 head 的目录"
+          echo '{}' > "$RUNNER_TEMP/base-skill-dirs.json"
 
       - name: Fetch base and head flake.lock
         env:
@@ -45,7 +60,8 @@ jobs:
           python3 utils/script/renovate_input_diff.py \
             --base-lock "$RUNNER_TEMP/base-flake.lock" \
             --head-lock "$RUNNER_TEMP/head-flake.lock" \
-            --skill-dirs "$RUNNER_TEMP/skill-source-dirs.json" \
+            --base-skill-dirs "$RUNNER_TEMP/base-skill-dirs.json" \
+            --head-skill-dirs "$RUNNER_TEMP/head-skill-dirs.json" \
             --pull-request "${{ github.event.pull_request.number }}" \
             --summary "$GITHUB_STEP_SUMMARY" \
             --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

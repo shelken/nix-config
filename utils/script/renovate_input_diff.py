@@ -3,12 +3,17 @@
 
 - 每个变化的 input 一段；skill 类静态资源只内联「已启用目录」里的文件改动，
   目录集合由 `nix eval --json .#skillSourceDirs` 生成（单一事实来源见 _skill-sources.nix）
+- 目录取 base 与 head 两侧的并集：`discover = true` 的分组在上游删掉 skill 后，
+  旧目录只会出现在 base 侧，只用 head 会把删除记录全部过滤掉
+- 重命名记录只要新旧路径任一落在启用目录内就保留
 - 非 skill input 只给 GitHub compare 链接
 - 全部内容超过 GitHub 评论上限时，溢出部分交给 Job Summary，评论里给出运行链接
 """
 import argparse
+import html
 import json
 import os
+import re
 import sys
 import urllib.parse
 import urllib.request
@@ -16,6 +21,7 @@ import urllib.request
 MARKER = "<!-- renovate-input-diff -->"
 COMMENT_LIMIT = 60000
 SUMMARY_LIMIT = 900000
+SUMMARY_TRUNCATION_NOTE = "\n\n_（Job Summary 超过 1 MiB 上限，已截断：完整内容见 compare 链接）_"
 NOTE_RESERVE = 400
 COMPARE_FILE_LIMIT = 300
 TITLE = "## 📦 flake.lock 变更"
@@ -89,18 +95,43 @@ def short(rev: str | None) -> str:
     return rev[:7] if rev else "?"
 
 
+def skill_dirs_for(name: str, base_dirs: dict, head_dirs: dict) -> list[str]:
+    """某个 input 的启用目录：base 与 head 的并集。
+
+    `discover = true` 的分组在上游删掉 skill 后，旧目录只存在于 base 侧；
+    只用 head 会把相应的删除记录全部过滤掉。
+    """
+    return sorted({*base_dirs.get(name, []), *head_dirs.get(name, [])})
+
+
 def in_dirs(path: str, dirs: list[str]) -> bool:
     return any(path == directory or path.startswith(f"{directory}/") for directory in dirs)
 
 
+def matches_dirs(file: dict, dirs: list[str]) -> bool:
+    """重命名记录只要新旧路径任一命中就保留（改动可能把文件挪出已启用目录）。"""
+    paths = [file["filename"]]
+    if file.get("previous_filename"):
+        paths.append(file["previous_filename"])
+    return any(in_dirs(path, dirs) for path in paths)
+
+
+def fence_for(patch: str) -> str:
+    """围栏比 patch 里最长的连续反引号更长，否则 patch 会掀掉代码块。"""
+    longest = max((len(run) for run in re.findall(r"`+", patch)), default=0)
+    return "`" * max(3, longest + 1)
+
+
 def render_file(file: dict) -> str:
     summary = (
-        f"<b><code>{file['filename']}</code></b> ({file['status']}, +{file['additions']}, -{file['deletions']})"
+        f"<b><code>{html.escape(file['filename'], quote=True)}</code></b> "
+        f"({html.escape(file['status'])}, +{file['additions']}, -{file['deletions']})"
     )
     patch = file.get("patch")
     if patch is None:
         return f"<details><summary>{summary}</summary>\n\n_diff 过大，GitHub 未返回内容：[查看文件]({file['blob_url']})_\n\n</details>"
-    return f"<details><summary>{summary}</summary>\n\n```diff\n{patch.rstrip()}\n```\n\n</details>"
+    fence = fence_for(patch)
+    return f"<details><summary>{summary}</summary>\n\n{fence}diff\n{patch.rstrip()}\n{fence}\n\n</details>"
 
 
 def input_blocks(
@@ -128,15 +159,29 @@ def input_blocks(
     if not isinstance(comparison, dict):
         raise TypeError("GitHub compare response must be an object")
     all_files = comparison.get("files", [])
-    files = [file for file in all_files if in_dirs(file["filename"], dirs)]
+    files = [file for file in all_files if matches_dirs(file, dirs)]
+    # compare 的 300 文件上限无法通过分页解除：结果不完整时不能宣称「没有改动」
+    incomplete = len(all_files) >= COMPARE_FILE_LIMIT
     if not files:
-        blocks.append(f"_已启用的 skill 目录（{len(dirs)} 个）内没有文件改动。_")
+        if incomplete:
+            blocks.append(
+                "_GitHub compare 只返回前 300 个文件，结果不完整：已启用目录内是否有改动请在完整对比里确认。_"
+            )
+        else:
+            blocks.append(f"_已启用的 skill 目录（{len(dirs)} 个）内没有文件改动。_")
         return blocks
     blocks.append(f"#### 已启用目录内的改动：{len(files)} 个文件")
     blocks.extend(render_file(file) for file in files)
-    if len(all_files) >= COMPARE_FILE_LIMIT:
-        blocks.append("_GitHub compare 最多返回 300 个文件，其余见上方完整对比。_")
+    if incomplete:
+        blocks.append("_GitHub compare 最多返回 300 个文件，已启用目录的改动可能不完整，见上方完整对比。_")
     return blocks
+
+
+def truncate_to_bytes(text: str, limit: int) -> str:
+    data = text.encode("utf-8")
+    if len(data) <= limit:
+        return text
+    return data[:limit].decode("utf-8", errors="ignore")
 
 
 def compose(
@@ -158,8 +203,11 @@ def compose(
     link = f"：[本次运行]({run_url})" if run_url else ""
     body.append(f"_评论长度受限，另有 {len(overflow)} 段 diff 见 Job Summary{link}。_")
     summary = "\n\n".join([f"{TITLE}（评论溢出的部分）", *overflow])
-    if len(summary) > summary_limit:
-        summary = f"{summary[:summary_limit]}\n\n_（Job Summary 超长，已截断：完整内容见 compare 链接）_"
+    # Job Summary 按 UTF-8 字节计，超限会让整份 Summary 上传失败；给截断说明留位置
+    budget = summary_limit - len(SUMMARY_TRUNCATION_NOTE.encode("utf-8"))
+    truncated = truncate_to_bytes(summary, budget)
+    if truncated != summary:
+        summary = f"{truncated}{SUMMARY_TRUNCATION_NOTE}"
     return "\n\n".join(body), summary
 
 
@@ -198,7 +246,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-lock", required=True, help="base 一侧的 flake.lock")
     parser.add_argument("--head-lock", required=True, help="head 一侧的 flake.lock")
-    parser.add_argument("--skill-dirs", required=True, help="flake.skillSourceDirs 的 JSON：input → 启用的 skill 目录")
+    parser.add_argument("--base-skill-dirs", required=True, help="base 一侧的 flake.skillSourceDirs JSON")
+    parser.add_argument("--head-skill-dirs", required=True, help="head 一侧的 flake.skillSourceDirs JSON")
     parser.add_argument("--pull-request", help="PR 号；给了才会更新评论")
     parser.add_argument("--summary", help="溢出内容写到这个文件（CI 传 $GITHUB_STEP_SUMMARY）")
     parser.add_argument("--run-url", help="运行链接，溢出时写进评论")
@@ -208,14 +257,17 @@ def main() -> None:
     DRY_RUN = args.dry_run
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
 
-    skill_dirs = read_json(args.skill_dirs)
+    base_dirs = read_json(args.base_skill_dirs)
+    head_dirs = read_json(args.head_skill_dirs)
     changed = changed_inputs(read_json(args.base_lock), read_json(args.head_lock))
     if not changed:
         log("flake.lock 里没有 input 变化，不更新评论")
         return
     blocks = []
     for name, before, after in changed:
-        blocks.extend(input_blocks(name, before, after, skill_dirs.get(name), token))
+        dirs = skill_dirs_for(name, base_dirs, head_dirs)
+        log(f"{name}: 启用目录 {len(dirs)} 个（base {len(base_dirs.get(name, []))}，head {len(head_dirs.get(name, []))}）")
+        blocks.extend(input_blocks(name, before, after, dirs, token))
     header = [MARKER, TITLE]
     comment, summary = compose(header, blocks, run_url=args.run_url)
     if args.print_body:
