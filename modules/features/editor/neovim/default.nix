@@ -1,8 +1,24 @@
-# Neovim：完整版（AstroNvim + 全套 LSP 工具）
-# yuuko 的 minimal 变体见 features/editor/neovim-minimal.nix
+# Neovim
+#   neovim-minimal（core）：所有主机都有的 nvim 本体与 vi/vim 别名
+#   neovim（tui 及以上）：插件、语言工具与 config/；shelken.neovim.minimal = true 时只留本体
+# 语言工具链见 _languages.nix，Lua 配置见 config/
 { config, ... }:
+let
+  hmModules = config.flake.modules.homeManager;
+in
 {
-  flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.neovim ];
+  flake.modules.homeManager.core.imports = [ hmModules.neovim-minimal ];
+  flake.modules.homeManager.tui.imports = [ hmModules.neovim ];
+
+  flake.modules.homeManager.neovim-minimal = {
+    programs.neovim = {
+      enable = true;
+      withRuby = false;
+      withPython3 = false;
+      viAlias = true;
+      vimAlias = true;
+    };
+  };
 
   flake.modules.homeManager.neovim =
     {
@@ -10,52 +26,53 @@
       mylib,
       pkgs,
       config,
-      pkgs-unstable,
       ...
     }:
     let
-      # astronvim-config = dotfiles.packages.${system}.dot-astro-nvim;
-      astronvim-config = pkgs.dot-astro-nvim;
-      inherit (lib) mkIf;
-      inherit (mylib) mkBoolOpt;
       cfg = config.shelken.neovim;
+      languages = builtins.attrValues (import ./_languages.nix pkgs);
+      collect = field: lib.concatMap (lang: lang.${field} or [ ]) languages;
+      byFiletype =
+        field: lib.zipAttrsWith (_: lib.concatLists) (map (lang: lang.${field} or { }) languages);
+      nixLanguages = {
+        lsp = collect "lsp";
+        formatters = byFiletype "formatters";
+        linters = byFiletype "linters";
+      };
     in
     {
       options.shelken.neovim = {
-        minimal = mkBoolOpt false "最小化安装nvim（不带配置）";
+        minimal = mylib.mkBoolOpt false "只装 nvim 本体，不带插件、语言工具和配置";
       };
 
-      imports = [
-        ./_packages-content.nix
-      ];
-
-      config = {
-        home.activation.installAstroNvim = mkIf (!cfg.minimal) (
-          lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-            ${pkgs.rsync}/bin/rsync -avz --delete --chmod=D2755,F744 ${astronvim-config}/ ${config.xdg.configHome}/nvim/
-          ''
-        );
+      config = lib.mkIf (!cfg.minimal) {
+        home.packages = collect "packages";
 
         programs.neovim = {
-          enable = true;
-          package = pkgs-unstable.neovim-unwrapped;
           defaultEditor = true;
-          withRuby = true;
-          withPython3 = true;
-
-          # 变更原因：AstroNvim 通过 rsync 管理 ~/.config/nvim/init.lua，HM 只能通过 wrapper 加载 provider 配置，避免双重管理同一文件。
+          # init.lua 属于 config/；initLua 经 wrapper 的 --cmd 先于它执行，把语言表交给 Lua
           sideloadInitLua = true;
-
-          viAlias = true;
-          vimAlias = true;
-        }
-        // lib.optionalAttrs (!cfg.minimal) {
-          # extraLuaPackages = ps: [ ps.magick ]; # for nvim image plugin https://github.com/3rd/image.nvim
-          # extraPackages = [ pkgs.imagemagick ]; # for nvim image plugin https://github.com/3rd/image.nvim
+          initLua = "vim.g.nix_languages = ${lib.generators.toLua { } nixLanguages}";
+          plugins = with pkgs.vimPlugins; [
+            (nvim-treesitter.withPlugins (grammars: map (name: grammars.${name}) (collect "grammars")))
+            nvim-lspconfig
+            SchemaStore-nvim
+            blink-cmp
+            friendly-snippets
+            conform-nvim
+            nvim-lint
+            snacks-nvim
+            grug-far-nvim
+            gitsigns-nvim
+            which-key-nvim
+            mini-icons
+            mini-surround
+            flash-nvim
+            yazi-nvim
+          ];
         };
 
-        # Disable catppuccin to avoid conflict with my non-nix config.
-        catppuccin.nvim.enable = mkIf (!cfg.minimal) false;
+        xdg.configFile.nvim = mylib.mkConfigFile config ./config;
       };
     };
 }
