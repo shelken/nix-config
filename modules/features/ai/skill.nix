@@ -2,6 +2,7 @@
   flake.modules.homeManager.ai =
     {
       config,
+      inputs,
       lib,
       pkgs,
       mylib,
@@ -64,7 +65,7 @@
 
       fetchedSkillRepos = {
         anti-slop = {
-          root = sources.anti-slop.src;
+          root = inputs.anti-slop;
           skills.install-anti-slop = "skills/install-anti-slop";
           frontmatter.install-anti-slop.disable-model-invocation = true;
         };
@@ -82,7 +83,7 @@
         };
 
         diagram-design = {
-          root = sources.diagram-design.src;
+          root = inputs.diagram-design;
           skills.diagram-design = "skills/diagram-design";
         };
 

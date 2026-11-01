@@ -1,5 +1,24 @@
 {
   "nodes": {
+    "anti-slop": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788212122,
+        "narHash": "sha256-K+nxeaH2h33Ixjn5HbFTw2n2d+s12SpKbVP90tkyj9A=",
+        "ref": "main",
+        "rev": "e8c4880471b23ab7f216fba7b27d173a6ef07d4c",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/dmmulroy/anti-slop"
+      },
+      "original": {
+        "ref": "main",
+        "rev": "e8c4880471b23ab7f216fba7b27d173a6ef07d4c",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/dmmulroy/anti-slop"
+      }
+    },
     "anyrun": {
       "inputs": {
         "flake-parts": "flake-parts",
@@ -63,6 +82,25 @@
         "owner": "serokell",
         "repo": "deploy-rs",
         "type": "github"
+      }
+    },
+    "diagram-design": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791586930,
+        "narHash": "sha256-sIRMfRbZ2uj4MDLOLDzufM9wg4CtQi3sGtIfhLAJry8=",
+        "ref": "main",
+        "rev": "cdfdc9686cd7465da70b68b036581833b503810c",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/cathrynlavery/diagram-design"
+      },
+      "original": {
+        "ref": "main",
+        "rev": "cdfdc9686cd7465da70b68b036581833b503810c",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/cathrynlavery/diagram-design"
       }
     },
     "disko": {
@@ -487,9 +525,11 @@
     },
     "root": {
       "inputs": {
+        "anti-slop": "anti-slop",
         "anyrun": "anyrun",
         "catppuccin": "catppuccin",
         "deploy-rs": "deploy-rs",
+        "diagram-design": "diagram-design",
         "disko": "disko",
         "dotfiles": "dotfiles",
         "flake-parts": "flake-parts_2",

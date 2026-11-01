@@ -8,7 +8,6 @@
       config,
       mylib,
       pkgs,
-      sources,
       ...
     }:
     {
@@ -18,9 +17,8 @@
         enableBashIntegration = true;
         shellWrapperName = "yy";
         plugins = {
-          piper = "${sources.yazi-plugins.src}/piper.yazi";
-          projects = "${sources.projects-yazi.src}";
-          # mime = "${sources.yazi-plugins.src}/mime.yazi";
+          piper = pkgs.yaziPlugins.piper;
+          projects = pkgs.yaziPlugins.projects;
         };
       };
 
