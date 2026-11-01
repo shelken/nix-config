@@ -42,7 +42,7 @@
       "thinking": "high"
     }
   },
-  "sandboxExclude": ["npm:@shelken/simple-plannotator@0.1.7"],
+  "sandboxExclude": ["npm:@shelken/simple-plannotator@0.1.8"],
   "packages": [
     "npm:pi-execution-time@0.2.0",
     "npm:pi-powerline-footer@0.21.0",
@@ -59,7 +59,7 @@
     "npm:@shelken/pi-inline-skills@0.1.0",
     "npm:@shelken/pi-co-authored-by@0.2.17",
     "npm:@shelken/pi-command-history@0.1.6",
-    "npm:@shelken/simple-plannotator@0.1.7",
+    "npm:@shelken/simple-plannotator@0.1.8",
     "npm:@shelken/copy-cut@0.2.2",
     "npm:@shelken/pi-sounds@0.1.0",
     "npm:@juicesharp/rpiv-todo@2.15.0",
