@@ -204,10 +204,13 @@ def compose(
     body.append(f"_评论长度受限，另有 {len(overflow)} 段 diff 见 Job Summary{link}。_")
     summary = "\n\n".join([f"{TITLE}（评论溢出的部分）", *overflow])
     # Job Summary 按 UTF-8 字节计，超限会让整份 Summary 上传失败；给截断说明留位置
-    budget = summary_limit - len(SUMMARY_TRUNCATION_NOTE.encode("utf-8"))
+    budget = max(0, summary_limit - len(SUMMARY_TRUNCATION_NOTE.encode("utf-8")))
     truncated = truncate_to_bytes(summary, budget)
     if truncated != summary:
-        summary = f"{truncated}{SUMMARY_TRUNCATION_NOTE}"
+        if budget:
+            summary = f"{truncated}{SUMMARY_TRUNCATION_NOTE}"
+        else:
+            summary = truncate_to_bytes(SUMMARY_TRUNCATION_NOTE, summary_limit)
     return "\n\n".join(body), summary
 
 

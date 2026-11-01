@@ -199,6 +199,9 @@ cjk = [f"### `中文{index}`\n\n" + "汉" * 200 for index in range(20)]
 _, summary = module.compose(header, cjk, comment_limit=1000, summary_limit=1200, run_url=None)
 assert summary.endswith(module.SUMMARY_TRUNCATION_NOTE)
 assert len(summary.encode("utf-8")) <= 1200
+# 上限小到装不下说明时，退化成只留被截断的说明，仍不超限
+tiny = module.compose(header, cjk, comment_limit=1000, summary_limit=40, run_url=None)[1]
+assert len(tiny.encode("utf-8")) <= 40
 
 # 转义：围栏比 patch 里最长的反引号长，文件名做 HTML 转义
 assert module.fence_for("a\n```\nb") == "````"
