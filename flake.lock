@@ -501,9 +501,6 @@
         "nixos-generators": "nixos-generators",
         "nixpkgs": "nixpkgs",
         "nixpkgs-darwin": "nixpkgs-darwin",
-        "nixpkgs-unstable": [
-          "nixpkgs"
-        ],
         "rime-main": "rime-main",
         "secrets": "secrets",
         "sops-nix": "sops-nix"

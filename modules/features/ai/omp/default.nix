@@ -78,7 +78,6 @@
           ".omp/agent/models.yml" = linkOmp "models.yml";
           ".omp/agent/context-prune/settings.json" =
             mylib.mkConfigFile config ../pi/configs/context-prune.json;
-          # ".omp/agent/mcp.json" = linkOmp "mcp.json";
         }
         // extensionLinks;
 
