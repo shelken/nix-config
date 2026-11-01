@@ -68,7 +68,7 @@
 grep -rlE '^# .*可选功能' modules/features
 ```
 
-打开对应文件，找到 `flake.modules.darwin.<名>` 里的 `<名>`（不一定等于文件名，比如 `game/main.nix` 是 `game-main`），加到主机的 `imports`：
+打开对应文件，找到 `flake.modules.darwin.<名>` 里的 `<名>`（不一定等于文件名，比如 `darwin/time-machine/darwin.nix` 是 `time-machine`），加到主机的 `imports`：
 
 ```nix
 # hosts/sakamoto/default.nix

@@ -312,8 +312,6 @@
     };
     # 递归导入 modules/{flake,features,profiles} 下的 flake-parts 模块（路径含 /_ 的忽略）
     import-tree.url = "github:denful/import-tree";
-    # 与 nixpkgs 同分支却独立锁定，只会漂移出第二份源码树；收敛为别名
-    nixpkgs-unstable.follows = "nixpkgs";
     # darwin 走 nixpkgs-unstable 分支：发布不等 NixOS 测试套件，
     # darwin 修复不被 NixOS 测试失败阻塞；nix-darwin 官方示例同款
     nixpkgs-darwin.url = "github:nixos/nixpkgs/nixpkgs-unstable";

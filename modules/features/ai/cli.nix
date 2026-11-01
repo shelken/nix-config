@@ -11,14 +11,6 @@
         exec ${pkgs.bun}/bin/bunx ctx7@latest "$@"
       '';
 
-      # bili = pkgs.writeShellScriptBin "bili" ''
-      #   exec ${pkgs.uv}/bin/uvx --from ${sources.bilibili-cli.src} bili "$@"
-      # '';
-
-      # twitter = pkgs.writeShellScriptBin "twitter" ''
-      #   exec ${pkgs.uv}/bin/uvx --from ${sources.twitter-cli.src} twitter "$@"
-      # '';
-
       deepwiki = pkgs.writeShellScriptBin "deepwiki" ''
         exec ${pkgs.bun}/bin/bunx @seflless/deepwiki "$@"
       '';
@@ -41,8 +33,6 @@
           lit
           pkgs.agent-browser
           pkgs.ast-grep
-          # bil
-          # twitter
           pkgs.imagemagick
         ];
 
