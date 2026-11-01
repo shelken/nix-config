@@ -62,6 +62,25 @@
         "type": "github"
       }
     },
+    "cursor-plugins": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1793228039,
+        "narHash": "sha256-Rq2nUBzdTGv6FOYWPpbF/2y3wJ51KszcRqoV4N/Oe0Y=",
+        "ref": "main",
+        "rev": "6f6c9e62585436f69e560138d46709026fa5c69f",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/cursor/plugins"
+      },
+      "original": {
+        "ref": "main",
+        "rev": "6f6c9e62585436f69e560138d46709026fa5c69f",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/cursor/plugins"
+      }
+    },
     "deploy-rs": {
       "inputs": {
         "flake-compat": "flake-compat",
@@ -329,6 +348,25 @@
         "type": "github"
       }
     },
+    "humanlayer-skills": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791496465,
+        "narHash": "sha256-W3dFEdIi4sz4CAZvaj1xjtN7xTRebF/WHOTQYCIe2Xo=",
+        "ref": "main",
+        "rev": "653b6411c1f70c275a18e37673b042ff99f67ceb",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/humanlayer/skills"
+      },
+      "original": {
+        "ref": "main",
+        "rev": "653b6411c1f70c275a18e37673b042ff99f67ceb",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/humanlayer/skills"
+      }
+    },
     "import-tree": {
       "locked": {
         "lastModified": 1788467110,
@@ -342,6 +380,63 @@
         "owner": "denful",
         "repo": "import-tree",
         "type": "github"
+      }
+    },
+    "kitty-icon": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1620952549,
+        "narHash": "sha256-q5wNdFRMvQDx3DlO7zdy/xPJbqcNlm4iVKaBwjxlSMs=",
+        "ref": "main",
+        "rev": "8fbd883a46f013a6fb62fc83694fde224f89d8f7",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/DinkDonk/kitty-icon"
+      },
+      "original": {
+        "ref": "main",
+        "rev": "8fbd883a46f013a6fb62fc83694fde224f89d8f7",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/DinkDonk/kitty-icon"
+      }
+    },
+    "llamaparse-agent-skills": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1782746809,
+        "narHash": "sha256-BGZyNJXJ1Yt/k4jm+CEwRwqcTSBAb+pG7yGxqoK35tI=",
+        "ref": "main",
+        "rev": "a8d8b34ad6a815ba3257f921c5eccc9ca95e429f",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/run-llama/llamaparse-agent-skills"
+      },
+      "original": {
+        "ref": "main",
+        "rev": "a8d8b34ad6a815ba3257f921c5eccc9ca95e429f",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/run-llama/llamaparse-agent-skills"
+      }
+    },
+    "mattpocock-skills": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1793087052,
+        "narHash": "sha256-CkNJKbSlW8bUSfvHqfl7JTPnq8o1iYdzI24LGDMojE4=",
+        "ref": "main",
+        "rev": "59db609eb1e18aaf59b63284d0e52255aff0c63c",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/mattpocock/skills"
+      },
+      "original": {
+        "ref": "main",
+        "rev": "59db609eb1e18aaf59b63284d0e52255aff0c63c",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/mattpocock/skills"
       }
     },
     "niri": {
@@ -506,21 +601,42 @@
         "type": "github"
       }
     },
+    "reverse-skill": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786185153,
+        "narHash": "sha256-Rr903Czwk66A4RTZHv4pj7t4OAuA4U2I2HOX+clzEJI=",
+        "ref": "main",
+        "rev": "9c28c6ca1062a1a076e28baf40f241dbb4cf5dc2",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/zhaoxuya520/reverse-skill"
+      },
+      "original": {
+        "ref": "main",
+        "rev": "9c28c6ca1062a1a076e28baf40f241dbb4cf5dc2",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/zhaoxuya520/reverse-skill"
+      }
+    },
     "rime-main": {
       "flake": false,
       "locked": {
         "lastModified": 1791207421,
         "narHash": "sha256-IveGjHDllCPiRTItBl+fIlvNLnr3VRlnipnTY7e2jzM=",
-        "owner": "iDvel",
-        "repo": "rime-ice",
+        "ref": "main",
         "rev": "da1fbe602e38f26db846fa10120ee64c2b0324c0",
-        "type": "github"
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/iDvel/rime-ice"
       },
       "original": {
-        "owner": "iDvel",
         "ref": "main",
-        "repo": "rime-ice",
-        "type": "github"
+        "rev": "da1fbe602e38f26db846fa10120ee64c2b0324c0",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/iDvel/rime-ice"
       }
     },
     "root": {
@@ -528,6 +644,7 @@
         "anti-slop": "anti-slop",
         "anyrun": "anyrun",
         "catppuccin": "catppuccin",
+        "cursor-plugins": "cursor-plugins",
         "deploy-rs": "deploy-rs",
         "diagram-design": "diagram-design",
         "disko": "disko",
@@ -535,14 +652,20 @@
         "flake-parts": "flake-parts_2",
         "git-hooks": "git-hooks",
         "home-manager": "home-manager",
+        "humanlayer-skills": "humanlayer-skills",
         "import-tree": "import-tree",
+        "kitty-icon": "kitty-icon",
+        "llamaparse-agent-skills": "llamaparse-agent-skills",
+        "mattpocock-skills": "mattpocock-skills",
         "niri": "niri",
         "nix-darwin": "nix-darwin",
         "nixos-generators": "nixos-generators",
         "nixpkgs": "nixpkgs",
         "nixpkgs-darwin": "nixpkgs-darwin",
+        "reverse-skill": "reverse-skill",
         "rime-main": "rime-main",
         "secrets": "secrets",
+        "security-audit-skill": "security-audit-skill",
         "sops-nix": "sops-nix"
       }
     },
@@ -561,6 +684,25 @@
         "shallow": true,
         "type": "git",
         "url": "https://github.com/shelken/secrets.nix.git"
+      }
+    },
+    "security-audit-skill": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789414134,
+        "narHash": "sha256-oVVACjotkHvllQGxEP8yWaEt4c3GxT0d909TUM5P3NM=",
+        "ref": "main",
+        "rev": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/cloudflare/security-audit-skill"
+      },
+      "original": {
+        "ref": "main",
+        "rev": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/cloudflare/security-audit-skill"
       }
     },
     "sops-nix": {

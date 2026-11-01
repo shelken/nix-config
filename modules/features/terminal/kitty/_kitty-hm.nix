@@ -1,8 +1,8 @@
 {
   config,
+  inputs,
   lib,
   myvars,
-  sources,
   ...
 }:
 let
@@ -132,7 +132,7 @@ in
   #   source = "${pkgs.kitty-themes}/share/kitty-themes/themes/${theme}";
   # };
   xdg.configFile."kitty/kitty.app.png" = {
-    source = "${sources.kitty-icon.src}/kitty-light.png";
+    source = "${inputs.kitty-icon}/kitty-light.png";
   };
 
   home.sessionVariables = {

@@ -1,0 +1,51 @@
+name: Renovate Input Diff
+
+on:
+  pull_request:
+    paths:
+      - flake.lock
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  comment:
+    # fork PR 的 GITHUB_TOKEN 只读，发不出评论
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
+
+      # 已启用的 skill 目录：单一事实来源（modules/features/ai/_skill-sources.nix）经 flake 输出读出
+      - name: Collect enabled skill directories
+        run: nix eval --json .#skillSourceDirs > "$RUNNER_TEMP/skill-source-dirs.json"
+
+      - name: Fetch base and head flake.lock
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/contents/flake.lock?ref=${{ github.event.pull_request.base.sha }}" \
+            -H "Accept: application/vnd.github.raw" > "$RUNNER_TEMP/base-flake.lock"
+          gh api "repos/${{ github.repository }}/contents/flake.lock?ref=${{ github.event.pull_request.head.sha }}" \
+            -H "Accept: application/vnd.github.raw" > "$RUNNER_TEMP/head-flake.lock"
+
+      - name: Update pull request comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 utils/script/renovate_input_diff.py \
+            --base-lock "$RUNNER_TEMP/base-flake.lock" \
+            --head-lock "$RUNNER_TEMP/head-flake.lock" \
+            --skill-dirs "$RUNNER_TEMP/skill-source-dirs.json" \
+            --pull-request "${{ github.event.pull_request.number }}" \
+            --summary "$GITHUB_STEP_SUMMARY" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

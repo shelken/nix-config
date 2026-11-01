@@ -10,7 +10,6 @@
 - `hosts/<hostname>/default.nix`: 机器配置，`.host-profile` 记录当前机器对应 flake 中的名字
 - `vars/`: 全局变量（用户名、邮箱等）
 - `lib/`: 自定义函数（`mylib.mkConfigFile`、`mylib.relativeToRoot` 等）
-- `_sources/`: nvfetcher 管理的非 nixpkgs 源
 - `secrets/`: 引用外部 secrets flake，通过 sops-nix 做秘密管理
 
 ## 约束

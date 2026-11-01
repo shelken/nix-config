@@ -1,44 +1,118 @@
+# 外部 skill 来源的解析与部署。声明在 _skill-sources.nix（纯数据），这里把它解析成两件事：
+#   - flake.skillSourceDirs：input → 启用的 skill 仓库内相对目录，CI 用它过滤 Renovate PR 的文件
+#   - Home 的部署来源：分组/平铺规则与声明前一致
+{ inputs, lib, ... }:
+let
+  declarations = import ./_skill-sources.nix;
+
+  flattenSkillName = lib.replaceStrings [ "/" ] [ "--" ];
+
+  collectSkillRootRelativePaths =
+    dirPath: relativePath:
+    let
+      entries = builtins.readDir dirPath;
+      childDirs = builtins.attrNames (lib.filterAttrs (_: fileType: fileType == "directory") entries);
+      childRelativePath =
+        childName: if relativePath == "" then childName else "${relativePath}/${childName}";
+    in
+    if builtins.hasAttr "SKILL.md" entries then
+      [ relativePath ]
+    else
+      lib.concatMap (
+        childName: collectSkillRootRelativePaths "${dirPath}/${childName}" (childRelativePath childName)
+      ) childDirs;
+
+  listToAttrsWithUniqueNameCheck =
+    errorMsg: entries:
+    let
+      names = map (entry: entry.name) entries;
+    in
+    assert lib.assertMsg (builtins.length names == builtins.length (lib.unique names)) errorMsg;
+    builtins.listToAttrs entries;
+
+  inputRoot = inputName: inputs.${inputName};
+
+  # base 为 "." 时，skill 在 base 内的相对路径就是仓库内路径
+  dirInRepo = base: relativePath: if base == "." then relativePath else "${base}/${relativePath}";
+
+  # 一个分组 → 启用的 skill（名字 → base 内相对路径）及它们的仓库内目录。
+  # discover 只扫 input 的源树，不读 build 期派生目录，避免 IFD。
+  resolveGroup =
+    groupName: decl:
+    let
+      base = decl.base;
+      scanRoot = "${inputRoot decl.input}${if base == "." then "" else "/${base}"}";
+      discovered =
+        if decl.discover or false then
+          listToAttrsWithUniqueNameCheck "${groupName}: 自动发现的 skill 名冲突。" (
+            map (relativePath: {
+              name = flattenSkillName relativePath;
+              value = relativePath;
+            }) (collectSkillRootRelativePaths scanRoot "")
+          )
+        else
+          { };
+      explicit = decl.skills or { };
+      duplicateNames = lib.intersectLists (builtins.attrNames discovered) (builtins.attrNames explicit);
+      combined = discovered // explicit;
+      exclusions = decl.exclude or [ ];
+      unknownExclusions = builtins.filter (name: !(builtins.hasAttr name combined)) exclusions;
+      resolved = builtins.removeAttrs combined exclusions;
+      overrideNames = builtins.attrNames (decl.frontmatter or { });
+      unknownOverrides = builtins.filter (name: !(builtins.hasAttr name resolved)) overrideNames;
+    in
+    assert lib.assertMsg (
+      duplicateNames == [ ]
+    ) "${groupName}: 自动发现与显式声明存在同名 skill：${builtins.concatStringsSep ", " duplicateNames}";
+    assert lib.assertMsg (
+      unknownExclusions == [ ]
+    ) "${groupName}: exclude 包含不存在的 skill：${builtins.concatStringsSep ", " unknownExclusions}";
+    assert lib.assertMsg (
+      unknownOverrides == [ ]
+    ) "${groupName}: frontmatter 包含不存在的 skill：${builtins.concatStringsSep ", " unknownOverrides}";
+    assert lib.assertMsg (resolved != { }) "${groupName}: 没有可用的 skill";
+    {
+      inherit (decl) input;
+      frontmatter = decl.frontmatter or { };
+      inherit base;
+      derived = decl.derived or null;
+      skills = resolved;
+      dirs = lib.mapAttrs (_: relativePath: dirInRepo base relativePath) resolved;
+    };
+
+  groups = lib.mapAttrs resolveGroup declarations;
+
+  skillSourceDirs = builtins.listToAttrs (
+    map (inputName: {
+      name = inputName;
+      value = lib.sort builtins.lessThan (
+        lib.unique (
+          lib.concatMap (group: builtins.attrValues group.dirs) (
+            lib.filter (group: group.input == inputName) (builtins.attrValues groups)
+          )
+        )
+      );
+    }) (lib.unique (map (group: group.input) (builtins.attrValues groups)))
+  );
+in
 {
+  # 供 CI 读取：某个 input 前进后，只看这些目录里的文件改动。
+  # `nix eval --json .#skillSourceDirs` 只读 input 源树，不触发构建
+  flake.skillSourceDirs = skillSourceDirs;
+
   flake.modules.homeManager.ai =
     {
       config,
-      inputs,
       lib,
       pkgs,
       mylib,
-      sources,
       ...
     }:
     let
       inherit (lib) mkOption types;
       cfg = config.shelken.dev.ai;
-      flattenSkillName = lib.replaceStrings [ "/" ] [ "--" ];
 
-      collectSkillRootRelativePaths =
-        dirPath: relativePath:
-        let
-          entries = builtins.readDir dirPath;
-          childDirs = builtins.attrNames (lib.filterAttrs (_: fileType: fileType == "directory") entries);
-          childRelativePath =
-            childName: if relativePath == "" then childName else "${relativePath}/${childName}";
-        in
-        if builtins.hasAttr "SKILL.md" entries then
-          [ relativePath ]
-        else
-          lib.concatMap (
-            childName: collectSkillRootRelativePaths "${dirPath}/${childName}" (childRelativePath childName)
-          ) childDirs;
-
-      listToAttrsWithUniqueNameCheck =
-        errorMsg: entries:
-        let
-          names = map (entry: entry.name) entries;
-        in
-        assert lib.assertMsg (builtins.length names == builtins.length (lib.unique names)) errorMsg;
-        builtins.listToAttrs entries;
-
-      # 外部来源只声明仓库根目录和选择策略，解析后统一进入现有分组/平铺流程。
-      # 整树改写：漂移门需要跨 skill 的全局视野（同一专名可能出现在任意 skill），
+      # 外部来源整树改写：漂移门需要跨 skill 的全局视野（同一专名可能出现在任意 skill），
       # 逐 skill 派生无法做这个断言。脚本幂等，每次 build 重算需要指针的集合。
       pstackSkills =
         pkgs.runCommand "pstack-skills"
@@ -46,7 +120,7 @@
             nativeBuildInputs = [ pkgs.python3 ];
           }
           ''
-            cp -r ${sources.cursor-plugins.src}/pstack $out
+            cp -r ${inputRoot groups.pstack.input}/${groups.pstack.derived} $out
             chmod -R u+w $out
             python3 ${mylib.relativeToRoot "utils/script/adapt_pstack_skills.py"} \
               "$out" \
@@ -54,151 +128,27 @@
               ${./skills/pstack-harness/pi.md}
           '';
 
-      # 派生目录自带形状：包装成 { derived = path; }，跳过需要读文件系统的单文件判定。
-      pstackSkillSource =
-        relativePath:
-        {
-          derived = pkgs.runCommand "pstack-skill-${flattenSkillName relativePath}" { } ''
-            cp -r ${pstackSkills}/skills/${relativePath} $out
-          '';
-        };
-
-      fetchedSkillRepos = {
-        anti-slop = {
-          root = inputs.anti-slop;
-          skills.install-anti-slop = "skills/install-anti-slop";
-          frontmatter.install-anti-slop.disable-model-invocation = true;
-        };
-
-        # ast-grep-agent-skill = {
-        #   root = sources.ast-grep-agent-skill.src;
-        #   skills.ast-grep = "ast-grep/skills/ast-grep";
-        # };
-
-        # pstack 把 CLI/TUI 验收委托给这个 skill；只取 control-cli，
-        # control-ui 由本机 agent-browser 承担，见 skills/pstack-harness。
-        cursor-team-kit = {
-          root = "${sources.cursor-plugins.src}/cursor-team-kit/skills";
-          skills.control-cli = "control-cli";
-        };
-
-        diagram-design = {
-          root = inputs.diagram-design;
-          skills.diagram-design = "skills/diagram-design";
-        };
-
-        humanlayer-skills = {
-          root = sources.humanlayer-skills.src;
-          skills = {
-            design-control-loop = "plugins/design-control-loop/skills/design-control-loop";
-            show-me = "plugins/show-me/skills/show-me";
-          };
-          # skills.visual-pr = "plugins/visual-pr/skills/visual-pr";
-        };
-
-        llamaparse-agent-skills = {
-          root = sources.llamaparse-agent-skills.src;
-          skills.liteparse = "skills/liteparse";
-        };
-
-        mattpocock-skills = {
-          root = sources.mattpocock-skills.src;
-          skills = {
-            improve-codebase-architecture = "skills/engineering/improve-codebase-architecture";
-            codebase-design = "skills/engineering/codebase-design";
-            diagnosing-bugs = "skills/engineering/diagnosing-bugs";
-            grill-me = "skills/productivity/grill-me";
-            grill-with-docs = "skills/engineering/grill-with-docs";
-            grilling = "skills/productivity/grilling";
-            handoff = "skills/productivity/handoff";
-            prototype = "skills/engineering/prototype";
-            tdd = "skills/engineering/tdd";
-            to-tickets = "skills/engineering/to-tickets";
-            to-spec = "skills/engineering/to-spec";
-            writing-for-agents = "skills/productivity/writing-for-agents";
-            loop-me = "skills/in-progress/loop-me";
-            code-review = "skills/engineering/code-review";
-            implement = "skills/engineering/implement";
-            implement-spec = "skills/engineering/implement-spec";
-            setup-matt-pocock-skills = "skills/engineering/setup-matt-pocock-skills";
-            wayfinder = "skills/engineering/wayfinder";
-            research = "skills/engineering/research";
-            domain-modeling = "skills/engineering/domain-modeling";
-            ask-matt = "skills/engineering/ask-matt";
-            triage = "skills/engineering/triage";
-            retro = "skills/engineering/retro";
-            pr = "skills/engineering/pr";
-          };
-        };
-
-        pstack = {
-          # 上游是 Cursor 方言：正文引用 Task/AskQuestion/~/.cursor/rules 等本机不存在的东西。
-          # build 期插入指针并改写死链；discoverFrom 让 eval 扫上游源码，避免 IFD。
-          root = pstackSkills;
-          discoverFrom = "${sources.cursor-plugins.src}/pstack/skills";
-          # 派生内的子目录不能直接当 source 字符串用，转成逐 skill 派生。
-          resolveSource = pstackSkillSource;
-          discover = true;
-          exclude = [
-            "tdd"
-          ];
-          frontmatter.poteto-mode.name = "poteto-mode";
-          frontmatter.make-bot-ui.name = "make-bot-ui";
-          frontmatter.setup-pstack.disable-model-invocation = true;
-        };
-
-        reverse-skill = {
-          root = sources.reverse-skill.src;
-          skills.reverse-skill = "skills";
-        };
-
-        security-audit-skill = {
-          root = sources.security-audit-skill.src;
-          skills.security-audit = "skills/security-audit";
-          frontmatter.security-audit.disable-model-invocation = true;
-        };
-      };
-
-      discoverSkillSources =
-        repoName: scanRoot: resolve:
-        listToAttrsWithUniqueNameCheck "${repoName}: 自动发现的 skill 名冲突。" (
-          map (relativePath: {
-            name = flattenSkillName relativePath;
-            value = resolve relativePath;
-          }) (collectSkillRootRelativePaths scanRoot "")
-        );
-
-      resolveSkillRepo =
-        repoName: repo:
+      # 普通分组取 input 源树里的目录；derived 分组的内容 build 期才生成，
+      # 派生内的子目录不能当 source 字符串用（eval 会做存在性检查），逐 skill 复制成独立派生。
+      groupSource =
+        group: relativePath:
         let
-          # 内容可能来自派生目录：eval 期只能扫上游源码，不能 readDir 尚未构建的产物（IFD）。
-          scanRoot = repo.discoverFrom or repo.root;
-          # 派生目录里的子路径不能当 source 字符串用（eval 会做存在性检查），由来源自行包装。
-          resolve = repo.resolveSource or (relativePath: "${repo.root}/${relativePath}");
-          discovered =
-            if repo.discover or false then discoverSkillSources repoName scanRoot resolve else { };
-          explicit = lib.mapAttrs (_: relativePath: resolve relativePath) (repo.skills or { });
-          duplicateNames = lib.intersectLists (builtins.attrNames discovered) (builtins.attrNames explicit);
-          combined = discovered // explicit;
-          exclusions = repo.exclude or [ ];
-          unknownExclusions = builtins.filter (name: !(builtins.hasAttr name combined)) exclusions;
-          resolved = builtins.removeAttrs combined exclusions;
-          overrideNames = builtins.attrNames (repo.frontmatter or { });
-          unknownOverrides = builtins.filter (name: !(builtins.hasAttr name resolved)) overrideNames;
+          inRepo = dirInRepo group.base relativePath;
         in
-        assert lib.assertMsg (
-          duplicateNames == [ ]
-        ) "${repoName}: 自动发现与显式声明存在同名 skill：${builtins.concatStringsSep ", " duplicateNames}";
-        assert lib.assertMsg (
-          unknownExclusions == [ ]
-        ) "${repoName}: exclude 包含不存在的 skill：${builtins.concatStringsSep ", " unknownExclusions}";
-        assert lib.assertMsg (
-          unknownOverrides == [ ]
-        ) "${repoName}: frontmatter 包含不存在的 skill：${builtins.concatStringsSep ", " unknownOverrides}";
-        assert lib.assertMsg (resolved != { }) "${repoName}: 没有可用的 skill";
-        resolved;
+        if group.derived == null then
+          "${inputRoot group.input}/${inRepo}"
+        else
+          {
+            derived = pkgs.runCommand "pstack-skill-${flattenSkillName relativePath}" { } ''
+              cp -r ${pstackSkills}/${lib.removePrefix "${group.derived}/" inRepo} $out
+            '';
+          };
 
-      fetchedSkillSourcesByRepo = lib.mapAttrs resolveSkillRepo fetchedSkillRepos;
+      fetchedSkillSourcesByRepo = lib.mapAttrs (
+        _: group: lib.mapAttrs (_: groupSource group) group.skills
+      ) groups;
+
+      fetchedSkillRepos = lib.mapAttrs (_: group: { inherit (group) frontmatter; }) groups;
 
       # 单文件来源统一包装成目录，skill 目标形态与目录来源保持一致，避免目录内再挂单文件链接。
       normalizeFetchedSkillSource =
