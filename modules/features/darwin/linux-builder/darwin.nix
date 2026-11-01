@@ -12,7 +12,7 @@
 #   - guest 默认只有 1 核、约 2.9 GB 内存；调大要改 guest 配置，会失去缓存，需先有可用 builder
 #
 # 启停手动：
-#   启动：linux-builder          （首次会要一次 sudo 密码，用来安装连接密钥；前台运行，Ctrl-C 优雅停机）
+#   启动：linux-builder          （首次会要一次 sudo 密码，用来安装连接密钥；前台运行，Ctrl-C 优雅停机；已在运行时拒绝）
 #   状态：linux-builder status   （运行中打印 PID 与启动时间）
 #   停止：linux-builder stop     （向 vzvm 发 SIGINT，等 guest 优雅关机；原终端已关闭也能停）
 #   重置：just builder-reset     （删掉 guest 磁盘，下次启动是空 store；运行中拒绝执行，先 stop）
@@ -51,6 +51,14 @@
           running_pids() { pgrep -f "$pattern" || true; }
 
           do_start() {
+            local pids
+            # 第二个实例会重写 vzvm.json 并与运行中的 VM 争用同一块 guest 磁盘
+            pids="$(running_pids)"
+            if [[ -n "$pids" ]]; then
+              echo "linux-builder 已在运行（PID ''${pids//$'\n'/ }），不再启动第二个实例" >&2
+              echo "要重启：先 linux-builder stop，再 linux-builder" >&2
+              exit 1
+            fi
             mkdir -p "$dir"
             cd "$dir"
             exec ${pkgs.darwin.linux-builder-vz}/bin/create-builder
