@@ -58,7 +58,7 @@
     // 静态资源（flake.nix 里 flake = false 的 input，见 docs/adr/0006-static-assets-as-flake-inputs.md）：
     // original 带 ref + rev，Renovate 只替换 flake.nix 里的 rev
     {
-      description: "skill 类静态资源：上游内容会进 agent 上下文，逐个 input 手动合并",
+      description: "skill 类静态资源：上游内容会进 agent 上下文，每周合成一个 PR 手动合并",
       matchManagers: ["nix"],
       matchDepNames: [
         "anti-slop",
@@ -69,7 +69,8 @@
         "mattpocock-skills",
         "security-audit-skill",
       ],
-      commitMessageTopic: "{{depName}}",
+      groupName: "skill static assets",
+      schedule: ["before 4am on monday"],
       automerge: false,
     },
     {
