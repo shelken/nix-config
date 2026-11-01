@@ -231,6 +231,19 @@
         };
       };
 
+      # HM 的 batCache 每次激活都 `bat cache --build` 并打印三行。catppuccin 经 programs.bat.themes
+      # 注入了自定义主题，bat 只从缓存读自定义资源，缓存必须保留；构建只要约 0.3s，所以每次重建，只丢弃 stdout
+      home.activation.batCache = lib.mkForce (
+        lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+          (
+            export XDG_CACHE_HOME=${lib.escapeShellArg config.xdg.cacheHome}
+            # 在空目录里构建，规避 ~/cache 存在时的失败：https://github.com/sharkdp/bat/issues/1726
+            cd "${pkgs.emptyDirectory}"
+            run ${lib.getExe config.programs.bat.package} cache --build > /dev/null
+          )
+        ''
+      );
+
       # zoxide is a smarter cd command, inspired by z and autojump.
       # It remembers which directories you use most frequently,
       # so you can "jump" to them in just a few keystrokes.
