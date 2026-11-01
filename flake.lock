@@ -385,17 +385,17 @@
     "kitty-icon": {
       "flake": false,
       "locked": {
-        "lastModified": 1620952549,
-        "narHash": "sha256-q5wNdFRMvQDx3DlO7zdy/xPJbqcNlm4iVKaBwjxlSMs=",
+        "lastModified": 1776216785,
+        "narHash": "sha256-6oHqtq4ff9YrZEty0Q2UMFhhICoGRwdoPp56JnYAXSM=",
         "ref": "main",
-        "rev": "8fbd883a46f013a6fb62fc83694fde224f89d8f7",
+        "rev": "b0108d7d4059164744eadd57ed644a7b2808ed3b",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/DinkDonk/kitty-icon"
       },
       "original": {
         "ref": "main",
-        "rev": "8fbd883a46f013a6fb62fc83694fde224f89d8f7",
+        "rev": "b0108d7d4059164744eadd57ed644a7b2808ed3b",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/DinkDonk/kitty-icon"

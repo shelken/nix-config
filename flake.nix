@@ -417,7 +417,7 @@
 
     # 终端图标
     kitty-icon = {
-      url = "git+https://github.com/DinkDonk/kitty-icon?ref=main&rev=8fbd883a46f013a6fb62fc83694fde224f89d8f7&shallow=1";
+      url = "git+https://github.com/DinkDonk/kitty-icon?ref=main&rev=b0108d7d4059164744eadd57ed644a7b2808ed3b&shallow=1";
       flake = false;
     };
 
