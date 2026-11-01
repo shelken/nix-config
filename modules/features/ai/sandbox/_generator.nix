@@ -123,8 +123,6 @@ let
     export MISE_SHIMS_DIR=/data/xdg/data/mise/shims
     export MISE_SYSTEM_CONFIG_FILE="$SB_CONFIG_DIR/mise.toml"
     export MISE_GLOBAL_CONFIG_FILE=/data/mise/config.toml
-    # 运行上下文禁止 mise 隐式安装；安装只允许经 sb sync 显式进行
-    export MISE_AUTO_INSTALL=0
     export PATH="$MISE_SHIMS_DIR:${guestBinPath}"
   '';
 
@@ -154,7 +152,9 @@ let
   # guest 上下文只挂载 store 与配置目录，因此这里在构建期解引用成自包含副本，
   # 保证 /root/.pi、/root/.omp/agent 等在上下文内可读。
   # 条目来源只有三种：sandboxFiles 的显式覆盖、{ source = ...; } 的软链目标、普通路径。
-  sandboxOverrides = lib.foldl' (acc: tool: acc // tool.sandboxFiles) { } (builtins.attrValues toolsCfg);
+  sandboxOverrides = lib.foldl' (acc: tool: acc // tool.sandboxFiles) { } (
+    builtins.attrValues toolsCfg
+  );
   resolveEntry =
     item:
     if sandboxOverrides ? ${item.target} then

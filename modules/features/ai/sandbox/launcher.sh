@@ -480,9 +480,9 @@ if [[ -d /data ]]; then
   mkdir -p /data/xdg/data/omp /data/xdg/state/omp /data/xdg/cache/omp /data/xdg/config /data/mise /data/xdg/data/mise/shims
 fi
 
-# 宿主共用 mise 目录：执行上下文内只读，安装仅经 sb sync
+# 宿主共用 mise 目录：上下文可写，项目工具按需安装并跨 VM 重建保留
 if [[ -d /opt/sandbox-mise ]]; then
-  BWRAP_ARGS+=(--ro-bind /opt/sandbox-mise /opt/sandbox-mise)
+  BWRAP_ARGS+=(--bind /opt/sandbox-mise /opt/sandbox-mise)
 fi
 
 if [[ -d /run/sandbox-config ]]; then
@@ -548,8 +548,8 @@ if [[ -f /run/sandbox-config/current/guest-env.sh ]]; then
   # shellcheck source=/dev/null
   source /run/sandbox-config/current/guest-env.sh
 fi
-# 上下文不能安装工具，联网解析项目 mise.toml 里的 latest 没有意义，反而每次启动都白等：
-# minio/mc 的版本列表约 14 MB，超过 mise 的超时，缓存写不进去，每次重试并刷警告。
-# 写在这里而不是 guest-env.sh：sb sync 也 source 它，但 sync 在上下文外，必须联网
-export MISE_OFFLINE=1
+# 不用 MISE_OFFLINE：它连安装下载也禁止。PREFER_OFFLINE 只在本地已有版本时不联网，
+# 已装的 latest（如 minio/mc，版本列表约 14 MB，超过 mise 超时）不再每次启动白等。
+# 写在这里而不是 guest-env.sh：sb sync 也 source 它，sync 必须联网解析
+export MISE_PREFER_OFFLINE=1
 ip netns exec "$NETNS" bwrap "${BWRAP_ARGS[@]}" -- "$@"

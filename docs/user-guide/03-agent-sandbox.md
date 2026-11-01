@@ -117,7 +117,15 @@ GitHub token 等 secret 不需要写进 `.sandbox.yaml`：沙箱里只有占位�
 
 ## 场景四：沙箱里缺工具
 
-Agent 在沙箱内不能安装工具。长期需要的工具登记到共享工具表，宿主和沙箱同时获得：
+只有某个项目要用的工具，写进项目自己的 `mise.toml`，在沙箱里装：
+
+```bash
+sb run bash -c 'mise trust && mise install'
+```
+
+Agent 在上下文里也可以自己执行这两条命令。装好的工具放在宿主的共用目录，重建 VM 后仍在，其他项目用同一版本时不再下载。每个项目目录只需 `mise trust` 一次。需要现场编译的工具（如带原生扩展的 `pipx:` 包）装不上，沙箱里没有 C 编译器
+
+所有项目都要用的工具，登记到共享工具表，宿主和沙箱同时获得：
 
 1. 在 `modules/features/ai/tools.nix`（AI 工具）或 `modules/features/dev/tools-base.nix`（基础 CLI）里加一条
    ```nix
