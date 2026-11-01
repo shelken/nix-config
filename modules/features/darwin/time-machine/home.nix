@@ -78,7 +78,7 @@
             if [ ! -e "$_tm_path" ]; then
               echo "time-machine: 跳过不存在的路径 $_tm_path"
             elif /usr/bin/xattr -p com.apple.metadata:com_apple_backup_excludeItem "$_tm_path" > /dev/null 2>&1; then
-              echo "time-machine: 已排除 $_tm_path"
+              :
             else
               # 失败只告警：排除是尽力而为，不该挡住激活
               if /usr/bin/tmutil addexclusion "$_tm_path"; then
