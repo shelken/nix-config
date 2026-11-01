@@ -16,23 +16,23 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@main
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # main
         with:
           ref: main
           submodules: true
           fetch-depth: 0
           token: "${{ secrets.GITHUB_TOKEN }}"
 
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - uses: DeterminateSystems/flake-checker-action@main
+      - uses: DeterminateSystems/nix-installer-action@9383ce2bf08796b65508822f5982f49151badc4e # main
+      - uses: DeterminateSystems/magic-nix-cache-action@f69a2d3e148e90223fe63ab6e3f6331f2e7e33dc # main
+      - uses: DeterminateSystems/flake-checker-action@52880e9a632c10558027febd64b43dd5a56d7fca # main
 
       - name: update flake upstream input
         shell: bash
         run: |
           nix flake lock --update-input ${{ inputs.input }}
 
-      - uses: EndBug/add-and-commit@main
+      - uses: EndBug/add-and-commit@b71b8bc98e8f0c672eb1ecccfc010cd6921bec7b # main
         with:
           add: flake.lock
           commit: --signoff
