@@ -47,6 +47,7 @@ flowchart LR
 - **沙箱基础环境 (Sandbox Base)**: 沙箱启动与隔离所需的 Linux 工具，由 sandbox 模块管理，不属于共享工具。不含 C 工具链，见「设计决策」
 - **补齐 (Sync)**: 显式安装已登记但缺失的 mise 工具和插件。_避免_: 升级、更新
 - **共用安装层 (Shared Install Layer)**: 宿主上由所有沙箱 VM 共用的一份 mise 安装产物与下载缓存。_避免_: 共享缓存、镜像卷
+- **项目工具 (Project Tool)**: 项目自己的 mise 配置声明、不在登记表里的工具。在执行上下文内按需安装，落在共用安装层，所有项目与 VM 共用。_避免_: 本地工具、临时工具
 - **声明配置 (Declared Config)**: Nix 定义、发布进沙箱的配置文件或目录，即共享工具登记表 `files` 里的条目。上下文内只读，不管插件想不想改它。_避免_: 配置（太泛）
 - **运行状态 (Runtime State)**: 工具运行中产生或修改的文件，例如插件数据库、登录态、intercom 运行目录。可写，所有上下文共用，不写回宿主
 
@@ -57,7 +58,7 @@ flowchart LR
 3. 执行上下文内的进程不能改变自己的能力授权
 4. 导入文件归宿主所有，执行上下文的修改不写回宿主
 5. 工具的升级只由用户主动触发，补齐不改变已安装项
-6. 执行上下文对共用安装层只读；写入（安装）只经 `sb sync` 在上下文外发生
+6. 登记工具只由 `sb sync` 在上下文外补齐；执行上下文可以写共用安装层，用来安装项目工具
 7. 上限指纹只含 guest 侧挂载声明，不含宿主真实路径；宿主路径变化不触发 VM 重建
 8. 项目配置未批准或批准后内容变了，不得启动执行上下文；批准只发生在宿主上
 9. 声明配置由挂载强制只读，不靠约定；同目录里的运行状态照常可写
@@ -175,7 +176,7 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 
 mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-linux`（`SB_MISE_HOST_DIR`，首次使用自动创建），挂到所有 VM 的 `/opt/sandbox-mise`，新 VM 不必重新下载。mise 的 state、shims 与用户层配置 `/data/mise/config.toml` 留在各 VM 数据卷
 
-上下文对共用层只读，并设 `MISE_AUTO_INSTALL=0`，Agent 无法在沙箱内安装工具。launcher 还设 `MISE_OFFLINE=1`：上下文里 mise 不发网络请求，项目 `mise.toml` 里写 `latest` 的工具解析不出版本，只给一条警告，不再每次启动白等超时（实测 minio/mc 的版本列表约 14 MB，超过 mise 的超时，缓存写不进去）。`sb sync` 不在上下文里，不受影响
+上下文对共用层可写，不设 `MISE_AUTO_INSTALL=0`：Agent 或用户在上下文里 `mise trust`、`mise install` 即可装项目工具，产物落在宿主目录，VM 重建后、其他 VM 的上下文里都直接复用。信任记录在数据卷 `/data/xdg/state/mise`，同一 VM 内跨上下文保留。launcher 设 `MISE_PREFER_OFFLINE=1` 而不是 `MISE_OFFLINE=1`：后者连安装下载也拒绝（实测 `offline mode is enabled`）；前者让已装的 `latest` 工具直接用本地版本，不再每次启动联网白等（实测 minio/mc 的版本列表约 14 MB，超过 mise 的超时）。`sb sync` 不在上下文里，不受影响
 
 ### `sb sync`
 
@@ -379,6 +380,7 @@ pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就
 - `sb sync` 在宿主侧经 flock（共用目录下的 `.sync.lock`）串行化，多 VM 并发 sync 不交叉写安装层
 - sync 不清理下载缓存，共用的下载缓存是资产
 - 主 VM 首次创建后自动 sync 一次；`sb run`、`sb shell`、`omp-sb` 复用已有 VM 时不自动 sync
+- 执行上下文可写共用层，项目工具在上下文内用 `mise install` 安装，不经 `sb sync`、不需要登记。原先上下文只读、安装只走 `sb sync`，目的是让 sync 成为唯一写入方；但威胁模型只防误操作，Agent 本来就能在项目里下载并运行任意程序，只读挡不住什么，反而让项目 `mise.toml` 里的工具（kustomize、helm、flux 等）在沙箱里无法使用。上下文的安装不拿 `.sync.lock`，并发安装同一版本由 mise 自己串行（实测 3 个上下文同时装 `shfmt@3.10.0`，1 个安装、2 个报告已安装，三者都能运行）
 - OMP 插件在 guest 内每次按沙箱清单重建。先把可写清单副本和旧 `bun.lock` 放入同级暂存目录，再使用保留的 Bun 缓存安装。安装成功后备份整个旧插件目录，再替换为新目录；清单外插件和旧登记表随旧目录删除。替换失败时恢复旧目录。私有依赖的 `git+ssh://git@github.com/…` 与 `ssh://git@github.com/…` 在本次安装中都改走 https（两条 `insteadOf`）。安装脚本通过 `gh auth token` 读取当前登录态，只向本次 Bun 安装传入 `GITHUB_TOKEN`；避免 Bun 把 SSH 用户名 `git` 带入 HTTPS 认证后被 credential helper 拒绝。guest 读到的是占位符，msb 在网络边界替换；宿主从现有 gh 登录态读取，同样不用 ssh
 - 宿主与沙箱要装不同的插件时，在清单顶层写 `sandboxExclude`：列出的依赖只从沙箱清单里去掉，宿主清单不变。沙箱清单由 Nix 在构建期生成（`sandboxFiles`）。`guest-env.sh` 导出 `SB_OMP_MANIFEST`，共享工具的安装命令把该路径传给 `install.sh`；宿主未设置时使用仓库原件。排除项不在 `dependencies` 里时构建失败
 - 安装或替换失败时 `sb sync` 以非零退出，宿主激活只打警告。替换前的备份包含插件、清单、锁文件和登记表；自动恢复也失败时输出备份路径并保留备份。缓存缺少所需内容时 Bun 可以联网下载
@@ -391,6 +393,9 @@ pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就
 - 宿主目录体积随工具增长（约 1 至 2 GB 量级）
 - 沙箱里装不了需要现场编译的原生依赖（如 `node-pty`），负对照见 `ae7b2b5d` 的验证记录
 - 没有有效 GitHub 凭据时私有插件装不上，`sb sync` 失败
+- 上下文里的 `mise uninstall`、`mise prune` 会删掉所有 VM 共用的版本；登记工具用 `sb sync` 补回，项目工具再 `mise install`
+- 没有 mise shell 激活，命令找不到时不会自动安装；新工具要先 `mise install`（安装会生成 shim）
+- 需要现场编译的项目工具装不上，例如依赖原生扩展的 `pipx:` 包（实测 `pipx:homeassistant-cli` 报 `No such file or directory: 'gcc'`）
 
 ## 测试
 
