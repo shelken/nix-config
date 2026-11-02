@@ -1,4 +1,4 @@
-"""执行计划端到端测试：用临时目录里的真实 git 仓库与 YAML 驱动 `python -m sb plan`。
+"""执行计划端到端测试：临时目录里的真实 git 仓库与 YAML，驱动真实的 `sb plan --json`。
 
 运行（需要 yq、git）：nix shell nixpkgs#yq-go -c python3 test_plan.py
 YAML 用 JSON 写，它是合法 YAML，yq 照常解析。
@@ -7,12 +7,10 @@ YAML 用 JSON 写，它是合法 YAML，yq 照常解析。
 import json
 import os
 import subprocess
-import sys
-import tempfile
 import unittest
-from pathlib import Path
 
-HERE = Path(__file__).parent
+from testenv import SbEnv
+
 CEILING = {
     "mount_roots": ["~/Code"],
     "network": {"allow": ["public", "dns", "host:tcp:8317"], "default_grant": ["192.168.1.5:8080"]},
@@ -25,27 +23,16 @@ def git(*args):
 
 class PlanTest(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="sb-plan-")).resolve()
-        self.addCleanup(lambda: subprocess.run(["rm", "-rf", str(self.tmp)]))
-        self.home = self.tmp / "home"
-        self.proj = self.home / "Code" / "proj"
-        self.proj.mkdir(parents=True)
-        git("init", "-q", str(self.proj))
-        git("-C", str(self.proj), "commit", "-q", "--allow-empty", "-m", "i")
+        self.env = SbEnv()
+        self.addCleanup(self.env.close)
+        self.tmp, self.home, self.proj = self.env.tmp, self.env.home, self.env.project
         self.ceiling = dict(CEILING)
 
     def plan(self, project_cfg=None, cwd=None):
         if project_cfg is not None:
-            (self.proj / ".sandbox.yaml").write_text(json.dumps(project_cfg))
-        ceiling = self.tmp / "sb.yaml"
-        ceiling.write_text(json.dumps(self.ceiling))
-        r = subprocess.run(
-            [sys.executable, "-m", "sb", "plan", str(cwd or self.proj), str(ceiling)],
-            cwd=HERE,
-            capture_output=True,
-            text=True,
-            env={**os.environ, "HOME": str(self.home)},
-        )
+            self.env.set_project(project_cfg)
+        self.env.policy.write_text(json.dumps(self.ceiling))
+        r = self.env.sb("plan", "--json", cwd=cwd)
         return r.returncode, (json.loads(r.stdout) if r.returncode == 0 else None), r.stderr.strip()
 
     def ok(self, project_cfg=None, **kw):
