@@ -36,7 +36,7 @@ iphone status
 
 | `iphone up 会走:` 的值 | 含义 | 需要什么 |
 |---|---|---|
-| `Xcode` | 本机 Xcode 认得这台手机 | 见「Xcode 路径」 |
+| `Xcode` | 本机 Xcode 的 `devicectl` 认得这台手机，且已配置 Team | 见「Xcode 路径」 |
 | `plumesign` | Xcode 不行，plumesign 与 rcodesign 可用且 plumesign 已登录 | 见「plumesign 路径」 |
 | `SideStore（未验证）` | 前两条都不行，手机上有 SideStore | 见「SideStore 路径」 |
 | `没有可用的安装路径` | 三条都不满足 | 运行 `iphone up`，报错会列出每条路径缺什么 |
@@ -45,9 +45,11 @@ iphone status
 
 `iphone up` 开头也会打印「路径」一行，另有两个值：`已就绪`（WDA 已在运行）和 `已装 Runner`（手机上已有 Runner，直接启动）。这两种不需要再装。
 
+装好之后的**启动方式**由手机系统决定，用户不选：iOS 17 及以上用 `xcodebuild test-without-building`，旧系统用 go-ios `runwda`。iOS 17 及以上要先在本机有同一份签名产物（`artifacts/signed/`，`up` 会自己准备），旧系统直接启动手机上那份。
+
 ### Xcode 路径
 
-适用：本机有完整 Xcode，且它认得这台手机。系统太旧的手机通常不行。
+适用：本机有完整 Xcode，它的 `devicectl` 认得这台手机，且已配置 Team。系统太旧的手机通常不认得。
 
 这条路径的前提沿用改造前的写法，改造后没有在真机重新验证（未验证）。
 
@@ -62,19 +64,21 @@ iphone init --team <TeamID> --bundle <全局唯一的 bundle id>
 iphone up
 ```
 
-- `--team`：Xcode 账号里个人团队的 Team ID，取法：`security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject` 的 `OU=`。只有这条路径需要它
+- `--team`：Xcode 账号里个人团队的 Team ID，取法：`security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject` 的 `OU=`。没配 Team 时 `iphone up` 不选这条路径
 - 首次 `up` 会拉取固定版本的 WDA 源码并用 `xcodebuild` 构建，约几分钟
 - 首次 `up` 后，手机上要到「设置 → 通用 → VPN 与设备管理 → 开发者 App」信任该证书，再重新 `iphone up`
 - Runner 的 bundle id 是 `<bundle id>.xctrunner`
 
 ### plumesign 路径
 
-适用：Xcode 路径不可用，例如系统太旧、Xcode 不认这台手机。只在 iOS 15.6.1 的 iPhone 6s 上验证过，iOS 17 及以上未验证。
+适用：Xcode 路径不可用，例如系统太旧、Xcode 不认这台手机、Xcode 没有登录 Apple ID。在 iOS 15.6.1 的 iPhone 6s 与 iOS 27.2 的 iPhone 14 上验证过。
 
 需要：
 
 - plumesign（mise 固定 2.7.2）与 rcodesign（nix），都声明在 `modules/features/ai/host-commands/iphone.nix`。缺失时 `iphone` 报错并说明安装方式，不会自己装
 - 一个不与其他侧载工具共用的 Apple ID
+- 手机在这个 Apple ID 的团队里注册过；`plumesign account devices` 能看到它。没注册时先 `plumesign account register-device --udid <UDID> --name <设备名>`，再 `iphone renew`
+- 手机上免费描述文件的名额有空位（同时最多 3 个 App）。满了 `up` 会报出该卸哪个，不会签完才发现装不上
 
 为什么要独立的 Apple ID：免费账号的开发证书有上限，实测观测到 2 个。plumesign 申请新证书超限时不询问，直接吊销现有证书，实测吊销过同账号 SideStore 的证书。不同签名工具共用一个账号会互相吊销对方的证书
 
@@ -98,9 +102,10 @@ iphone up
 第一次约 2 分钟，依次做这些事：
 
 - 下载固定版本的官方 Runner 并校验 sha256，一次性
-- 手机没挂载开发者磁盘镜像时，由 go-ios 下载并挂载，首次较慢
-- 第一遍 plumesign 签主 app（不带设备），rcodesign 补签 `.xctest`，第二遍 plumesign 签名并安装。补签的原因见 [设计 README](../README.md)「后果」
-- 用 go-ios 启动 Runner，等待 WDA 就绪
+- 查免费描述文件的名额，满额就停下来报出该卸哪个
+- 第一遍 plumesign 签主 app（不带设备），rcodesign 补签 `.xctest`，第二遍 plumesign 把整包封好。补签的原因见 [设计 README](../README.md)「后果」
+- 安装：`devicectl` 认得这台设备时用 `xcrun devicectl device install app`，认不得（旧系统）时第二遍签名带上 `--register-and-install` 由 plumesign 经 AFC 安装
+- 启动 Runner 并等 WDA 就绪：iOS 17 及以上用 `xcodebuild test-without-building`，旧系统用 go-ios `runwda`（先挂载开发者磁盘镜像，首次较慢）
 - 把自动锁定改为「永不」
 
 另外：
@@ -145,11 +150,11 @@ WDA 直接打开 `prefs:` 会被系统拒绝，只有「快捷指令」里的「
 | `config.json` | 配置：UDID、bundle id、Team ID |
 | `cli/up.log` | 启动 WDA 的日志，启动失败先看它 |
 | `cli/wda.log` | go-ios `runwda` 的日志输出 |
-| `cli/tools.log` | plumesign、rcodesign、go-ios 的完整输出，plumesign 路径每次安装前清空 |
+| `cli/tools.log` | plumesign、rcodesign、go-ios、devicectl 的完整输出，plumesign 路径每次安装前清空 |
 | `cli/build.log` | Xcode 路径的构建日志 |
 | `cli/` 其他 | `wda.pid`、`last.json`（最近一次快照）、`session`、`shots/`（截图） |
 | `artifacts/wda-<版本>/` | 校验后解包的官方 Runner，不原地签名 |
-| `artifacts/signed/` | plumesign 路径签好的 Runner 副本，证书过期时间读它 |
+| `artifacts/signed/` | plumesign 路径签好的 Runner 副本，也是 `xcodebuild` 启动的 `__TESTROOT__`：目录根有生成的 `WebDriverAgentRunner.xctestrun`，app 在它旁边的 `Debug-iphoneos/`。证书过期时间读它 |
 | `artifacts/images/` | go-ios 的开发者磁盘镜像 |
 | `artifacts/` 下的 `.ipa` | SideStore 路径推给手机的 IPA |
 | `xcode/` | 只有 Xcode 路径用：`derived_data/` 构建产物，`WebDriverAgent/` 固定版本源码 |
@@ -168,17 +173,21 @@ plumesign 的账号令牌与私钥在 `~/.config/PlumeImpactor/`，不在上面�
 | `WDA 还在运行。先 iphone down` | 只在 `iphone init` 时出现（换 bundle id）：先 `iphone down` 再 `iphone init`。换手机用 `iphone up`，不会出现 |
 | `没有可用的安装路径` | 三条路径都不满足。按报错里 Xcode、plumesign、SideStore 各一行补齐其一，见「首次配置」 |
 | `手机系统 ... 低于下限` | 官方 Runner 装不上，先升级手机系统 |
-| `缺 go-ios`、`缺 rcodesign`、`缺 plumesign` | 按报错里的安装方式装。nix 与 mise 的声明在 `modules/features/ai/host-commands/iphone.nix`，`iphone` 不会自己装 |
+| `缺 go-ios`、`缺 rcodesign`、`缺 plumesign`、`缺 xcodebuild` | 按报错里的安装方式装。go-ios、rcodesign 与 plumesign（mise 固定版本）声明在 `modules/features/ai/host-commands/iphone.nix`，Xcode 由用户自己装完整版，`iphone` 不会自己装 |
 | `plumesign 没登录` | 用户本人登录，命令见「plumesign 路径」 |
+| `手机上的免费描述文件 App 已满 3 个` | 免费描述文件在一台手机上同时最多装 3 个 App，跨团队计数。按报错里的卸载命令先卸掉一个，优先卸旧的 Runner，再 `iphone up`。`iphone status` 的 `Runner:` 一行能看出手机上那份 Runner 是哪条路径签的 |
+| `devicectl 装不上` | 报错里给出 iOS 的原始回复。若原文含 `maximum number of installed apps using a free developer profile` 就是名额满了，按上面一行处理；否则看报错末尾的注册提示与 `cli/tools.log` |
+| `设备没在 plumesign 的团队里注册时` | 你本人运行 `plumesign account register-device --udid <UDID> --name <设备名>`，再 `iphone renew` |
 | `同账号上其他侧载工具的证书已被吊销` | 证书数超过账号上限，plumesign 吊销了别的工具的证书。换一个不与其他侧载工具共用的 Apple ID，不要反复重试 |
 | `anisette 服务器不可用` | plumesign 经第三方服务器登录。检查网络，稍后重试 |
 | `plumesign 失败`、`rcodesign 失败`、`ios 失败` | 报错末尾给出 `cli/tools.log`，看完整输出。每次调用 plumesign 都可能向 Apple 申请证书，不要循环重试 |
 | `没能从主程序取到签名证书`、`找不到 plumesign 的私钥` | 第一遍 plumesign 没留下证书或私钥。看 `cli/tools.log` 里它的输出，不要反复重试 |
 | `下载 Runner 失败` | 检查网络后重试 |
 | `Runner 的 sha256 不符，已拒绝解包` | 下载内容与固定的哈希不符。检查网络与代理后重试，不要手动放行。哈希写在脚本开头的常量里 |
-| `手机锁屏，请用户本人解锁`、`手机锁屏，等待用户解锁`、`手机处于锁屏` | 用户本人解锁。启动时的前两条 `up` 会继续等，解锁后自动继续；其他命令解锁后重新运行 |
+| `手机锁屏，等待用户解锁`、`手机锁屏，等待用户解锁（xcodebuild 会继续等）`、`手机锁屏，请用户本人解锁`、`手机处于锁屏` | 用户本人解锁。前两条是启动时的提示，`xcodebuild` 与 `runwda` 都停在那里等，在 `--timeout`（默认 120 秒）内解锁就自己继续，不用重跑；其他命令解锁后重新运行 |
 | `Runner 启动后立刻退出，多半是 .xctest 没签好` | `iphone renew` 重新签名 |
 | `已装的 Runner 没起来`、`已装的 Runner 证书已过期，需要重新签名` | `up` 会继续往下探测，重新签名并安装，不用处理 |
+| `已装的 Runner（...）在本机没有对应的产物` | iOS 17 及以上要用本机的签名产物写 xctestrun。`up` 继续往下走一轮签名安装即可 |
 | `WDA 还没就绪。手机若锁屏请解锁` | 启动超过 20 秒仍未就绪时的提示。解锁手机，`up` 继续等 |
 | `120s 内 WDA 没就绪`（秒数随 `--timeout`） | 看 `cli/up.log` 与 `cli/wda.log` |
 | `WDA 未运行` | `iphone up` |
@@ -193,9 +202,10 @@ plumesign 的账号令牌与私钥在 `~/.config/PlumeImpactor/`，不在上面�
 ## 已知限制
 
 - 免费账号证书 7 天过期。过期后 `iphone up` 自动重签并重装（SideStore 路径除外，由 SideStore 管理）
-- 免费账号最多同时装 3 个开发 App
+- 免费账号在一台手机上同时最多装 3 个开发 App，跨团队计数，按「团队 + bundle id」在设备上算。同一份 Runner 覆盖安装不占新名额；装新的 Runner 前先卸旧的，`up` 会在装之前查一次名额
+- 免费账号在团队里注册的设备有到期时间，`plumesign account devices` 能看到（实测注册当天显示 7 天后到期）；到期后要重新注册
 - plumesign 路径申请新证书超过账号上限时，不询问直接吊销现有证书；实测观测到的免费账号上限是 2。要用不与其他侧载工具共用的 Apple ID
-- plumesign 路径只在 iOS 15.6.1 上验证。iOS 17 及以上的设备，go-ios 需要 tunnel，没有验证，这类设备走 Xcode 路径
+- plumesign 路径在 iOS 15.6.1 与 iOS 27.2 上验证。iOS 17 及以上的启动改用 `xcodebuild test-without-building`，go-ios 的 tunnel 没有采用，见 [设计 README](../README.md)；iOS 15 的旧设备仍走 plumesign 加 go-ios，这条路径在本次改动后没有回归验证
 - Xcode 路径在改造后没有在真机重新验证，SideStore 路径从未在设备上跑过
 - iOS 15.6.1 的设置页没有 `com.apple.settings.*` 标识，行的 `name` 是本地化文字（「3 minutes」「Never」），所以按标识找行的界面点击回退用不了；自动锁定页的选项行因此在名字对不上时按固定的 7 行顺序取（30 秒、1–5 分钟、永不）。装了中转快捷指令后 `autolock` 在 iOS 15.6.1 上实测可用（经 Safari，3 分钟与永不互相切换，各约 15 秒）；没装时报「这台手机的设置页没有稳定标识」，`up` 只警告不失败。WDA 直接打开 `prefs:` 在 iOS 15.6.1 上请求返回成功，但设置不会打开（实为 Siri 回退）。iOS 16.0–16.3 未验证。`iphone up --no-keep-awake` 可以跳过
 - iOS 16.4 以下经 Safari 运行中转快捷指令时（iOS 15.6.1 实测）：键盘输入偶尔多出字符（见过 `namUe`），封装输完会读回地址栏核对，不一致就清空并放慢重输；点地址栏中心会命中「隐私报告」弹层，所以点输入框右端；Safari 里残留的提示框或编辑态会让后面的输入落空，每次先清掉。键盘事件在没有输入框获得焦点时会让 WDA 卡死，只能 `iphone up --restart` 恢复，所以封装发键盘输入前一定先确认输入框已存在。设置 App 处于「后台挂起」时 `terminate` 会卡满 60 秒，这类旧系统上 `autolock` 不再终止它
