@@ -22,7 +22,7 @@ GUEST_STATUS="${GUEST_STATUS:-}"
 export MSB_CONFIG_PATH="${MSB_CONFIG_PATH:-$DEFAULT_MSB_CONFIG}"
 export MSB_HOME="${MSB_HOME:-$DEFAULT_MSB_HOME}"
 # 共用 mise 层的目录、挂载点与模式由 _mise-layer.nix 经 _host.nix 注入，这里没有内置默认值
-: "${SB_MISE_HOST_DIR:?}" "${SB_MISE_GUEST_MOUNT:?}" "${SB_MISE_MOUNT_MODE:?}"
+: "${SB_MISE_HOST_DIR:?}" "${SB_MISE_GUEST_MOUNT:?}" "${SB_MISE_MOUNT_MODE:?}" "${SB_PLAN:?}"
 export SB_MISE_HOST_DIR
 SB_APPROVAL_DIR="$MSB_HOME/approvals"
 SB_LOCK_DIR="$MSB_HOME/locks"
@@ -144,177 +144,6 @@ print_plan() {
       section("放行的宿主端口:"; .default_allow),
       "批准状态: \({approved: "已批准", unapproved: "未批准，确认以上内容后执行 sb trust", none: "无 .sandbox.yaml，不需要批准"}[$state])"
   ' <<< "$plan_json"
-}
-
-resolve_and_validate_plan() {
-  local cwd="$1" ceiling_yaml="$2"
-  local ceiling_json
-  ceiling_json="$(yq -o=json '.' "$ceiling_yaml")"
-
-  local -a allowed_roots=()
-  while IFS= read -r root_path; do
-    [[ -n "$root_path" ]] || continue
-    local expanded
-    expanded="$(expand_path "$root_path")"
-    [[ -d "$expanded" ]] && allowed_roots+=("$(realpath "$expanded")")
-  done < <(jq -r '(.mount_roots // [])[]' <<< "$ceiling_json")
-
-  local project_root=""
-  if git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    project_root="$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || true)"
-  fi
-  [[ -z "$project_root" ]] && project_root="$cwd"
-  project_root="$(realpath "$project_root")"
-
-  local root_allowed=0
-  for ar in "${allowed_roots[@]}"; do
-    if [[ "$project_root" == "$ar" || "$project_root" == "$ar"/* ]]; then
-      root_allowed=1
-      break
-    fi
-  done
-  if [[ "$root_allowed" -eq 0 ]]; then
-    echo "[-] 错误: 当前项目根目录 $project_root 超出沙箱能力上限 (未落在 sb.yaml mount_roots 挂载根内)" >&2
-    return 1
-  fi
-
-  local git_common_dir=""
-  if git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    local cd_raw
-    cd_raw="$(git -C "$cwd" rev-parse --git-common-dir 2>/dev/null || true)"
-    [[ -n "$cd_raw" ]] && git_common_dir="$(cd "$cwd" && realpath "$cd_raw")"
-  fi
-  if [[ -n "$git_common_dir" && "$git_common_dir" != "$project_root" && "$git_common_dir" != "$project_root"/* ]]; then
-    local gcd_allowed=0
-    for ar in "${allowed_roots[@]}"; do
-      if [[ "$git_common_dir" == "$ar" || "$git_common_dir" == "$ar"/* ]]; then
-        gcd_allowed=1
-        break
-      fi
-    done
-    if [[ "$gcd_allowed" -eq 0 ]]; then
-      echo "[-] 错误: worktree 的 git common dir $git_common_dir 超出沙箱能力上限，请先把该路径加入 mount_roots" >&2
-      return 1
-    fi
-  fi
-
-  local proj_cfg="$project_root/.sandbox.yaml"
-  local imports_json="[]" network_json="[]" paths_json="[]"
-
-  if [[ -f "$proj_cfg" ]]; then
-    local cfg_json
-    cfg_json="$(yq -o=json '.' "$proj_cfg")"
-
-    local -a verified_imports=()
-    local target_form='^(~/|/)[^/]'
-    while IFS= read -r item; do
-      [[ -n "$item" ]] || continue
-      local src target rel
-      src="$(jq -r '.src? // empty' <<< "$item")"
-      target="$(jq -r '.target? // empty' <<< "$item")"
-      if [[ -z "$src" || -z "$target" ]]; then
-        echo "[-] 错误: .sandbox.yaml 的 imports 每项都要写 src 与 target: $item" >&2
-        return 1
-      fi
-      rel="${target#\~/}"
-      rel="${rel#/}"
-      if [[ ! "$target" =~ $target_form || "$target" == */ || "/$target/" == */../* || "$rel" != */* ]]; then
-        echo "[-] 错误: imports 的 target 必须以 ~/ 或 / 开头、不含 ..、位于某个子目录内: $target" >&2
-        return 1
-      fi
-      src="$(expand_path "$src")"
-      [[ "$src" != /* ]] && src="$project_root/$src"
-      if [[ ! -f "$src" ]]; then
-        echo "[-] 错误: .sandbox.yaml 中声明的导入文件不存在: $src" >&2
-        return 1
-      fi
-      verified_imports+=("$(jq -n --arg src "$(realpath "$src")" --arg target "$target" '{src: $src, target: $target, dir: ($target | sub("/[^/]*$"; ""))}')")
-    done < <(jq -c '.imports[]? // empty' <<< "$cfg_json")
-
-    if [[ ${#verified_imports[@]} -gt 0 ]]; then
-      # 命令替换里 set -e 不生效：jq 失败必须显式捕获，否则 imports_json 为空，
-      # 下面 jq --argjson 才报一串无关错误并以非 1 退出，丢掉统一的错误前缀
-      local imports_err
-      if ! imports_json="$(printf '%s\n' "${verified_imports[@]}" | jq -s '
-        (map(.target) | group_by(.) | map(select(length > 1)) | first) as $dup
-        | if $dup then error("imports 的 target 重复: \($dup[0])") else . end
-        | (map(.dir) | unique) as $dirs
-        | map(. as $i | $i + {stage: ($dirs | index($i.dir))})' 2>&1)"; then
-        imports_err="$imports_json"
-        echo "[-] 错误: ${imports_err#*): }" >&2
-        return 1
-      fi
-    fi
-
-    local -a verified_network=()
-    while IFS= read -r net_target; do
-      [[ -n "$net_target" ]] || continue
-      if [[ ! "$net_target" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(:[0-9]+)?$ ]]; then
-        echo "[-] 错误: .sandbox.yaml 的 network 只接受 IP 或 IP:端口: $net_target" >&2
-        return 1
-      fi
-      verified_network+=("$net_target")
-    done < <(jq -r '.network[]? // empty' <<< "$cfg_json")
-    [[ ${#verified_network[@]} -gt 0 ]] && network_json="$(printf '%s\n' "${verified_network[@]}" | jq -R . | jq -s .)"
-
-    local -a verified_paths=()
-    while IFS= read -r item; do
-      [[ -n "$item" ]] || continue
-      local p ro="false"
-      if jq -e 'type == "string"' <<< "$item" >/dev/null 2>&1; then
-        local raw_p
-        raw_p="$(jq -r . <<< "$item")"
-        if [[ "$raw_p" == *:ro ]]; then p="${raw_p%:ro}"; ro="true"; else p="$raw_p"; fi
-      else
-        p="$(jq -r '.path // empty' <<< "$item")"
-        jq -e '.readonly == true or .ro == true' <<< "$item" >/dev/null 2>&1 && ro="true"
-      fi
-      p="${p/#\~/$HOME}"
-      [[ "$p" != /* ]] && p="$project_root/$p"
-      if [[ ! -e "$p" ]]; then
-        echo "[-] 错误: .sandbox.yaml 中声明的额外路径不存在: $p" >&2
-        return 1
-      fi
-      local real_p
-      real_p="$(realpath "$p")"
-      local p_allowed=0
-      for ar in "${allowed_roots[@]}"; do
-        if [[ "$real_p" == "$ar" || "$real_p" == "$ar"/* ]]; then p_allowed=1; break; fi
-      done
-      if [[ "$p_allowed" -eq 0 ]]; then
-        echo "[-] 错误: .sandbox.yaml 中额外路径 $real_p 超出能力上限 (未落在 mount_roots 内)" >&2
-        return 1
-      fi
-      verified_paths+=("$(jq -n --arg path "$real_p" --argjson ro "$ro" '{path: $path, readonly: $ro}')")
-    done < <(jq -c '.paths[]? // empty' <<< "$cfg_json")
-    [[ ${#verified_paths[@]} -gt 0 ]] && paths_json="$(printf '%s\n' "${verified_paths[@]}" | jq -s .)"
-  fi
-
-  local -a default_grants=()
-  while IFS= read -r grant; do
-    [[ -n "$grant" ]] || continue
-    if [[ ! "$grant" =~ ^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+):[0-9]+$ ]]; then
-      echo "[-] 错误: sb.yaml network.default_grant 只接受 IP:端口: $grant" >&2
-      return 1
-    fi
-    default_grants+=("$grant")
-  done < <(jq -r '.network.default_grant[]? // empty' <<< "$ceiling_json")
-  if [[ ${#default_grants[@]} -gt 0 ]]; then
-    network_json="$(printf '%s\n' "${default_grants[@]}" | jq -R . | jq -s --argjson proj "$network_json" '$proj + . | unique')"
-  fi
-
-  local default_allow_json
-  default_allow_json="$(jq -c '[.network.allow[]? | select(. | test("^host:tcp:"))]' <<< "$ceiling_json")"
-
-  jq -n \
-    --arg pr "$project_root" \
-    --arg gcd "$git_common_dir" \
-    --arg cwd "$cwd" \
-    --argjson imp "$imports_json" \
-    --argjson net "$network_json" \
-    --argjson paths "$paths_json" \
-    --argjson def_allow "$default_allow_json" \
-    '{project_root: $pr, git_common_dir: $gcd, cwd: $cwd, imports: $imp, network: $net, paths: $paths, default_allow: $def_allow}'
 }
 
 # -----------------------------------------------------------------------------
@@ -684,7 +513,7 @@ EOF
     ;;
 
   plan)
-    plan_json="$(resolve_and_validate_plan "$(pwd -P)" "$YAML_FILE")"
+    plan_json="$("$SB_PLAN" plan "$(pwd -P)" "$YAML_FILE")"
     if [[ "${1:-}" == "--json" || "${1:-}" == "-j" ]]; then
       jq --arg a "$(approval_state "$(jq -r '.project_root' <<< "$plan_json")")" '. + {approval: $a}' <<< "$plan_json"
     else
@@ -693,7 +522,7 @@ EOF
     ;;
 
   trust)
-    plan_json="$(resolve_and_validate_plan "$(pwd -P)" "$YAML_FILE")"
+    plan_json="$("$SB_PLAN" plan "$(pwd -P)" "$YAML_FILE")"
     project_root="$(jq -r '.project_root' <<< "$plan_json")"
     if [[ ! -f "$project_root/.sandbox.yaml" ]]; then
       echo "[sb] $project_root 没有 .sandbox.yaml，不需要批准"
@@ -731,7 +560,7 @@ EOF
     fi
 
     current_cwd="$(pwd -P)"
-    plan_json="$(resolve_and_validate_plan "$current_cwd" "$YAML_FILE")"
+    plan_json="$("$SB_PLAN" plan "$current_cwd" "$YAML_FILE")"
     project_root="$(jq -r '.project_root' <<< "$plan_json")"
     if [[ "$(approval_state "$project_root")" == "unapproved" ]]; then
       die "$project_root/.sandbox.yaml 未批准，或批准后已变更。先执行 sb plan 查看授权内容，确认后执行 sb trust"
