@@ -4,7 +4,7 @@
   "sandboxExclude": ["@shelken/simple-plannotator"],
   "dependencies": {
     "@ff-labs/pi-fff": "npm:@ff-labs/pi-fff@0.11.0",
-    "@dietrichgebert/ponytail": "npm:@dietrichgebert/ponytail@5.3.2",
+    "@dietrichgebert/ponytail": "npm:@dietrichgebert/ponytail@5.3.3",
     "@shelken/pi-co-authored-by": "npm:@shelken/pi-co-authored-by@0.2.17",
     "@shelken/pi-context-prune": "git+ssh://git@github.com/shelken/pi-context-prune.git#main",
     "@shelken/simple-plannotator": "npm:@shelken/simple-plannotator@0.1.8",
