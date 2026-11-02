@@ -28,14 +28,14 @@ flowchart LR
   H -- /opt/sandbox-mise --> M
 ```
 
-| 组件 | 文件 | 职责 |
+| 模块 / 组件 | 文件 | 职责 |
 | --- | --- | --- |
-| 宿主 CLI | [sb.sh](./sb.sh)、[_sb.nix](./_sb.nix) | 读上限、解析项目计划、管理主 VM 生命周期、复制 imports、调用 launcher |
-| launcher | [launcher.sh](./launcher.sh)、[_launcher.nix](./_launcher.nix) | 在 guest 内以 root 建网络与 bubblewrap 视图，运行命令，退出清理 |
-| 生成器 | [_generator.nix](./_generator.nix)、[sync-guest.sh](./sync-guest.sh) | 由登记表生成 guest 环境、mise 配置、OMP 配置与 sync 脚本 |
-| 状态查询 | [guest-status.sh](./guest-status.sh) | 列出缺失的 mise 工具，供 `sb status` 使用 |
-| 能力上限 | [sb.yaml](./sb.yaml) | 部署到 `~/.config/sandbox/sb.yaml`，`SB_CONFIG` 可覆盖 |
-
+| 顶层装配 Seam | [default.nix](./default.nix) | 极小装配入口（~50 行），消费单一 manifest 装配三个深模块并暴露 HM 选项 |
+| 单一事实来源 | [_manifest.nix](./_manifest.nix) | 集中提取路径、工具与断言，生成统一 manifest 对象，杜绝散装传参 |
+| 配置物化深模块 | [_config.nix](./_config.nix) | 声明文件收集、解引用工作区软链、原子发布至 `~/.config/sandbox/current` 并修剪过期版本 |
+| Guest 运行时与隔离器 | [_guest.nix](./_guest.nix)、[launcher.sh](./launcher.sh)、[guest/](./guest/)、[sync-guest.sh](./sync-guest.sh)、[guest-status.sh](./guest-status.sh) | 封装 Linux 工具闭包与环境脚本；内聚 netns、registry、layout 三个窄接口子模块与 bubblewrap 隔离执行器 |
+| 宿主驱动与 CLI | [_host.nix](./_host.nix)、[sb.sh](./sb.sh) | 封装 microsandbox 驱动配置，接收原生 `sb.yaml`，统一 `die()` 报错，组装 `sb` 与 `omp-sb` 命令行工具 |
+| 能力上限 | [sb.yaml](./sb.yaml) | 原生 YAML 策略基线，部署到 `~/.config/sandbox/sb.yaml`，供日常查看与编辑 |
 ## 术语与不变量
 
 - **主 VM (Main VM)**: 长期运行的一台沙箱 VM，承载所有日常执行上下文。_避免_: 全局 VM、sb-default
