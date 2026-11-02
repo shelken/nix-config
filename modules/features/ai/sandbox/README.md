@@ -45,7 +45,7 @@ flowchart LR
 - **能力上限 (Capability Ceiling)**: 一台沙箱 VM 创建时固定的挂载根、VM 级网络策略（公网、DNS、私网整体放开）和 secret 集合，只能通过重建 VM 改变
 - **能力授权 (Capability Grant)**: 某个执行上下文实际获得的额外路径、导入文件和私网目标。额外路径是挂载根的子集；导入文件和私网目标没有上限，由批准决定
 - **批准 (Approval)**: 用户用 `sb trust` 对项目 `.sandbox.yaml` 的规范化内容哈希做的记录。未批准或内容变了，启动直接报错
-- **项目配置 (Project Config)**: 项目仓库根 `.sandbox.yaml`，请求导入文件、私网目标和额外目录；批准后才生效
+- **项目配置 (Project Config)**: 项目仓库根 `.sandbox.yaml`，请求导入文件、私网目标和额外路径；批准后才生效
 - **执行计划 (Plan)**: `sb` 把能力上限与项目配置解析、校验后交给 launcher 的数据：项目根、git common dir、导入文件、额外路径、放行的私网目标与宿主端口。它是 host → guest 的唯一契约，类型定义在 [py/sb/plan.py](./py/sb/plan.py)，guest 里只有 [guest/plan.sh](./guest/plan.sh) 解析它，改字段要同步这两处，[py/test_contract.py](./py/test_contract.py) 校验两边一致。_避免_: plan_json（那只是它的序列化）
 - **发布目录 (Published Config)**: `~/.config/sandbox/current` 指向的版本化目录，含声明配置副本、`mise.toml`、`guest-env.sh`、`sync-guest.sh`、`declared-paths` 与 `writable-roots`，只读挂进 VM 的 `/run/sandbox-config`。旧版本保留 7 天：数据盘没有 `.declared-paths` 记录时，清理残留占位要靠它们推出上次的声明清单
 - **沙箱基础环境 (Sandbox Base)**: 沙箱启动与隔离所需的 Linux 工具，由 sandbox 模块管理，不属于共享工具。不含 C 工具链，见「设计决策」
@@ -94,7 +94,13 @@ flowchart LR
 
 此外两项自动授权：项目根（git 仓库根，不在仓库内时取当前目录）可写绑定；worktree 的 git common dir 不在项目内时自动加绑，它不在挂载根内则拒绝启动
 
-**批准**：项目有 `.sandbox.yaml` 时，`sb run`、`sb shell`、`omp-sb` 要求它已批准，否则直接报错并提示 `sb trust`，不弹提示、不等待输入。`sb trust` 对规范化内容（键排序、去注释，只改格式或注释不失效）算 SHA-256，记入 `$MSB_HOME/approvals/<哈希>`。批准只看内容、不看路径，所以同一份文件在所有 worktree 里只批准一次；文件一变（包括被 Agent 修改）就要重新批准。`sb plan` 显示批准状态。记录在宿主上，沙箱里的 `sb` 被宿主命令桩拒绝，Agent 批准不了自己
+**批准**：
+
+- 触发：项目有 `.sandbox.yaml` 时，`sb run`、`sb shell`、`omp-sb` 要求它已批准。否则直接报错并提示 `sb trust`，不弹提示、不等待输入
+- 内容：`sb trust` 对规范化内容（键排序、去注释）算 SHA-256，记入 `$MSB_HOME/approvals/<哈希>`。只改格式或注释不失效
+- 只看内容、不看路径：同一份文件在所有 worktree 里只批准一次。文件一变（包括被 Agent 修改）就要重新批准
+- 防自批：记录在宿主上，沙箱里的 `sb` 被宿主命令桩拒绝，Agent 批准不了自己
+- 查看：`sb plan` 显示批准状态
 
 ## 执行上下文
 
@@ -429,5 +435,5 @@ bash modules/features/ai/sandbox/e2e/smoke.sh
 宿主 CLI 由三份单元测试覆盖，不需要 VM：[py/test_plan.py](./py/test_plan.py) 用临时目录里的真实 git 仓库、worktree 与 YAML 驱动真实的 `sb plan --json`；[py/test_lifecycle.py](./py/test_lifecycle.py) 用 [py/testenv.py](./py/testenv.py) 里假的 `msb`，驱动创建、复用、重建、忙时拒绝、`rm`、`status`、`sync`、批准流程与 imports 暂存；[py/test_contract.py](./py/test_contract.py) 把真实的 Plan 交给 `guest/plan.sh` 解析，校验 host → guest 契约两端字段一致。测试环境不继承调用者的 `MSB_HOME`，`sb trust` 不会写进真实的批准目录。PR 上由 [sandbox-host-tests](../../../../.github/workflows/sandbox-host-tests.yml) 运行
 
 ```bash
-cd modules/features/ai/sandbox/py && nix shell nixpkgs#bash nixpkgs#jq nixpkgs#yq-go -c python3 -m unittest test_plan test_lifecycle test_contract
+cd modules/features/ai/sandbox/py && nix shell nixpkgs#python3 nixpkgs#bash nixpkgs#jq nixpkgs#yq-go nixpkgs#git -c python3 -m unittest test_plan test_lifecycle test_contract
 ```
