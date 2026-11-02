@@ -61,15 +61,15 @@ is_empty_placeholder() {
 
 resolve_conflict() {
   local path="$1" want="$2" others="$3"
-  if [[ "$others" -gt 0 ]]; then
-    echo "[-] 错误: 数据盘路径冲突：$path（期望 $want，但存在不同类型的项），有其他上下文在运行，不自动覆盖以免破坏它们" >&2
-    exit 1
-  fi
-  if is_empty_placeholder "$path"; then
+  if is_empty_placeholder "$path" && [[ "$others" -eq 0 ]]; then
     rm -rf "$path"
     return 0
   fi
-  echo "[-] 错误: 数据盘路径冲突：$path（期望 $want，但存在非空项），清空该路径后重试" >&2
+  if is_empty_placeholder "$path"; then
+    echo "[-] 错误: 声明配置的落点 $path 残留了类型不符的空占位（需要$want），但还有 $others 个上下文在运行，可能正把它当挂载点用；全部退出后重试" >&2
+  else
+    echo "[-] 错误: 声明配置的落点 $path 已有类型不符的内容（需要$want），不会自动删除；确认无用后手动移走" >&2
+  fi
   exit 1
 }
 
@@ -84,10 +84,11 @@ is_agent_layout_path() {
   return 1
 }
 
+# 发布目录在而清单缺失时不能静默放行：上下文会没有任何声明配置和只读保护
 require_published() {
   local file="$1"
   if [[ ! -f "$file" ]]; then
-    echo "[-] 错误: 沙箱发布目录不完整（缺少 $file），重新发布配置后重试：just hm" >&2
+    echo "[-] 错误: 发布目录缺少清单：$file（发布目录来自旧版本，重新发布配置后重试：just hm）" >&2
     exit 1
   fi
 }
@@ -164,7 +165,7 @@ prepare_declared_layout() {
     fi
     dst="$(declared_dst "$t")"
     if ! root="$(mount_root_of "$dst")"; then
-      echo "[-] 错误: 声明配置 $t 不在任何可写根或 .config/ 下（重新发布配置后重试：just hm）" >&2
+      echo "[-] 错误: 声明配置 $t 不在任何可写根或 .config/ 下（发布清单不一致，重新发布配置后重试：just hm）" >&2
       exit 1
     fi
     p="$(dirname "$dst")"
