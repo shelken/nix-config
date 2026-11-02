@@ -1,0 +1,33 @@
+name: Sandbox Host Tests
+
+on:
+  pull_request:
+    paths:
+      - modules/features/ai/sandbox/py/**
+      - modules/features/ai/sandbox/guest/plan.sh
+      - .github/workflows/sandbox-host-tests.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
+
+      # 宿主 sb 的单元测试（假 msb，不需要 VM）与 host → guest 的执行计划契约测试
+      - name: Run unit tests
+        working-directory: modules/features/ai/sandbox/py
+        run: >
+          nix shell nixpkgs#python3 nixpkgs#bash nixpkgs#jq nixpkgs#yq-go nixpkgs#git --command
+          python3 -m unittest test_plan test_lifecycle test_contract
