@@ -79,6 +79,13 @@ class ContractTest(unittest.TestCase):
         got = guest_parse(json.dumps(self.host_plan() | {"imports": [], "network": [], "paths": [], "default_allow": []}))
         self.assertEqual(set(got), {"ROOT", "GCD"})
 
+    def test_path_with_a_backslash_reaches_the_guest_unescaped(self):
+        (self.e.project / "back\\slash").mkdir()
+        self.e.set_project({"paths": ["back\\slash"]})
+        plan = self.host_plan()
+        self.assertEqual(plan["paths"][0]["path"], str(self.e.project / "back\\slash"))
+        self.assertEqual(guest_parse(json.dumps(plan))["PATH"], [f"{plan['paths'][0]['path']}\tfalse"])
+
     def test_malformed_plan_fails_before_anything_is_allocated(self):
         r = subprocess.run(["bash", "-c", DUMP, "x", str(PLAN_SH), "not json"], capture_output=True, text=True)
         self.assertNotEqual(r.returncode, 0)

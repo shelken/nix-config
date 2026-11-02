@@ -21,5 +21,5 @@ parse_plan() {
   mapfile -t PLAN_DEFAULT_ALLOW < <(jq -r '.default_allow[]? // empty' <<< "$plan_json")
   mapfile -t PLAN_NETWORK < <(jq -r '.network[]? // empty' <<< "$plan_json")
   mapfile -t PLAN_IMPORT_STAGES < <(jq -r '[.imports[]? | [.stage, .dir]] | unique[] | @tsv' <<< "$plan_json")
-  mapfile -t PLAN_PATHS < <(jq -r '.paths[]? | [.path, (.readonly // false | tostring)] | @tsv' <<< "$plan_json")
+  mapfile -t PLAN_PATHS < <(jq -r '.paths[]? | [.path, (.readonly // false | tostring)] | join("\t")' <<< "$plan_json")
 }
