@@ -13,8 +13,10 @@ description: PR 提交规范：目标仓库与模板、分支与 commit 历史�
 ## 分支与提交历史
 
 - 从 upstream 的干净基点建立分支，不在 fork main 上累积多个 commit 后再提 PR；多个修复 commit 压缩为一个后提交
-- PR base 必须是默认分支，不通过 feature 分支互相 merge 建立堆栈；紧耦合改动合成一个分支、一个 PR
-- 已有堆栈须在合并前逐个执行 `gh pr edit <n> --base <默认分支>`：合并进非默认分支的 PR 不会关闭 `Fixes` 引用的 Issue；GitHub 只在合并后删除 head 分支时自动重定向依赖 PR 的 base，`gh pr merge --delete-branch` 时并不可靠
+- 单个 PR 的 base 是默认分支；紧耦合改动合成一个分支、一个 PR
+- 有依赖关系的多个改动用 GitHub 原生 stacked PRs：`gh stack` 建栈，栈底 PR 的 base 是默认分支，整条栈落到默认分支
+- 栈内保持线性历史靠 `gh stack rebase` 加 `gh stack push`（`--force-with-lease`），这是「不改写历史」的例外
+- 手工堆栈（PR 的 base 指向另一个 feature 分支）须在合并前逐个执行 `gh pr edit <n> --base <默认分支>`：合并进非默认分支的 PR 不会关闭 `Fixes` 引用的 Issue；GitHub 只在合并后删除 head 分支时自动重定向依赖 PR 的 base，`gh pr merge --delete-branch` 时并不可靠
 - 一般情况不直接修改 commit 历史，不 amend，让每个历史变更在 PR 中清晰可见
 - 不自行添加或清除 commit message 中的 `Co-Authored-By` trailer
 
