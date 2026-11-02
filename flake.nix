@@ -72,6 +72,8 @@
           deploy = {
             sshUser = "root";
             interactiveSudo = false;
+            # 在目标机构建：评估仍在本机，VPS 只实现派生并直接从 cache.nixos.org 下载，省掉本机 linux-builder 与跨境上传
+            remoteBuild = true;
           };
           nixos-modules = map mylib.relativeToRoot [
             "hosts/vps/vps-cc"
