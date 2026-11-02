@@ -14,11 +14,8 @@ let
   devMiseTools = config.shelken.dev.miseTools;
   devWritableRoots = config.shelken.dev.sandbox.writableRoots;
 
-  # 合并宿主控制命令拦截桩（保证其他模块登记的拦截桩不丢失）
-  mergedHostCommands = config.shelken.dev.sandbox.hostCommands // {
-    sb = "sb 是宿主沙箱管理 CLI，沙箱内部无法嵌套管理沙箱 VM";
-    just = "just hm / just sw 是宿主系统切换命令，沙箱内无法修改宿主系统配置";
-  };
+  # 含 default.nix 声明的 sb、just 与其他功能登记的拦截桩，由模块系统合并
+  devHostCommands = config.shelken.dev.sandbox.hostCommands;
 
   # 规范化路径集合
   statePaths = {
@@ -128,5 +125,5 @@ in
   tools = devTools;
   miseTools = devMiseTools;
   writableRoots = devWritableRoots;
-  hostCommands = mergedHostCommands;
+  hostCommands = devHostCommands;
 }
