@@ -35,8 +35,8 @@ flowchart LR
 | 共用 mise 层定义 | [_mise-layer.nix](./_mise-layer.nix) | 宿主目录、guest 挂载点、挂载模式、上下文环境的唯一定义；`sb`、launcher、guest-env 都从它派生，shell 里没有内置默认值 |
 | 配置物化深模块 | [_config.nix](./_config.nix) | 声明文件收集、解引用工作区软链、原子发布至 `~/.config/sandbox/current` 并修剪过期版本 |
 | Guest 运行时与隔离器 | [_guest.nix](./_guest.nix)、[launcher.sh](./launcher.sh)、[guest/](./guest/)、[sync-guest.sh](./sync-guest.sh)、[guest-status.sh](./guest-status.sh) | 封装 Linux 工具闭包与环境脚本；内聚 netns、registry、layout 三个窄接口子模块与 bubblewrap 隔离执行器 |
-| 宿主驱动与 CLI | [_host.nix](./_host.nix)、[sb.sh](./sb.sh) | 封装 microsandbox 驱动配置，接收原生 `sb.yaml`，统一 `die()` 报错，组装 `sb` 与 `omp-sb` 命令行工具 |
-| 执行计划 | [py/sb/plan.py](./py/sb/plan.py) | 把 `sb.yaml` 能力上限与项目 `.sandbox.yaml` 授权解析成 host → guest 的唯一数据契约（`Plan`）；打包成 `sb-plan`，`sb.sh` 调用它。YAML 经 `yq` 转 JSON，与批准哈希同一个解析器 |
+| 宿主驱动与 CLI | [_host.nix](./_host.nix)、[py/sb/](./py/sb/) | `_host.nix` 生成 microsandbox 驱动配置与 `sb-config.json`（Nix 到 sb 的唯一配置通道），打包 `sb` 与 `omp-sb`。`py/sb` 是 CLI 本体：`cli` 分发子命令，`vm` 算期望配置、能力上限指纹并驱动就绪状态机，`msb` 是 msb 命令行的唯一 seam，`approvals`、`sync`、`locks`、`config` 各管一件事 |
+| 执行计划 | [py/sb/plan.py](./py/sb/plan.py) | 把 `sb.yaml` 能力上限与项目 `.sandbox.yaml` 授权解析成 host → guest 的唯一数据契约（`Plan`），launcher 经 `PLAN_JSON` 消费。YAML 经 `yq` 转 JSON，与批准哈希同一个解析器 |
 | 能力上限 | [sb.yaml](./sb.yaml) | 原生 YAML 策略基线，部署到 `~/.config/sandbox/sb.yaml`，供日常查看与编辑 |
 ## 术语与不变量
 
@@ -46,6 +46,8 @@ flowchart LR
 - **能力授权 (Capability Grant)**: 某个执行上下文实际获得的额外路径、导入文件和私网目标。额外路径是挂载根的子集；导入文件和私网目标没有上限，由批准决定
 - **批准 (Approval)**: 用户用 `sb trust` 对项目 `.sandbox.yaml` 的规范化内容哈希做的记录。未批准或内容变了，启动直接报错
 - **项目配置 (Project Config)**: 项目仓库根 `.sandbox.yaml`，请求导入文件、私网目标和额外目录；批准后才生效
+- **执行计划 (Plan)**: `sb` 把能力上限与项目配置解析、校验后交给 launcher 的数据：项目根、git common dir、导入文件、额外路径、放行的私网目标与宿主端口。它是 host → guest 的唯一契约，类型定义在 [py/sb/plan.py](./py/sb/plan.py)，改字段要同步改 `launcher.sh` 与 `guest/` 里读它的地方。_避免_: plan_json（那只是它的序列化）
+- **发布目录 (Published Config)**: `~/.config/sandbox/current` 指向的版本化目录，含声明配置副本、`mise.toml`、`guest-env.sh`、`sync-guest.sh`、`declared-paths` 与 `writable-roots`，只读挂进 VM 的 `/run/sandbox-config`。旧版本保留 7 天：数据盘没有 `.declared-paths` 记录时，清理残留占位要靠它们推出上次的声明清单
 - **沙箱基础环境 (Sandbox Base)**: 沙箱启动与隔离所需的 Linux 工具，由 sandbox 模块管理，不属于共享工具。不含 C 工具链，见「设计决策」
 - **补齐 (Sync)**: 显式安装已登记但缺失的 mise 工具和插件。_避免_: 升级、更新
 - **共用安装层 (Shared Install Layer)**: 宿主上由所有沙箱 VM 共用的一份 mise 安装产物与下载缓存。_避免_: 共享缓存、镜像卷
@@ -215,6 +217,17 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 ## 设计决策
 
 每节记录为什么这样设计、考虑过的替代方案和代价。机制本身见上文各节
+
+### 宿主 CLI 用 Python，guest 脚本留在 shell
+
+宿主 `sb` 做的是结构化数据处理：合并两份 YAML、校验路径是否落在允许根内、拼 VM 配置并算指纹、维护批准状态、驱动一台 VM 的状态机。这些用 shell 写要靠 jq/yq 串联，同一条「路径在允许根内」循环抄过三份，还得用注释提醒命令替换里 `set -e` 不生效。Python 让执行计划成为一个有类型的 `Plan`，`msb` 命令行成为一个可替换的 seam，生命周期状态机可以用假的 msb 在没有 VM 的机器上测
+
+guest 里的 launcher、netns、registry、layout 留在 shell：它们本质是调 `ip`、`iptables`、`bwrap`、`flock`，shell 就是合适的语言，guest 闭包也不必带 Python（闭包大小是专门砍过的）
+
+Python 只用标准库。YAML 经 `yq` 转 JSON 而不用 PyYAML：批准哈希用的是 `yq`，换解析器会让 YAML 1.1 与 1.2 的差异（`yes`/`no`、八进制、冒号分隔的整数）悄悄改变授权内容或让历史批准失效。能力上限指纹逐字节沿用 `jq -S -c` 的规范化，已有主 VM 不会因为换实现被判定为「上限已变」
+
+- 代价：宿主多依赖 `python3` 与 `yq`；`msb` 与 `sec-run` 仍取用户 `PATH`
+- 测试环境覆盖变量只服务验证：`SB_CONFIG`、`SB_SANDBOX_CONFIG`、`SB_MISE_HOST_DIR`、`SB_MISE_LOCK_DIR`、`SB_NO_HOST_CREDENTIALS`、`MSB_HOME`、`MSB_CONFIG_PATH`；日常只有 Nix 生成的 `sb-config.json`
 
 ### 一台主 VM 承载所有执行上下文
 
@@ -412,8 +425,8 @@ bash modules/features/ai/sandbox/e2e/smoke.sh
 
 冒烟测试之外的行为验证（首次启动、OMP 调模型、sync、生命周期与授权）见项目技能 [verify-sandbox](../../../../.agents/skills/verify-sandbox/SKILL.md)
 
-执行计划的规则由 [py/test_plan.py](./py/test_plan.py) 覆盖：临时目录里的真实 git 仓库、worktree 与 YAML，驱动真实的 `python -m sb plan`，不需要 VM
+宿主 CLI 由两份单元测试覆盖，不需要 VM：[py/test_plan.py](./py/test_plan.py) 用临时目录里的真实 git 仓库、worktree 与 YAML 驱动真实的 `sb plan --json`；[py/test_lifecycle.py](./py/test_lifecycle.py) 用 [py/testenv.py](./py/testenv.py) 里假的 `msb`，驱动创建、复用、重建、忙时拒绝、`rm`、`status`、`sync`、批准流程与 imports 暂存。测试环境不继承调用者的 `MSB_HOME`，`sb trust` 不会写进真实的批准目录
 
 ```bash
-cd modules/features/ai/sandbox/py && nix shell nixpkgs#yq-go -c python3 test_plan.py
+cd modules/features/ai/sandbox/py && nix shell nixpkgs#yq-go -c python3 -m unittest test_plan test_lifecycle
 ```
