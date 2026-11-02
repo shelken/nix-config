@@ -33,10 +33,10 @@ modelRoles:
   web: google/gemini-2.5-flash
   gog: google-antigravity/gemini-3.8-flash:high
   plan: "@reviewer-gpt"
-  smol: "@dsf"
-  scout: "@smol"
+  smol: "@claude-lite"
+  scout: "@dsf"
   default: "@dsf"
-  task: "@dsf"
+  task: "@reviewer-gemini"
   slow: "@gpt:high"
 cycleOrder:
   - smol
@@ -78,7 +78,6 @@ statusLine:
 task:
   agentModelOverrides:
     reviewer: "@reviewer-general"
-    reviewer-general: "@reviewer-general"
     reviewer-gemini: "@reviewer-gemini"
     reviewer-ds: "@reviewer-ds"
     reviewer-glm: "@reviewer-glm"

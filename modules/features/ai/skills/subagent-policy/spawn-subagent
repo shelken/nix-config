@@ -115,10 +115,22 @@ function toPiModel(model: string): string {
   return (alias[model.slice(0, i)] ?? model.slice(0, i)) + model.slice(i);
 }
 
+// 变体 agent 与 nix 侧 roleOf 保持一致：自己没有角色条目时借用同名后缀的 reviewer 角色。
+// 这样 task-cc 与 reviewer-cc 同步，新增后缀只需在 default.nix 的 variants 加一行。
+function roleFor(profile: string, roles: Record<string, string>): string {
+  if (typeof roles[profile] === "string") return profile;
+  const i = profile.lastIndexOf("-");
+  if (i <= 0) return profile;
+  const suffix = profile.slice(i + 1);
+  if (typeof roles[`reviewer-${suffix}`] === "string") return `reviewer-${suffix}`;
+  if (typeof roles[suffix] === "string") return suffix;
+  return profile;
+}
+
 function liveModel(profile: string): { model: string; thinking: string } | null {
   const live = loadLiveConfig();
   if (!live) return null;
-  const spec = live.overrides[profile] ?? `@${profile}`;
+  const spec = live.overrides[profile] ?? `@${roleFor(profile, live.roles)}`;
   const resolved = resolveSpec(spec, live.roles);
   if (!resolved) return null;
   const model = toPiModel(resolved.model);
@@ -150,6 +162,7 @@ function usage() {
 profile: 对应 ~/.pi/agent/agents/<profile>.md（文件名匹配大小写不敏感，agent 名统一小写）；
          md 由 nix 生成：frontmatter 的 tools 与正文生效；model/thinking 每次派发实时取自
          ~/.omp/agent/config.yml 的 task.agentModelOverrides + modelRoles，该文件缺失/损坏时才回退 md 值；
+         变体 agent（如 task-cc）没有自己的角色条目时，借同名后缀的 reviewer-<后缀> 角色；
          正文作为系统提示追加（--append-system-prompt）。
          插件排除由 subagent-config.json 的 exclude 全局统一，md 不支持单独声明。
 slug:    任务语义标识（小写字母/数字/连字符；agent 名 profile-slug-时间戳上限 32，

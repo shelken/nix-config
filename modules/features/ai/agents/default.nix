@@ -36,8 +36,9 @@
         "seance"
       ];
 
-      reviewerVariants = [
-        "general"
+      # 变体声明：新增模型后缀只在 variants 加一行；新增支持变体的类别只在
+      # variantCategories 加一行，其余生成逻辑自动生效。
+      variants = [
         "gemini"
         "ds"
         "glm"
@@ -45,11 +46,15 @@
         "cc"
       ];
 
-      reviewerDescription = "Adversarial code reviewer (quality, security, correctness); read-only";
+      variantCategories = [
+        "reviewer"
+        "task"
+      ];
 
-      agentsCommon = {
+      baseAgents = {
         task = {
           description = "General-purpose execution agent with full tool access; never use it for review, that is what the reviewers are for";
+          variantDescription = "General-purpose execution agent with full tool access";
           ompTools = workerOmpTools;
           piTools = workerPiTools;
           body = ./prompts/task.md;
@@ -64,11 +69,14 @@
 
         reviewer = {
           description = "Code review agent for quality, security, and correctness (read-only)";
+          variantDescription = "Adversarial code reviewer (quality, security, correctness); read-only";
           ompTools = reviewerOmpTools;
           ompSpawns = "scout";
           # pi 的 profile 没有 spawns 概念，多派一个 reviewer-variant 才是它的跨家族面板。
           piTools = reviewerPiTools;
           body = ./prompts/reviewer.md;
+          # output schema 只有 omp 认；挂在 agent 上，变体自动继承，无需按名字特判。
+          extraFrontmatter = [ reviewerOutputSchema ];
         };
 
         judge = {
@@ -94,14 +102,29 @@
           piTools = commentSickoPiTools;
           body = ./prompts/comment-sicko.md;
         };
-      }
-      // lib.genAttrs (map (v: "reviewer-${v}") reviewerVariants) (name: {
-        description = "${reviewerDescription} (model role ${name})";
-        ompTools = reviewerOmpTools;
-        ompSpawns = "scout";
-        piTools = reviewerPiTools;
-        body = ./prompts/reviewer.md;
-      });
+      };
+
+      # 类别 × 变体后缀的笛卡尔积：每个组合生成一个独立 agent，属性全部继承类别基础声明。
+      generatedVariants = builtins.listToAttrs (
+        lib.concatMap (
+          cat:
+          map (
+            v:
+            let
+              base = baseAgents.${cat};
+              name = "${cat}-${v}";
+            in
+            lib.nameValuePair name (
+              lib.removeAttrs base [ "variantDescription" ]
+              // {
+                description = "${base.variantDescription or base.description} (model role ${name})";
+              }
+            )
+          ) variants
+        ) variantCategories
+      );
+
+      agentsCommon = baseAgents // generatedVariants;
 
       # ---------- 模型角色解析（omp 与 pi 共用）----------
 
@@ -112,7 +135,29 @@
       agentModelOverrides = ompConfig.task.agentModelOverrides or { };
 
       # judge 不在 task.agentModelOverrides 里也能工作：它自己的 modelRoles 条目就是真相源。
-      roleOf = name: agentsCommon.${name}.modelRole or name;
+      # 变体角色的解析顺序：显式 modelRole > 同名角色 > 变体后缀回退到 reviewer-<后缀>/<后缀> > 名字本身。
+      roleOf =
+        name:
+        let
+          a = agentsCommon.${name};
+        in
+        if a ? modelRole then
+          a.modelRole
+        else if roles ? ${name} then
+          name
+        else if generatedVariants ? ${name} then
+          let
+            parts = lib.splitString "-" name;
+            v = builtins.elemAt parts (builtins.length parts - 1);
+          in
+          if roles ? "reviewer-${v}" then
+            "reviewer-${v}"
+          else if roles ? ${v} then
+            v
+          else
+            name
+        else
+          name;
       modelOf = name: agentModelOverrides.${name} or "@${roleOf name}";
 
       # omp 与 pi 对同一服务的 provider 命名不同；映射与 spawn-subagent 热加载共用一份。
@@ -197,33 +242,28 @@
 
       reviewerOutputSchema = lib.removeSuffix "\n" (builtins.readFile ./reviewer.output.yml);
 
-      mkOmpAgent =
-        name: a:
-        let
-          isReviewer = lib.hasPrefix "reviewer" name;
-        in
-        {
-          name = "${name}.md";
-          path = pkgs.writeText "${name}.md" (
-            lib.concatStringsSep "\n" (
-              [
-                "---"
-                "name: ${name}"
-                "description: ${a.description}"
-                "tools: ${a.ompTools}"
-              ]
-              ++ lib.optional ((a.ompSpawns or null) != null) "spawns: ${a.ompSpawns}"
-              ++ [ "model: ${modelOf name}" ]
-              ++ lib.optional isReviewer reviewerOutputSchema
-              ++ [
-                "---"
-                ""
-                (builtins.readFile a.body)
-              ]
-            )
-            + "\n"
-          );
-        };
+      mkOmpAgent = name: a: {
+        name = "${name}.md";
+        path = pkgs.writeText "${name}.md" (
+          lib.concatStringsSep "\n" (
+            [
+              "---"
+              "name: ${name}"
+              "description: ${a.description}"
+              "tools: ${a.ompTools}"
+            ]
+            ++ lib.optional ((a.ompSpawns or null) != null) "spawns: ${a.ompSpawns}"
+            ++ [ "model: ${modelOf name}" ]
+            ++ (a.extraFrontmatter or [ ])
+            ++ [
+              "---"
+              ""
+              (builtins.readFile a.body)
+            ]
+          )
+          + "\n"
+        );
+      };
 
       ompAgents = lib.filterAttrs (name: _: !(builtins.elem name ompBundledAgents)) agentsCommon;
       ompAgentsDir = pkgs.linkFarm "omp-agents" (lib.mapAttrsToList mkOmpAgent ompAgents);
