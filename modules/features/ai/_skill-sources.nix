@@ -40,6 +40,7 @@
       design-control-loop = "plugins/design-control-loop/skills/design-control-loop";
       show-me = "plugins/show-me/skills/show-me";
     };
+    frontmatter.show-me.disable-model-invocation = false;
     # skills.visual-pr = "plugins/visual-pr/skills/visual-pr";
   };
 
