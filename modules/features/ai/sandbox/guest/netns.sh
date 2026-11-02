@@ -2,7 +2,7 @@
 # guest/netns.sh: 上下文网络隔离与防火墙规则管理
 # 职责：
 # 1. 唯一网络参数推导 (calc_slot_network)
-# 2. 网络命名空间、veth 虚拟网卡与 iptables 安全放行规则配置 (net_up)
+# 2. 网络命名空间、veth 虚拟网卡与 iptables 安全放行规则配置 (net_up)，放行目标读 PLAN_DEFAULT_ALLOW、PLAN_NETWORK
 # 3. 统一的网络资源拆卸与清理 (net_down)
 set -euo pipefail
 
@@ -27,7 +27,7 @@ net_down() {
 }
 
 net_up() {
-  local slot="$1" plan_json="$2"
+  local slot="$1"
   calc_slot_network "$slot"
 
   echo 1 > /proc/sys/net/ipv4/ip_forward
@@ -74,7 +74,7 @@ net_up() {
   host_ip="$(grep 'host.microsandbox.internal' /etc/hosts 2>/dev/null | awk '{print $1}' | grep '^[0-9]' | head -n 1 || true)"
   [[ -z "$host_ip" ]] && host_ip="$(ip route show default 2>/dev/null | awk '{print $3}' | head -n 1 || true)"
 
-  for item in $(jq -r '.default_allow[]? // empty' <<< "$plan_json"); do
+  for item in "${PLAN_DEFAULT_ALLOW[@]}"; do
     if [[ "$item" =~ ^host:tcp:([0-9]+)$ ]]; then
       local port="${BASH_REMATCH[1]}"
       [[ -n "$host_ip" ]] && iptables -A "$SLOT_CHAIN" -d "$host_ip" -p tcp --dport "$port" -j ACCEPT
@@ -82,7 +82,7 @@ net_up() {
   done
 
   # 项目获准私网放行
-  for target in $(jq -r '.network[]? // empty' <<< "$plan_json"); do
+  for target in "${PLAN_NETWORK[@]}"; do
     if [[ "$target" =~ ^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+):([0-9]+)$ ]]; then
       iptables -A "$SLOT_CHAIN" -d "${BASH_REMATCH[1]}" -p tcp --dport "${BASH_REMATCH[2]}" -j ACCEPT
     elif [[ -n "$target" ]]; then

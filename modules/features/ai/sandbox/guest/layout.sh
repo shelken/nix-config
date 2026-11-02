@@ -6,6 +6,9 @@
 # 3. 钉扎祖先目录为挂载点，防止改名绕过只读配置
 # 4. 生成 bubblewrap 挂载参数 (LAYOUT_ARGS)
 # 5. 清理声明删除或改名后遗留的空占位 (prune_stale_placeholders)
+#
+# 读：HOME；写：AGENT_ROOTS（数据盘可写根映射）、LAYOUT_ARGS（bwrap 参数）、MOUNT_POINTS（祖先挂载点）
+# is_agent_layout_path 在 prepare_declared_layout 之后供 launcher 校验 imports 目标
 set -euo pipefail
 
 declare -A AGENT_ROOTS=()

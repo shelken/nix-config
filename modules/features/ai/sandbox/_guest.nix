@@ -2,7 +2,7 @@
 # 职责：
 # 1. 接收单一 SandboxManifest，构建 Linux 交叉工具闭包 (baseTools, sharedTools, hostCommandStubs)
 # 2. 统一 guest 环境与目录同源规则 (guest-env.sh)
-# 3. bubblewrap 隔离执行器打包 (sb-launcher，内聚 netns、registry、layout 三个窄接口子模块)
+# 3. bubblewrap 隔离执行器打包 (sb-launcher，内聚 plan、netns、registry、layout 四个窄接口子模块)
 # 4. 依赖补齐 (sync-guest) 与状态探测 (guest-status) 原生封包
 {
   pkgs,
@@ -150,7 +150,7 @@ let
     }
   }/bin/guest-status";
 
-  # launcher 隔离执行器：自包含打包 netns、registry、layout 模块
+  # launcher 隔离执行器：自包含打包 plan、netns、registry、layout 模块
   launcherTools = with linuxPkgs; [
     bashInteractive
     coreutils
@@ -175,7 +175,8 @@ let
           lib.mapAttrsToList (name: value: "export ${name}=${lib.escapeShellArg value}") miseLayer.contextEnv
         )}
 
-        # 内嵌 3 个内部窄接口模块 (netns, registry, layout)
+        # 内嵌 4 个内部窄接口模块 (plan, netns, registry, layout)
+        ${builtins.readFile ./guest/plan.sh}
         ${builtins.readFile ./guest/netns.sh}
         ${builtins.readFile ./guest/registry.sh}
         ${builtins.readFile ./guest/layout.sh}

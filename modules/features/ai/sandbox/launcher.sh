@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # sb-launcher: 沙箱 Guest 内部执行上下文隔离调度器
 # 职责：
-# 组装 guest/netns.sh、guest/registry.sh、guest/layout.sh 三个内部模块（由 _guest.nix 内嵌），
-# 协调槽位分配、网络隔离、布局规划与 bubblewrap 容器启动。
+# 组装 guest/plan.sh、netns.sh、registry.sh、layout.sh 四个内部模块（由 _guest.nix 内嵌），
+# 协调槽位分配、网络隔离、布局规划与 bubblewrap 容器启动。执行计划只经 parse_plan 读取。
 set -euo pipefail
 
 export PATH="/data/xdg/data/mise/shims:${SB_GUEST_BIN_PATH:-/usr/local/bin:/usr/bin:/bin}"
@@ -24,11 +24,14 @@ PLAN_JSON="$2"
 CWD="$3"
 shift 3
 
-# 2. 启动序列：槽位锁覆盖到布局结束，其他启动者在此排队
+# 2. 解析执行计划：JSON 有问题在占用槽位和锁之前就失败
+parse_plan "$PLAN_JSON"
+
+# 3. 启动序列：槽位锁覆盖到布局结束，其他启动者在此排队
 #    allocate_slot → net_up → prepare_declared_layout → release_slot_lock
 allocate_slot "$CTX_ID"
 
-# 3. 注册退出清理钩子：放在 net_up 之前，网络配置中途失败也会拆掉已建的部分并归还槽位
+# 4. 注册退出清理钩子：放在 net_up 之前，网络配置中途失败也会拆掉已建的部分并归还槽位
 cleanup() {
   local exit_code=$?
   trap - EXIT INT TERM HUP
@@ -37,13 +40,13 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM HUP
 
-net_up "$CURRENT_SLOT" "$PLAN_JSON"
+net_up "$CURRENT_SLOT"
 
-# 4. 准备声明配置布局与可写根
+# 5. 准备声明配置布局与可写根
 prepare_declared_layout "$OTHER_CONTEXTS_COUNT"
 release_slot_lock
 
-# 5. 构建 bubblewrap 隔离参数
+# 6. 构建 bubblewrap 隔离参数
 BWRAP_ARGS=(
   --unshare-user --uid 1000 --gid 1000
   --unshare-ipc --unshare-pid --unshare-uts
@@ -73,7 +76,8 @@ BWRAP_ARGS+=("${LAYOUT_ARGS[@]}")
 
 # 导入文件绑定
 IMPORTS_DIR="$CURRENT_CTX_DIR/imports"
-while IFS=$'\t' read -r stage dir; do
+for entry in "${PLAN_IMPORT_STAGES[@]}"; do
+  IFS=$'\t' read -r stage dir <<< "$entry"
   [[ -n "$stage" ]] || continue
   dir="${dir/#\~/$HOME}"
   case "$dir" in
@@ -89,21 +93,16 @@ while IFS=$'\t' read -r stage dir; do
     exit 1
   fi
   BWRAP_ARGS+=(--bind "$IMPORTS_DIR/$stage" "$dir")
-done < <(jq -r '[.imports[]? | [.stage, .dir]] | unique[] | @tsv' <<< "$PLAN_JSON")
+done
 
-PROJECT_ROOT="$(jq -r '.project_root' <<< "$PLAN_JSON")"
-GIT_COMMON_DIR="$(jq -r '.git_common_dir // empty' <<< "$PLAN_JSON")"
+BWRAP_ARGS+=(--bind "$PLAN_PROJECT_ROOT" "$PLAN_PROJECT_ROOT")
 
-BWRAP_ARGS+=(--bind "$PROJECT_ROOT" "$PROJECT_ROOT")
-
-if [[ -n "$GIT_COMMON_DIR" && "$GIT_COMMON_DIR" != "$PROJECT_ROOT" && "$GIT_COMMON_DIR" != "$PROJECT_ROOT"/* ]]; then
-  [[ -e "$GIT_COMMON_DIR" ]] && BWRAP_ARGS+=(--bind "$GIT_COMMON_DIR" "$GIT_COMMON_DIR")
+if [[ -n "$PLAN_GIT_COMMON_DIR" && "$PLAN_GIT_COMMON_DIR" != "$PLAN_PROJECT_ROOT" && "$PLAN_GIT_COMMON_DIR" != "$PLAN_PROJECT_ROOT"/* ]]; then
+  [[ -e "$PLAN_GIT_COMMON_DIR" ]] && BWRAP_ARGS+=(--bind "$PLAN_GIT_COMMON_DIR" "$PLAN_GIT_COMMON_DIR")
 fi
 
-while IFS= read -r item; do
-  [[ -n "$item" ]] || continue
-  p="$(jq -r .path <<< "$item")"
-  ro="$(jq -r '.readonly // false' <<< "$item")"
+for entry in "${PLAN_PATHS[@]}"; do
+  IFS=$'\t' read -r p ro <<< "$entry"
   if [[ -e "$p" ]]; then
     if [[ "$ro" == "true" ]]; then
       BWRAP_ARGS+=(--ro-bind "$p" "$p")
@@ -111,12 +110,12 @@ while IFS= read -r item; do
       BWRAP_ARGS+=(--bind "$p" "$p")
     fi
   fi
-done < <(jq -c '.paths[]? // empty' <<< "$PLAN_JSON")
+done
 
 if [[ -d "$CWD" ]]; then
   BWRAP_ARGS+=(--chdir "$CWD")
 else
-  BWRAP_ARGS+=(--chdir "$PROJECT_ROOT")
+  BWRAP_ARGS+=(--chdir "$PLAN_PROJECT_ROOT")
 fi
 
 # 6. 加载环境规范并启动容器
