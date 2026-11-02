@@ -23,7 +23,7 @@
 Preconditions:
 
 - 首次启动已完成
-- 共用层目录 `M=${SB_MISE_HOST_DIR:-$HOME/Data/sandboxes/mise/aarch64-linux}`（默认值写在 `sb.sh` 里），harness 不隔离它，下面的 `sb sync` 写的是真实共用层
+- 共用层目录 `M=${SB_MISE_HOST_DIR:-$HOME/Data/sandboxes/mise/aarch64-linux}`（默认值来自 `_mise-layer.nix`，由 `sb` 包装脚本注入），harness 不隔离它，下面的 `sb sync` 写的是真实共用层
 
 - **重复 sync。** 运行 `$V run sync1 -- $V sb sync & $V run sync2 -- $V sb sync & wait`。`sync1.rc` 与 `sync2.rc` 都是 `0`，两份 `.out` 或 `.err` 含「工具与插件补齐成功」。mise 不重复下载已安装工具，Bun 缓存目录保留；插件重建会更新文件，不以两次 `du` 相等作为判据
 - **恢复插件。** 运行 `$V msb exec sb-main -- bash -c 'p=/data/xdg/data/omp/plugins; rm -rf "$p/node_modules/pi-trae-provider"; mkdir -p "$p/node_modules/hand-installed"; printf "{}\n" > "$p/omp-plugins.lock.json"'`，再运行 `$V run sync-repair -- $V sb sync`。`sync-repair.rc` 为 `0`。运行 `$V msb exec sb-main -- bash -c 'p=/data/xdg/data/omp/plugins; test -d "$p/node_modules/pi-trae-provider" && test ! -e "$p/node_modules/hand-installed" && test ! -e "$p/omp-plugins.lock.json"'`，退出码为 `0`。本项在测试 VM 的数据卷中执行，不修改共用下载缓存

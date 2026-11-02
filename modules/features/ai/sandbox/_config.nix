@@ -1,18 +1,21 @@
 # 配置物化与版本发布深模块 (SandboxConfig)
 # 职责：
-# 接收单一 SandboxManifest 规范，生成宿主原子版本发布脚本
+# 接收 SandboxManifest 与 SandboxGuest，生成宿主原子版本发布脚本
 # （解引用外部软链、版本化目录、current.new -> current 原子替换、过期清理）
 {
   pkgs,
   lib,
   manifest,
+  guest,
 }:
 let
   publishDir = manifest.statePaths.publishDir;
 
-  # 宿主侧物化脚本构造器：把发布条目解引用成自包含副本，写入 ~/.config/sandbox/current
-  mkPublishScript =
-    { guestEnvSh, syncGuestScript }:
+  # 宿主侧物化脚本：把发布条目解引用成自包含副本，写入 ~/.config/sandbox/current
+  publishScript =
+    let
+      inherit (guest) guestEnvSh syncGuestScript;
+    in
     pkgs.writeShellScript "publish-sandbox-config" ''
       set -euo pipefail
       export PATH="${
@@ -39,7 +42,7 @@ let
           chmod -R u+w "$tmp/$target"
         fi
       done < ${manifest.configManifest}
-      ln -sfn ${manifest.readOnlyMiseToml} "$tmp/mise.toml"
+      ln -sfn ${manifest.miseToml} "$tmp/mise.toml"
       ln -sfn ${guestEnvSh} "$tmp/guest-env.sh"
       ln -sfn ${syncGuestScript} "$tmp/sync-guest.sh"
       ln -sfn ${manifest.declaredPaths} "$tmp/declared-paths"
@@ -63,5 +66,5 @@ let
     '';
 in
 {
-  inherit mkPublishScript;
+  inherit publishScript;
 }

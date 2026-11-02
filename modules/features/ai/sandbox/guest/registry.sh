@@ -3,8 +3,14 @@
 # 职责：
 # 1. 槽位锁管理 (acquire_slot_lock, release_slot_lock)
 # 2. 扫除僵死上下文 (sweep_dead_contexts)
-# 3. 槽位原子分配与元数据发布 (allocate_slot)
-# 4. 退出资源回收与槽位归还 (release_slot)
+# 3. 槽位原子分配与元数据发布 (allocate_slot)，不碰网络；调用方在 allocate_slot 之后自己 net_up
+# 4. 退出资源回收与槽位归还 (release_slot)，回收死上下文和归还槽位时调用 net_down 拆网络
+#
+# allocate_slot 返回时持有槽位锁（fd 9），设置：
+#   CURRENT_SLOT           本上下文的槽位号
+#   CURRENT_CTX_DIR        本上下文的注册目录
+#   OTHER_CONTEXTS_COUNT   其他仍在运行或启动宽限期内的上下文数
+# 调用方在启动结束后 release_slot_lock
 set -euo pipefail
 
 CONTEXTS_DIR="/run/sandbox/contexts"
@@ -73,7 +79,7 @@ count_active_contexts() {
 }
 
 allocate_slot() {
-  local ctx_id="$1" plan_json="$2"
+  local ctx_id="$1"
   acquire_slot_lock
   sweep_dead_contexts "$ctx_id"
 
@@ -126,9 +132,6 @@ allocate_slot() {
       OTHER_CONTEXTS_COUNT=$((OTHER_CONTEXTS_COUNT + 1))
     fi
   done
-
-  # 准备并启动网络隔离
-  net_up "$CURRENT_SLOT" "$plan_json"
 }
 
 release_slot() {
