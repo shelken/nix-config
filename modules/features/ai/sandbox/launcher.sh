@@ -1,22 +1,12 @@
 #!/usr/bin/env bash
 # sb-launcher: 沙箱 Guest 内部执行上下文隔离调度器
 # 职责：
-# 组装 guest/netns.sh、guest/registry.sh、guest/layout.sh 三个内部模块，
+# 组装 guest/netns.sh、guest/registry.sh、guest/layout.sh 三个内部模块（由 _guest.nix 内嵌），
 # 协调槽位分配、网络隔离、布局规划与 bubblewrap 容器启动。
 set -euo pipefail
 
 export PATH="/data/xdg/data/mise/shims:${SB_GUEST_BIN_PATH:-/usr/local/bin:/usr/bin:/bin}"
 export HOME="${HOME:-/root}"
-# 如果是在独立脚本环境下运行且子模块未内嵌，则动态加载
-if ! declare -f allocate_slot >/dev/null 2>&1; then
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  # shellcheck source=/dev/null
-  source "$SCRIPT_DIR/guest/netns.sh"
-  # shellcheck source=/dev/null
-  source "$SCRIPT_DIR/guest/registry.sh"
-  # shellcheck source=/dev/null
-  source "$SCRIPT_DIR/guest/layout.sh"
-fi
 
 # 1. 快速检查活跃上下文数 (--check-busy)
 if [[ "${1:-}" == "--check-busy" ]]; then
@@ -34,10 +24,11 @@ PLAN_JSON="$2"
 CWD="$3"
 shift 3
 
-# 2. 槽位分配与网络初始化（内部自动清理死上下文并发布元数据）
-allocate_slot "$CTX_ID" "$PLAN_JSON"
+# 2. 启动序列：槽位锁覆盖到布局结束，其他启动者在此排队
+#    allocate_slot → net_up → prepare_declared_layout → release_slot_lock
+allocate_slot "$CTX_ID"
 
-# 3. 注册退出清理钩子（无论是正规退出还是信号中断，统一归还槽位与拆卸网络）
+# 3. 注册退出清理钩子：放在 net_up 之前，网络配置中途失败也会拆掉已建的部分并归还槽位
 cleanup() {
   local exit_code=$?
   trap - EXIT INT TERM HUP
@@ -45,6 +36,8 @@ cleanup() {
   exit "$exit_code"
 }
 trap cleanup EXIT INT TERM HUP
+
+net_up "$CURRENT_SLOT" "$PLAN_JSON"
 
 # 4. 准备声明配置布局与可写根
 prepare_declared_layout "$OTHER_CONTEXTS_COUNT"
@@ -72,8 +65,8 @@ if [[ -d /data ]]; then
   mkdir -p /data/xdg/data/omp /data/xdg/state/omp /data/xdg/cache/omp /data/xdg/config /data/mise /data/xdg/data/mise/shims
 fi
 
-# 宿主共用 mise 目录：上下文可写，项目工具按需安装并跨 VM 重建保留
-[[ -d /opt/sandbox-mise ]] && BWRAP_ARGS+=(--bind /opt/sandbox-mise /opt/sandbox-mise)
+# 宿主共用 mise 目录：挂载点、绑定模式与上下文环境由 _mise-layer.nix 经 _guest.nix 注入
+[[ -d "$SB_MISE_LAYER" ]] && BWRAP_ARGS+=("$SB_MISE_BWRAP_BIND" "$SB_MISE_LAYER" "$SB_MISE_LAYER")
 [[ -d /run/sandbox-config ]] && BWRAP_ARGS+=(--ro-bind /run/sandbox-config /run/sandbox-config)
 
 BWRAP_ARGS+=("${LAYOUT_ARGS[@]}")
@@ -133,10 +126,6 @@ if [[ -f /run/sandbox-config/current/guest-env.sh ]]; then
   # shellcheck source=/dev/null
   source /run/sandbox-config/current/guest-env.sh
 fi
-# 不用 MISE_OFFLINE：它连安装下载也禁止。PREFER_OFFLINE 只在本地已有版本时不联网，
-# 已装的 latest（如 minio/mc，版本列表约 14 MB，超过 mise 超时）不再每次启动白等。
-# 写在这里而不是 guest-env.sh：sb sync 也 source 它，sync 必须联网解析
-export MISE_PREFER_OFFLINE=1
 
 # 注意：不使用 exec，保留 Bash 父进程等待子进程退出，以确保 EXIT cleanup trap 触发网络与资源释放
 ip netns exec "$SLOT_NETNS" bwrap "${BWRAP_ARGS[@]}" -- "$@"

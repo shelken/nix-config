@@ -21,9 +21,10 @@ let
   statePaths = {
     msbHome = "${config.home.homeDirectory}/Data/sandboxes/msb";
     cacheDir = "${config.home.homeDirectory}/.cache/microsandbox";
-    sharedMiseDir = "${config.home.homeDirectory}/Data/sandboxes/mise/aarch64-linux";
     publishDir = "${config.home.homeDirectory}/.config/sandbox";
   };
+
+  miseLayer = import ./_mise-layer.nix { homeDir = config.home.homeDirectory; };
 
   # Git 全局配置（用于克隆和私有依赖凭据改写）
   gitConfig = (pkgs.formats.gitIni { }).generate "sandbox-git-config" {
@@ -68,8 +69,8 @@ let
     }
   ];
 
-  # guest 只读层 mise 配置
-  readOnlyMiseToml = (pkgs.formats.toml { }).generate "sandbox-mise.toml" {
+  # 登记表里 mise 工具的声明，作为只读配置发布给 guest；工具本体装在共用层
+  miseToml = (pkgs.formats.toml { }).generate "sandbox-mise.toml" {
     tools = devMiseTools;
   };
 
@@ -116,7 +117,8 @@ in
     assertions
     gitConfig
     statePaths
-    readOnlyMiseToml
+    miseLayer
+    miseToml
     configManifest
     declaredPaths
     writableRootsFile

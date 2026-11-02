@@ -15,6 +15,7 @@ let
   linuxPkgs = nixpkgs.legacyPackages.${linuxSystem};
   toolsCfg = manifest.tools;
   hostCommandsCfg = manifest.hostCommands;
+  miseLayer = manifest.miseLayer;
 
   # 沙箱基础环境（不登记为共享工具，理由见 ADR 0003）
   baseTools = with linuxPkgs; [
@@ -92,7 +93,7 @@ let
     export XDG_CACHE_HOME=/data/xdg/cache
     export XDG_CONFIG_HOME=/data/xdg/config
     export SB_CONFIG_DIR=/run/sandbox-config/current
-    export SB_MISE_LAYER=/opt/sandbox-mise
+    export SB_MISE_LAYER=${miseLayer.guestMount}
     export SB_OMP_MANIFEST="$SB_CONFIG_DIR/.omp/agent/plugins-package.json"
     if [[ -d "$SB_MISE_LAYER/data" ]]; then
       export MISE_DATA_DIR="$SB_MISE_LAYER/data"
@@ -161,6 +162,11 @@ let
       text = ''
         export SB_GUEST_BIN_PATH="${guestBinPath}"
         export SB_GIT_CONFIG="${manifest.gitConfig}"
+        export SB_MISE_LAYER="${miseLayer.guestMount}"
+        export SB_MISE_BWRAP_BIND="${miseLayer.bwrapBind}"
+        ${lib.concatStringsSep "\n        " (
+          lib.mapAttrsToList (name: value: "export ${name}=${lib.escapeShellArg value}") miseLayer.contextEnv
+        )}
 
         # 内嵌 3 个内部窄接口模块 (netns, registry, layout)
         ${builtins.readFile ./guest/netns.sh}
@@ -180,6 +186,4 @@ in
     guestStatus
     launcher
     ;
-  sync = syncGuestScript;
-  status = guestStatus;
 }
