@@ -17,6 +17,13 @@ let
   hostCommandsCfg = manifest.hostCommands;
   miseLayer = manifest.miseLayer;
 
+  # Git 全局配置（用于克隆和私有依赖凭据改写）
+  gitConfig = (pkgs.formats.gitIni { }).generate "sandbox-git-config" {
+    user = manifest.gitUser;
+    credential."https://github.com".helper = "!gh auth git-credential";
+    url."https://github.com/".insteadOf = "git@github.com:";
+  };
+
   # 沙箱基础环境（不登记为共享工具，理由见 ADR 0003）
   baseTools = with linuxPkgs; [
     bashInteractive
@@ -122,7 +129,7 @@ let
         mise
       ];
       text = ''
-        export SB_GIT_CONFIG="${manifest.gitConfig}"
+        export SB_GIT_CONFIG="${gitConfig}"
         export SB_POSTINSTALL_HOOK="${postInstallHook}"
         ${lib.removePrefix "#!/usr/bin/env bash\n" (builtins.readFile ./sync-guest.sh)}
       '';
@@ -161,7 +168,7 @@ let
       runtimeInputs = launcherTools;
       text = ''
         export SB_GUEST_BIN_PATH="${guestBinPath}"
-        export SB_GIT_CONFIG="${manifest.gitConfig}"
+        export SB_GIT_CONFIG="${gitConfig}"
         export SB_MISE_LAYER="${miseLayer.guestMount}"
         export SB_MISE_BWRAP_BIND="${miseLayer.bwrapBind}"
         ${lib.concatStringsSep "\n        " (
