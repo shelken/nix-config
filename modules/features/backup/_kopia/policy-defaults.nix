@@ -5,6 +5,8 @@
     "*.tmp"
     ".direnv"
     ".venv"
+    "build"
+    ".build"
     ".vitepress"
     "*.temp"
     "*.log"
