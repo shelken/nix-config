@@ -6,6 +6,7 @@
 # 4. 导出宿主 sessionVariables
 {
   pkgs,
+  lib,
   manifest,
   guest,
   policyFile,
@@ -19,6 +20,26 @@ let
     home = msbHome;
     paths.cache = cacheDir;
     sandbox_defaults.disable_metrics_sample = true;
+  };
+
+  # 执行计划解析：sb.yaml 上限 + 项目 .sandbox.yaml 授权 → Plan JSON（py/sb/plan.py）
+  # -P 不把当前目录放进 sys.path：用户项目里恰好有名为 sb 的目录也不会抢走模块
+  sbPlan = pkgs.writeShellApplication {
+    name = "sb-plan";
+    runtimeInputs = [
+      pkgs.python3
+      pkgs.yq-go
+      pkgs.git
+    ];
+    text = ''
+      export PYTHONPATH=${
+        lib.fileset.toSource {
+          root = ./py;
+          fileset = ./py/sb;
+        }
+      }
+      exec python3 -P -m sb "$@"
+    '';
   };
 
   # 宿主 CLI：Nix 原生 writeShellApplication 打包（无宏模板替换）
@@ -38,6 +59,7 @@ let
       export DEFAULT_YAML="${policyFile}"
       export LAUNCHER="${guest.launcher}"
       export GUEST_STATUS="${guest.guestStatus}"
+      export SB_PLAN="${sbPlan}/bin/sb-plan"
       export SB_MISE_HOST_DIR="''${SB_MISE_HOST_DIR:-${manifest.miseLayer.hostDir}}"
       export SB_MISE_GUEST_MOUNT="${manifest.miseLayer.guestMount}"
       export SB_MISE_MOUNT_MODE="${manifest.miseLayer.mountMode}"
