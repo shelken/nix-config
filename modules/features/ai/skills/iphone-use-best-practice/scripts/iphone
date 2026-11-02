@@ -3,7 +3,8 @@
 
 只依赖标准库。HTTP 直接走 usbmuxd，不需要端口转发进程。
 iphone up 按本机条件自动选路，把官方 Runner 装上手机并启动；用户不选路径（设计见 ../README.md）:
-  已就绪 / 已装 Runner 直接起 / Xcode / plumesign / SideStore（未验证）
+  装法: 已就绪 / 已装 Runner 直接起 / Xcode / plumesign / SideStore（未验证）
+  启法: iOS 17 及以上用 xcodebuild test-without-building，旧系统用 go-ios runwda
 iphone 只下载固定版本并校验过的官方 Runner，不下载也不安装 go-ios、rcodesign、plumesign。
 子命令: iphone --help
 """
@@ -41,7 +42,12 @@ SIDESTORE_ID = "com.SideStore.SideStore"  # 手机上有该前缀的 App 即视�
 RUNNER_APP = "WebDriverAgentRunner-Runner.app"
 XCTEST_CONFIG = "WebDriverAgentRunner.xctest"
 OFFICIAL_RUNNER_ID = "com.facebook.WebDriverAgentRunner.xctrunner"  # 官方 Runner 的原始 bundle id
-GOIOS_TUNNEL_MIN_OS = 17  # go-ios 在该系统及以上的 XCTest 会话需要 tunnel，本项目未验证；这类设备只走 Xcode 路径
+# iOS 17 及以上 go-ios 的 XCTest 会话需要 tunnel（本项目未采用），启动改用 xcodebuild test-without-building
+XCTESTRUN_MIN_OS = 17
+FREE_PROFILE_LIMIT = 3  # 免费描述文件在一台设备上同时最多 3 个 App，跨团队计数（iOS 硬限制）
+FREE_PROFILE_ERROR = "maximum number of installed apps using a free developer profile"  # 撞上限时 iOS 报错的开头
+PRODUCTS_DIR = "Debug-iphoneos"  # xcodebuild 按 xctestrun 找 app 的固定目录名
+XCTESTRUN_NAME = "WebDriverAgentRunner.xctestrun"
 
 HOME = Path(os.environ.get("IPHONE_HOME", "~/.local/share/iphone-use")).expanduser()
 CFG = HOME / "config.json"
@@ -53,7 +59,7 @@ TOOLLOG = CLI / "tools.log"
 SHOTS = CLI / "shots"
 ARTIFACTS = HOME / "artifacts"
 OFFICIAL = ARTIFACTS / f"wda-{WDA_RELEASE_TAG}"  # 校验后原样解包的官方 Runner，不原地签名
-SIGNED = ARTIFACTS / "signed"  # plumesign 路径签好的副本
+SIGNED = ARTIFACTS / "signed"  # plumesign 路径签好的副本；xcodebuild 按 xctestrun 启动时它也是 __TESTROOT__
 IMAGES = ARTIFACTS / "images"  # go-ios 的开发者磁盘镜像
 XCODE = HOME / "xcode"  # 仅 Xcode 路径
 DERIVED = XCODE / "derived_data"
@@ -438,7 +444,7 @@ def pid_alive():
     return pid
 
 
-LOG_HINTS = [  # 只用于 Xcode 路径的 xcodebuild 日志
+LOG_HINTS = [  # 只用于 xcodebuild 的日志：Xcode 路径的构建与测试、按 xctestrun 启动
     (r"Unlock .* to Continue", "手机锁屏，等待用户解锁（xcodebuild 会继续等）", False),
     (r"Developer App Certificate is not trusted",
      "手机没信任开发者证书：设置 → 通用 → VPN 与设备管理 → 开发者 App → 信任，然后重新 iphone up", True),
@@ -452,8 +458,7 @@ RUNWDA_HINTS = [  # ios runwda 日志
     (r"(?i)PasswordProtected|device is locked", "手机锁屏，请用户本人解锁", False),
     (r"(?i)broken pipe", "Runner 启动后立刻退出，多半是 .xctest 没签好。运行 iphone renew 重新签名", True),
 ]
-RUNWDA_STALL = "WDA 还没就绪。手机若锁屏请解锁，WDA 要解锁后才就绪"
-
+STALL_HINT = "WDA 还没就绪。手机若锁屏请解锁，WDA 要解锁后才就绪"  # 两种启法共用：启动超过 20 秒仍未就绪时的提示
 
 # ---------- 外部工具与错误翻译 ----------
 
@@ -461,13 +466,19 @@ TOOL_HELP = {
     "ios": "缺 go-ios（命令 ios）。用 nix 装，iphone 不会自己装",
     "rcodesign": "缺 rcodesign。用 nix 装，iphone 不会自己装",
     "plumesign": f"缺 plumesign。用 mise 装 {PLUMESIGN_MISE} {PLUMESIGN_VERSION}，iphone 不会自己装",
+    "xcodebuild": "缺 xcodebuild。装完整的 Xcode（只装命令行工具不够），iphone 不会自己装",
 }
 LOGIN_HELP = ("plumesign 没登录。你本人在终端运行 plumesign account login -u <邮箱>（密码与验证码自己输入）；"
               "登录后运行 chmod -R go-rwx ~/.config/PlumeImpactor，让令牌只有你能读")
 REVOKED_HELP = ("同账号上其他侧载工具的证书已被吊销，这是证书上限导致的（免费账号最多 2 个开发证书）。"
                 "plumesign 路径要用不与其他侧载工具共享的 Apple ID。不要反复重试")
+FREE_PROFILE_HELP = (f"手机上的免费描述文件 App 已满 {FREE_PROFILE_LIMIT} 个（跨团队计数，iOS 硬限制）。"
+                     "先卸掉一个再重试，优先卸旧的 Runner")
+REGISTER_HELP = ("设备没在 plumesign 的团队里注册时，取到的描述文件不含它，装不上去。"
+                 "你本人运行 plumesign account register-device --udid <UDID> --name <设备名> 注册，再 iphone renew")
 TOOL_ERRORS = [
     (r"Revoked certificate", REVOKED_HELP),
+    (FREE_PROFILE_ERROR, FREE_PROFILE_HELP),
     (r"(?i)anisette.*(fail|error|unreach|time.?out|refused|unavailable|connect)"
      r"|(fail|error|unreach|time.?out|refused|unavailable|connect).*anisette",
      "anisette 服务器不可用（plumesign 经第三方服务器登录）。检查网络，稍后重试"),
@@ -648,10 +659,79 @@ ROUTE_NAMES = {"ready": "已就绪", "installed": "已装 Runner", "xcode": "Xco
 
 
 def devicectl_serves(doc, udid):
-    """Xcode 可服务该设备：devicectl 列出的物理设备里有这个 UDID。不比较版本号。"""
+    """devicectl 列出的物理设备里有这个 UDID。不比较版本号：旧系统的设备通常不在里面。"""
     devs = (doc.get("result") or {}).get("devices") or []
     return any((d.get("hardwareProperties") or {}).get("reality") == "physical"
                and (d.get("hardwareProperties") or {}).get("udid") == udid for d in devs)
+
+
+def devicectl_devices():
+    """xcrun devicectl list devices 的原始输出；没有完整 Xcode 或命令失败时 None。"""
+    with tempfile.TemporaryDirectory() as d:
+        out = Path(d) / "devices.json"
+        try:
+            r = subprocess.run(["xcrun", "devicectl", "list", "devices", "--json-output", str(out)],
+                               capture_output=True, timeout=60)
+            return json.loads(out.read_text()) if r.returncode == 0 else None
+        except (OSError, subprocess.TimeoutExpired, ValueError):
+            return None
+
+
+def devicectl_json(args):
+    """xcrun devicectl 的 --json-output 结果；命令失败或输出不是 JSON 时 None。"""
+    with tempfile.TemporaryDirectory() as d:
+        out = Path(d) / "out.json"
+        try:
+            r = subprocess.run(["xcrun", "devicectl", *args, "--json-output", str(out)],
+                               capture_output=True, timeout=120)
+            return json.loads(out.read_text()) if r.returncode == 0 else None
+        except (OSError, subprocess.TimeoutExpired, ValueError):
+            return None
+
+
+def devicectl(args, timeout=300):
+    """跑 xcrun devicectl，完整输出落 tools.log，返回 (退出码, 输出)。"""
+    need_tool("xcodebuild")  # devicectl 与 xcodebuild 同属完整 Xcode
+    CLI.mkdir(parents=True, exist_ok=True)
+    try:
+        r = subprocess.run(["xcrun", "devicectl", *args], stdin=subprocess.DEVNULL, capture_output=True,
+                           text=True, errors="replace", timeout=timeout)
+    except FileNotFoundError:
+        raise Fail("找不到 xcrun。装完整的 Xcode")
+    except subprocess.TimeoutExpired:
+        raise Fail(f"devicectl 超过 {timeout // 60} 分钟没结束，已放弃")
+    out = r.stdout + r.stderr
+    with open(TOOLLOG, "a") as f:
+        f.write(f"$ xcrun devicectl {' '.join(args)}\n{out}\n")
+    return r.returncode, out
+
+
+def free_profile_apps(cfg):
+    """手机上用免费描述文件安装的 App（跨团队计数，上限 3 个）。devicectl 只列开发者签名的 App，
+    实测与安装被拒时 iOS 报出的名单一致。查不到（没有完整 Xcode、CoreDevice 认不得这台设备）时 None。"""
+    doc = devicectl_json(["device", "info", "apps", "--device", cfg["udid"]])
+    apps = ((doc or {}).get("result") or {}).get("apps") or []
+    return [a["bundleIdentifier"] for a in apps if a.get("builtByDeveloper") and a.get("bundleIdentifier")]
+
+
+def free_limit_text(cfg, ids):
+    """免费描述文件的 3 个名额满了：报出占名额的 App 与卸载命令，Runner 排在前面（那是旧的 Runner，卸了不心疼）。
+    报错里的 app id 带团队前缀（<TeamID>.<bundle id>），卸载命令要用去掉前缀的 bundle id。"""
+    clean = list(dict.fromkeys(re.sub(r"^[A-Z0-9]{10}\.", "", i) for i in ids))
+    runners = [i for i in clean if runner_kind(i, cfg)]
+    return (f"{FREE_PROFILE_HELP}。手机上占着名额的 App:\n" + "".join(f"  {i}\n" for i in clean)
+            + "先卸掉一个再 iphone up:\n"
+            + "".join(f"  xcrun devicectl device uninstall app --device {cfg['udid']} {i}\n"
+                     for i in runners + [i for i in clean if i not in runners]))
+
+
+def check_free_slots(cfg, rid):
+    """装之前查免费描述文件的名额，不签完一遍才发现装不上。rid 已在名单里时不占新名额（覆盖安装）。
+    查不到设备上装了哪些 App 时跳过，交由安装报错兜底。"""
+    apps = free_profile_apps(cfg)
+    if not apps or rid in apps or len(apps) < FREE_PROFILE_LIMIT:
+        return
+    raise Fail(free_limit_text(cfg, apps))
 
 
 def account_listed(text):
@@ -666,7 +746,7 @@ class Probes:
     """路径表用到的探测。每个方法对应一个条件；selftest 用假数据的对象替换它。"""
 
     def __init__(self, timeout=120, fetch=True):
-        self.timeout, self.fetch, self._apps, self._ver = timeout, fetch, None, None
+        self.timeout, self.fetch, self._apps, self._ver, self._dev_read = timeout, fetch, None, None, None
 
     def ready(self):
         return ready()
@@ -687,12 +767,19 @@ class Probes:
         return find_runner(self.apps(cfg), cfg)
 
     def start(self, cfg, rid):
-        d = days_left(signed_app()) if rid == runner_id(cfg) else None
-        if d is not None and d <= 0:
-            print("已装的 Runner 证书已过期，需要重新签名", flush=True)
+        """启动手机上已装的 Runner。iOS 17 及以上要本机有同一份签名/构建产物（xcodebuild 按它写 xctestrun 启动）；
+        旧系统的 go-ios runwda 直接启动手机上那份，不要求本机副本。证书过期时返回 False，交给下面重新签名。"""
+        if rid == runner_id(cfg):
+            d = days_left(signed_app())
+            if d is not None and d <= 0:
+                print("已装的 Runner 证书已过期，需要重新签名", flush=True)
+                return False
+        app = installed_app(cfg, rid)
+        if app is None and launch_channel(cfg, self) == "xctestrun":
+            print(f"已装的 Runner（{rid}）在本机没有对应的产物，没法用 xcodebuild 启动，继续往下探测", flush=True)
             return False
         try:
-            launch_runwda(cfg, self.timeout, rid)
+            launch_runner(cfg, self, app, rid, self.timeout)
         except Fail as e:
             print(f"已装的 Runner 没起来: {e}", flush=True)
             return False
@@ -719,15 +806,19 @@ class Probes:
             return None  # status 不下载；还没解包就不知道下限
         return runner_min_os(fetch_runner())
 
+    def _devices(self):
+        if self._dev_read is None:
+            self._dev_read = devicectl_devices()
+        return self._dev_read
+
+    def devicectl_knows(self, cfg):
+        """xcrun devicectl 认得这台设备。旧系统的设备通常不认得，装法与启法都要看它。"""
+        doc = self._devices()
+        return bool(doc) and devicectl_serves(doc, cfg["udid"])
+
     def xcode_serves(self, cfg):
-        with tempfile.TemporaryDirectory() as d:
-            out = Path(d) / "devices.json"
-            try:
-                r = subprocess.run(["xcrun", "devicectl", "list", "devices", "--json-output", str(out)],
-                                   capture_output=True, timeout=60)
-                return r.returncode == 0 and devicectl_serves(json.loads(out.read_text()), cfg["udid"])
-            except (OSError, subprocess.TimeoutExpired, ValueError):
-                return False  # 没有完整 Xcode 时命令失败，按「否」
+        """Xcode 可服务该设备：devicectl 认得它，且已配 Team。没有 Team 时 Xcode 路径签不了名，不能选它。"""
+        return bool(cfg.get("team_id")) and self.devicectl_knows(cfg)
 
     def plumesign_state(self):
         """空串表示 plumesign 路径可用；否则是不可用的原因（含怎么补）。"""
@@ -747,21 +838,19 @@ class Probes:
 
 def no_route_text(plume_why):
     return ("没有可用的安装路径。任选其一:\n"
-            "  Xcode: 本机装完整 Xcode，且它认得这台手机（系统太旧的手机通常不行）\n"
+            "  Xcode: 本机装完整 Xcode，devicectl 认得这台手机（系统太旧的手机通常不行），且已 iphone init --team <TeamID>\n"
             f"  plumesign: {plume_why}\n"
             "  SideStore: 在手机上装 SideStore（未验证）")
 
 
 def install_route(cfg, p):
-    """已就绪、已装 Runner 之后的探测：该用哪条路把 Runner 装上手机。renew 与 status 也用它。"""
+    """已就绪、已装 Runner 之后的探测：该用哪条路把 Runner 装上手机。renew 与 status 也用它。
+    系统版本只用来卡 Runner 的下限，选路本身看本机条件，不看 iOS 版本。"""
     have, floor = p.device_version(cfg), p.min_os()
     if have and floor and vtuple(have) < vtuple(floor):
         raise Fail(f"手机系统 {have} 低于下限 {floor}，官方 Runner 装不上。先升级手机系统")
     if p.xcode_serves(cfg):
         return "xcode"
-    if have and vtuple(have) >= (GOIOS_TUNNEL_MIN_OS,):
-        raise Fail(f"iOS {GOIOS_TUNNEL_MIN_OS} 及以上需要 Xcode 路径（go-ios 需要 tunnel，未验证）。\n"
-                   "Xcode 要满足: 本机装完整 Xcode；xcrun devicectl list devices 里能看到这台手机；已 iphone init --team <TeamID>")
     why = p.plumesign_state()
     if not why:
         return "plumesign"
@@ -775,8 +864,7 @@ def choose_route(cfg, p):
     if p.ready():
         print(f"路径: {ROUTE_NAMES['ready']}")
         return "ready"
-    have = p.device_version(cfg)
-    rid = None if have and vtuple(have) >= (GOIOS_TUNNEL_MIN_OS,) else p.runner_installed(cfg)
+    rid = p.runner_installed(cfg)
     if rid:
         print(f"路径: {ROUTE_NAMES['installed']}", flush=True)
         if p.start(cfg, rid):
@@ -814,8 +902,31 @@ def wait_ready(proc, what, timeout, hints, stall=None):
     raise Fail(f"{timeout}s 内 WDA 没就绪，见 {UPLOG}")
 
 
+def launch_channel(cfg, p):
+    """启法由手机系统决定：iOS 17 及以上用 xcodebuild test-without-building（go-ios 在这类系统上要建 tunnel，
+    本项目未采用，xcodebuild 自己走 CoreDevice 建连），旧系统沿用 go-ios runwda。
+    读不到版本时按 runwda（旧行为），此时 go-ios 缺失会由 need_tool 报缺。"""
+    v = p.device_version(cfg)
+    return "xctestrun" if v and vtuple(v) >= (XCTESTRUN_MIN_OS,) else "runwda"
+
+
+def installed_app(cfg, rid):
+    """手机上已装的那个 Runner 在本机对应的产物：plumesign 路径看签名副本，Xcode 路径看构建产物；
+    本机没有副本时返回 None（SideStore 重签的包本机不保存）。"""
+    kind = runner_kind(rid, cfg)
+    app = {"plumesign": signed_app(), "xcode": RUNNER}.get(kind)
+    return app if app is not None and app.is_dir() else None
+
+
+def launch_runner(cfg, p, app, rid, timeout):
+    """启动手机上已装的 Runner。app 是本机对应产物，runwda 不需要它（直接启动手机上那份）。"""
+    if launch_channel(cfg, p) == "xctestrun":
+        return launch_xctestrun(cfg, app, timeout)
+    return launch_runwda(cfg, timeout, rid)
+
+
 def launch_runwda(cfg, timeout, rid):
-    """ios runwda 是前台常驻进程：独立会话启动、写 pidfile、轮询就绪。DDI 在这里准备，已装直启与 plumesign 路径共用。"""
+    """ios runwda 是前台常驻进程：独立会话启动、写 pidfile、轮询就绪。DDI 在这里准备。"""
     need_tool("ios")
     ensure_ddi(cfg)
     CLI.mkdir(parents=True, exist_ok=True)
@@ -823,7 +934,61 @@ def launch_runwda(cfg, timeout, rid):
         proc = subprocess.Popen(runwda_cmd(cfg, rid), stdout=log, stderr=subprocess.STDOUT,
                                 stdin=subprocess.DEVNULL, start_new_session=True)
     PIDFILE.write_text(str(proc.pid))
-    wait_ready(proc, "ios runwda", timeout, RUNWDA_HINTS, RUNWDA_STALL)
+    wait_ready(proc, "ios runwda", timeout, RUNWDA_HINTS, STALL_HINT)
+
+
+def app_bundle_id(app):
+    return plistlib.loads((app / "Info.plist").read_bytes())["CFBundleIdentifier"]
+
+
+def write_xctestrun(cfg, app):
+    """生成 xcodebuild 启动要的 xctestrun，并把 app 放进它要求的 Debug-iphoneos/ 布局。
+    __TESTROOT__ 就是 xctestrun 所在目录。xcodebuild 只按它启动手机上已装的那份，不负责安装。"""
+    rid = app_bundle_id(app)
+    products = SIGNED / PRODUCTS_DIR
+    shutil.rmtree(products, ignore_errors=True)
+    products.mkdir(parents=True)
+    shutil.copytree(app, products / RUNNER_APP, symlinks=True)
+    host = f"__TESTROOT__/{PRODUCTS_DIR}/{RUNNER_APP}"
+    doc = {"WebDriverAgentRunner": {
+        "BlueprintName": "WebDriverAgentRunner",
+        "ProductModuleName": "WebDriverAgentRunner",
+        "RunOrder": 0,
+        "TestHostPath": host,
+        "TestBundlePath": f"__TESTHOST__/PlugIns/{XCTEST_CONFIG}",
+        "TestHostBundleIdentifier": rid,
+        "BundleIdentifiersForCrashReportEmphasis": [rid],
+        "DependentProductPaths": [host, f"{host}/PlugIns/{XCTEST_CONFIG}"],
+        "EnvironmentVariables": {"USE_PORT": str(cfg.get("device_port", 8100)),
+                                 "WDA_PRODUCT_BUNDLE_IDENTIFIER": rid},
+        "TestingEnvironmentVariables": {"XCODE_SCHEME_NAME": "WebDriverAgentRunner"},
+        "IsXCTRunnerHostedTestBundle": True,
+        "IsUITestBundle": True,
+        "TestTimeoutsEnabled": False,
+        "UseUITargetAppProvidedByTests": True,
+        "ProcessNamesForCrashReportCollection": ["WebDriverAgentRunner-Runner"],
+    }, "__xctestrun_metadata__": {"FormatVersion": 1,
+                                  "ContainerInfo": {"ContainerName": "WebDriverAgent",
+                                                    "SchemeName": "WebDriverAgentRunner"}}}
+    out = SIGNED / XCTESTRUN_NAME
+    with open(out, "wb") as f:
+        plistlib.dump(doc, f)
+    return out
+
+
+def launch_xctestrun(cfg, app, timeout):
+    """xcodebuild test-without-building 按 xctestrun 启动：不需要 Apple ID，不需要
+    -allowProvisioningUpdates，也不需要 tunnel。它是前台常驻进程，手机锁屏时会一直等用户解锁。"""
+    need_tool("xcodebuild")
+    CLI.mkdir(parents=True, exist_ok=True)
+    x = write_xctestrun(cfg, app)
+    with open(UPLOG, "w") as log:
+        proc = subprocess.Popen(["xcodebuild", "test-without-building", "-xctestrun", str(x),
+                                 "-destination", "id=" + cfg["udid"]],
+                                stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                                cwd=HOME, start_new_session=True)
+    PIDFILE.write_text(str(proc.pid))
+    wait_ready(proc, "xcodebuild", timeout, LOG_HINTS, STALL_HINT)
 
 
 def ensure_ddi(cfg):
@@ -853,11 +1018,12 @@ def extract_signing_pems(app, tmp, run):
     return pem, key
 
 
-def sign_runner(cfg, device_id, run=None):
-    """官方 Runner 复制一份到临时位置，签完装上手机，成品留在 artifacts/signed/。
-    顺序不能变：plumesign 不签 .xctest，必须先让 plumesign 建好证书并签主 app，
-    再用 rcodesign 补签 .xctest，最后第二遍 plumesign 把 .xctest 一并封进主 app 并安装。
-    plumesign 的 --udid 比较的是 usbmuxd 的数字 DeviceID，不是 UDID。
+def sign_runner(cfg, install=None, run=None):
+    """官方 Runner 复制一份到临时位置签名，成品留在 artifacts/signed/。签名与安装分开：
+    顺序不能变，plumesign 不签 .xctest，必须先让 plumesign 建好证书并签主 app，
+    再用 rcodesign 补签 .xctest，最后第二遍 plumesign 把 .xctest 一并封进主 app。
+    install 是 usbmuxd 的数字 DeviceID：给出时让 plumesign 顺手经 AFC 安装（旧系统的设备 devicectl 看不到），
+    不给就只签名，由调用方用 devicectl 安装。plumesign 的 --udid 比较的是 DeviceID，不是 UDID。
     每次调用 plumesign 都可能向 Apple 申请证书（超限会吊销别的证书），所以不循环、不重试。"""
     run = run or run_tool
     rid = runner_id(cfg)
@@ -875,27 +1041,49 @@ def sign_runner(cfg, device_id, run=None):
         print("补签 .xctest...", flush=True)
         for x in xctests:
             run(["rcodesign", "sign", "--pem-file", str(pem), "--pem-file", str(key), str(x)])
-        print("签名并安装：第二遍...", flush=True)
-        run(["plumesign", "sign", "--apple-id", "--register-and-install", "--udid", str(device_id),
-             "--custom-identifier", rid, "--package", str(app)])
+        print("签名 Runner：第二遍，密封整包" + ("并安装" if install is not None else "") + "...", flush=True)
+        seal = ["plumesign", "sign", "--apple-id"]
+        if install is not None:
+            seal += ["--register-and-install", "--udid", str(install)]
+        run(seal + ["--custom-identifier", rid, "--package", str(app)])
         shutil.rmtree(SIGNED, ignore_errors=True)
         SIGNED.mkdir(parents=True)
         shutil.copytree(app, signed_app(), symlinks=True)
     return signed_app()
 
 
-def install_plumesign(cfg, device_id):
+def install_app(cfg, app):
+    """用 devicectl 安装签名后的 Runner。撞上免费描述文件的 3 个名额时 iOS 会拒装，
+    这时要把它的原始报错和该卸哪个一起给出来。"""
+    rc, out = devicectl(["device", "install", "app", "--device", cfg["udid"], str(app)])
+    if rc == 0:
+        return
+    if FREE_PROFILE_ERROR in out:
+        ids = list(dict.fromkeys(re.findall(r'^\s*"([^"]+)"', out, re.M)))
+        raise Fail("devicectl 装不上:\n" + "\n".join(f"  {l}" for l in out.splitlines() if l.strip())
+                   + "\n" + free_limit_text(cfg, ids))
+    raise Fail(f"devicectl 装不上: {tool_hint(out) or ' | '.join([l.strip() for l in out.splitlines() if l.strip()][-3:])}\n"
+               f"{REGISTER_HELP}\n完整输出: {TOOLLOG}")
+
+
+def install_plumesign(cfg, device_id, p):
+    """签名并安装。装之前先查免费描述文件的名额：签名要一两分钟，还可能动账号上的 App ID，
+    撞上限时不该白签一遍。iOS 17 及以上用 devicectl 安装，旧系统（devicectl 看不到设备）让 plumesign 经 AFC 装。"""
+    check_free_slots(cfg, runner_id(cfg))
     TOOLLOG.unlink(missing_ok=True)
-    d = days_left(sign_runner(cfg, device_id))
+    app = sign_runner(cfg, install=None if p.devicectl_knows(cfg) else device_id)
+    if p.devicectl_knows(cfg):
+        install_app(cfg, app)
+    d = days_left(app)
     print(f"已签名并安装，证书剩余 {d:.1f} 天" if d is not None
           else "已签名并安装（没读到 embedded.mobileprovision，过期时间未知）")
 
 
-def up_plumesign(cfg, a):
+def up_plumesign(cfg, a, p):
     for t in ("ios", "plumesign", "rcodesign"):
         need_tool(t)
-    install_plumesign(cfg, need_usb(cfg)[0])  # 进到这条路径就是要签名并安装；失败直接报错，不重试
-    launch_runwda(cfg, a.timeout, runner_id(cfg))
+    install_plumesign(cfg, need_usb(cfg)[0], p)  # 进到这条路径就是要签名并安装；失败直接报错，不重试
+    launch_runner(cfg, p, signed_app(), runner_id(cfg), a.timeout)
 
 
 def up_sidestore(cfg, p):
@@ -1038,7 +1226,7 @@ def cmd_renew(a):
     elif route == "plumesign":
         for t in ("ios", "plumesign", "rcodesign"):
             need_tool(t)
-        install_plumesign(cfg, dev[0])
+        install_plumesign(cfg, dev[0], p)
     else:
         up_sidestore(cfg, p)
 
@@ -1066,8 +1254,8 @@ def cmd_up(a):
     if route == "xcode":
         up_xcode(cfg, a)
     elif route == "plumesign":
-        up_plumesign(cfg, a)
-    finish_up(a)  # "installed" 已在探测时由 runwda 启动
+        up_plumesign(cfg, a, p)
+    finish_up(a)  # "installed" 已在探测时启动
 
 
 def cmd_down(a):
@@ -1101,12 +1289,12 @@ def stop_wda():
 
 def runner_kind(rid, cfg):
     """手机上已装 Runner 的来源，由 bundle id 判断：<bundle>.runner 是 plumesign，<bundle>.xctrunner 是 Xcode，
-    其余带官方前缀的是 SideStore 重签（后缀未验证）。没有 Runner 返回 None。"""
+    带官方前缀的是 SideStore 重签（后缀未验证）。不是 Runner 返回 None。"""
     if rid == runner_id(cfg):
         return "plumesign"
     if rid == cfg["bundle_id"] + ".xctrunner":
         return "xcode"
-    return "sidestore" if rid else None
+    return "sidestore" if rid and rid.startswith(OFFICIAL_RUNNER_ID) else None
 
 
 def cert_line(route):
@@ -1854,10 +2042,11 @@ def selftest():
                 zi.external_attr = (0o100000 | mode) << 16
                 z.writestr(zi, data)
 
-    def fake_app(root, main_min, xctest_min):
+    def fake_app(root, main_min, xctest_min, rid=OFFICIAL_RUNNER_ID):
         fa = root / RUNNER_APP
         (fa / "PlugIns/WebDriverAgentRunner.xctest").mkdir(parents=True)
-        (fa / "Info.plist").write_bytes(plistlib.dumps({"CFBundleExecutable": "WebDriverAgentRunner-Runner", "MinimumOSVersion": main_min}))
+        (fa / "Info.plist").write_bytes(plistlib.dumps({"CFBundleExecutable": "WebDriverAgentRunner-Runner",
+                                                        "CFBundleIdentifier": rid, "MinimumOSVersion": main_min}))
         (fa / "PlugIns/WebDriverAgentRunner.xctest/Info.plist").write_bytes(plistlib.dumps({"MinimumOSVersion": xctest_min}))
         (fa / "WebDriverAgentRunner-Runner").write_bytes(b"bin")
         (fa / "WebDriverAgentRunner-Runner").chmod(0o755)
@@ -1915,12 +2104,12 @@ def selftest():
         run_ent = ent[f"Payload/{RUNNER_APP}/WebDriverAgentRunner-Runner"]
         assert f"Payload/{RUNNER_APP}/Info.plist" in ent and (run_ent.external_attr >> 16) & 0o111
 
-        # plumesign 流程：DeviceID 而不是 UDID；补签在第二遍之前；原样解包的目录不被改动；成品留在 signed/
-        official = fake_app(t / "off", "13.0", "15.0")
+        # plumesign 流程：签名与安装分开；补签在第二遍之前；原样解包的目录不被改动；成品留在 signed/
+        official = fake_app(t / "off", "13.0", "15.0", rid="com.example.wda.runner")
         (t / "keys" / "TEAM123").mkdir(parents=True)
         (t / "keys" / "TEAM123" / "key.pem").write_text("KEY")
         c1 = {"udid": "00008030-ABCDEF", "bundle_id": "com.example.wda"}
-        cmds = []
+        cmds, seals = [], []
 
         def fake_run(cmd, check=True):
             cmds.append(list(cmd))
@@ -1930,23 +2119,48 @@ def selftest():
                 Path(cmd[cmd.index("-out") + 1]).write_text("PEM")
             elif cmd[0] == "openssl":
                 return "subject=UID=u, CN=Apple Development: a (b), OU=TEAM123, O=n, C=US"
-            elif cmd[0] == "plumesign" and "--register-and-install" in cmd:
-                (Path(cmd[cmd.index("--package") + 1]) / "embedded.mobileprovision").write_bytes(b"p")
+            elif cmd[0] == "plumesign":
+                seals.append(list(cmd))
+                if len(seals) == 2:  # 第二遍密封时才把描述文件封进整包
+                    (Path(cmd[cmd.index("--package") + 1]) / "embedded.mobileprovision").write_bytes(b"p")
             return ""
 
         with patched(SIGNED=t / "signed", PLUME_KEYS=t / "keys", fetch_runner=lambda: official):
-            kept, _ = quiet(sign_runner, c1, 7, run=fake_run)
+            kept, _ = quiet(sign_runner, c1, run=fake_run)
         assert [c[0] for c in cmds] == ["plumesign", "codesign", "openssl", "openssl", "rcodesign", "plumesign"], cmds
         first, rc, second = cmds[0], cmds[4], cmds[5]
-        assert "--register-and-install" not in first and "--udid" not in first  # 第一遍不带设备
-        assert second[second.index("--udid") + 1] == "7" and "00008030-ABCDEF" not in " ".join(second)  # DeviceID，不是 UDID
-        assert second[second.index("--custom-identifier") + 1] == "com.example.wda.runner" and "--register-and-install" in second
+        assert "--register-and-install" not in " ".join(first + second) and "--udid" not in " ".join(first + second)
+        assert seals == [first, second]  # 两遍 plumesign，没有再被别的命令插进来
+        assert second[second.index("--custom-identifier") + 1] == "com.example.wda.runner"
         pkg = second[second.index("--package") + 1]
         assert pkg == first[first.index("--package") + 1] and Path(pkg) != official  # 都签同一份临时副本
         assert rc.count("--pem-file") == 2 and str(t / "keys" / "TEAM123" / "key.pem") in rc  # 按证书 OU 找到私钥
         assert rc[-1].startswith(pkg) and rc[-1].endswith(".xctest") and str(official) not in " ".join(rc)  # 补签的是副本里的 xctest
         assert not list(official.rglob("embedded.mobileprovision"))  # 官方解包目录原样
         assert kept == t / "signed" / RUNNER_APP and (kept / "embedded.mobileprovision").exists()
+
+        # 旧系统的设备 devicectl 看不到，安装交回 plumesign：第二遍带 --register-and-install，--udid 是 DeviceID
+        cmds.clear(), seals.clear()
+        with patched(SIGNED=t / "signed", PLUME_KEYS=t / "keys", fetch_runner=lambda: official):
+            quiet(sign_runner, c1, install=7, run=fake_run)
+        last = cmds[-1]
+        assert "--register-and-install" in last and last[last.index("--udid") + 1] == "7", last
+        assert "00008030-ABCDEF" not in " ".join(last)  # DeviceID，不是 UDID
+
+        # xctestrun：由脚本生成，app 放进 Debug-iphoneos/ 布局；bundle id 取自 app 自己，不靠调用方传
+        with patched(SIGNED=t / "signed"):
+            x = write_xctestrun({"udid": "U", "bundle_id": "com.x.wda", "device_port": 8100}, kept)
+            doc = plistlib.loads(x.read_bytes())["WebDriverAgentRunner"]
+            assert x == t / "signed" / XCTESTRUN_NAME and doc["TestHostBundleIdentifier"] == "com.example.wda.runner"
+            assert doc["TestHostPath"] == f"__TESTROOT__/{PRODUCTS_DIR}/{RUNNER_APP}", doc
+            assert doc["TestBundlePath"] == f"__TESTHOST__/PlugIns/{XCTEST_CONFIG}" and doc["DependentProductPaths"] == \
+                [doc["TestHostPath"], f"{doc['TestHostPath']}/PlugIns/{XCTEST_CONFIG}"]
+            assert doc["EnvironmentVariables"]["USE_PORT"] == "8100" and doc["IsXCTRunnerHostedTestBundle"] and doc["IsUITestBundle"]
+            assert (t / "signed" / PRODUCTS_DIR / RUNNER_APP / "embedded.mobileprovision").exists()  # 布局里是同一份签名产物
+            assert plistlib.loads(x.read_bytes())["__xctestrun_metadata__"]["FormatVersion"] == 1
+            write_xctestrun({"udid": "U", "bundle_id": "com.x.wda", "device_port": 9100}, kept)  # 重来一遍不留旧布局
+            assert len(list((t / "signed" / PRODUCTS_DIR).iterdir())) == 1
+            assert plistlib.loads(x.read_bytes())["WebDriverAgentRunner"]["EnvironmentVariables"]["USE_PORT"] == "9100"
 
         # 过期读取：profile 里的 ExpirationDate；没有文件或解不开都是 None
         def profile(days):
@@ -1960,6 +2174,79 @@ def selftest():
         with patched(_decode_profile=lambda f: None):
             assert days_left(kept) is None
         assert days_left(t / "nothing") is None
+
+        # 免费描述文件的 3 个名额：满了就不再签名，报出该卸哪个，Runner 排最前
+        c5 = {"udid": "U1", "bundle_id": "com.x.y"}
+        three = ["com.a.one", "com.SideStore.SideStore.ZZZ", "com.x.y.xctrunner"]
+        with patched(free_profile_apps=lambda cfg: three):
+            try:
+                check_free_slots(c5, "com.x.y.runner")
+            except Fail as e:
+                msg = str(e)
+            else:
+                raise AssertionError("满额时应该报错")
+            assert "--device U1" in msg and "uninstall" in msg, msg
+            # 卸载命令里 Runner 排最前（旧的 Runner 优先卸），名单本身按设备上的原顺序
+            assert msg.index("uninstall app --device U1 com.x.y.xctrunner") < msg.index("uninstall app --device U1 com.a.one"), msg
+            check_free_slots(c5, "com.SideStore.SideStore.ZZZ")  # 已在名单里：覆盖安装，不占新名额
+        with patched(free_profile_apps=lambda cfg: three[:2]):
+            check_free_slots(c5, "com.x.y.runner")  # 还有空位
+        with patched(free_profile_apps=lambda cfg: None):
+            check_free_slots(c5, "com.x.y.runner")  # 查不到设备上装了哪些：跳过，交给安装报错兜底
+
+        # devicectl 安装：成功即返回；撞上限时回显 iOS 的原始报错并给出卸载命令；其他失败带注册提示
+        raw = ('Error: Idevice error: Application verification failed: This device has reached the maximum number '
+               'of installed apps using a free developer profile: {(\n'
+               '    "TEAM000001.com.x.y.xctrunner",\n'
+               '    "TEAM000002.com.SideStore.SideStore.ZZZ"\n'
+               ')}\n')
+        seen = []
+        with patched(devicectl=lambda args, timeout=300: (seen.append(args), (1, raw))[1]):
+            # 原始报错原文照抄（含团队前缀的那三行），再给出去掉前缀的卸载命令
+            expect_fail(lambda: install_app(c5, t / "app"), "TEAM000001.com.x.y.xctrunner", "uninstall", "--device U1")
+            expect_fail(lambda: install_app(c5, t / "app"), "installed apps using a free developer profile")
+        assert seen[0][:4] == ["device", "install", "app", "--device"] and seen[0][-1] == str(t / "app"), seen
+        with patched(devicectl=lambda args, timeout=300: (0, "App installed: bundleID com.x.y.runner\n")):
+            install_app(c5, t / "app")  # 成功不抛
+        with patched(devicectl=lambda args, timeout=300: (1, "ERROR: Device not found\n")):
+            expect_fail(lambda: install_app(c5, t / "app"), "register-device", "Device not found")
+
+    # devicectl 的输出解析：认得设备才算认得；命令失败或没有完整 Xcode 时按「不认得」
+    dev_doc = json.dumps({"result": {"devices": [{"hardwareProperties": {"reality": "physical", "udid": "U1"}}]}})
+
+    class FakeDevicectlRun:
+        def __init__(self, rc, body):
+            self.rc, self.body = rc, body
+
+        def __call__(self, cmd, **kw):
+            Path(cmd[cmd.index("--json-output") + 1]).write_text(self.body)
+            return type("R", (), {"returncode": self.rc})()
+
+    def fake_subprocess(rc=0, body="{}"):
+        return type("S", (), {"run": FakeDevicectlRun(rc, body)})()
+
+    with patched(subprocess=fake_subprocess(0, dev_doc)):
+        assert devicectl_devices() and Probes().xcode_serves({"udid": "U1", "team_id": "T"})
+        assert Probes().devicectl_knows({"udid": "U1"}) and not Probes().devicectl_knows({"udid": "U9"})
+        assert not Probes().xcode_serves({"udid": "U1"})  # 认得设备但没配 Team：Xcode 路径签不了名，不能选它
+    with patched(subprocess=fake_subprocess(1, dev_doc)):
+        assert devicectl_devices() is None and not Probes().devicectl_knows({"udid": "U1"})  # 没有完整 Xcode
+    apps_doc = json.dumps({"result": {"apps": [{"bundleIdentifier": "com.a", "builtByDeveloper": True},
+                                               {"bundleIdentifier": "com.b", "builtByDeveloper": False}]}})
+    with patched(subprocess=fake_subprocess(0, apps_doc)):
+        assert free_profile_apps({"udid": "U"}) == ["com.a"]  # 只数开发者签名的 App
+
+    # 已装 Runner 在本机的对应产物：plumesign 看签名副本，Xcode 看构建产物，SideStore 重签的包本机不保存
+    c7 = {"udid": "U", "bundle_id": "com.x.y"}
+    with tempfile.TemporaryDirectory() as t:
+        t = Path(t)
+        with patched(SIGNED=t / "signed", RUNNER=t / "built" / RUNNER_APP):
+            assert installed_app(c7, "com.x.y.runner") is None
+            (t / "signed" / RUNNER_APP).mkdir(parents=True)
+            assert installed_app(c7, "com.x.y.runner") == t / "signed" / RUNNER_APP
+            assert installed_app(c7, OFFICIAL_RUNNER_ID + ".A") is None
+            (t / "built" / RUNNER_APP).mkdir(parents=True)
+            assert installed_app(c7, "com.x.y.xctrunner") == t / "built" / RUNNER_APP
 
     # 路径表：每一档都用注入的假探测走一遍
     class FakeP:
@@ -1991,6 +2278,9 @@ def selftest():
         def xcode_serves(self, cfg):
             return self._a("xcode")
 
+        def devicectl_knows(self, cfg):
+            return self.v["xcode"]
+
         def plumesign_state(self):
             return self._a("plume")
 
@@ -2006,8 +2296,10 @@ def selftest():
 
     r, lines, calls = route(ready=True, installed="b.runner", xcode=True)  # 已就绪：后面的探测都不跑
     assert r == "ready" and lines == ["路径: 已就绪"] and calls == ["ready"], (r, lines, calls)
-    r, lines, calls = route(installed="b.runner")  # 已装 Runner 且能起
-    assert r == "installed" and lines == ["路径: 已装 Runner"] and "xcode" not in calls, (r, lines, calls)
+    r, lines, calls = route(installed="b.runner")  # 已装 Runner 且能起，不看系统版本
+    assert r == "installed" and lines == ["路径: 已装 Runner"] and calls == ["ready", "installed", "start"], (r, lines, calls)
+    r, lines, calls = route(version="27.2", installed="b.runner")  # iOS 17 及以上同样先试已装的 Runner
+    assert r == "installed" and "xcode" not in calls, (r, lines, calls)
     r, lines, calls = route(installed="b.runner", start=False, xcode=True)  # 已装但起不来：继续往下
     assert r == "xcode" and lines[0] == "路径: 已装 Runner" and lines[-1] == "路径: Xcode", lines
     expect_fail(lambda: route(version="14.8", xcode=True, plume="", side=True), "14.8", "15.0")  # 系统低于下限，Xcode 也不行
@@ -2020,12 +2312,23 @@ def selftest():
     assert r == "sidestore" and "未验证" in lines[-1], (r, lines)
     expect_fail(lambda: route(plume="缺 plumesign"), "Xcode", "plumesign", "SideStore")  # 都不满足：列出方案
 
-    # iOS 17 及以上：已装直启、plumesign、SideStore 都不可用，在碰 plumesign 与 SideStore 之前就报错；Xcode 照常
-    p17 = FakeP(version="17.2", installed="b.runner", plume="", side=True)
-    expect_fail(lambda: quiet(choose_route, c3, p17), "iOS 17 及以上需要 Xcode 路径", "tunnel", "Xcode")
-    assert not {"installed", "start", "plume", "side"} & set(p17.calls) and not p17.started, p17.calls
-    assert route(version="17.2", installed="b.runner", xcode=True)[0] == "xcode"
+    # iOS 17 及以上不再被排除：plumesign 与 SideStore 照常可选（go-ios 的 tunnel 只管启动，不管安装）
+    assert route(version="27.2", plume="", side=True)[0] == "plumesign"
+    assert route(version="27.2", xcode=True)[0] == "xcode"
+    r, lines, calls = route(version="27.2", installed="b.runner", start=False, plume="", side=True)
+    assert r == "plumesign" and calls == ["ready", "installed", "start", "version", "floor", "xcode", "plume"], calls
     assert route(version="16.7", installed="b.runner")[0] == "installed"
+    expect_fail(lambda: route(version="27.2", plume="缺 plumesign"), "没有可用的安装路径", "plumesign")
+
+    # 启法：iOS 17 及以上用 xcodebuild 按 xctestrun 启动，旧系统沿用 go-ios runwda；读不到版本按旧系统
+    for version, want in (("15.6.1", "runwda"), ("16.7", "runwda"), ("17", "xctestrun"), ("27.2", "xctestrun"), (None, "runwda")):
+        assert launch_channel(c7, FakeP(version=version)) == want, version
+    called = []
+    with patched(launch_channel=lambda cfg, p: "xctestrun", launch_xctestrun=lambda cfg, app, timeout: called.append(("xctestrun", app))):
+        launch_runner(c7, FakeP(version="27.2"), "APP", "rid", 5)
+    with patched(launch_channel=lambda cfg, p: "runwda", launch_runwda=lambda cfg, timeout, rid: called.append(("runwda", rid))):
+        launch_runner(c7, FakeP(version="15.6.1"), None, "rid", 5)
+    assert called == [("xctestrun", "APP"), ("runwda", "rid")], called
 
     # 已装 Runner 的识别：三种候选各自命中，前缀对应 SideStore 路径（id 后缀未验证）；runwda 用匹配到的 id
     c4 = {"udid": "U", "bundle_id": "com.x.y"}
@@ -2048,13 +2351,13 @@ def selftest():
         assert cmd[:2] == ["ios", "runwda"] and f"--bundleid={rid}" in cmd and f"--testrunnerbundleid={rid}" in cmd, cmd
 
     # 已装 Runner 起不来（比如账号证书被吊销，本地副本却没到期）：up 仍要走一轮签名安装，且只有一轮
-    signs, launches = [], []
-    pf = FakeP(installed="com.x.y.runner", start=False, plume="")
+    order, pf = [], FakeP(installed="com.x.y.runner", start=False, plume="")
     with patched(config=lambda: c4, usb_device=lambda u: (7, "U"), need_usb=lambda c: (7, "U"), need_tool=lambda n: None, Probes=lambda timeout: pf,
-                 install_plumesign=lambda c, d: signs.append(d), finish_up=lambda a: None,
-                 launch_runwda=lambda c, timeout, rid: launches.append(rid)):
+                 install_plumesign=lambda c, d, p: order.append(("install", d)), finish_up=lambda a: None,
+                 launch_runner=lambda c, p, app, rid, timeout: order.append(("launch", rid, app))):
         quiet(cmd_up, argparse.Namespace(restart=False, timeout=5, udid=None))
-    assert pf.started == ["com.x.y.runner"] and signs == [7] and launches == ["com.x.y.runner"], (pf.started, signs, launches)
+    assert pf.started == ["com.x.y.runner"], pf.started
+    assert order == [("install", 7), ("launch", "com.x.y.runner", SIGNED / RUNNER_APP)], order  # 先装后启，只一轮
 
     # DDI 在启动 runwda 之前准备：准备失败时不会启动进程
     with tempfile.TemporaryDirectory() as t:
