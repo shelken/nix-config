@@ -217,6 +217,18 @@ class RunTest(unittest.TestCase):
         self.assertTrue(any(c[-2:-1] == ["-rf"] or "rm" in c for c in execs), execs)
         self.assertFalse(any("/fake/launcher" in c and "--check-busy" not in c for c in execs))
 
+    def test_every_msb_call_gets_the_resolved_state_location_even_without_it_in_the_caller_env(self):
+        (self.e.project / "kube.yaml").write_text("x")
+        self.e.set_project({"imports": [{"src": "kube.yaml", "target": "~/.kube/config"}]})
+        self.e.sb("trust")
+        self.e.msb_state(copy_rc=1)  # 失败路径会经过暂存目录回收那次 msb 调用
+        self.assertNotIn("MSB_HOME", self.e.env)
+        self.e.sb("run", "true")
+        envs = self.e.msb_state()["envs"]
+        self.assertTrue(any(c[:2] == ["exec", "sb-main"] and "rm" in c for c in self.e.calls()))
+        want = {"MSB_HOME": str(self.e.tmp / "msbhome"), "MSB_CONFIG_PATH": str(self.e.tmp / "msb-config.json")}
+        self.assertEqual([e for e in envs if e != want], [])
+
 
 if __name__ == "__main__":
     unittest.main()

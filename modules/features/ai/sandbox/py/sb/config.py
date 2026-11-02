@@ -32,6 +32,7 @@ class Config:
     mise_lock_dir: str
     host_credentials: bool
     home: str
+    msb_env: Mapping[str, str]  # msb 子进程的环境：调用者环境加上解析后的 MSB_HOME、MSB_CONFIG_PATH，不依赖用户 shell 是否导出
 
     @property
     def approval_dir(self) -> str:
@@ -58,9 +59,11 @@ class Config:
             user_yaml = os.path.join(home, ".config/sandbox/sb.yaml")
             policy = user_yaml if os.path.isfile(user_yaml) else nix["policy_yaml"]
         mise_host = env.get("SB_MISE_HOST_DIR") or nix["mise"]["host_dir"]
+        msb_config = env.get("MSB_CONFIG_PATH") or nix["msb_config"]
+        msb_home = env.get("MSB_HOME") or nix["msb_home"]
         return Config(
-            msb_config=env.get("MSB_CONFIG_PATH") or nix["msb_config"],
-            msb_home=env.get("MSB_HOME") or nix["msb_home"],
+            msb_config=msb_config,
+            msb_home=msb_home,
             policy_yaml=policy,
             sandbox_config=env.get("SB_SANDBOX_CONFIG") or None,
             launcher=nix["launcher"],
@@ -71,4 +74,5 @@ class Config:
             mise_lock_dir=env.get("SB_MISE_LOCK_DIR") or mise_host,
             host_credentials=env.get("SB_NO_HOST_CREDENTIALS", "0") != "1",
             home=home,
+            msb_env={**env, "MSB_HOME": msb_home, "MSB_CONFIG_PATH": msb_config},
         )

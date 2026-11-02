@@ -6,7 +6,6 @@ import json
 import os
 import random
 import signal
-import subprocess
 import sys
 import time
 
@@ -139,7 +138,7 @@ def _stage_imports(msb: Msb, ctx_id: str, p: Plan) -> None:
             msb.must("copy", imp.src, f"{VM_NAME}:{guest_dir}/imports/{imp.stage}/{imp.target.rsplit('/', 1)[-1]}", to_stderr=True)
         msb.must("exec", VM_NAME, "--", "chmod", "-R", "u+rwX,go-rwx", f"{guest_dir}/imports")
     except BaseException:
-        subprocess.run([msb.bin, "exec", VM_NAME, "--", "rm", "-rf", guest_dir], capture_output=True)
+        msb.capture("exec", VM_NAME, "--", "rm", "-rf", guest_dir)
         raise
 
 

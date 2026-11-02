@@ -35,11 +35,11 @@ class Msb:
         cmd = [self.bin, *args]
         if args[0] in ("create", "start") and self._cfg.host_credentials and shutil.which("sec-run"):
             cmd = ["sec-run", *cmd]
-        rc = subprocess.run(cmd, stdout=sys.stderr if to_stderr else None).returncode
+        rc = subprocess.run(cmd, stdout=sys.stderr if to_stderr else None, env=self._cfg.msb_env).returncode
         return 128 - rc if rc < 0 else rc  # 被信号杀死按 shell 惯例是 128+信号号
 
     def capture(self, *args: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run([self.bin, *args], capture_output=True, text=True)
+        return subprocess.run([self.bin, *args], capture_output=True, text=True, env=self._cfg.msb_env)
 
     def inspect(self, name: str) -> dict[str, Any] | None:
         r = self.capture("inspect", name, "--format", "json")

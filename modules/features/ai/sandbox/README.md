@@ -228,6 +228,7 @@ Python 只用标准库。YAML 经 `yq` 转 JSON 而不用 PyYAML：批准哈希�
 
 - 代价：宿主多依赖 `python3` 与 `yq`；`msb` 与 `sec-run` 仍取用户 `PATH`
 - 测试环境覆盖变量只服务验证：`SB_CONFIG`、`SB_SANDBOX_CONFIG`、`SB_MISE_HOST_DIR`、`SB_MISE_LOCK_DIR`、`SB_NO_HOST_CREDENTIALS`、`MSB_HOME`、`MSB_CONFIG_PATH`；日常只有 Nix 生成的 `sb-config.json`
+- `sb` 每次调用 `msb` 都显式传入解析后的 `MSB_HOME` 与 `MSB_CONFIG_PATH`，锁、批准记录和 `msb` 的状态目录因此始终是同一处，不依赖用户 shell 是否导出这两个变量
 
 ### 一台主 VM 承载所有执行上下文
 

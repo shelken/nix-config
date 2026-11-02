@@ -19,6 +19,7 @@ state_path = os.environ["FAKE_MSB_STATE"]
 st = json.load(open(state_path))
 args = sys.argv[1:]
 st["calls"].append(args)
+st["envs"].append({{k: os.environ.get(k) for k in ("MSB_HOME", "MSB_CONFIG_PATH")}})
 
 def save():
     json.dump(st, open(state_path, "w"))
@@ -99,7 +100,7 @@ class SbEnv:
         self.state.write_text(
             json.dumps(
                 {
-                    "vm": None, "volumes": [], "calls": [], "busy": 0, "busy_rc": 0, "missing": [],
+                    "vm": None, "volumes": [], "calls": [], "envs": [], "busy": 0, "busy_rc": 0, "missing": [],
                     "sync_rc": 0, "run_rc": 0, "copy_rc": 0, "create_rc": 0,
                 }
             )
@@ -113,7 +114,7 @@ class SbEnv:
         self.config_file.write_text(
             json.dumps(
                 {
-                    "msb_config": "", "msb_home": str(self.tmp / "msbhome"), "policy_yaml": str(self.policy),
+                    "msb_config": str(self.tmp / "msb-config.json"), "msb_home": str(self.tmp / "msbhome"), "policy_yaml": str(self.policy),
                     "launcher": "/fake/launcher", "guest_status": "/fake/guest-status",
                     "mise": {"host_dir": str(self.mise), "guest_mount": "/opt/sandbox-mise", "mount_mode": "rw"},
                 }
