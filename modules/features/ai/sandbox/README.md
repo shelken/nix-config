@@ -46,6 +46,8 @@ flowchart LR
 - **能力授权 (Capability Grant)**: 某个执行上下文实际获得的额外路径、导入文件和私网目标。额外路径是挂载根的子集；导入文件和私网目标没有上限，由批准决定
 - **批准 (Approval)**: 用户用 `sb trust` 对项目 `.sandbox.yaml` 的规范化内容哈希做的记录。未批准或内容变了，启动直接报错
 - **项目配置 (Project Config)**: 项目仓库根 `.sandbox.yaml`，请求导入文件、私网目标和额外目录；批准后才生效
+- **执行计划 (Plan)**: `sb` 把能力上限与项目配置解析、校验后交给 launcher 的数据：项目根、git common dir、导入文件、额外路径、放行的私网目标与宿主端口。它是 host → guest 的唯一契约，类型定义在 [py/sb/plan.py](./py/sb/plan.py)，改字段要同步改 `launcher.sh` 与 `guest/` 里读它的地方。_避免_: plan_json（那只是它的序列化）
+- **发布目录 (Published Config)**: `~/.config/sandbox/current` 指向的版本化目录，含声明配置副本、`mise.toml`、`guest-env.sh`、`sync-guest.sh`、`declared-paths` 与 `writable-roots`，只读挂进 VM 的 `/run/sandbox-config`。旧版本保留 7 天：数据盘没有 `.declared-paths` 记录时，清理残留占位要靠它们推出上次的声明清单
 - **沙箱基础环境 (Sandbox Base)**: 沙箱启动与隔离所需的 Linux 工具，由 sandbox 模块管理，不属于共享工具。不含 C 工具链，见「设计决策」
 - **补齐 (Sync)**: 显式安装已登记但缺失的 mise 工具和插件。_避免_: 升级、更新
 - **共用安装层 (Shared Install Layer)**: 宿主上由所有沙箱 VM 共用的一份 mise 安装产物与下载缓存。_避免_: 共享缓存、镜像卷
