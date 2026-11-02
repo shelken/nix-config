@@ -1,3 +1,7 @@
+# Agent 沙箱 Home Manager 特性装配入口 (Seam)
+# 职责：
+# 汇集 SandboxManifest 规范，装配 SandboxConfig、SandboxGuest、SandboxHost 三个深模块，
+# 声明 options 并挂载 activation 动作。
 {
   flake.modules.homeManager.ai =
     {
@@ -9,46 +13,41 @@
       ...
     }:
     let
-      msbHome = "${config.home.homeDirectory}/Data/sandboxes/msb";
-      # 宿主共用 Linux mise 目录：data 与 cache 分离，guest 侧固定挂到 /opt/sandbox-mise
-      sharedMiseDir = "${config.home.homeDirectory}/Data/sandboxes/mise/aarch64-linux";
-      msbConfig = (pkgs.formats.json { }).generate "microsandbox-config.json" {
-        version = 1;
-        home = msbHome;
-        paths.cache = "${config.home.homeDirectory}/.cache/microsandbox";
-        sandbox_defaults.disable_metrics_sample = true;
-      };
+      # 1. 唯一事实来源与静态断言 (SandboxManifest)
+      manifest = import ./_manifest.nix { inherit config lib pkgs; };
 
-      gitConfig = (pkgs.formats.gitIni { }).generate "sandbox-git-config" {
-        user = config.programs.git.settings.user;
-        credential."https://github.com".helper = "!gh auth git-credential";
-        url."https://github.com/".insteadOf = "git@github.com:";
-      };
-
-      generator = import ./_generator.nix {
+      # 2. 配置物化深模块 (SandboxConfig)：负责声明文件收集与原子发布物化
+      sandboxConfig = import ./_config.nix {
         inherit
           pkgs
           lib
-          config
-          nixpkgs
-          gitConfig
+          manifest
           ;
       };
 
-      launcher = import ./_launcher.nix {
-        inherit pkgs gitConfig;
-        inherit (generator) guestBinPath linuxPkgs;
-      };
-
-      sb = import ./_sb.nix {
+      # 3. Linux 执行隔离深模块 (SandboxGuest)：负责交叉编译、bwrap 容器隔离、sync 与 status 打包
+      guest = import ./_guest.nix {
         inherit
           pkgs
-          msbConfig
-          msbHome
-          launcher
+          lib
+          nixpkgs
+          manifest
           ;
-        inherit (generator) guestStatus;
-        defaultConf = ./sb.yaml;
+      };
+
+      # 4. 宿主驱动与 CLI 深模块 (SandboxHost)：负责接收原生 sb.yaml、VM 调度与 sb / omp-sb 打包
+      host = import ./_host.nix {
+        inherit
+          pkgs
+          manifest
+          guest
+          ;
+        policyFile = ./sb.yaml; # 原生 YAML 传入
+      };
+
+      # 闭合配置发布脚本：连接 config 与 guest 静态文件
+      publishScript = sandboxConfig.mkPublishScript {
+        inherit (guest) guestEnvSh syncGuestScript;
       };
     in
     {
@@ -56,66 +55,26 @@
         mylib.mkBoolOpt false "Whether to install the agent sandbox.";
 
       config = lib.mkIf config.shelken.dev.ai.sandbox.enable {
-        # 可写根与声明配置的一致性：launcher 只执行发布清单，不兜底，所以在构建期拒绝不合法的组合。
-        # .config/<X> 走 XDG（/data/xdg/config），不属于任何根
-        assertions =
-          let
-            roots = config.shelken.dev.sandbox.writableRoots;
-            under = root: p: p == root || lib.hasPrefix "${root}/" p;
-            targets = lib.concatMap (tool: builtins.attrNames tool.files ++ builtins.attrNames tool.sandboxFiles) (
-              builtins.attrValues config.shelken.dev.tools
-            );
-          in
-          [
-            {
-              assertion = lib.all (
-                r:
-                r != ""
-                && !(lib.hasPrefix "/" r)
-                && !(lib.hasSuffix "/" r)
-                && !(lib.hasPrefix ".config/" r)
-                && !(builtins.elem ".." (lib.splitString "/" r))
-              ) roots;
-              message = "shelken.dev.sandbox.writableRoots: 每项必须是 $HOME 下的相对路径，不能为空、以 / 结尾、含 .. 或落在 .config/ 下：${builtins.toJSON roots}";
-            }
-            {
-              assertion = lib.all (a: lib.all (b: a == b || !(under a b)) roots) roots;
-              message = "shelken.dev.sandbox.writableRoots: 根之间不能嵌套：${builtins.toJSON roots}";
-            }
-            {
-              assertion = lib.all (t: lib.hasPrefix ".config/" t || lib.any (r: under r t) roots) targets;
-              message = "shelken.dev.tools.*.files 的目标必须落在某个 writableRoots 下或位于 .config/ 下，否则沙箱无处挂载：${
-                builtins.toJSON (
-                  builtins.filter (t: !(lib.hasPrefix ".config/" t || lib.any (r: under r t) roots)) targets
-                )
-              }";
-            }
-          ];
+        inherit (manifest) assertions;
 
-        shelken.dev.sandbox.hostCommands = {
-          sb = "sb 是宿主沙箱管理 CLI，沙箱内部无法嵌套管理沙箱 VM";
-          just = "just hm / just sw 是宿主系统切换命令，沙箱内无法修改宿主系统配置";
-        };
+        shelken.dev.sandbox.hostCommands = manifest.hostCommands;
         programs.mise.globalConfig.tools.microsandbox = "0.7.7";
 
-        home.sessionVariables = {
-          MSB_HOME = msbHome;
-          MSB_CONFIG_PATH = "${msbConfig}";
-        };
+        home.sessionVariables = host.sessionVariables;
         home.file.".config/sandbox/sb.yaml".source = ./sb.yaml;
 
-        # 共用 mise 目录就绪性标记：data/cache 子目录随激活创建（不破坏已有内容）
+        # 共用 mise 目录就绪性标记：data 与 cache 子目录随激活创建（不破坏已有内容）
         home.activation.sandboxSharedMiseDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          mkdir -p "${sharedMiseDir}/data" "${sharedMiseDir}/cache"
+          mkdir -p "${manifest.statePaths.sharedMiseDir}/data" "${manifest.statePaths.sharedMiseDir}/cache"
         '';
 
         # 配置发布：在宿主把 live-edit 软链解引用成自包含副本，guest 才能读到
         # 发布目录路径固定，内容变化不改变上限指纹
         home.activation.sandboxPublishConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          run ${generator.publishScript}
+          run ${publishScript}
         '';
 
-        home.packages = [ sb ];
+        home.packages = host.packages;
       };
     };
 }
