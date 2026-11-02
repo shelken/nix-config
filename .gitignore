@@ -11,3 +11,4 @@ __pycache__
 .claude/*.local.json
 .alma-snapshots
 .playwright-cli/
+modules/features/ai/omp/config.yml.lock
