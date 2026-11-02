@@ -57,7 +57,10 @@
       config = lib.mkIf config.shelken.dev.ai.sandbox.enable {
         inherit (manifest) assertions;
 
-        shelken.dev.sandbox.hostCommands = manifest.hostCommands;
+        shelken.dev.sandbox.hostCommands = {
+          sb = "sb 是宿主沙箱管理 CLI，沙箱内部无法嵌套管理沙箱 VM";
+          just = "just hm / just sw 是宿主系统切换命令，沙箱内无法修改宿主系统配置";
+        };
         programs.mise.globalConfig.tools.microsandbox = "0.7.7";
 
         home.sessionVariables = host.sessionVariables;
