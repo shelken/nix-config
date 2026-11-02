@@ -44,7 +44,7 @@ omp-sb --model=cpa/gpt-5.6-luna -p '只回复 OK'
 
 沙箱里也能用 pi：`sb run pi …`。新数据卷上第一次启动会安装沙箱清单中的 packages，之后复用已安装的包。沙箱排除 `simple-plannotator`，无需编译 `node-pty`。首次并发启动的注意事项见 [沙箱 README](../../modules/features/ai/sandbox/README.md) 的「pi 在上下文里自己装 packages」
 
-项目必须位于挂载根内（默认 `~/Code`、`~/nix-config`、`~/.herdr/worktrees`），否则启动时报错
+项目必须位于挂载根内（默认 `~/Code`、`~/nix-config`），否则启动时报错。herdr 的 worktree 默认放在 `~/Code/worktrees`，已在 `~/Code` 之内，无需单独加挂载根
 
 ## 场景二：同时开多个 Agent
 
@@ -66,7 +66,7 @@ cd ~/Code/my-app && omp-sb
 在 worktree 里运行也一样：
 
 ```bash
-cd ~/.herdr/worktrees/my-app/feature-x
+cd ~/Code/worktrees/my-app/feature-x
 omp-sb
 ```
 

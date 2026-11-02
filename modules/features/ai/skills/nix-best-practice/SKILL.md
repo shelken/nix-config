@@ -6,4 +6,3 @@ description: Nix 生态任务的包查找方式与命令限制。涉及 nix、ni
 ## 包查找与命令约束
 
 - 搜索包时优先使用 `nh search {package-name}`
-- 未经用户同意，不执行 `nix run`、`nix shell` 等命令；不使用 `with import <nixpkgs>` 这类写法

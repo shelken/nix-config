@@ -20,6 +20,9 @@ providers:
       timeoutMs: 3000
     # >>> mp-modelOverrides:auto-sync >>>
     modelOverrides:
+      zcode/GLM-5.3-Flash-Trial:
+        name: "GLM-5.3-Flash-Trial"
+        input: ["text", "image"]
       qoder-cn/qfmodel:
         name: "Qwen3.8-Flash"
         input: ["text", "image"]
@@ -50,6 +53,10 @@ providers:
         input: ["text", "image"]
       workbuddy-ai/glm-5.3-flash:
         input: ["text"]
+      antigravity/claude-sonnet-4-6:
+        name: "Claude Sonnet 4.6 (Thinking)"
+      antigravity/claude-opus-4-6-thinking:
+        name: "Claude Opus 4.6 (Thinking)"
       trae-cn/Doubao-Seed-2.1-Pro:
         name: "Seed-2.1-Pro-0915"
       trae-cn/Doubao-Seed-2.1-Pro-max:
@@ -77,13 +84,13 @@ providers:
           efforts: [minimal, low, medium, high, xhigh]
       loomy/spark-x2.6:
         name: "Spark-X2.6 正式版(限时免费)"
-      loomy/spark-x:
-        name: "Spark-X2.5（限时免费）"
       loomy/qwen-3.8-max:
         name: "Qwen 3.8 Max"
       loomy/auto:
         name: "自动 · 均衡"
         input: ["text"]
+      loomy/spark-x:
+        name: "Spark-X2.5（限时免费）"
     # <<< mp-modelOverrides:auto-sync <<<
   cpa:
     # cpa 端点锚点(openai/cpa 两 provider 共用): 外出 localhost, 回家改回 https://cpa.int.ooooo.space/v1

@@ -3,6 +3,10 @@ onboarding = false
 [theme]
 name = "catppuccin"
 
+# worktree 检出根目录：实际路径为 <directory>/<仓库名>/<分支 slug>，默认 ~/.herdr/worktrees
+[worktrees]
+directory = "~/Code/worktrees"
+
 [keys]
 prefix = "alt+x"
 split_horizontal = "prefix+h"

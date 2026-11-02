@@ -34,6 +34,7 @@
 - `~/Code/kaiyuan`：别人的开源项目，研究用
 - `~/Code/active`：本地开发的项目
 - `~/Code/wiki`：跨项目技术知识库；会话/研究中有价值的结论存这里，遵守其 AGENTS.md
+- `~/Code/worktrees`: 当需要创建工作区时, 放这; 实际路径为 `<directory>/<仓库名>/<分支 slug>`
 
 ## 项目记忆
 

@@ -12,7 +12,6 @@ volume:
 mount_roots:
   - "${HOME}/Code"
   - "${HOME}/nix-config"
-  - "${HOME}/.herdr/worktrees"
 
 # VM 级网络策略：公网 + DNS + 私网 + 宿主端口。私网在这一层整体放开，逐项限制由每个
 # 执行上下文自己的 iptables 链完成：只有 sb.yaml 的 default_grant 与已批准（sb trust）的
