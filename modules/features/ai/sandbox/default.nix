@@ -14,7 +14,7 @@
     }:
     let
       # 1. 唯一事实来源与静态断言 (SandboxManifest)
-      manifest = import ./_manifest.nix { inherit config lib pkgs; };
+      manifest = import ./_manifest.nix { inherit config lib; };
 
       # 2. Linux 执行隔离深模块 (SandboxGuest)：负责交叉编译、bwrap 容器隔离、sync 与 status 打包
       guest = import ./_guest.nix {
