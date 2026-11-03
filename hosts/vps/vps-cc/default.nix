@@ -12,7 +12,10 @@ let
   net = import (secrets + "/hosts/vps-cc/network.nix");
 in
 {
-  imports = [ ../common.nix ];
+  imports = [
+    ../common.nix
+    ./apps
+  ];
 
   networking = {
     hostName = "vps-cc";
