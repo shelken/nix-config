@@ -79,6 +79,19 @@
             "hosts/vps/vps-cc"
           ];
         };
+        # HK1 Box（S905X3 电视盒子）：家里的单臂旁路由，只跑 sing-box；原先刷 ImmortalWrt
+        # 本机经 linux-builder 原生构建 aarch64，再用 root 推送
+        hk1box = mkHost {
+          type = "nixos";
+          system = "aarch64-linux";
+          deploy = {
+            sshUser = "root";
+            interactiveSudo = false;
+          };
+          nixos-modules = map mylib.relativeToRoot [
+            "hosts/hk1box"
+          ];
+        };
         # vps-cc 的 x86_64 BIOS 演练机（Lima + qemu）
         vps-test = mkHost {
           type = "nixos";
@@ -375,12 +388,6 @@
 
     niri = {
       url = "github:sodiboo/niri-flake";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    # generate iso/qcow2/docker/... image from nixos configuration
-    nixos-generators = {
-      url = "github:nix-community/nixos-generators";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

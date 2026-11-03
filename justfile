@@ -150,12 +150,12 @@ gc-all:
     @nh clean all -a --keep-one
     @nix store gc
 
-# 生成镜像
+# 生成镜像（变体由 nixpkgs 提供：iso / iso-installer / qemu / proxmox / sd-card …）
 [linux]
 gen-image host format:
     #!/usr/bin/env bash
     set -e
-    nom build .#nixosConfigurations.{{ host }}.config.formats.{{ format }}
+    nom build .#nixosConfigurations.{{ host }}.config.system.build.images.{{ format }}
     d=$(readlink -f result)
     suffix="${d##*.}"
     ls -hl $d

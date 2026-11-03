@@ -24,11 +24,6 @@
         # bun 由共享工具登记表提供（shelken.dev.tools，ADR 0003），此处不再声明
         tools = {
           yt-dlp = "2026.08";
-          "github:shelken/proxy" = {
-            version = "latest";
-            matching = "sbtools";
-            minimum_release_age = "0h";
-          };
           "cargo:mbx" = "1.18"; # for cargo build, save storage
         };
       };

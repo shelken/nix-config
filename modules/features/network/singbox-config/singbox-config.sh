@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# 生成 mac / ios / router 的订阅 URL：填充 1Password 模板 → 校验 → encode（URL 进剪切板）
+
+usage() {
+  cat >&2 <<'EOF'
+用法: singbox-config <mac|ios|router>
+
+把 templates/<变体>.yaml 里的 1Password 引用填充成真实配置，经 sbtools 校验后
+encode 成订阅 URL，URL 由 sbtools 写进剪切板。私密值只落在临时目录，退出即删。
+
+模板里用到的 1Password 条目（都在 vault Personal 的 proxy 条目里，一个字段一项）：
+  subs-miaona        机场订阅 URL
+  vps-hy2            \
+  vps-hy2-v6          > 私有节点 URI（mac / router 三条，ios 两条）
+  vps-anytls         /
+  clash-secret       router 的 clash API secret
+  mac-1 … mac-5      router 白名单设备的 MAC，一台一项
+
+订阅服务地址取 sops 的 main-domain，脚本里拼成 https://<main-domain>。
+EOF
+  exit 2
+}
+
+(( $# == 1 )) || usage
+variant=$1
+case $variant in
+  mac | ios | router) ;;
+  *) usage ;;
+esac
+
+main_domain_file="@mainDomainFile@"
+if [[ ! -r $main_domain_file ]]; then
+  echo "读不到 sops 密文：$main_domain_file（本机未启用 secrets，或还没激活过）" >&2
+  exit 1
+fi
+main_domain=$(< "$main_domain_file")
+if [[ -z $main_domain ]]; then
+  echo "sops 的 main-domain 是空的：$main_domain_file" >&2
+  exit 1
+fi
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+yaml="$work/$variant.yaml"
+
+echo "→ 填充模板：@templatesDir@/$variant.yaml"
+sec-run op inject -i "@templatesDir@/$variant.yaml" -o "$yaml"
+chmod 600 "$yaml"
+
+echo "→ 校验：sbtools check"
+mise exec -- sbtools check -c "$yaml"
+
+echo "→ 生成订阅 URL（写入剪切板）"
+mise exec -- sbtools encode -s "https://$main_domain" -c "$yaml"
