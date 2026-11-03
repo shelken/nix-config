@@ -43,6 +43,12 @@ let
         router-home = "192.168.0.1";
         router-mine = "192.168.6.1";
         router-old = "192.168.8.1";
+        # 公网 VPS 的 Tailscale 地址：业务容器把端口绑在它上面，
+        # tailnet 侧的 Gatus / Prometheus 也从这里进来；sshd 不是默认端口
+        vps-cc-ts = {
+          address = "100.97.0.8";
+          port = 60223;
+        };
       };
     };
   };

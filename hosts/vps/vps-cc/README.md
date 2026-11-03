@@ -172,10 +172,10 @@ just deploy vps-cc
 
 ```bash
 ssh vps-cc 'tar -C /data -xzf -' < ~/vps-cc-backup/data-docker.tgz
-cd ~/Code/active/home-ops && task compose:deploy:vps
+just deploy vps-cc
 ```
 
-首次会重新拉取约 3.6GB 镜像。
+业务容器由本仓库声明，部署时自己拉取约 3.6GB 镜像
 
 ### 7. 逐项核对
 
@@ -186,15 +186,15 @@ cd ~/Code/active/home-ops && task compose:deploy:vps
 - [ ] derp、hysteria2、anytls 能正常使用；kopia 下一次备份成功
 - [ ] IPv6：网卡上只有静态地址（`accept_ra`、`autoconf` 为 0），`ip -6 route get <公网 IPv6>` 的 `src` 是固定地址；独立客户端经固定 IPv6 能连上 hysteria2（见 nix-config #182）
 - [ ] 日志驱动：NixOS 默认 `journald`，不接受 compose `logging.options` 里的 `max-size`、`max-file`；接管前对比 `docker info` 的日志驱动与 compose 的 `logging`（见 home-ops #1728）
-- [ ] 观察一两天，再决定清理 home-ops 的 ansible（那是另一个仓库的单独改动）
+- [x] home-ops 的 ansible 不再配置 VPS：`vps` 组降为仅 SSH/运维，bootstrap playbook（`site-others.yml`、`ufw-vps.yml`、`install-ohmyzsh.yaml`）与 `host_vars/vps-cc.yaml` 已随容器迁移一起删除
 - [ ] 稳定后删除本机的随装目录（含 age 私钥、SSH 主机私钥、tailscale 状态）；数据包留到确认不会回滚
 
 ## 回滚
 
-| 时机                   | 做法                                                                                                                                                                                                                                                   |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| kexec 之后、disko 之前 | VNC 控制台强制重启，回到 Ubuntu，磁盘没动                                                                                                                                                                                                              |
-| disko 之后             | 服务商控制台重装 Ubuntu（地址不变）；加回 SSH 公钥后，home-ops 跑 `ansible/site-others.yml`，把 `~/vps-cc-backup` 里的 `data-docker.tgz` 解回 `/data`，`tailscaled.state` 放回 `/var/lib/tailscale/` 再启动 tailscaled，最后 `task compose:deploy:vps` |
+| 时机                   | 做法                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| kexec 之后、disko 之前 | VNC 控制台强制重启，回到 Ubuntu，磁盘没动                                                                                                                                                                                                                                                                                                                                                              |
+| disko 之后             | 服务商控制台重装 Ubuntu（地址不变）；加回 SSH 公钥后，用迁移前的 home-ops commit 跑 `ansible/site-others.yml`（该 playbook、`host_vars/vps-cc.yaml` 与 `task compose:deploy:vps` 都已随迁移删除，`git show <迁移前 commit>:<路径>` 取回），把 `~/vps-cc-backup` 里的 `data-docker.tgz` 解回 `/data`，`tailscaled.state` 放回 `/var/lib/tailscale/` 再启动 tailscaled，最后跑 `task compose:deploy:vps` |
 
 ## 日常更新
 

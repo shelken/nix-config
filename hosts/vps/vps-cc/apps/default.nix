@@ -18,20 +18,20 @@
     ./node-exporter.nix
     ./openlist.nix
     ./kopia
+    ./dnsmasq.nix
+    ./caddy
+    ./crowdsec-agent
+    ./crowdsec-firewall-bouncer
+    ./dhp
+    ./dockerproxy.nix
+    ./fluent-bit
+    ./mosdns.nix
+    ./sub-converter.nix
+    ./sbtools-server.nix
+    ./derp.nix
+    ./hysteria2
+    ./anytls
   ];
-
-  options.shelken.vpsContainers.tailscaleAddress = lib.mkOption {
-    type = lib.types.str;
-    # 这台 VPS 的 tailnet 地址，与 home-ops 的 ts-node-vps 服务同一个值；
-    # 部署前用 `tailscale ip -4` 对一下，绑错地址容器会直接起不来
-    default = "100.97.0.8";
-    description = ''
-      业务容器的端口只发布到这个地址（Tailscale 网卡）。
-      Docker 发布端口走 NAT，绕过 NixOS 防火墙：发布到 0.0.0.0 等于直接放到公网，
-      发布到 127.0.0.1 则 Tailscale 侧的调用方（Gatus、Prometheus）访问不到。
-      旧 Compose 从 BWS 的 DEPLOY_HOST 取同一个值。
-    '';
-  };
 
   config = {
     # 继续用 Docker：旧 Compose 的容器、卷、网络都在 Docker 上。
@@ -41,9 +41,9 @@
 
     systemd.services = {
       # homelab：业务容器共用的 bridge 网络，容器之间用容器名互相解析
-      # （kopia 连 openlist 的 WebDAV）。参数与旧 Compose 声明一致：
-      # MTU 1280 与出口 tailscale0 对齐，避免容器按 1500 冷启动踩 PMTU 黑洞。
-      # 已存在就不动它，否则正在运行的容器会连同网络一起被换掉。
+      # （kopia 连 openlist 的 WebDAV、caddy 连 crowdsec-agent 的 AppSec）。
+      # 参数与旧 Compose 声明一致：MTU 1280 与出口 tailscale0 对齐，避免容器按 1500
+      # 冷启动踩 PMTU 黑洞。已存在就不动它，否则正在运行的容器会连同网络一起被换掉。
       docker-network-homelab = {
         description = "homelab bridge network for the VPS containers";
         after = [ "docker.service" ];
@@ -65,18 +65,27 @@
         '';
       };
     }
-    # 旧 Compose 用 restart: always：容器退出就拉起。
-    # 容器交给 systemd 后，模块默认的 Restart=on-failure 会放走「退出码 0 退出」这种情况，
-    # 这里统一改回 always；10s 间隔避免崩溃时把日志打满（docker 自己的退避由 systemd 承担）
+    # 两个每台容器都要有的约定，按容器属性自动生成，服务文件里不再重复：
+    # 1) 旧 Compose 用 restart: always：容器退出就拉起。容器交给 systemd 后，
+    #    模块默认的 Restart=on-failure 会放走「退出码 0 退出」这种情况，这里统一改回
+    #    always；10s 间隔避免崩溃时把日志打满（docker 自己的退避由 systemd 承担）
+    # 2) 用 homelab 网络的容器要等网络单元创建好网络。用 `--network=host` 的容器
+    #    （derp、hysteria2、anytls、crowdsec 防火墙 bouncer）不在这个网络里，跳过
     // lib.mapAttrs' (
-      name: _:
-      lib.nameValuePair "docker-${name}" {
-        serviceConfig = {
-          # 模块在这条上给了 on-failure，覆盖它必须显式提优先级
-          Restart = lib.mkForce "always";
-          RestartSec = "10s";
-        };
-      }
+      name: container:
+      lib.nameValuePair "docker-${name}" (
+        {
+          serviceConfig = {
+            # 模块在这条上给了 on-failure，覆盖它必须显式提优先级
+            Restart = lib.mkForce "always";
+            RestartSec = "10s";
+          };
+        }
+        // lib.optionalAttrs (builtins.elem "homelab" container.networks) {
+          after = [ "docker-network-homelab.service" ];
+          requires = [ "docker-network-homelab.service" ];
+        }
+      )
     ) config.virtualisation.oci-containers.containers;
   };
 }

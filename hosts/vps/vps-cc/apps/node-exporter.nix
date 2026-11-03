@@ -1,6 +1,6 @@
-{ config, ... }:
+{ myvars, ... }:
 let
-  address = config.shelken.vpsContainers.tailscaleAddress;
+  address = myvars.networking.hostAddress."vps-cc-ts".address;
 in
 {
   virtualisation.oci-containers.containers.node-exporter = {
@@ -27,10 +27,5 @@ in
       "homepage.icon" = "docker-moby.svg";
       "homepage.description" = "";
     };
-  };
-
-  systemd.services.docker-node-exporter = {
-    after = [ "docker-network-homelab.service" ];
-    requires = [ "docker-network-homelab.service" ];
   };
 }

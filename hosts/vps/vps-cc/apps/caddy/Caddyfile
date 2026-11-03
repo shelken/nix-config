@@ -1,0 +1,154 @@
+{
+  log {
+    # format console
+    level DEBUG
+    output file /var/log/caddy/access.log {
+     	roll_size 30MiB
+     	roll_keep 10
+    }
+  }
+  metrics {
+    per_host
+  }
+  admin :2019
+  # 所有服务全局配置块
+  servers {
+    protocols h1 h2 h3
+  }
+  crowdsec {
+    api_url {$CROWDSEC_LOCAL_API_URL}
+    api_key {$CROWDSEC_CADDY_BOUNCER_API_KEY}
+    ticker_interval 15s
+    appsec_url http://crowdsec-agent:7422
+    # 必须大于 crowdsec-agent 的 auth_timeout(2s)，否则内层认证耗尽外层预算
+    appsec_timeout 5s
+  }
+}
+
+(with-tls) {
+   tls {
+        dns cloudflare {$CLOUDFLARE_API_TOKEN}
+        # 本机 :53 不可信、certmagic 不支持 DoH：改由 LE 从公网侧直查 CF 权威校验，延迟用于等 CF 边缘发布
+        propagation_timeout -1
+        propagation_delay 30s
+    }
+}
+
+# 通用的代理头部设置
+(common_to_proxy_headers) {
+  flush_interval -1
+}
+
+(common_header) {
+  header {
+    +My-Server "vps"
+    -Server
+    -via
+  }
+}
+
+(empty) {
+
+}
+
+# 0: to
+# 1: 特殊处理
+# 2: 添加 transport 参数
+(reverse_template) {
+  reverse_proxy {
+    to {args[0]}
+    import common_to_proxy_headers
+    import {args[1]}
+    header_up Host {http.request.host}
+    transport http {
+      import {args[2]}
+
+      dial_timeout 10s
+      response_header_timeout 30s
+
+      keepalive 300s
+      keepalive_idle_conns 100
+      keepalive_interval 30s
+    }
+  }
+}
+
+(tls_common) {
+  tls
+  tls_server_name {http.request.host}
+}
+
+(to_external) {
+  import reverse_template https://{$ENVOY_EXTERNAL_IP}:443 empty tls_common
+}
+
+(to_host) {
+  import reverse_template http://172.20.0.1:{args[0]} empty empty
+}
+
+(skip-tls) {
+  tls
+  tls_insecure_skip_verify
+}
+(to_docker) {
+  import reverse_template http://{args[0]}:{args[1]} empty empty
+}
+
+(robots_ban) {
+  header /robots.txt {
+    Content-Type "text/plain"
+    X-Robots-Tag "noindex, nofollow"
+  }
+  respond /robots.txt <<HTML
+  User-agent: *
+  Disallow: /
+  HTML 200
+}
+
+# 第一个参数 代表三级域名例如sub.ooooo.space的sub；也代表匹配规则的名字
+# 第二个参数 代表需要跳转的机器(to_开头)
+# 第三个参数 代表机器上的端口
+# 第四个参数 代表特殊额外处理的import
+(service2) {
+  @{args[0]} host {args[0]}.{$MAIN_DOMAIN}
+  handle @{args[0]} {
+    import {args[1]} {args[2]}
+    import {args[3]}
+    import common_header
+  }
+}
+
+(service_docker) {
+  @{args[0]} host {args[0]}.{$MAIN_DOMAIN}
+  handle @{args[0]} {
+    import to_docker {args[1]} {args[2]}
+    import {args[3]}
+    import common_header
+  }
+}
+
+*.{$MAIN_DOMAIN} {
+  import with-tls
+
+  # 机器对机器的 WebDAV（Basic 认证）不经 AppSec：PROPFIND 的 XML body 会命中 CRS 901340，out-of-band 事件累计后封出口 IP（#1705）
+  @waf not {
+    host drive.{$MAIN_DOMAIN}
+    path /dav /dav/*
+  }
+
+  route {
+    crowdsec
+    appsec @waf
+
+    import service_docker sub       sub-converter 25500 robots_ban
+    import service_docker subs      sbtools-server 8080  robots_ban
+    import service2       derp      to_host       8666  empty
+    import service_docker dhp       dhp           5000 robots_ban
+    import service_docker vdns      mosdns        9053 robots_ban
+
+    handle {
+      import to_external
+      import common_header
+    }
+  }
+}
