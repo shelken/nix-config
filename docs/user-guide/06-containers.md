@@ -195,7 +195,7 @@ sakamoto-compose logs
 sakamoto-compose recreate
 ```
 
-agent 日志在 `~/Library/Logs/sakamoto-compose.log`；切换、验收与回退见 `hosts/sakamoto/apps/README.md`
+agent 日志在 `~/Library/Logs/sakamoto-compose.log`；切换与回退见 `hosts/sakamoto/apps/README.md`
 
 ## 相关
 
