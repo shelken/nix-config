@@ -2,7 +2,7 @@
 
 `vps-cc` 上原先由 home-ops 的 docker compose 部署的业务容器，现在由本仓库声明：`virtualisation.oci-containers`，Docker 后端。这一页说明怎么引入一个服务，代码放哪、环境变量与密钥从哪来、网络与端口怎么定、怎么切换与回退
 
-代码在 `hosts/vps/vps-cc/apps/`，当前纳管三个服务，见文末「当前已纳管的服务」
+代码在 `hosts/vps/vps-cc/apps/`，VPS 上的业务容器已全部纳管，见文末「当前已纳管的服务」
 
 ## 先决定用哪种方式
 
@@ -106,7 +106,9 @@ virtualisation.oci-containers.containers.openlist = {
 
 - `apps/default.nix` 里的 `docker-network-homelab` 单元检查 `homelab` 网络，不存在才按原参数创建，已存在就不动，避免正在运行的容器被换网络
 - 服务之间用容器名互解，kopia 连 openlist 的 WebDAV 走的就是 `http://openlist:80/dav/main`
-- 对外端口只发布到 Tailscale 地址。`127.0.0.1` 会让 tailnet 侧的 Gatus、Prometheus 也访问不到，`0.0.0.0` 等于直接放公网
+- 对外端口默认只发布到 Tailscale 地址。`127.0.0.1` 会让 tailnet 侧的 Gatus、Prometheus 也访问不到，`0.0.0.0` 等于直接放公网
+- 例外只有两类，都按旧 Compose 原样保留：公网入口（`caddy` 的 80/443、`mosdns` 的 5054 明文 DNS）发布到所有地址；只给宿主机自己用的（`dnsmasq` 的 53、`sub-converter` 的 25500）发布到 `127.0.0.1`
+- 需要宿主机网络栈的容器（`derp`、`hysteria2`、`anytls`、`crowdsec-firewall-bouncer`）写 `extraOptions = [ "--network=host" ]`，这时不要写 `networks`，对应端口由 `hosts/vps/common.nix` 的防火墙放行
 - Docker 守护进程要等 tailscaled，`hosts/vps/common.nix` 里已有 `docker.service` 的 `after`/`wants`
 - 新服务接入：`networks = [ "homelab" ];`，端口写 `"${address}:<宿主端口>:<容器端口>"`
 
@@ -135,22 +137,40 @@ virtualisation.oci-containers.containers.openlist = {
 - [ ] 求值：`nix eval .#nixosConfigurations.<主机>.config.system.build.toplevel.drvPath`
 - [ ] 部署：`just deploy vps-cc`
 - [ ] 验收：`systemctl status docker-<名字>`、`journalctl -u docker-<名字>`、`docker ps`，再从 tailnet 侧试一次端口
-- [ ] 回退：home-ops 恢复对应服务的 compose 声明，本仓库去掉该服务文件再部署
+- [ ] 回退：**顺序不能反**，否则容器会被前后两次清掉
+  - 取回 home-ops 迁移前的 `compose/vps/`、`.env.tpl` 与被删的 task/ansible，备好凭据
+  - 本仓库去掉该服务（或整套）声明并 `just deploy vps-cc`：nix 单元的停止与清理会 `docker rm -f` 同名容器，这一步结束时容器是停的
+  - 在 home-ops 跑 `task compose:deploy:vps` 把 Compose 容器起回来（反序做的话，nix 单元的清理会把刚起的同名容器删掉）
 
 ## 当前已纳管的服务
 
-| 服务            | 形态                                              | 备注                                         |
-| --------------- | ------------------------------------------------- | -------------------------------------------- |
-| `node-exporter` | 无状态：只读挂宿主机目录，端口只到 Tailscale      |                                              |
-| `openlist`      | 有状态：数据目录 + HTTP 健康检查                  | 专门给 kopia 使用的，连接 139 网盘           |
-| `kopia`         | 依赖型：openlist 可用后才真正跑起来，密钥与配置多 | 仓库配置由 sops 渲染，策略与入口脚本随目录挂 |
+`hosts/vps/vps-cc/apps/` 一个文件一个服务
 
-## 还没纳管的
+| 服务                        | 形态                                          | 备注                                            |
+| --------------------------- | --------------------------------------------- | ----------------------------------------------- |
+| `node-exporter`             | 无状态：只读挂宿主机目录                      | 端口只到 Tailscale                              |
+| `openlist`                  | 有状态：数据目录 + HTTP 健康检查              | 专门给 kopia 使用，连接 139 网盘                |
+| `kopia`                     | 依赖型：openlist 可用后才真正跑起来           | 仓库配置由 sops 渲染，策略与入口脚本随目录挂    |
+| `dnsmasq`                   | 容器：宿主解析入口                            | 配置含 sops 值，只发布 127.0.0.1:53             |
+| `caddy`                     | 容器：公网入口 80/443                         | 镜像自带 Cloudflare DNS 与 CrowdSec AppSec 插件 |
+| `crowdsec-agent`            | 容器：agent-only，连远程 LAPI                 | Caddy 的 AppSec 后端（`crowdsec-agent:7422`）   |
+| `crowdsec-firewall-bouncer` | 容器 + host 网络：操作宿主机 iptables         | 与 NixOS 防火墙并行工作                         |
+| `dhp`                       | 容器：Docker Hub 的 pull-through 代理         | 数据目录 `/data/docker/dhp/data`                |
+| `dockerproxy`               | 容器：docker socket 只读代理                  | 给 tailnet 侧的 Gatus 与 Homepage 用            |
+| `fluent-bit`                | 容器：读 docker socket 与 `/var/log`          | 日志转集群 VictoriaLogs，db 落在宿主机          |
+| `mosdns`                    | 容器：配置烘在自建镜像里                      | 5054 仍对外（`vdns` 的明文 DNS 入口）           |
+| `sub-converter`             | 容器：自建镜像                                | Caddy 按容器名反代，端口只发布到宿主 loopback   |
+| `sbtools-server`            | 容器：自建镜像，单个私钥变量                  | 不发布端口，只有 Caddy 走 homelab 网络访问      |
+| `derp`                      | 容器 + host 网络：TLS 由 Caddy 终止           | `8666/tcp`、`3478/udp`                          |
+| `hysteria2`                 | 容器 + host 网络：复用 Caddy 的 wildcard 证书 | `10357/udp`                                     |
+| `anytls`                    | 容器 + host 网络：入口脚本负责自签证书        | `5444/tcp`                                      |
 
-其余服务（caddy、crowdsec、mosdns、dnsmasq、derp、hysteria2、anytls、fluent-bit、dockerproxy、dhp、sub-converter、sbtools-server）仍在 home-ops 的 compose 里，按同一模式逐个搬
+只有 dnsmasq 试过走原生 module 但落不下来（`services.dnsmasq.configFile` 是 readOnly，配置只能由 `settings` 生成，而它含 sops 值）；其余服务各自的阻碍写在对应服务文件的头部注释里。判断标准是「原生 module 能否原样覆盖配置与进程语义」，不是「有没有 module」：`services.tailscale.derper`、`services.sing-box`、`services.fluent-bit` 都存在，但分别把 nginx、证书目录、单位硬化写死在 module 里，搬过去要改的就不只是声明了
+
+旧声明（home-ops 的 `compose/vps/`）已随这次迁移整体删除，回退步骤见「加一个服务的步骤」最后一条（先撤本仓库声明，再起 Compose，顺序反了容器会被删两次）
 
 ## 相关
 
-- 旧声明：home-ops 的 `compose/vps/docker-compose.yml`
+- 旧声明：home-ops 的 `compose/vps/docker-compose.yml`（已删除，历史里可查）
 - 官方实现：nixpkgs 的 `nixos/modules/virtualisation/oci-containers.nix`
 - 系统侧：`hosts/vps/common.nix`（tailscale、docker）、`05-vps.md`（接管与部署）

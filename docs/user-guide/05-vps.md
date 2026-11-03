@@ -140,7 +140,7 @@ nixos-anywhere -f .#<主机> --target-host root@<主机> --build-on local --ssh-
 
 1. 用原别名登录，确认 `nixos-version`、地址、`tailscale status`
 2. 做一次**不改任何配置**的 `just deploy <主机>`。nixos-anywhere 装的那一代没有 deploy-rs 的激活器，第一次 deploy 配置变坏时回滚会失败
-3. 恢复业务数据，再部署容器（vps-cc 的容器由 home-ops 的 `task compose:deploy:vps` 管）
+3. 恢复业务数据，再部署容器（vps-cc 的业务容器由本仓库的 `hosts/vps/vps-cc/apps/` 声明，见 [容器服务](06-containers.md)）
 4. 稳定后删掉本机的随装目录，它含私钥
 
 ## 日常更新

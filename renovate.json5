@@ -31,6 +31,18 @@
       matchStrings: ['"npm:(?<depName>@?[^@"\\s]+)@(?<currentValue>[^"\\s]+)"'],
       datasourceTemplate: "npm",
     },
+    {
+      // oci-containers 的 `image = "仓库:标签@sha256:..."` 没有内置 manager 认识。
+      // VPS 容器原先由 home-ops 的 compose 声明，镜像升级靠那边的 docker-compose manager，
+      // 迁移后升级源在这里，不认这块就等于镜像从此不再升级
+      customType: "regex",
+      description: "服务声明里的容器镜像",
+      managerFilePatterns: ["/(^|/)hosts/[^/]+/[^/]+/apps/.+\\.nix$/"],
+      matchStrings: [
+        'image = "(?<depName>[^"@]+):(?<currentValue>[^"@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?"',
+      ],
+      datasourceTemplate: "docker",
+    },
   ],
 
   packageRules: [
@@ -118,6 +130,18 @@
       matchUpdateTypes: ["minor", "patch"],
       minimumReleaseAge: null,
       schedule: ["at any time"],
+    },
+    {
+      description: "VPS 容器镜像：合成一个 PR，手动合并",
+      matchFileNames: ["hosts/vps/vps-cc/apps/**"],
+      groupName: "vps container images",
+      automerge: false,
+    },
+    {
+      // 自建镜像里只有它用滚动 tag（vps-latest），没有可比较的版本号
+      matchDatasources: ["docker"],
+      matchPackageNames: ["ghcr.io/shelken/mosdns"],
+      enabled: false,
     },
   ],
 }

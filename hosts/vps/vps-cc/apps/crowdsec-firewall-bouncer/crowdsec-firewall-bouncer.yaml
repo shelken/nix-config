@@ -1,0 +1,24 @@
+mode: iptables
+update_frequency: 10s
+log_mode: stdout
+log_level: info
+
+api_url: ${CROWDSEC_LOCAL_API_URL}
+api_key: ${CROWDSEC_FIREWALL_BOUNCER_API_KEY}
+
+# IPv6 支持
+disable_ipv6: false
+
+# iptables 配置
+iptables_chains:
+  - INPUT
+  - FORWARD
+  - DOCKER-USER
+
+# 拒绝动作: DROP 或 REJECT
+deny_action: DROP
+deny_log: false
+
+# Prometheus metrics (可选)
+prometheus:
+  enabled: false

@@ -28,9 +28,4 @@ in
       "homepage.description" = "";
     };
   };
-
-  systemd.services.docker-node-exporter = {
-    after = [ "docker-network-homelab.service" ];
-    requires = [ "docker-network-homelab.service" ];
-  };
 }

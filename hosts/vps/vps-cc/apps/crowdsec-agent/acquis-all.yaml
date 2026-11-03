@@ -1,0 +1,22 @@
+---
+filename: /var/log/caddy/access.log
+labels:
+  type: caddy
+---
+filenames:
+  - /var/log/auth.log
+labels:
+  type: syslog
+---
+appsec_configs:
+  - crowdsecurity/appsec-default
+  - crowdsecurity/crs
+  - local/jellyfin-exclusions
+labels:
+  type: appsec
+listen_addr: 0.0.0.0:7422
+# 默认 200ms 小于跨 tailscale 校验 bouncer API key 的冷连接耗时（实测约 380ms），
+# 冷连接探针必超时；缓存为空时超时即返回 401，Caddy 转成 500。
+# 热连接约 190ms 可勉强通过，所以故障集中在启动后缓存尚未建立的窗口。
+auth_timeout: 2s
+source: appsec
