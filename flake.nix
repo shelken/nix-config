@@ -87,6 +87,7 @@
           deploy = {
             sshUser = "root";
             interactiveSudo = false;
+            remoteBuild = true;
           };
           nixos-modules = map mylib.relativeToRoot [
             "hosts/hk1box"
