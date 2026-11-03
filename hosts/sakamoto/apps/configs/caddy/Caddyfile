@@ -1,0 +1,103 @@
+{
+  admin 0.0.0.0:2019
+  log {
+    format console
+    level INFO
+  }
+  # 所有服务全局配置块
+  servers {
+    # 此处仅在二级代理时才应该开启，假如这里变成一级代理，不应该相信外部传入的xff
+    trusted_proxies static private_ranges
+    protocols h1 h2 h3
+  }
+}
+
+(with-tls) {
+  tls {
+    dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    # 本机 :53 不可信、certmagic 不支持 DoH：改由 LE 从公网侧直查 CF 权威校验，延迟用于等 CF 边缘发布
+    propagation_timeout -1
+    propagation_delay 30s
+  }
+}
+
+# 通用的代理头部设置
+(common_to_proxy_headers) {
+  flush_interval -1
+}
+
+# 0: to
+# 1: 多种处理，例如 transfer_xff，添加请求头
+# 2: 添加 transport 参数
+(reverse_template) {
+  reverse_proxy {
+    to {args[0]}
+    import common_to_proxy_headers
+    import {args[1]}
+    transport http {
+      import {args[2]}
+
+      dial_timeout 10s
+      response_header_timeout 30s
+      expect_continue_timeout 15s
+
+      keepalive 300s
+      keepalive_idle_conns 100
+      keepalive_interval 30s
+    }
+  }
+}
+
+(common_header) {
+  header {
+    +My-Server "sakamoto"
+    -Server
+    -via
+  }
+}
+
+(empty) {
+}
+
+(skip-tls-verify) {
+  tls
+  tls_insecure_skip_verify
+}
+
+# 0: 名称 1: to 2/3: 传输参数 4: 域名后缀
+(internal-access) {
+  @{args[0]} host {args[0]}.{args[4]}
+  handle @{args[0]} {
+    @deny header X-Forwarded-For *
+    handle @deny {
+      respond "Access denied - Internal network only" 403
+    }
+    import reverse_template {args[1]} {args[2]} {args[3]}
+    import common_header
+  }
+}
+
+# 站点清单只有一份，后缀由调用方传入
+(internal-sites) {
+  import internal-access rustfs-ui    http://127.0.0.1:9001       empty empty {args[0]}
+  import internal-access rustfs       http://127.0.0.1:9000       empty empty {args[0]}
+  import internal-access minio-ui     http://127.0.0.1:9001       empty empty {args[0]}
+  import internal-access minio        http://127.0.0.1:9000       empty empty {args[0]}
+  import internal-access nvidia-dls   https://127.0.0.1:5100      empty skip-tls-verify {args[0]}
+  import internal-access pve-mine     https://192.168.6.213:8006  empty skip-tls-verify {args[0]}
+
+  import internal-access ghcr-mirror        http://127.0.0.1:5001  empty empty {args[0]}
+  import internal-access quay-mirror        http://127.0.0.1:5002  empty empty {args[0]}
+  import internal-access mirror-gcr-mirror  http://127.0.0.1:5003  empty empty {args[0]}
+  import internal-access k8s-mirror         http://127.0.0.1:5005  empty empty {args[0]}
+
+  handle {
+    abort
+  }
+}
+
+# 目标状态：内部名
+*.int.{env.MAIN_DOMAIN} {
+  import with-tls
+  import internal-sites int.{env.MAIN_DOMAIN}
+}

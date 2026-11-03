@@ -138,6 +138,14 @@
       automerge: false,
     },
     {
+      // sakamoto 的镜像在 compose.yaml 里，内置的 docker-compose manager 认识这个文件名；
+      // 迁移前升级源在 home-ops 的同名 compose 文件上
+      description: "sakamoto 容器镜像：合成一个 PR，手动合并",
+      matchFileNames: ["hosts/sakamoto/apps/**"],
+      groupName: "sakamoto container images",
+      automerge: false,
+    },
+    {
       // 自建镜像里只有它用滚动 tag（vps-latest），没有可比较的版本号
       matchDatasources: ["docker"],
       matchPackageNames: ["ghcr.io/shelken/mosdns"],

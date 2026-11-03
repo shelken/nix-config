@@ -2,6 +2,8 @@
 
 `vps-cc` 上原先由 home-ops 的 docker compose 部署的业务容器，现在由本仓库声明：`virtualisation.oci-containers`，Docker 后端。这一页说明怎么引入一个服务，代码放哪、环境变量与密钥从哪来、网络与端口怎么定、怎么切换与回退
 
+`sakamoto`（macOS）的业务容器同样搬进了本仓库，但运行时仍是 OrbStack 里的 Compose，差异见文末「sakamoto（macOS）：声明在仓库里，运行时仍是 Compose」
+
 代码在 `hosts/vps/vps-cc/apps/`，VPS 上的业务容器已全部纳管，见文末「当前已纳管的服务」
 
 ## 先决定用哪种方式
@@ -169,8 +171,35 @@ virtualisation.oci-containers.containers.openlist = {
 
 旧声明（home-ops 的 `compose/vps/`）已随这次迁移整体删除，回退步骤见「加一个服务的步骤」最后一条（先撤本仓库声明，再起 Compose，顺序反了容器会被删两次）
 
+## sakamoto（macOS）：声明在仓库里，运行时仍是 Compose
+
+`sakamoto` 的业务容器（caddy、四个 registry mirror、rustfs、nvidia-dls、dockerproxy 与两个 kopia）同样由本仓库声明，代码在 `hosts/sakamoto/apps/`。与 VPS 的唯一区别：macOS 侧没有 `oci-containers` 这类原生模块，容器、命名卷与 `homelab` 网络都在 OrbStack 里，所以保留 `compose.yaml`，只是把它与 `configs/` 一起搬进 Nix store，容器挂 store 路径
+
+| 内容                                | 放哪                                                                      |
+| ----------------------------------- | ------------------------------------------------------------------------- |
+| `compose.yaml` 与 `configs/`        | 服务目录，整目录进 store（`${./.}/compose.yaml`），容器挂 store 路径      |
+| 含机密的配置（云端 kopia 仓库配置） | sops 模板渲染，`configs.<名>.file` 指到渲染路径                           |
+| 口令、token、外接盘路径             | sops 模板渲染成 env 文件，`docker compose --env-file` 取用                |
+| 启动                                | HM 的 launchd agent（`gui` 域、`RunAtLoad` + 每 15 分钟），与人工入口共用 |
+
+三处与旧 Compose 不同的约定：
+
+- `compose.yaml` 顶部写死 `name: homelab-compose`：命名卷带项目名前缀，项目名跟着目录名变成 store 路径名时会新建两个空卷
+- 外接盘路径走 sops，不进公开仓库；`sakamoto-compose up` 先逐个 `test -d`，盘没挂载直接退出，不让 Docker 以 root 新建空目录把备份写到本地盘
+- 只改 `configs/` 里挂载的文件内容（例如 Caddyfile）时容器不会自动重建：用 `sakamoto-compose recreate`
+
+```bash
+sakamoto-compose up         # 等 OrbStack 与密钥就绪、检查数据目录，再 up -d
+sakamoto-compose status
+sakamoto-compose logs
+sakamoto-compose recreate
+```
+
+agent 日志在 `~/Library/Logs/sakamoto-compose.log`；切换、验收与回退见 `hosts/sakamoto/apps/README.md`
+
 ## 相关
 
-- 旧声明：home-ops 的 `compose/vps/docker-compose.yml`（已删除，历史里可查）
+- 旧声明：home-ops 的 `compose/vps/docker-compose.yml`、`compose/sakamoto/`（都已删除，历史里可查）
+- 服务目录：`hosts/sakamoto/apps/`（`README.md` 是切换与回退手册）
 - 官方实现：nixpkgs 的 `nixos/modules/virtualisation/oci-containers.nix`
 - 系统侧：`hosts/vps/common.nix`（tailscale、docker）、`05-vps.md`（接管与部署）

@@ -1,0 +1,63 @@
+{
+  "@sakamoto-local": {
+    "retention": {
+      "keepHourly": 24,
+      "keepDaily": 7
+    },
+    "compression": {
+      "compressorName": "zstd-fastest"
+    },
+    "files": {
+      "ignore": [
+        ".DS_Store",
+        ".DS_Store?",
+        "._*",
+        ".Spotlight-V100",
+        ".Trashes",
+        ".fseventsd",
+        ".TemporaryItems",
+        ".DocumentRevisions-V100",
+        "Thumbs.db",
+        "*.log",
+        "*.tmp",
+        "*.temp",
+        "cache",
+        "/Downloads",
+        "/Software/VM",
+        ".minio.sys",
+        ".rustfs.sys",
+        "kopia-backup"
+      ]
+    }
+  },
+  "shelken@sakamoto-local:/backup/sakamoto-data/media": {
+    "scheduling": {
+      "cron": ["15 * * * *"]
+    }
+  },
+  "shelken@sakamoto-local:/backup/sakamoto-data/Work": {
+    "scheduling": {
+      "cron": ["15 * * * *"]
+    }
+  },
+  "shelken@sakamoto-local:/backup/sakamoto-data/折腾": {
+    "scheduling": {
+      "cron": ["15 * * * *"]
+    }
+  },
+  "shelken@sakamoto-local:/backup/sakamoto-data/synogy-data": {
+    "scheduling": {
+      "cron": ["15 * * * *"]
+    }
+  },
+  "shelken@sakamoto-local:/backup/sakamoto-data/k8s/storage": {
+    "scheduling": {
+      "cron": ["15 * * * *"]
+    }
+  },
+  "shelken@sakamoto-local:/backup/sakamoto-data/Devlopment/docker/data/minio": {
+    "scheduling": {
+      "cron": ["15 * * * *"]
+    }
+  }
+}
