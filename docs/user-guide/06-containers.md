@@ -90,7 +90,13 @@ virtualisation.oci-containers.containers.openlist = {
 };
 ```
 
-`sops.templates` 的内容先以占位符写进 `Nix store`，激活时由主机解密替换，`Nix store` 里没有明文
+`sops.templates` 的内容先以占位符写进 `Nix store`，激活时由主机解密替换，链路上没有明文：
+
+1. 求值：`sops.placeholder.<名字>` 是 `<SOPS:<名字的 sha256>:PLACEHOLDER>`，模板文本连着占位符一起进 `Nix store`
+2. 激活：`sops-install-secrets` 读 `manifest.json`，解密密文，把模板里的占位符替换成真值，写到 `/run/secrets/rendered/<模板名>`，权限 0400、属主 root；渲染结果字节变了才按 `restartUnits` 重启对应单元
+3. 取用：`environmentFiles` 被翻译成 `docker run --env-file /run/secrets/rendered/<模板名>`，docker 在宿主机上以 root 读这个文件，解析成容器进程的环境变量
+
+值只在渲染时出现，所以 `environment = { X = config.sops.placeholder.<名字>; }` 会把占位符字面量塞进容器，机密只能走 `environmentFiles` 或挂渲染出来的文件
 
 新字段加在 `secrets` 仓库的 `sops/secrets/hosts/<主机名>.yaml`，用 sops 编辑，字段名按用途分组，例如 `openlist/admin-password`、`kopia/password`。迁移旧服务时先沿用原值，不要顺手轮换
 
