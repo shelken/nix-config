@@ -6,11 +6,12 @@ HK1 Box（Amlogic S905X3，4G 内存，千兆网口），在家里当单臂旁�
 
 ## 组成
 
-- `default.nix`：主机名、静态网络（地址取自 `vars/networking.nix`）、转发与 sysctl、防火墙、sing-box、sops
+- `default.nix`：主机名、静态网络（地址取自 `vars/networking.nix`）、转发与 sysctl、防火墙、sops 文件
+- `sing-box.nix`：sing-box 服务，以及从订阅服务定时拉取配置
 - `hardware.nix`：内核参数、设备树编译、initrd 驱动、extlinux 与晶晨引导文件的安装
 - `bootfs.nix` + `boot/*.cmd`：厂商 u-boot 要读的 autoscript 与主线 u-boot（`u-boot.ext` / `u-boot.emmc`）
 - `disk.nix`：eMMC 的 MBR 分区，前 68MiB 留给厂商 bootloader
-- `image.nix`：U 盘 / SD 卡试机镜像，同一份配置，不跑 sing-box
+- `image.nix`：U 盘 / SD 卡试机镜像（nixpkgs 镜像变体 `hk1box-usb`），同一份配置，不跑 sing-box
 - `dts/meson-sm1-hk1box-vontar-x3.dts`：设备树源码，取自 [unifreq/linux-6.12.y](https://github.com/unifreq/linux-6.12.y) 的 `d23ed3d1`（ophub 内核用的同一份），许可证见文件头（GPL-2.0+ OR MIT），未修改
 
 ## 引导链
@@ -28,22 +29,59 @@ HK1 Box（Amlogic S905X3，4G 内存，千兆网口），在家里当单臂旁�
 - 主线 u-boot 先找 U 盘、SD 卡，再找 eMMC，所以插着 U 盘就从 U 盘起，拔掉就回 eMMC。这也是之后的救援方式
 - 5.10 以后的内核厂商 u-boot 起不来，所以必须经过主线 u-boot 这一跳（与 ophub 的做法相同）
 
-## 前置：secrets 仓库
+## 前置一：路由器用的订阅 URL
+
+sing-box 配置走和 Mac / iOS 一样的链路：Mac 上的 sbtools 把 yaml 加密成订阅 URL，订阅服务按 URL 现场装配。路由器单独一份 yaml（如 `~/.config/sing-box/router.yaml`，只在本机），底模用 proxy 仓库的 `template-router.json`（tun 开 `auto_redirect`、53 端口的 DNS 入口、clash API 对局域网监听）：
+
+```yaml
+subs:
+  - https://<机场订阅>
+template_url: https://raw.githubusercontent.com/shelken/proxy/main/config/sing-box/template-router.json
+overlay: |
+  {
+    "experimental": { "clash_api": { "secret": "<随机串，neko-master 用同一个>" } },
+    "dns": { "rules": [
+      { "source_mac_address": ["<MAC1>", "<MAC2>"], "invert": true, "server": "dns-local-system" }
+    ] },
+    "route": { "rules": [
+      { "inbound": ["tun-in"], "source_mac_address": ["<MAC1>", "<MAC2>"], "invert": true,
+        "action": "bypass", "outbound": "direct" }
+    ] }
+  }
+```
+
+```bash
+sbtools check -c ~/.config/sing-box/router.yaml
+sbtools encode -s https://<订阅服务> -c ~/.config/sing-box/router.yaml   # URL 进剪贴板
+```
+
+白名单写在 overlay 里，随载荷加密，不出现在任何仓库的明文中。规则含义见 proxy 仓库的路由器用户指南；要点：
+
+- 名单外的设备在 `auto_redirect` 的预匹配阶段被 `bypass`，内核直接转发给主路由，不进 sing-box；`outbound: direct` 是兜底
+- `inbound: tun-in` 不能省：否则发往 53 端口 DNS 入口的查询也会被 direct 送回本机，绕成环
+- 名单外的设备如果 DNS 也指向这台，拿到的是真实 IP 而不是 fakeip
+- 名单内的设备，网关与 DNS 都要指向这台（主路由 DHCP 下发，或设备上手动设）；DNS 指向主路由时查询在同网段直达，fakeip 用不上
+- 手机要把这个 Wi-Fi 的「私有地址」改成固定，否则 MAC 会变
+
+改名单就改 overlay，重新 `encode`，再按下一节更新 sops 里的 URL
+
+## 前置二：secrets 仓库
 
 与 vps-cc 一样走系统层 sops（`docs/adr/0005-server-role-and-core-baseline.md`），步骤见 `docs/user-guide/05-vps.md` 的「主机自己的 age 密钥和口令密文」：
 
 1. `age-keygen -o hk1box-age.txt`，私钥不进任何仓库
 2. `.sops.yaml` 加一条 `sops/secrets/hosts/hk1box\.yaml$`，接收方是管理员公钥加这台的公钥
-3. 新建 `sops/secrets/hosts/hk1box.yaml`，写一个键 `sing-box-config`，值是现在旁路由上那份 sing-box 的完整 `config.json`（多行字符串）
+3. 新建 `sops/secrets/hosts/hk1box.yaml`，写一个键 `sing-box-sub-url`，值是上一节的订阅 URL（它能换出完整节点配置，等同凭据）
 4. 推送后回本仓库 `nix flake update secrets`
 
 这个文件不存在时，`hk1box` 的正式系统无法求值；试机镜像不读它
 
-sing-box 配置里与这台机器相关的几处：
+拉取由 `sing-box.nix` 负责：开机一次、之后每 6 小时一次，先 `sing-box check`，内容变了才替换并重启；失败时保留上一份。部署本身不会触发拉取，换了 URL 部署后手动执行一次：
 
-- 透明代理用 tun 入站加 `auto_route`、`auto_redirect`；`auto_redirect` 依赖 nftables，已在 `default.nix` 打开，且关掉了重载时清空整个规则集
-- clash API 要监听网口地址（不是 127.0.0.1），homelab 的 neko-master 才拉得到；入站防火墙对 eth0 已全放行
-- DNS 入站如果监听 53，sing-box 服务自带 `CAP_NET_BIND_SERVICE`，无需 root
+```bash
+ssh root@hk1box systemctl start sing-box-sub-update
+ssh root@hk1box journalctl -u sing-box-sub-update -n 20
+```
 
 ## 1. 构建并写 U 盘
 
@@ -51,7 +89,7 @@ sing-box 配置里与这台机器相关的几处：
 
 ```bash
 git add hosts/hk1box
-nix build .#nixosConfigurations.hk1box.config.system.build.usbImage
+nix build .#nixosConfigurations.hk1box.config.system.build.images.hk1box-usb
 nix shell nixpkgs#zstd -c zstd -d result/sd-image/hk1box-usb*.img.zst -o hk1box-usb.img
 # 确认 U 盘是哪块盘再写，写错会抹掉别的盘
 diskutil list
@@ -60,6 +98,13 @@ sudo dd if=hk1box-usb.img of=/dev/rdiskN bs=4m status=progress
 ```
 
 首次开机会自动把根分区扩满整个 U 盘。SD 卡同样可用（`mmc0` 比 eMMC 先被找到）
+
+这是 nixpkgs 的镜像变体机制（`image.modules` → `system.build.images`），在 Linux 上也可以用 `nixos-rebuild build-image --image-variant hk1box-usb --flake .#hk1box`。想看变体和正式系统差在哪，读它的配置：
+
+```bash
+nix eval .#nixosConfigurations.hk1box.config.system.build.images.hk1box-usb.passthru.config.fileSystems \
+  --apply 'fs: builtins.mapAttrs (_: v: v.device) fs'
+```
 
 ## 2. U 盘试机
 
@@ -117,11 +162,12 @@ nixos-anywhere -f .#hk1box --target-host root@hk1box --build-on local \
 ssh root@hk1box
 findmnt / /boot                      # eMMC 的 p2、p1
 ls /boot                             # emmc_autoscript u-boot.emmc extlinux nixos
-systemctl status sing-box
+systemctl status sing-box-sub-update sing-box
+ls -l /etc/sing-box/config.json      # 软链到 /var/lib/sing-box-sub/config.json
 nft list tables                      # 有 sing-box 自己的表
 ```
 
-客户端走一遍代理，neko-master 能看到流量即可
+白名单内的设备走一遍代理，neko-master 能看到流量；名单外的设备照常上网，且不出现在 sing-box 的连接列表里
 
 ## 日常更新
 

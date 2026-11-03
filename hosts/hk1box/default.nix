@@ -9,12 +9,13 @@
 #  hk1box：HK1 Box（S905X3 电视盒子）当单臂旁路由，只跑 sing-box
 #
 #  原先刷 ImmortalWrt（ophub 打包）；现在是普通 NixOS 主机，用 deploy-rs 推送
-#  硬件与引导见 ./hardware.nix，eMMC 分区见 ./disk.nix，试机镜像见 ./image.nix
-#  从 ImmortalWrt 切过来的步骤见 ./README.md
+#  硬件与引导见 ./hardware.nix，eMMC 分区见 ./disk.nix，试机镜像见 ./image.nix，
+#  sing-box 与订阅拉取见 ./sing-box.nix；从 ImmortalWrt 切过来的步骤见 ./README.md
 #
-#  单臂：只有一个网口，客户端把网关指向这台；它把流量交给 sing-box，再从同一个网口发给主路由
-#  地址：沿用 vars/networking.nix 里的登记（同一网段，网关是主路由）
-#  sing-box 配置含节点凭据，整份放在 secrets 仓库的 sops 文件里，激活时解到 /etc/sing-box/
+#  单臂：只有一个网口，客户端把网关指向这台；它把流量交给 sing-box，再从同一个网口发给主路由。
+#  哪些设备走代理由 sing-box 配置（订阅 overlay 里的白名单）决定，名单外的由内核直接转发
+#  地址：沿用 vars/networking.nix 里的登记（同一网段，网关是主路由）。
+#  本机自己的 DNS 必须指向主路由：sing-box 的 dns-local-system 走系统解析，指回本机会绕成环
 #
 #############################################################
 let
@@ -28,6 +29,7 @@ in
     ./hardware.nix
     ./disk.nix
     ./image.nix
+    ./sing-box.nix
   ];
 
   networking = {
@@ -56,7 +58,8 @@ in
     };
     firewall = {
       # 只接在内网里，入站与 ImmortalWrt 时一样全放行：
-      # 客户端的 DNS、被重定向进 sing-box 的连接、clash API（homelab 的 neko-master 来拉流量）都从这里进
+      # 客户端的 DNS（router 底模的 dns-in，53）、被重定向进 sing-box 的连接、
+      # clash API（9090，homelab 的 neko-master 来拉流量，靠 overlay 里的 secret 保护）都从这里进
       trustedInterfaces = [ "eth0" ];
       # 透明代理的回包从 tun 进来，严格反向路径过滤会丢掉
       checkReversePath = "loose";
@@ -75,17 +78,8 @@ in
     "net.ipv4.tcp_congestion_control" = "bbr";
   };
 
-  # 不在 Nix 里声明 settings：nixpkgs 模块此时直接用 -C /etc/sing-box 读整个目录
-  services.sing-box.enable = true;
-
-  sops = {
-    defaultSopsFile = secrets + "/sops/secrets/hosts/hk1box.yaml";
-    secrets.sing-box-config = {
-      path = "/etc/sing-box/config.json";
-      owner = "sing-box";
-      restartUnits = [ "sing-box.service" ];
-    };
-  };
+  # 本机的系统密钥（目前只有 sing-box 的订阅 URL），只有管理员与这台的 age 密钥能解
+  sops.defaultSopsFile = secrets + "/sops/secrets/hosts/hk1box.yaml";
 
   system.stateVersion = "26.05";
 }
