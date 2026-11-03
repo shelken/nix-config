@@ -4,9 +4,10 @@ let
   dataDir = "/data/docker/openlist/data";
 in
 {
-  # 业务数据目录：docker 以 root 写入，与旧系统保持一致
+  # 业务数据目录：镜像以 UID 1001 运行，属主必须是它
+  # 设成 root 会让容器建不了临时文件，openlist 在 `init logrus...` 之后静默退出 1
   systemd.tmpfiles.rules = [
-    "d ${dataDir} 0755 root root -"
+    "d ${dataDir} 0755 1001 1001 -"
   ];
 
   # admin 口令：密文留在私有 secrets 仓库，激活时渲染成容器可读的环境文件

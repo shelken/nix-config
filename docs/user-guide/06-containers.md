@@ -112,15 +112,15 @@ virtualisation.oci-containers.containers.openlist = {
 
 ## 生命周期与依赖
 
-| 事项       | 行为                                                                                                                       |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------- |
-| 容器名     | 等于属性名，例如 `openlist`                                                                                                |
-| unit 名    | `docker-<属性名>.service`                                                                                                  |
-| 启动前     | 模块先 `docker rm -f <容器名>`，从 compose 接管同名容器不用手工停旧容器                                                    |
-| 日志       | 默认 `journald`，`journalctl -u docker-<名字>`                                                                             |
-| 重启       | `Restart=always`，间隔 10 秒，崩溃时不会把日志打满                                                                         |
-| 服务间依赖 | `dependsOn = [ "openlist" ]` 给退出联动与启动顺序                                                                          |
-| 等健康就绪 | `dependsOn` 不等健康，需要就加 `ExecStartPre` 轮询 `docker inspect` 的 `.State.Health.Status`，见 `apps/kopia/default.nix` |
+| 事项       | 行为                                                                                                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 容器名     | 等于属性名，例如 `openlist`                                                                                                                                                    |
+| unit 名    | `docker-<属性名>.service`                                                                                                                                                      |
+| 启动前     | 模块先 `docker rm -f <容器名>`，从 compose 接管同名容器不用手工停旧容器                                                                                                        |
+| 日志       | 默认 `journald`，`journalctl -u docker-<名字>`                                                                                                                                 |
+| 重启       | `Restart=always`，间隔 10 秒，崩溃时不会把日志打满                                                                                                                             |
+| 服务间依赖 | `dependsOn = [ "openlist" ]` 给退出联动与启动顺序                                                                                                                              |
+| 等健康就绪 | 不要在 `ExecStartPre` 里轮询：它阻塞 unit 的启动任务，整次 `switch` 会被拖过 deploy-rs 的确认窗口而误回滚。让应用自己失败重试（`Restart=always`），见 `apps/kopia/default.nix` |
 
 ## 加一个服务的步骤
 
@@ -129,7 +129,7 @@ virtualisation.oci-containers.containers.openlist = {
 - [ ] 非机密参数进 `environment`，机密进 sops：加字段、加模板、挂 `environmentFiles`
 - [ ] 私有仓库推送后 `just upp secrets` 刷新 `flake.lock`，否则部署读的是旧密文
 - [ ] 附带文件放进服务目录，用 `${./文件名}` 挂载
-- [ ] 需要等依赖健康时加 `ExecStartPre`
+- [ ] 需要等依赖就绪时，让服务自己失败重试，不要在 `ExecStartPre` 里等待
 - [ ] 核对数据目录与命名卷的实际名字
 - [ ] 新目录时，在主机 `default.nix` 的 `imports` 加一次
 - [ ] 求值：`nix eval .#nixosConfigurations.<主机>.config.system.build.toplevel.drvPath`
@@ -139,11 +139,11 @@ virtualisation.oci-containers.containers.openlist = {
 
 ## 当前已纳管的服务
 
-| 服务            | 形态                                         | 备注                                         |
-| --------------- | -------------------------------------------- | -------------------------------------------- |
-| `node-exporter` | 无状态：只读挂宿主机目录，端口只到 Tailscale |                                              |
-| `openlist`      | 有状态：数据目录 + HTTP 健康检查             | 专门给 kopia 使用的，连接 139 网盘           |
-| `kopia`         | 依赖型：等 openlist 健康，密钥与配置多       | 仓库配置由 sops 渲染，策略与入口脚本随目录挂 |
+| 服务            | 形态                                              | 备注                                         |
+| --------------- | ------------------------------------------------- | -------------------------------------------- |
+| `node-exporter` | 无状态：只读挂宿主机目录，端口只到 Tailscale      |                                              |
+| `openlist`      | 有状态：数据目录 + HTTP 健康检查                  | 专门给 kopia 使用的，连接 139 网盘           |
+| `kopia`         | 依赖型：openlist 可用后才真正跑起来，密钥与配置多 | 仓库配置由 sops 渲染，策略与入口脚本随目录挂 |
 
 ## 还没纳管的
 

@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, ... }:
 let
   address = config.shelken.vpsContainers.tailscaleAddress;
   logDir = "/data/docker/kopia/logs";
@@ -89,20 +89,13 @@ in
     };
   };
 
+  # 就绪语义：dependsOn 只保证先启动 openlist，不等它健康。
+  # 不在 ExecStartPre 里轮询健康：那会阻塞 unit 的启动任务，进而拖长整次 switch，
+  # 超过 deploy-rs 的确认窗口就误判成「未确认」并回滚（2026-11-03 实测）。
+  # 改成让 kopia 自己失败重试：仓库连不上时 entrypoint 立刻退出 1，
+  # Restart=always + RestartSec=10s 会一直重试到 openlist 能用为止
   systemd.services.docker-kopia = {
     after = [ "docker-network-homelab.service" ];
     requires = [ "docker-network-homelab.service" ];
-    serviceConfig.ExecStartPre = [
-      (pkgs.writeShellScript "wait-for-openlist" ''
-        for _ in $(${pkgs.coreutils}/bin/seq 1 30); do
-          if [ "$(${pkgs.docker}/bin/docker inspect --format '{{.State.Health.Status}}' openlist 2>/dev/null)" = healthy ]; then
-            exit 0
-          fi
-          ${pkgs.coreutils}/bin/sleep 2
-        done
-        echo "openlist 在 60 秒内没有 healthy，本次不启动 kopia" >&2
-        exit 1
-      '')
-    ];
   };
 }
