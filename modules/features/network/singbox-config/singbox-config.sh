@@ -10,8 +10,9 @@ encode 成订阅 URL，URL 由 sbtools 写进剪切板。私密值只落在临�
 
 模板里用到的 1Password 条目（都在 vault Personal 的 proxy 条目里，一个字段一项）：
   subs-miaona        机场订阅 URL
-  vps-hy2            私有 hy2 节点 URI
-  vps-anytls         私有 anytls 节点 URI
+  vps-hy2            \
+  vps-hy2-v6          > 私有节点 URI（mac / router 三条，ios 两条）
+  vps-anytls         /
   clash-secret       router 的 clash API secret
   mac-1 … mac-5      router 白名单设备的 MAC，一台一项
 
