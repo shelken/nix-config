@@ -16,7 +16,7 @@ encode 成订阅 URL，URL 由 sbtools 写进剪切板。私密值只落在临�
   clash-secret       router 的 clash API secret
   mac-1 … mac-5      router 白名单设备的 MAC，一台一项
 
-订阅服务地址取 sops 的 main-domain，脚本里拼成 https://<main-domain>。
+订阅服务地址取 sops 的 main-domain，脚本里拼成 https://subs.<main-domain>。
 EOF
   exit 2
 }
@@ -47,8 +47,7 @@ echo "→ 填充模板：@templatesDir@/$variant.yaml"
 sec-run op inject -i "@templatesDir@/$variant.yaml" -o "$yaml"
 chmod 600 "$yaml"
 
-echo "→ 校验：sbtools check"
-mise exec -- sbtools check -c "$yaml"
-
+# 不跑 sbtools check：那一步要启动 sing-box 内核，本机没装就报「启动内核失败（sing-box）」。
+# 想校验就先装内核，再手动 `sbtools check -c <填充后的 yaml>`
 echo "→ 生成订阅 URL（写入剪切板）"
-mise exec -- sbtools encode -s "https://$main_domain" -c "$yaml"
+mise exec -- sbtools encode -s "https://subs.$main_domain" -c "$yaml"
