@@ -84,14 +84,14 @@ ssh root@hk1box
 nixos-version
 cat /proc/device-tree/model          # HK1 Box/Vontar X3
 ip -br addr show eth0                # 地址正确、UP
-cat /sys/class/net/eth0/address      # 与 ImmortalWrt 时记下的 MAC 一致，不是随机值
+cat /sys/class/net/eth0/address      # 应为 default.nix 里钉住的 00:e5:00:00:15:eb
 cat /sys/class/net/eth0/speed        # 1000
 lsblk                                # mmcblk? 是 eMMC，sd? 是 U 盘
 ls -l /dev/disk/by-path/ | grep ffe07000   # disk.nix 用的就是它
 reboot                               # 能再次进来
 ```
 
-- MAC 变随机了（这台 efuse 为空，MAC 全靠引导链注入）：在 `dts/` 的 `&ethmac` 里补 `local-mac-address`，或让主线 u-boot 的 env 带上 `ethaddr`
+- MAC 对不上（这台 efuse 为空，u-boot 会按 SoC 派生一个稳定但不同的值）：钉它的地方就是 `default.nix` 里的 `networking.interfaces.eth0.macAddress`，别去改 `dts/` —— u-boot 在启动时会把 `local-mac-address` 写进设备树，会盖掉 dts 里的值
 - 起不来：接 TTL 串口（115200）看日志；卡在网口就把 `dts/` 里的 `phy-mode` 换成注释中的 `rgmii-txid` 那组
 - 此时客户端网关仍指向这台，流量照常转发给主路由，只是不走代理。拔掉 U 盘就回 ImmortalWrt
 

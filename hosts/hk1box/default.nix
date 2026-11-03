@@ -37,6 +37,9 @@ in
     # 只有一个网口，沿用 ImmortalWrt 时的 eth0
     usePredictableInterfaceNames = false;
     useDHCP = false;
+    # 这台 efuse 为空，u-boot 只按 SoC 派生一个稳定但不同的 MAC；钉回 ImmortalWrt 时的值
+    # （生成 systemd `.link`，由 udevd 应用，不依赖 networkd）
+    interfaces.eth0.macAddress = "00:e5:00:00:15:eb";
     interfaces.eth0.ipv4.addresses = [
       {
         inherit (hostAddress.hk1box) address;
