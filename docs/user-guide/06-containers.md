@@ -100,6 +100,8 @@ virtualisation.oci-containers.containers.openlist = {
 
 新字段加在 `secrets` 仓库的 `sops/secrets/hosts/<主机名>.yaml`，用 sops 编辑，字段名按用途分组，例如 `openlist/admin-password`、`kopia/password`。迁移旧服务时先沿用原值，不要顺手轮换
 
+私有仓库推送后，在本仓库 `nix flake update secrets`（或 `just upp secrets`）并提交 `flake.lock`，否则部署用的还是锁定的旧密文
+
 ## 网络与端口
 
 - `apps/default.nix` 里的 `docker-network-homelab` 单元检查 `homelab` 网络，不存在才按原参数创建，已存在就不动，避免正在运行的容器被换网络
@@ -125,6 +127,7 @@ virtualisation.oci-containers.containers.openlist = {
 - [ ] 对照「从 Compose 抄字段」把声明写进 `apps/<服务名>.nix`
 - [ ] 定端口与地址，写 `"${address}:<宿主端口>:<容器端口>"`
 - [ ] 非机密参数进 `environment`，机密进 sops：加字段、加模板、挂 `environmentFiles`
+- [ ] 私有仓库推送后 `just upp secrets` 刷新 `flake.lock`，否则部署读的是旧密文
 - [ ] 附带文件放进服务目录，用 `${./文件名}` 挂载
 - [ ] 需要等依赖健康时加 `ExecStartPre`
 - [ ] 核对数据目录与命名卷的实际名字
