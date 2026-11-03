@@ -73,7 +73,7 @@ git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-con
 
 # 4. 选择 flake.nix 中定义的机器配置
 # Darwin: mio / sakamoto / yuuko / ling
-# NixOS: vps-cc / lima-test / work-test
+# NixOS: vps-cc / hk1box / lima-test / work-test
 PROFILE=mio
 printf 'PROFILE=%s\n' "$PROFILE" > .host-profile
 

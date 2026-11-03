@@ -38,7 +38,7 @@ let
     infra = {
       user = "root";
       hosts = {
-        tvbox = "192.168.6.3";
+        hk1box = "192.168.6.3"; # 单臂旁路由；hosts/hk1box 的静态地址也取自这里
         pve = "192.168.6.213";
         router-home = "192.168.0.1";
         router-mine = "192.168.6.1";
