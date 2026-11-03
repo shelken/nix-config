@@ -15,6 +15,7 @@ in
   imports = [
     self.modules.nixos.tui
     self.modules.nixos.disko
+    self.modules.nixos.nix-icache-system
   ];
 
   shelken.disko = {
@@ -43,11 +44,6 @@ in
     systemd-boot.enable = true;
     efi.canTouchEfiVariables = false;
   };
-
-  nix.settings.substituters = lib.mkBefore [
-    "https://icache.int.ooooo.space/cache.nixos.org"
-    "https://icache.int.ooooo.space/nix-community.cachix.org"
-  ];
 
   networking = {
     hostName = "lima-test";

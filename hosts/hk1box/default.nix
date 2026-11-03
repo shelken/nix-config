@@ -26,6 +26,7 @@ in
   imports = [
     self.modules.nixos.server
     self.modules.nixos.sops
+    self.modules.nixos.nix-icache-system
     ./hardware.nix
     ./disk.nix
     ./image.nix
