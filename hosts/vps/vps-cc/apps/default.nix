@@ -22,12 +22,14 @@
 
   options.shelken.vpsContainers.tailscaleAddress = lib.mkOption {
     type = lib.types.str;
-    example = "100.64.0.1";
+    # 这台 VPS 的 tailnet 地址，与 home-ops 的 ts-node-vps 服务同一个值；
+    # 部署前用 `tailscale ip -4` 对一下，绑错地址容器会直接起不来
+    default = "100.97.0.8";
     description = ''
       业务容器的端口只发布到这个地址（Tailscale 网卡）。
       Docker 发布端口走 NAT，绕过 NixOS 防火墙：发布到 0.0.0.0 等于直接放到公网，
       发布到 127.0.0.1 则 Tailscale 侧的调用方（Gatus、Prometheus）访问不到。
-      地址由主机事实提供，公开仓库不写字面量。
+      旧 Compose 从 BWS 的 DEPLOY_HOST 取同一个值。
     '';
   };
 

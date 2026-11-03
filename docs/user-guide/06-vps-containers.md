@@ -19,40 +19,33 @@
 | 重启意图      | 旧 Compose 的 `restart: always` 由 `Restart=always` + `RestartSec=10s` 承担 |
 | 启动依赖      | `kopia` 等 openlist 真的 `healthy` 才启动（`dependsOn` 只管顺序与依赖）     |
 
-## 部署前必须补齐的两处私有输入
+## 部署前必须补齐的私有输入
 
-这两处都不在公开仓库里，缺任一处求值或激活会失败。
+密钥不在公开仓库里，缺字段会在激活时失败。在 `secrets` 仓库的 `sops/secrets/hosts/vps-cc.yaml` 用 sops 增加以下字段（值取旧 BWS 里的同名变量，迁移期间不轮换）：
 
-1. `secrets` 仓库的 `hosts/vps-cc/network.nix` 增加 Tailscale 地址（容器端口只发布到这个地址，否则等于把服务放到公网）：
+```yaml
+openlist:
+  admin-username: ...
+  admin-password: ...
+  s3-access-key-id: ...
+  s3-secret-access-key: ...
+  webdav-username: ...
+  webdav-password: ...
+kopia:
+  password: ...
+  webhook-url: ...
+```
 
-   ```nix
-   tailscaleIp = "<vps-cc 的 Tailscale 地址>";
-   ```
-
-2. `secrets` 仓库的 `sops/secrets/hosts/vps-cc.yaml` 用 sops 增加以下字段（值取旧 BWS 里的同名变量，迁移期间不轮换）：
-
-   ```yaml
-   openlist:
-     admin-username: ...
-     admin-password: ...
-     s3-access-key-id: ...
-     s3-secret-access-key: ...
-     webdav-username: ...
-     webdav-password: ...
-   kopia:
-     password: ...
-     webhook-url: ...
-   ```
-
-   `webdav-username` / `webdav-password` 是 kopia 访问 openlist WebDAV 的凭据，旧 Compose 从 `OPENLIST_WEBDAV_*` 注入。
+`webdav-username` / `webdav-password` 是 kopia 访问 openlist WebDAV 的凭据，旧 Compose 从 `OPENLIST_WEBDAV_*` 注入。
 
 ## 切换步骤
 
 1. 先在 home-ops 里删掉这三个服务的 Compose 声明（或至少不再执行 `task compose:deploy:vps`）。
    不这么做的话，`docker compose up` 会按它自己的声明重建同名容器，把 Nix 的容器顶掉。
-2. 核对实际卷名：`docker volume ls | grep kopia`。`apps/kopia/default.nix` 里的 `cacheVolume` 按 Compose 项目名推断为 `homelab-compose_kopia_cache`，对不上就改成本机实际值。
+2. 核对绑定的 tailnet 地址：`ssh vps-cc 'tailscale ip -4'` 应与 `apps/default.nix` 里 `tailscaleAddress` 的默认值一致。不一致就改那一行——地址不对时容器直接起不来（`cannot assign requested address`）。
+3. 核对实际卷名：`docker volume ls | grep kopia`。`apps/kopia/default.nix` 里的 `cacheVolume` 按 Compose 项目名推断为 `homelab-compose_kopia_cache`，对不上就改成本机实际值。
    这个卷只放缓存与对账指纹，名字错了不会丢备份数据，但会重新对账一次。
-3. 部署：`just deploy vps-cc`。
+4. 部署：`just deploy vps-cc`。
 
 ## 验收
 
