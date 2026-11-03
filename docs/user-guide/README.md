@@ -10,3 +10,4 @@
 | [03-agent-sandbox.md](03-agent-sandbox.md) | Agent 沙箱：在隔离 VM 里同时跑多个 OMP               |
 | [04-backup.md](04-backup.md)               | 备份：kopia 快照、策略、手动入口与恢复               |
 | [05-vps.md](05-vps.md)                     | VPS：nixos-anywhere 接管、disko 分区、deploy-rs 部署 |
+| [06-containers.md](06-containers.md)       | 容器服务：引入一个容器、环境变量与密钥来源、文件组织 |
