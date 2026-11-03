@@ -31,40 +31,17 @@ HK1 Box（Amlogic S905X3，4G 内存，千兆网口）当单臂旁路由，只�
 
 ## 前置一：路由器用的订阅 URL
 
-路由器单独一份 yaml（如 `~/.config/sing-box/router.yaml`，只在本机），底模用 proxy 仓库的 `template-router.json`；白名单写在 overlay 里，随载荷加密：
-
-```yaml
-subs:
-  - https://<机场订阅>
-template_url: https://raw.githubusercontent.com/shelken/proxy/main/config/sing-box/template-router.json
-overlay: |
-  {
-    "experimental": { "clash_api": { "secret": "<随机串，neko-master 用同一个>" } },
-    "dns": { "rules": [
-      { "source_mac_address": ["<MAC1>", "<MAC2>"], "invert": true, "server": "dns-local-system" }
-    ] },
-    "route": { "rules": [
-      { "type": "logical", "mode": "and", "rules": [
-          { "inbound": ["tun-in"] },
-          { "type": "logical", "mode": "and", "invert": true,
-            "rules": [ { "source_mac_address": ["<MAC1>", "<MAC2>"] } ] }
-        ],
-        "action": "bypass", "outbound": "direct" }
-    ] }
-  }
-```
+mac / ios / router 三份 yaml 由 `singbox-config` 生成：模板与 1Password 引用在 `modules/features/network/singbox-config/`，订阅服务地址取 sops 的 `main-domain`
 
 ```bash
-sbtools check -c ~/.config/sing-box/router.yaml
-sbtools encode -s https://<订阅服务> -c ~/.config/sing-box/router.yaml   # URL 进剪贴板
+singbox-config router        # 填充模板 → sbtools check → encode，URL 进剪切板
 ```
 
-- 规则照抄上面的两层结构：`invert` 反转整条规则，把 `inbound: tun-in` 和它写在同一层会让 `dns-in` 的查询也被翻成命中。细节见 proxy 仓库的 `docs/user-guide/05-router.md`
-- 名单外的设备在 `auto_redirect` 预匹配阶段被 `bypass`，内核直接转发给主路由，不进 sing-box
+- 白名单设备在 `auto_redirect` 预匹配阶段被 `bypass`，内核直接转发给主路由，不进 sing-box
 - 名单内的设备，网关与 DNS 都指向这台；名单外的设备即使 DNS 指过来，拿到的也是真实 IP 而不是 fakeip
 - 手机要把这个 Wi-Fi 的「私有地址」改成固定，否则 MAC 会变
 
-改名单就改 overlay，重新 `encode`，再按下一节更新 sops 里的 URL
+改名单就改模板里的 MAC 条目，重新 `singbox-config router`，再按下一节更新 sops 里的 URL
 
 ## 前置二：secrets 仓库
 

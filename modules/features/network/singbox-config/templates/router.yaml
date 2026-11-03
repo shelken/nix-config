@@ -1,0 +1,25 @@
+# 旁路由：白名单与 clash secret 只在这里
+#
+# invert 反转整条规则，所以「排除白名单」必须两层：外层 AND 限定 inbound: tun-in，
+# 内层只反转 MAC。写在同一层会把 dns-in 的查询也翻成命中。
+subs:
+  - "{{ op://Personal/proxy/subs-miaona }}"
+nodes:
+  - "{{ op://Personal/proxy/vps-hy2 }}"
+  - "{{ op://Personal/proxy/vps-anytls }}"
+template_url: https://raw.githubusercontent.com/shelken/proxy/main/config/sing-box/template-router.json
+overlay: |
+  {
+    "experimental": { "clash_api": { "secret": "{{ op://Personal/proxy/clash-secret }}" } },
+    "dns": { "rules": [
+      { "source_mac_address": ["{{ op://Personal/proxy/mac-1 }}", "{{ op://Personal/proxy/mac-2 }}"], "invert": true, "server": "dns-local-system" }
+    ] },
+    "route": { "rules": [
+      { "type": "logical", "mode": "and", "rules": [
+          { "inbound": ["tun-in"] },
+          { "type": "logical", "mode": "and", "invert": true,
+            "rules": [ { "source_mac_address": ["{{ op://Personal/proxy/mac-1 }}", "{{ op://Personal/proxy/mac-2 }}"] } ] }
+        ],
+        "action": "bypass", "outbound": "direct" }
+    ] }
+  }
