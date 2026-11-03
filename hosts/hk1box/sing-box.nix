@@ -105,9 +105,9 @@ in
   systemd.timers.sing-box-sub-update = {
     wantedBy = [ "timers.target" ];
     timerConfig = {
-      # 开机拉一次（原来由 multi-user.target 负责），之后每 6 小时一次
+      # 开机拉一次（原来由 multi-user.target 负责），之后每 24 小时一次
       OnBootSec = "1min";
-      OnUnitActiveSec = "6h";
+      OnUnitActiveSec = "24h";
       RandomizedDelaySec = "10min";
     };
   };

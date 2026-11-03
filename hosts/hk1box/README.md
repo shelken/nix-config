@@ -2,7 +2,7 @@
 
 HK1 Box（Amlogic S905X3，4G 内存，千兆网口）当单臂旁路由，只跑 sing-box，不用 WiFi。原先刷的是 ImmortalWrt
 
-**先用 U 盘试机，eMMC 上的 ImmortalWrt 一直保留到你确认 NixOS 能用为止。**
+**先用 U 盘试机，eMMC 上的 ImmortalWrt 保留到确认 NixOS 能用为止。**eMMC 现已装 NixOS，动手前的备份见 §3
 
 ## 组成
 
@@ -25,9 +25,10 @@ HK1 Box（Amlogic S905X3，4G 内存，千兆网口）当单臂旁路由，只�
                  └─ NixOS（extlinux 菜单里有最近 5 代）
 ```
 
-- NixOS 靠 extlinux，厂商 u-boot 不认，所以要经主线 u-boot 这一跳；这一跳在这台盒子上还没跑通过，第一次能不能起由试机验证
-- 前提是厂商 env 里有 `start_autoscript` / `start_emmc_autoscript`，从系统内看不到。**起不来时第一步就重写它**：插上 U 盘，用牙签按住 AV 孔里的复位键再通电，等它自动重启
-- 主线 u-boot 先找 U 盘、SD 卡，再找 eMMC：插着 U 盘就从 U 盘起，拔掉就回 eMMC。这也是之后的救援方式
+- NixOS 靠 extlinux，厂商 u-boot 不认，要经主线 u-boot 这一跳
+- 厂商 env 里需要有 `start_autoscript` / `start_emmc_autoscript`，系统内看不到。缺了拔掉 U 盘起不来：第一跳只能借 U 盘 p1 的 `s905_autoscript`，主线 u-boot 起来后才轮到 eMMC 的 `emmc_autoscript`
+- env 缺失时：插 U 盘，牙签按住 AV 孔里的复位键通电，厂商 u-boot 会执行 U 盘 p1 的 `aml_autoscript`，`setenv` 后 `saveenv`（见 `boot/aml_autoscript.cmd`）。一次性动作，刷过 ophub ImmortalWrt 的盒子通常已写过
+- 主线 u-boot 按 `usb0 → mmc0 → mmc1` 找 `extlinux/extlinux.conf`，U 盘 p1 有可用 extlinux 就从 U 盘起，否则落 eMMC。装好 eMMC 后拔掉 U 盘才保证进 eMMC；插 U 盘进系统是 eMMC 起不来时的救援方式
 
 ## 前置一：路由器用的订阅 URL
 
@@ -93,7 +94,7 @@ reboot                               # 能再次进来
 
 - MAC 对不上（这台 efuse 为空，u-boot 会按 SoC 派生一个稳定但不同的值）：钉它的地方就是 `default.nix` 里的 `networking.interfaces.eth0.macAddress`，别去改 `dts/` —— u-boot 在启动时会把 `local-mac-address` 写进设备树，会盖掉 dts 里的值
 - 起不来：接 TTL 串口（115200）看日志；卡在网口就把 `dts/` 里的 `phy-mode` 换成注释中的 `rgmii-txid` 那组
-- 此时客户端网关仍指向这台，流量照常转发给主路由，只是不走代理。拔掉 U 盘就回 ImmortalWrt
+- 此时客户端网关仍指向这台，流量照常转发给主路由，只是不走代理。装 eMMC 之前拔掉 U 盘就回 ImmortalWrt
 
 ## 3. 备份 eMMC 开头
 
@@ -103,43 +104,85 @@ reboot                               # 能再次进来
 E=$(readlink -f /dev/disk/by-path/platform-ffe07000.mmc)   # 如 /dev/mmcblk1
 dd if=$E of=/root/emmc-head-68M.img bs=1M count=68
 # eMMC 的两个硬件引导分区，厂商 bootloader 的另一份拷贝（没有就跳过）
-for p in boot0 boot1; do [ -b ${E}$p ] && dd if=${E}$p of=/root/emmc-$p.img; done
+for p in boot0 boot1; do [ -b ${E}-$p ] && dd if=${E}-$p of=/root/emmc-$p.img; done   # by-path 的写法是 <E>-boot0
 ```
 
 然后 `scp` 回 Mac 保存。eMMC 起不来时，插 U 盘进系统 `dd` 写回前 68MiB 即可
 
 ## 4. 装进 eMMC
 
-目标是正在跑的 U 盘系统，已经是 NixOS，跳过 kexec 直接分区安装。随装目录只放 age 私钥：
+目标是正在跑的 U 盘系统，已经是 NixOS，跳过 kexec 直接分区安装。随装目录只放 age 私钥，目录结构就是目标路径（`$EXTRA/var/lib/sops-nix/key.txt` → 装完系统的 `/var/lib/sops-nix/key.txt`）：
 
 ```bash
-mkdir -p /tmp/hk1box-extra/var/lib/sops-nix
-cp hk1box-age.txt /tmp/hk1box-extra/var/lib/sops-nix/key.txt
-chmod 600 /tmp/hk1box-extra/var/lib/sops-nix/key.txt
+EXTRA=$(mktemp -d)
+install -d -m 700 "$EXTRA/var/lib/sops-nix"
+install -m 400 hk1box-age.txt "$EXTRA/var/lib/sops-nix/key.txt"
 
 # 先确认 disko 会挂出什么
 nix eval .#nixosConfigurations.hk1box.config.fileSystems --apply 'fs: builtins.mapAttrs (_: v: v.device) fs'
 
 nixos-anywhere -f .#hk1box --target-host root@hk1box --build-on local \
-  --phases disko,install --extra-files /tmp/hk1box-extra
+  --phases disko,install --extra-files "$EXTRA"
 ```
 
-装完拔掉 U 盘再 `ssh root@hk1box reboot`（插着会继续从 U 盘起）
+装完**先别重启**，确认私钥进了新根（`--extra-files` 拿到空值时是静默跳过拷贝的，安装照样报成功）：
+
+```bash
+ssh hk1box 'ls -l /mnt/var/lib/sops-nix/key.txt'   # 应为 -r-------- 400，约 189 字节
+```
+
+缺了就补（`/mnt` 这时还挂着新根，不用重装）：
+
+```bash
+scp hk1box-age.txt hk1box:/mnt/var/lib/sops-nix/key.txt
+ssh hk1box 'chmod 400 /mnt/var/lib/sops-nix/key.txt'
+```
+
+### 别在 U 盘系统上跑 deploy / nixos-rebuild
+
+试机镜像的 `/boot` 沿用主机配置指向 eMMC 的 p1（`image.nix` 没覆盖 loader 那侧的 `fileSystems`），应挂 U 盘自己的 `sda1`。所以在**U 盘系统**上激活一次带 sops 的主机配置（`just deploy hk1box`、`nixos-rebuild switch`），就会：
+
+- 按 **U 盘 store** 的路径重写 eMMC 的 `/boot/extlinux/extlinux.conf`
+- 删掉 eMMC 自己系统的 initrd（它判定「不再需要」）
+- 自己还在 sops 那步失败（U 盘系统里没有这台机器的 age 私钥），deploy-rs 回滚
+
+结果是拔盘后 eMMC 起不来，中招后这样修（用 eMMC 自己的系统重写引导项）：
+
+```bash
+ssh hk1box 'nixos-enter --root /mnt -c "/nix/var/nix/profiles/system/bin/switch-to-configuration boot"'
+ssh hk1box 'grep -E "^DEFAULT|init=" /mnt/boot/extlinux/extlinux.conf'   # init 应指向 eMMC store 里的那份
+```
+
+装完 eMMC 的顺序是：**断电 → 拔 U 盘 → 通电**（通电那一刻 U 盘不能在，u-boot 先找它）
 
 ## 5. 验证
 
 ```bash
 ssh root@hk1box
-findmnt / /boot                      # eMMC 的 p2、p1
+findmnt -no SOURCE / /boot           # /dev/mmcblk1p2、/dev/mmcblk1p1
+readlink /run/current-system         # 名字里没有 sd-card；有的话说明进的是 U 盘试机镜像
+cat /sys/class/net/eth0/address      # 00:e5:00:00:15:eb
 ls /boot                             # emmc_autoscript u-boot.emmc extlinux nixos
-systemctl status sing-box-sub-update sing-box
+ls /run/secrets/                     # 有 sing-box-sub-url（sops-nix 是 oneshot，is-active 显示 inactive 属正常）
 ls -l /etc/sing-box/config.json      # 软链到 /var/lib/sing-box-sub/config.json
+systemctl is-active sing-box         # active
 nft list tables                      # 有 sing-box 自己的表
 ```
+
+首次开机 sing-box 会失败重启几次：`sing-box-sub-update.timer` 要开机 1 分钟（外加最多 10 分钟随机延迟）才拉订阅，配置就位前 sing-box 起不来。等一会儿再确认；一直不 active 就手动拉一次：
+
+```bash
+ssh root@hk1box systemctl start sing-box-sub-update
+ssh root@hk1box systemctl status sing-box --no-pager | head -12
+```
+
+机器没有 RTC，开机头几分钟墙钟可能是垃圾值，NTP 到位后才准，那期间 `uptime` 读数离谱属正常
 
 白名单内的设备走一遍代理，neko-master 能看到流量；名单外的设备照常上网，且不出现在 sing-box 的连接列表里
 
 ## 日常更新
+
+**只在 eMMC 系统上 deploy**（先 `findmnt -no SOURCE /` 确认是 `/dev/mmcblk1p2`；跑在 U 盘系统上会写坏 eMMC 的 `/boot`，见 §4）：
 
 ```bash
 just deploy hk1box
