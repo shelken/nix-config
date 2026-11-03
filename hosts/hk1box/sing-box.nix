@@ -73,7 +73,9 @@ in
   # 订阅 URL：secrets 仓库 sops/secrets/hosts/hk1box.yaml 的 sing-box-sub-url 键
   sops.secrets.sing-box-sub-url = { };
 
-  systemd.tmpfiles.rules = [
+  # 试机镜像关掉 sing-box 时，sing-box 用户与组也不存在（nixpkgs 模块把它们包在 mkIf 里），
+  # 留着这些规则会让 systemd-tmpfiles-setup 在开机时报未知组
+  systemd.tmpfiles.rules = lib.optionals config.services.sing-box.enable [
     "d ${stateDir} 0750 root sing-box -"
     "d /etc/sing-box 0755 root root -"
     "L+ /etc/sing-box/config.json - - - - ${configFile}"
@@ -82,14 +84,15 @@ in
   # 首次开机还没有配置时不启动，等拉取成功后由拉取脚本拉起，避免反复失败重启
   systemd.services.sing-box.unitConfig.ConditionPathExists = configFile;
 
+  # 只由自己的 timer 触发，不挂到任何 target 上：挂上去的话，激活时会因为它是
+  # 「完成即 inactive 的 oneshot」被当成没在运行而再拉一遍，订阅服务恰好不通就让
+  # 激活失败、触发 deploy-rs 回滚。这里让激活路径完全没有入口启动它。
+  # 换了订阅 URL 后手动 `systemctl start sing-box-sub-update`，或等下一次定时
   systemd.services.sing-box-sub-update = {
     description = "拉取 sing-box 订阅配置";
     wants = [ "network-online.target" ];
+    # timer 触发时同样等网络就绪
     after = [ "network-online.target" ];
-    # 开机拉一次；不阻塞开机（multi-user 只 Wants 它）
-    wantedBy = [ "multi-user.target" ];
-    # 部署时不跑它：订阅服务恰好不通会让激活报失败，进而触发 deploy-rs 回滚。
-    # 换了订阅 URL 后手动 `systemctl start sing-box-sub-update`，或等下一次定时
     restartIfChanged = false;
     serviceConfig = {
       Type = "oneshot";
@@ -102,7 +105,8 @@ in
   systemd.timers.sing-box-sub-update = {
     wantedBy = [ "timers.target" ];
     timerConfig = {
-      OnBootSec = "6h";
+      # 开机拉一次（原来由 multi-user.target 负责），之后每 6 小时一次
+      OnBootSec = "1min";
       OnUnitActiveSec = "6h";
       RandomizedDelaySec = "10min";
     };
