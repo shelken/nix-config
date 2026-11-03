@@ -58,20 +58,7 @@ deploy --skip-checks .#vps-test --hostname 127.0.0.1 --ssh-opts "-p $P -o Strict
 limactl delete --force nixos-anywhere-vps
 ```
 
-### 演练验收结果
-
-| 项                                                                        | 结果                                                                               |
-| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| BIOS + GPT（1M EF02 + ext4）+ GRUB 能引导                                 | 通过，`grub-install` 为 i386-pc，根分区在 `/dev/vda2`                              |
-| 静态 IP、网关、MTU 1400，重启后不丢                                       | 通过                                                                               |
-| sshd 监听 60223，仅密钥登录，root 与 shelken 都能登录，密码登录被拒       | 通过                                                                               |
-| 口令哈希由 sops 在开机时解到 `/run/secrets-for-users`，写入 `/etc/shadow` | 哈希已写入（`$y$`）；**口令本身是否正确没有测，切换后由你在 VNC 或 `sudo` 时验证** |
-| zramSwap、BBR、inotify、journald 200M                                     | 通过                                                                               |
-| 防火墙放行清单与 `common.nix` 一致                                        | 通过                                                                               |
-| docker 守护进程启动、晚于 tailscaled、能拉镜像                            | 通过                                                                               |
-| deploy-rs 推送更新，配置把 SSH 堵死后自动回滚                             | 通过，前提见下表「第一次 `deploy` 后配置变坏」一行                                 |
-
-没有在演练里测：compose 业务容器、crowdsec-firewall-bouncer 与 NixOS 防火墙的配合、tailscale 登录、真实 KVM 下的 kexec
+演练覆盖装机与系统层；业务容器、crowdsec-firewall-bouncer 与 NixOS 防火墙的配合、tailscale 登录、真实 KVM 下的 kexec 不在其中
 
 ### 演练里遇到的问题
 
@@ -99,9 +86,9 @@ tar -tzf ~/vps-cc-backup/data-docker.tgz | head -3
 # 看一眼最近一次 kopia 快照时间（例如 kopia 的 Web 界面，或 docker exec kopia 里列快照）
 ```
 
-- [ ] 确认能登录服务商网页 VNC 控制台。装机后 root 的口令是 `secrets` 里哈希对应的**新口令**，不是服务商给的旧口令，先确认你记得它
-- [ ] 确认 `secrets` 仓库已推送，`nix flake metadata` 里的 `secrets` 是含 `hosts/vps-cc/network.nix` 的那一版
-- [ ] `nix build .#nixosConfigurations.vps-cc.config.system.build.toplevel` 通过
+- 确认能登录服务商网页 VNC 控制台。装机后 root 的口令是 `secrets` 里哈希对应的**新口令**，不是服务商给的旧口令，先确认你记得它
+- 确认 `secrets` 仓库已推送，`nix flake metadata` 里的 `secrets` 是含 `hosts/vps-cc/network.nix` 的那一版
+- `nix build .#nixosConfigurations.vps-cc.config.system.build.toplevel` 通过
 
 安装时一起带过去的文件（身份与密钥，**不进 git**）：
 
@@ -129,15 +116,15 @@ nixos-anywhere -f .#vps-cc --target-host root@vps-cc --build-on local --ssh-port
 
 之后机器在内存里的 NixOS 安装环境，sshd 在 **22** 端口。若 nixos-anywhere 卡在重连，Ctrl-C，直接做下一步。**这一步之后、disko 之前的任何时候，重启（VNC 控制台强制重启）都会回到原来的 Ubuntu。**
 
-### 2. 核对
+### 2. 检查安装环境
 
 ```bash
 ssh -p 22 root@vps-cc 'ls /sys/firmware/efi 2>&1; lsblk -o NAME,SIZE,TYPE,FSTYPE; ip -br a; ip link show eth0 | grep -o "mtu [0-9]*"; ip r'
 ```
 
-- [ ] 没有 `/sys/firmware/efi`（BIOS），盘是 `/dev/vda`，120G
-- [ ] IPv4、三个 IPv6 地址、网关、MTU 1400 与 `secrets` 仓库里的 `network.nix` 一致
-- [ ] 数据已备份、`$EXTRA` 已备齐
+- 没有 `/sys/firmware/efi`（BIOS），盘是 `/dev/vda`，120G
+- IPv4、三个 IPv6 地址、网关、MTU 1400 与 `secrets` 仓库里的 `network.nix` 一致
+- 数据已备份、`$EXTRA` 已备齐
 
 ### 3. 分区、安装、重启（这一步抹盘）
 
@@ -154,9 +141,9 @@ ssh vps-cc 'nixos-version; findmnt -no SOURCE,FSTYPE /; ip -br a show eth0; ip l
 ssh vps-cc 'stat -c "%U %a %n" /var/lib/sops-nix/key.txt /var/lib/tailscale/tailscaled.state'   # root 600
 ```
 
-- [ ] 用原来的别名（端口 60223）能登录，没有主机密钥警告
-- [ ] `tailscale status` 里还是原来的节点名与地址
-- [ ] 你自己在机器上执行一次 `sudo -k true`，确认新口令正确
+- 用原来的别名（端口 60223）能登录，没有主机密钥警告
+- `tailscale status` 里还是原来的节点名与地址
+- 你自己在机器上执行一次 `sudo -k true`，确认新口令正确
 
 连不上时：用 VNC 控制台以 root 和新口令登录，看 `ip a`、`journalctl -b -u network-addresses-eth0 -u sshd`。
 
@@ -176,18 +163,6 @@ just deploy vps-cc
 ```
 
 业务容器由本仓库声明，部署时自己拉取约 3.6GB 镜像
-
-### 7. 逐项核对
-
-- [ ] `docker ps` 16 个容器都在
-- [ ] 对外端口：443（tcp、udp）、8666、3478/udp、10357/udp、5444、60223 能从外部连通
-- [ ] tailscale 上绑定的端口（node-exporter、caddy 管理口、kopia、openlist）可从 tailnet 访问
-- [ ] crowdsec-firewall-bouncer 在 `INPUT`、`FORWARD`、`DOCKER-USER` 里确实加了规则：`iptables -S | grep -i crowdsec`；若没有，说明它的 iptables 与 NixOS 防火墙不兼容，需要处理
-- [ ] derp、hysteria2、anytls 能正常使用；kopia 下一次备份成功
-- [ ] IPv6：网卡上只有静态地址（`accept_ra`、`autoconf` 为 0），`ip -6 route get <公网 IPv6>` 的 `src` 是固定地址；独立客户端经固定 IPv6 能连上 hysteria2（见 nix-config #182）
-- [ ] 日志驱动：NixOS 默认 `journald`，不接受 compose `logging.options` 里的 `max-size`、`max-file`；接管前对比 `docker info` 的日志驱动与 compose 的 `logging`（见 home-ops #1728）
-- [x] home-ops 的 ansible 不再配置 VPS：`vps` 组降为仅 SSH/运维，bootstrap playbook（`site-others.yml`、`ufw-vps.yml`、`install-ohmyzsh.yaml`）与 `host_vars/vps-cc.yaml` 已随容器迁移一起删除
-- [ ] 稳定后删除本机的随装目录（含 age 私钥、SSH 主机私钥、tailscale 状态）；数据包留到确认不会回滚
 
 ## 回滚
 
@@ -214,4 +189,4 @@ deploy-rs 用 root + 密钥推送，激活后新开一个 SSH 连接确认，30 
 - compose 的 `logging.options` 与 NixOS 默认的 journald 日志驱动不兼容：home-ops #1728
 - 构建的系统与实际部署的系统不是同一个：nix-config #181
 - deploy-rs 激活器要从源码编译：nix-config #184（已关闭）；本机磁盘紧张：nix-config #185
-- 执行记录与第 7 步核对清单：nix-config #183
+- 执行记录：nix-config #183
