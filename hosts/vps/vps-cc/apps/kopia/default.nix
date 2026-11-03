@@ -94,8 +94,5 @@ in
   # 超过 deploy-rs 的确认窗口就误判成「未确认」并回滚（2026-11-03 实测）。
   # 改成让 kopia 自己失败重试：仓库连不上时 entrypoint 立刻退出 1，
   # Restart=always + RestartSec=10s 会一直重试到 openlist 能用为止
-  systemd.services.docker-kopia = {
-    after = [ "docker-network-homelab.service" ];
-    requires = [ "docker-network-homelab.service" ];
-  };
+  # （homelab 网络的启动顺序由 apps/default.nix 统一生成）
 }

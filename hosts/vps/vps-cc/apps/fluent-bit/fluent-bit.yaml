@@ -1,0 +1,46 @@
+service:
+  daemon: off
+  flush: 5
+  log_level: warn
+  http_server: on
+  http_listen: 0.0.0.0
+  http_port: 2020
+  health_check: on
+pipeline:
+  inputs:
+    - name: tail
+      alias: caddy-access
+      tag: caddy.access
+      path: /var/log/caddy/access.log
+      parser: json
+      refresh_interval: 3
+      db: /fluent-bit/db/caddy.db
+  filters:
+    - name: nest
+      match: caddy.*
+      operation: lift
+      nested_under: request
+      add_prefix: request.
+    - name: grep
+      match: caddy.*
+      regex: "msg upstream roundtrip"
+    - name: modify
+      match: caddy.*
+      Add:
+        - app caddy-vps-cc
+        - source vps
+        - hostname ${HOSTNAME}
+  outputs:
+    - name: http
+      match: caddy.*
+      host: ${VICTORIA_LOGS_HOST}
+      port: ${VICTORIA_LOGS_PORT}
+      uri: "/insert/jsonline?_stream_fields=source,hostname,app&_msg_field=request.host&_time_field=date"
+      format: json_lines
+      json_date_format: iso8601
+      compress: gzip
+      log_response_payload: off
+      retry_limit: 5
+parsers:
+  - name: json
+    format: json

@@ -57,9 +57,4 @@ in
       "homepage.description" = "专门给 kopia 使用的，连接 139 网盘";
     };
   };
-
-  systemd.services.docker-openlist = {
-    after = [ "docker-network-homelab.service" ];
-    requires = [ "docker-network-homelab.service" ];
-  };
 }
