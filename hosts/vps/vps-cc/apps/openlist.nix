@@ -9,20 +9,17 @@ in
     "d ${dataDir} 0755 root root -"
   ];
 
-  # 口令与 S3 凭据：密文留在私有 secrets 仓库，激活时渲染成容器可读的环境文件
+  # admin 口令：密文留在私有 secrets 仓库，激活时渲染成容器可读的环境文件
+  # kopia 只经 WebDAV 取 openlist 的仓库，S3 不再由这份配置开启
   sops.secrets = {
     "openlist/admin-username" = { };
     "openlist/admin-password" = { };
-    "openlist/s3-access-key-id" = { };
-    "openlist/s3-secret-access-key" = { };
   };
 
   sops.templates."openlist.env" = {
     content = ''
       ADMIN_USERNAME=${config.sops.placeholder."openlist/admin-username"}
       ADMIN_PASSWORD=${config.sops.placeholder."openlist/admin-password"}
-      S3_ACCESS_KEY_ID=${config.sops.placeholder."openlist/s3-access-key-id"}
-      S3_SECRET_ACCESS_KEY=${config.sops.placeholder."openlist/s3-secret-access-key"}
     '';
     # 环境文件在容器创建时被读走，改密文后要重建容器才会生效
     restartUnits = [ "docker-openlist.service" ];
@@ -38,8 +35,6 @@ in
     ];
     environment = {
       TZ = "Asia/Shanghai";
-      S3_ENABLE = "true";
-      S3_PORT = "5246";
       HTTP_PORT = "80";
     };
     environmentFiles = [ config.sops.templates."openlist.env".path ];
