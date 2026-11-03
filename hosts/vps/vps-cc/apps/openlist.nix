@@ -58,7 +58,7 @@ in
       "homepage.name" = "openlist";
       "homepage.icon" = "openlist.svg";
       "homepage.href" = "http://${address}:5244";
-      "homepage.description" = "网盘S3服务";
+      "homepage.description" = "专门给 kopia 使用的，连接 139 网盘";
     };
   };
 

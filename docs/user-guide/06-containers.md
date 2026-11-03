@@ -1,0 +1,147 @@
+# 容器服务
+
+`vps-cc` 上原先由 home-ops 的 docker compose 部署的业务容器，现在由本仓库声明：`virtualisation.oci-containers`，Docker 后端。这一页说明怎么引入一个服务，代码放哪、环境变量与密钥从哪来、网络与端口怎么定、怎么切换与回退
+
+代码在 `hosts/vps/vps-cc/apps/`，当前纳管三个服务，见文末「当前已纳管的服务」
+
+## 先决定用哪种方式
+
+| 情况                                  | 做法                                                  |
+| ------------------------------------- | ----------------------------------------------------- |
+| nixpkgs 有对应 module（`services.*`） | 用原生服务，例如 `services.prometheus.exporters.node` |
+| 只有容器镜像，依赖关系简单            | 用本页的 `oci-containers`                             |
+| 多个服务共享网络、配置与启动顺序      | 先按服务逐个搬，不要为一个服务自写一层 systemd unit   |
+
+原生 module 能覆盖的不要包一层容器声明：包一层只是多一份要维护的镜像与挂载
+
+## 文件组织
+
+```text
+hosts/vps/vps-cc/
+├── default.nix                主机入口：主机名、静态网络、导入 ./apps
+└── apps/
+    ├── default.nix            聚合：后端、共享网络、统一重启策略、绑定地址
+    ├── node-exporter.nix      服务文件，没有附带文件时
+    └── kopia/
+        ├── default.nix        服务文件
+        ├── entrypoint.sh      随容器挂进去的文件
+        └── policy.json
+```
+
+| 规则         | 说明                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------ |
+| 放置位置     | 只有一台主机用的放 `hosts/<...>/apps/`，多台主机共用才进 `modules/features/`                     |
+| 文件粒度     | 一个服务一个文件，文件名就是容器的属性名                                                         |
+| 附带文件     | 入口脚本、策略、配置跟服务放同一目录，用 `${./entrypoint.sh}` 挂进容器（`Nix store` 路径，只读） |
+| 含机密的配置 | 不落仓库，走 sops 模板，见下一节                                                                 |
+| 主机入口     | 新目录只在 `imports` 里加一次，服务文件不再单独导入                                              |
+
+`apps/default.nix` 是三件共用的事：后端固定 `docker`、`homelab` 网络单元、所有容器的重启策略。新服务不重复写这些
+
+## 从 Compose 抄字段
+
+| Compose                       | 这里                                                              |
+| ----------------------------- | ----------------------------------------------------------------- |
+| `image`                       | `image`，带多架构索引 digest                                      |
+| `command` / `entrypoint`      | `cmd` / `entrypoint`                                              |
+| `environment`                 | `environment`，只放非机密                                         |
+| `env_file`                    | `environmentFiles`，机密走 sops 模板                              |
+| `ports`                       | `ports`，必须带地址，见「网络与端口」                             |
+| `volumes`                     | `volumes`，命名卷先核对实际名字                                   |
+| `networks`                    | `networks`，服务之间用容器名互相解析                              |
+| `configs`                     | `volumes`，只读挂 `Nix store` 路径或 sops 模板路径                |
+| `hostname` / `container_name` | `hostname` / 容器属性名                                           |
+| `healthcheck`                 | `extraOptions`，传 `--health-cmd` 等                              |
+| `cap_add`、`privileged` 等    | `capabilities`、`extraOptions`                                    |
+| `depends_on`                  | `dependsOn`，只保证顺序与依赖，不等健康就绪                       |
+| `restart`                     | 在 `apps/default.nix` 统一给 `Restart=always`，不要用 `--restart` |
+
+三个容易踩的点
+
+- `ports` 写成 `5244:80` 会绑到 `0.0.0.0`，Docker 的端口发布走 NAT、绕过 NixOS 防火墙，等于把服务放到公网
+- 模块默认 `Restart=on-failure` 会放走「退出码 0 就退出」，而 `--restart` 与模块默认加的 `--rm` 冲突，所以重启策略只在 systemd 侧配
+- 命名卷带 Compose 项目名前缀，`kopia_cache` 实际可能是 `homelab-compose_kopia_cache`，迁移前用 `docker volume ls` 对一下，名字不对会新建一个空卷
+
+## 环境变量与密钥从哪来
+
+| 内容                     | 放哪                                                                            | 例子                                     |
+| ------------------------ | ------------------------------------------------------------------------------- | ---------------------------------------- |
+| 非机密的运行参数         | 容器 `environment`                                                              | `TZ`、`HTTP_PORT`                        |
+| 口令、token、Webhook URL | 私有 `secrets` 仓库的 sops 字段，模板渲染成 env 文件，容器读 `environmentFiles` | openlist 的 admin 口令与 S3 凭据         |
+| 含机密的配置文件         | sops 模板渲染整个文件，再按 `volumes` 挂进容器                                  | kopia 的仓库配置里有 WebDAV 凭据         |
+| 主机事实（地址等）       | 主机模块里的常量或选项默认值                                                    | `shelken.vpsContainers.tailscaleAddress` |
+| 不含机密的文件           | 跟服务放同一目录，直接挂 `Nix store` 路径                                       | kopia 的 `policy.json`、`entrypoint.sh`  |
+
+以一个 token 为例
+
+```nix
+sops.secrets."openlist/admin-password" = { };
+
+sops.templates."openlist.env" = {
+  content = ''
+    OPENLIST_ADMIN_PASSWORD=${config.sops.placeholder."openlist/admin-password"}
+  '';
+  # env 文件在创建容器时读走，密文变了要重建容器
+  restartUnits = [ "docker-openlist.service" ];
+};
+
+virtualisation.oci-containers.containers.openlist = {
+  environmentFiles = [ config.sops.templates."openlist.env".path ];
+};
+```
+
+`sops.templates` 的内容先以占位符写进 `Nix store`，激活时由主机解密替换，`Nix store` 里没有明文
+
+新字段加在 `secrets` 仓库的 `sops/secrets/hosts/<主机名>.yaml`，用 sops 编辑，字段名按用途分组，例如 `openlist/admin-password`、`kopia/password`。迁移旧服务时先沿用原值，不要顺手轮换
+
+## 网络与端口
+
+- `apps/default.nix` 里的 `docker-network-homelab` 单元检查 `homelab` 网络，不存在才按原参数创建，已存在就不动，避免正在运行的容器被换网络
+- 服务之间用容器名互解，kopia 连 openlist 的 WebDAV 走的就是 `http://openlist:80/dav/main`
+- 对外端口只发布到 Tailscale 地址。`127.0.0.1` 会让 tailnet 侧的 Gatus、Prometheus 也访问不到，`0.0.0.0` 等于直接放公网
+- Docker 守护进程要等 tailscaled，`hosts/vps/common.nix` 里已有 `docker.service` 的 `after`/`wants`
+- 新服务接入：`networks = [ "homelab" ];`，端口写 `"${address}:<宿主端口>:<容器端口>"`
+
+## 生命周期与依赖
+
+| 事项       | 行为                                                                                                                       |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 容器名     | 等于属性名，例如 `openlist`                                                                                                |
+| unit 名    | `docker-<属性名>.service`                                                                                                  |
+| 启动前     | 模块先 `docker rm -f <容器名>`，从 compose 接管同名容器不用手工停旧容器                                                    |
+| 日志       | 默认 `journald`，`journalctl -u docker-<名字>`                                                                             |
+| 重启       | `Restart=always`，间隔 10 秒，崩溃时不会把日志打满                                                                         |
+| 服务间依赖 | `dependsOn = [ "openlist" ]` 给退出联动与启动顺序                                                                          |
+| 等健康就绪 | `dependsOn` 不等健康，需要就加 `ExecStartPre` 轮询 `docker inspect` 的 `.State.Health.Status`，见 `apps/kopia/default.nix` |
+
+## 加一个服务的步骤
+
+- [ ] 对照「从 Compose 抄字段」把声明写进 `apps/<服务名>.nix`
+- [ ] 定端口与地址，写 `"${address}:<宿主端口>:<容器端口>"`
+- [ ] 非机密参数进 `environment`，机密进 sops：加字段、加模板、挂 `environmentFiles`
+- [ ] 附带文件放进服务目录，用 `${./文件名}` 挂载
+- [ ] 需要等依赖健康时加 `ExecStartPre`
+- [ ] 核对数据目录与命名卷的实际名字
+- [ ] 新目录时，在主机 `default.nix` 的 `imports` 加一次
+- [ ] 求值：`nix eval .#nixosConfigurations.<主机>.config.system.build.toplevel.drvPath`
+- [ ] 部署：`just deploy vps-cc`
+- [ ] 验收：`systemctl status docker-<名字>`、`journalctl -u docker-<名字>`、`docker ps`，再从 tailnet 侧试一次端口
+- [ ] 回退：home-ops 恢复对应服务的 compose 声明，本仓库去掉该服务文件再部署
+
+## 当前已纳管的服务
+
+| 服务            | 形态                                         | 备注                                         |
+| --------------- | -------------------------------------------- | -------------------------------------------- |
+| `node-exporter` | 无状态：只读挂宿主机目录，端口只到 Tailscale |                                              |
+| `openlist`      | 有状态：数据目录 + HTTP 健康检查             | 专门给 kopia 使用的，连接 139 网盘           |
+| `kopia`         | 依赖型：等 openlist 健康，密钥与配置多       | 仓库配置由 sops 渲染，策略与入口脚本随目录挂 |
+
+## 还没纳管的
+
+其余服务（caddy、crowdsec、mosdns、dnsmasq、derp、hysteria2、anytls、fluent-bit、dockerproxy、dhp、sub-converter、sbtools-server）仍在 home-ops 的 compose 里，按同一模式逐个搬
+
+## 相关
+
+- 旧声明：home-ops 的 `compose/vps/docker-compose.yml`
+- 官方实现：nixpkgs 的 `nixos/modules/virtualisation/oci-containers.nix`
+- 系统侧：`hosts/vps/common.nix`（tailscale、docker）、`05-vps.md`（接管与部署）

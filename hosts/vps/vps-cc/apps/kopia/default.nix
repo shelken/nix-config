@@ -4,7 +4,7 @@ let
   logDir = "/data/docker/kopia/logs";
 
   # Compose 的命名卷带项目名前缀，而这个卷是上次部署时创建的：
-  # 切换前必须按 docs/user-guide/06-vps-containers.md 核对线上实际卷名，
+  # 切换前必须按 docs/user-guide/06-containers.md 核对线上实际卷名，
   # 对不上只会丢一份缓存与对账指纹，kopia 会重新对账
   cacheVolume = "homelab-compose_kopia_cache";
 in

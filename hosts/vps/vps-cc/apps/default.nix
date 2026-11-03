@@ -10,7 +10,7 @@
 #  现在改由 NixOS 的 virtualisation.oci-containers 声明（Docker backend）。
 #
 #  一个容器一个文件；只有本机用到的容器放这里，不进 modules/features。
-#  手动步骤见 docs/user-guide/06-vps-containers.md
+#  手动步骤见 docs/user-guide/06-containers.md
 #
 #############################################################
 {
