@@ -70,7 +70,7 @@ nix shell nixpkgs#zstd -c zstd -d result/sd-image/hk1box-usb*.img.zst -o hk1box-
 # 确认 U 盘是哪块盘再写，写错会抹掉别的盘
 diskutil list
 diskutil unmountDisk /dev/diskN
-sudo dd if=hk1box-usb.img of=/dev/rdiskN bs=4m status=progress
+sudo /bin/dd if=hk1box-usb.img of=/dev/rdiskN bs=4m   # 用系统自带 BSD dd；写的过程中按 Ctrl-T 看进度
 ```
 
 首次开机会自动把根分区扩满整个 U 盘。SD 卡同样可用
