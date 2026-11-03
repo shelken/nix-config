@@ -175,12 +175,12 @@ virtualisation.oci-containers.containers.openlist = {
 
 `sakamoto` 的业务容器（caddy、四个 registry mirror、rustfs、nvidia-dls、dockerproxy 与两个 kopia）同样由本仓库声明，代码在 `hosts/sakamoto/apps/`。与 VPS 的唯一区别：macOS 侧没有 `oci-containers` 这类原生模块，容器、命名卷与 `homelab` 网络都在 OrbStack 里，所以保留 `compose.yaml`，只是把它与 `configs/` 一起搬进 Nix store，容器挂 store 路径
 
-| 内容                                | 放哪                                                                      |
-| ----------------------------------- | ------------------------------------------------------------------------- |
-| `compose.yaml` 与 `configs/`        | 服务目录，整目录进 store（`${./.}/compose.yaml`），容器挂 store 路径      |
-| 含机密的配置（云端 kopia 仓库配置） | sops 模板渲染，`configs.<名>.file` 指到渲染路径                           |
-| 口令、token、外接盘路径             | sops 模板渲染成 env 文件，`docker compose --env-file` 取用                |
-| 启动                                | HM 的 launchd agent（`gui` 域、`RunAtLoad` + 每 15 分钟），与人工入口共用 |
+| 内容                                     | 放哪                                                                      |
+| ---------------------------------------- | ------------------------------------------------------------------------- |
+| `stack/compose.yaml` 与 `stack/configs/` | `stack/` 整目录进 store（`${./stack}/compose.yaml`），容器挂 store 路径   |
+| 含机密的配置（云端 kopia 仓库配置）      | sops 模板渲染，`configs.<名>.file` 指到渲染路径                           |
+| 口令、token、外接盘路径                  | sops 模板渲染成 env 文件，`docker compose --env-file` 取用                |
+| 启动                                     | HM 的 launchd agent（`gui` 域、`RunAtLoad` + 每 15 分钟），与人工入口共用 |
 
 三处与旧 Compose 不同的约定：
 

@@ -5,11 +5,13 @@
 
 ## 组成
 
-| 文件           | 作用                                                                                                                             |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `compose.yaml` | 服务声明。与旧 compose 的差异只有三处：顶部 `name: homelab-compose`、两个外接盘路径改成 env 插值、kopia 云端仓库配置指向渲染路径 |
-| `configs/`     | Caddyfile、镜像 registry 配置、kopia 的策略与入口脚本：不含机密，随目录进 store                                                  |
-| `default.nix`  | sops 密钥与两个模板、launchd agent、`sakamoto-compose` 命令行                                                                    |
+| 文件                 | 作用                                                                                                                             |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `stack/compose.yaml` | 服务声明。与旧 compose 的差异只有三处：顶部 `name: homelab-compose`、两个外接盘路径改成 env 插值、kopia 云端仓库配置指向渲染路径 |
+| `stack/configs/`     | Caddyfile、镜像 registry 配置、kopia 的策略与入口脚本：不含机密                                                                  |
+| `default.nix`        | sops 密钥与两个模板、launchd agent、`sakamoto-compose` 命令行                                                                    |
+
+`stack/` 整目录进 Nix store，里面只放容器要读到的文件：改 `default.nix` 或本文件不会换 store 路径，也就不会白白重建挂 `configs` 的容器
 
 渲染出来的两个文件都在 `~/.config/sops-nix/secrets/rendered/`，权限 0400，明文不进 Nix store：
 
@@ -41,7 +43,7 @@
 - [ ] kopia 与 kopia-local：`kopia snapshot list` 能看到旧快照，下一轮计划任务成功，`hostname` 仍是 `sakamoto` / `sakamoto-local`
 - [ ] `cat ~/Library/LaunchAgents/space.ooooo.sakamoto-compose.plist`：含 `RunAtLoad`、`StartInterval = 900` 与 `WatchPaths`
 - [ ] 外接盘未挂载时 `sakamoto-compose up` 直接失败并打印缺失目录（重启后盘未挂载时观察）
-- [ ] 改一次 `configs/caddy/Caddyfile`，`just hm` 后 `sakamoto-compose up` 会重建 caddy 容器并生效
+- [ ] 改一次 `stack/configs/caddy/Caddyfile`，`just hm` 后 `sakamoto-compose up` 会重建 caddy 容器并生效
 
 ## 回退
 

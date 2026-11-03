@@ -24,9 +24,10 @@ let
   # 改名会新建两个空卷：kopia 需要重新对账，还会丢掉缓存
   projectName = "homelab-compose";
 
-  # compose.yaml 与 configs/ 整目录进 store。compose.yaml 里的相对路径（./configs/...）
-  # 按「compose 文件所在目录」解析，所以两者必须放在同一目录
-  composeFile = "${./.}/compose.yaml";
+  # stack/ 整目录进 store，里面只放容器要读的文件（compose.yaml 与 configs/）：
+  # 改 default.nix 或 README.md 不会换 store 路径，也就不会白白重建挂 configs 的容器。
+  # compose.yaml 里的相对路径（./configs/...）按「compose 文件所在目录」解析，所以两者必须同级
+  composeFile = "${./stack}/compose.yaml";
 
   # sops 在激活时渲染出来的文件。env 与云端仓库配置含机密，只能由模板产生
   envFile = config.sops.templates."sakamoto-compose.env".path;
