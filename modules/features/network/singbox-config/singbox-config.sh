@@ -8,12 +8,12 @@ usage() {
 把 templates/<变体>.yaml 里的 1Password 引用填充成真实配置，经 sbtools 校验后
 encode 成订阅 URL，URL 由 sbtools 写进剪切板。私密值只落在临时目录，退出即删。
 
-模板里用到的 1Password 条目（都已存在或待建，均属 vault Personal 的 proxy 条目）：
-  subs-miaona    机场订阅 URL
-  vps-hy2        私有 hy2 节点 URI
-  vps-anytls     私有 anytls 节点 URI
-  clash-secret   router 的 clash API secret
-  mac-1 / mac-2  router 白名单设备的 MAC
+模板里用到的 1Password 条目（都在 vault Personal 的 proxy 条目里，一个字段一项）：
+  subs-miaona        机场订阅 URL
+  vps-hy2            私有 hy2 节点 URI
+  vps-anytls         私有 anytls 节点 URI
+  clash-secret       router 的 clash API secret
+  mac-1 … mac-5      router 白名单设备的 MAC，一台一项
 
 订阅服务地址取 sops 的 main-domain，脚本里拼成 https://<main-domain>。
 EOF

@@ -12,14 +12,43 @@ overlay: |
   {
     "experimental": { "clash_api": { "secret": "{{ op://Personal/proxy/clash-secret }}" } },
     "dns": { "rules": [
-      { "source_mac_address": ["{{ op://Personal/proxy/mac-1 }}", "{{ op://Personal/proxy/mac-2 }}"], "invert": true, "server": "dns-local-system" }
+      {
+        "invert": true,
+        "server": "dns-local-system",
+        "source_mac_address": [
+          "{{ op://Personal/proxy/mac-1 }}",
+          "{{ op://Personal/proxy/mac-2 }}",
+          "{{ op://Personal/proxy/mac-3 }}",
+          "{{ op://Personal/proxy/mac-4 }}",
+          "{{ op://Personal/proxy/mac-5 }}"
+        ]
+      }
     ] },
     "route": { "rules": [
-      { "type": "logical", "mode": "and", "rules": [
+      {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
           { "inbound": ["tun-in"] },
-          { "type": "logical", "mode": "and", "invert": true,
-            "rules": [ { "source_mac_address": ["{{ op://Personal/proxy/mac-1 }}", "{{ op://Personal/proxy/mac-2 }}"] } ] }
+          {
+            "type": "logical",
+            "mode": "and",
+            "invert": true,
+            "rules": [
+              {
+                "source_mac_address": [
+                  "{{ op://Personal/proxy/mac-1 }}",
+                  "{{ op://Personal/proxy/mac-2 }}",
+                  "{{ op://Personal/proxy/mac-3 }}",
+                  "{{ op://Personal/proxy/mac-4 }}",
+                  "{{ op://Personal/proxy/mac-5 }}"
+                ]
+              }
+            ]
+          }
         ],
-        "action": "bypass", "outbound": "direct" }
+        "action": "bypass",
+        "outbound": "direct"
+      }
     ] }
   }
