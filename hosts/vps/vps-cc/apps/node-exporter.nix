@@ -1,7 +1,10 @@
-{ ... }:
+{ config, ... }:
+let
+  address = config.shelken.vpsContainers.tailscaleAddress;
+in
 {
   virtualisation.oci-containers.containers.node-exporter = {
-    image = "prom/node-exporter:v1.12.1@sha256:7164ff58d2aa236f06f5cd9a77efb32e6097ee8959f2a4eb9231f24d55734e94";
+    image = "prom/node-exporter:v1.12.1@sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0";
     autoStart = true;
     cmd = [
       "--path.rootfs=/host/root"
@@ -11,15 +14,12 @@
       "--web.listen-address=0.0.0.0:9100"
       "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)"
     ];
-    ports = [ "9100:9100/tcp" ];
+    networks = [ "homelab" ];
+    ports = [ "${address}:9100:9100/tcp" ];
     volumes = [
       "/:/host/root:ro"
       "/proc:/host/proc:ro"
       "/sys:/host/sys:ro"
-    ];
-    extraOptions = [
-      "--network=homelab"
-      "--restart=always"
     ];
     labels = {
       "homepage.group" = "VPS";

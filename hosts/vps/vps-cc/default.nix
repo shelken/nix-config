@@ -17,6 +17,10 @@ in
     ./apps
   ];
 
+  # 业务容器只把端口发布到 Tailscale 地址（见 apps/default.nix 的说明）；
+  # 地址是主机事实，和上面的 network.nix 一起放在私有 secrets 仓库
+  shelken.vpsContainers.tailscaleAddress = net.tailscaleIp;
+
   networking = {
     hostName = "vps-cc";
     useDHCP = false;
