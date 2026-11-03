@@ -31,9 +31,26 @@
       matchStrings: ['"npm:(?<depName>@?[^@"\\s]+)@(?<currentValue>[^"\\s]+)"'],
       datasourceTemplate: "npm",
     },
+    {
+      customType: "regex",
+      description: "可选 OCI 容器模块中的镜像 tag 和 digest",
+      managerFilePatterns: ["/^modules/features/containers/[^/]+\\.nix$/"],
+      matchStrings: [
+        'image\\s*=\\s*"(?<depName>ghcr\\.io/[^":\\s]+):(?<currentValue>[^"@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)"',
+      ],
+      datasourceTemplate: "docker",
+      versioningTemplate: "docker",
+    },
   ],
 
   packageRules: [
+    {
+      matchManagers: ["custom.regex"],
+      matchDatasources: ["docker"],
+      matchFileNames: ["modules/features/containers/*.nix"],
+      pinDigests: true,
+      automerge: false,
+    },
     {
       matchManagers: ["github-actions"],
       // Actions 使用完整 SHA + major 标签注释（# vN），由 Renovate 更新版本和 digest。
