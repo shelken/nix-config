@@ -8,13 +8,12 @@
   ...
 }:
 let
-  inherit (inputs) nixpkgs home-manager nixos-generators;
+  inherit (inputs) nixpkgs home-manager;
   specialArgs = genSpecialArgs nixpkgs system;
 in
 nixpkgs.lib.nixosSystem {
   inherit system specialArgs;
   modules = nixos-modules ++ [
-    nixos-generators.nixosModules.all-formats
     home-manager.nixosModules.home-manager
     (
       { config, ... }:
