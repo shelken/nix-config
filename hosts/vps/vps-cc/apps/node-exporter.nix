@@ -1,6 +1,6 @@
-{ config, ... }:
+{ myvars, ... }:
 let
-  address = config.shelken.vpsContainers.tailscaleAddress;
+  address = myvars.networking.hostAddress."vps-cc-ts".address;
 in
 {
   virtualisation.oci-containers.containers.node-exporter = {

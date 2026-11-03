@@ -64,13 +64,13 @@ hosts/vps/vps-cc/
 
 ## 环境变量与密钥从哪来
 
-| 内容                     | 放哪                                                                            | 例子                                     |
-| ------------------------ | ------------------------------------------------------------------------------- | ---------------------------------------- |
-| 非机密的运行参数         | 容器 `environment`                                                              | `TZ`、`HTTP_PORT`                        |
-| 口令、token、Webhook URL | 私有 `secrets` 仓库的 sops 字段，模板渲染成 env 文件，容器读 `environmentFiles` | openlist 的 admin 口令                   |
-| 含机密的配置文件         | sops 模板渲染整个文件，再按 `volumes` 挂进容器                                  | kopia 的仓库配置里有 WebDAV 凭据         |
-| 主机事实（地址等）       | 主机模块里的常量或选项默认值                                                    | `shelken.vpsContainers.tailscaleAddress` |
-| 不含机密的文件           | 跟服务放同一目录，直接挂 `Nix store` 路径                                       | kopia 的 `policy.json`、`entrypoint.sh`  |
+| 内容                     | 放哪                                                                            | 例子                                    |
+| ------------------------ | ------------------------------------------------------------------------------- | --------------------------------------- |
+| 非机密的运行参数         | 容器 `environment`                                                              | `TZ`、`HTTP_PORT`                       |
+| 口令、token、Webhook URL | 私有 `secrets` 仓库的 sops 字段，模板渲染成 env 文件，容器读 `environmentFiles` | openlist 的 admin 口令                  |
+| 含机密的配置文件         | sops 模板渲染整个文件，再按 `volumes` 挂进容器                                  | kopia 的仓库配置里有 WebDAV 凭据        |
+| 主机事实（地址等）       | `vars/networking.nix` 的 `hostAddress` 表                                       | `vps-cc-ts` 的 tailnet 地址             |
+| 不含机密的文件           | 跟服务放同一目录，直接挂 `Nix store` 路径                                       | kopia 的 `policy.json`、`entrypoint.sh` |
 
 以一个 token 为例
 

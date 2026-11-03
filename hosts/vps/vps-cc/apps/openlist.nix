@@ -1,6 +1,6 @@
-{ config, ... }:
+{ config, myvars, ... }:
 let
-  address = config.shelken.vpsContainers.tailscaleAddress;
+  address = myvars.networking.hostAddress."vps-cc-ts".address;
   dataDir = "/data/docker/openlist/data";
 in
 {

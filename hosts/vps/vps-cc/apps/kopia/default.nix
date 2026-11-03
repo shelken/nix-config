@@ -1,6 +1,6 @@
-{ config, ... }:
+{ config, myvars, ... }:
 let
-  address = config.shelken.vpsContainers.tailscaleAddress;
+  address = myvars.networking.hostAddress."vps-cc-ts".address;
   logDir = "/data/docker/kopia/logs";
 
   # Compose 的命名卷带项目名前缀，而这个卷是上次部署时创建的：
