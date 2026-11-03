@@ -39,6 +39,7 @@
 - [ ] rustfs：控制台与 S3 端口有响应，数据目录仍是旧的（没被新建空目录接过）
 - [ ] nvidia-dls：许可证接口有响应
 - [ ] kopia 与 kopia-local：`kopia snapshot list` 能看到旧快照，下一轮计划任务成功，`hostname` 仍是 `sakamoto` / `sakamoto-local`
+- [ ] `cat ~/Library/LaunchAgents/space.ooooo.sakamoto-compose.plist`：含 `RunAtLoad`、`StartInterval = 900` 与 `WatchPaths`
 - [ ] 外接盘未挂载时 `sakamoto-compose up` 直接失败并打印缺失目录（重启后盘未挂载时观察）
 - [ ] 改一次 `configs/caddy/Caddyfile`，`just hm` 后 `sakamoto-compose up` 会重建 caddy 容器并生效
 

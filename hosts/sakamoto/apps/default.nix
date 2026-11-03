@@ -230,8 +230,8 @@ in
       };
 
       # 不写 domain：默认 gui，配 OrbStack 所在的 Aqua 会话；
-      # 登录后 RunAtLoad 跑一次，StartInterval 负责补漏（密钥轮换、容器被手工删掉、
-      # 开机时外接盘还没挂上）；plist 变化时 Home Manager 会重新加载，也会立刻再跑一次
+      # 登录后 RunAtLoad 跑一次，StartInterval 负责补漏（开机时外接盘还没挂上、容器被手工删掉）；
+      # plist 变化时 Home Manager 会重新加载，也会立刻再跑一次
       launchd.agents.sakamoto-compose = {
         enable = true;
         config = {
@@ -243,6 +243,9 @@ in
           RunAtLoad = true;
           KeepAlive = false;
           StartInterval = 900;
+          # 轮换某个密钥的值时 plist 与 CLI 都没变化，RunAtLoad 不会触发；
+          # 盯住渲染目录，sops 写完 env 就立刻对账，不用等下一次 StartInterval
+          WatchPaths = [ (dirOf envFile) ];
           # launchd 的默认 PATH 只有 /usr/bin:/bin:/usr/sbin:/sbin，docker 在 /usr/local/bin
           EnvironmentVariables.PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
           StandardOutPath = "${config.home.homeDirectory}/Library/Logs/sakamoto-compose.log";
