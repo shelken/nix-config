@@ -5,11 +5,11 @@
 # 白名单按源 IP 匹配：透明 DNS 在 auto_redirect 预匹配阶段取不到源 MAC。
 # IP 与 vars/networking.nix 同网，改名单直接改这里的两处列表。
 #
-# 底模的路由变体弃用了本网解析器的定义（type: local 对 *.local 固定走内置 mDNS），
+# 底模的路由角色不列本网解析器的定义（type: local 对 *.local 固定走内置 mDNS），
 # 所以 dns-lan 这个 tag 的地址由这里给；route.default_domain_resolver 也指向它，
 # 缺了整个配置起不来。部署域 int.ooooo.space 走底模的 MyDirect-dns → dns-lan，
 # 由主路由 dnsmasq 应答，不再需要底模那份静态通配应答。
-# clash API 在底模里只监听回环，对局域网监听的地址也由这里覆盖。
+# 路由底模已监听 0.0.0.0:9090；这里再写一遍，把监听地址与 secret 一起收在 overlay。
 # route.rules 顺序是固定的：放行解析器 → 53 劫持 → 白名单 bypass。白名单 bypass
 # 匹配的是「不在名单里」的整台设备，排在 53 劫持之前会把名单外设备的 DNS 一起放走。
 subs:
