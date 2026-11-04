@@ -44,7 +44,7 @@
   },
   "sandboxExclude": ["npm:@shelken/simple-plannotator@0.1.8"],
   "packages": [
-    "npm:pi-execution-time@0.2.0",
+    "npm:pi-execution-time@0.3.0",
     "npm:pi-powerline-footer@0.22.0",
     "npm:pi-token-speed@0.12.0",
     "npm:@tifan/pi-preferred-thinking@1.0.2",
