@@ -52,11 +52,13 @@
     autoStart = true;
     user = "dnsmasq";
     volumes = [ "${config.sops.templates."dnsmasq.conf".path}:/etc/dnsmasq.conf:ro" ];
-    # 只给宿主 loopback：本机 resolv.conf 指向 127.0.0.1，
-    # 绑到 tailnet 或 0.0.0.0 等于多开一个对外解析入口
+    # 127.0.0.1: 本机 resolv.conf 指向它；tailnet 地址上的 5353 只给集群侧
+    # Gatus 做解析探测（公网 IP 上没有监听），等于把解析入口开到 tailnet，
+    # 与 mosdns 的 5054 同级
     ports = [
       "127.0.0.1:53:5353/tcp"
       "127.0.0.1:53:5353/udp"
+      "${address}:5353:5353/udp"
     ];
     networks = [ "homelab" ];
     extraOptions = [

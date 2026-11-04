@@ -152,3 +152,28 @@
     }
   }
 }
+
+# Homepage 的 docker 集成只读 label：给它一份只含声明的静态列表，
+# 不接真 Docker API，也就没有可读的容器 env 与挂载路径。
+# health 由 filters 区分（Homepage 只把 health 当 filter 用）：healthy 给全量，其余给空。
+http://:2576 {
+  root * /srv/homepage-docker
+
+  @list path /containers/json
+  handle @list {
+    header Content-Type application/json
+
+    @healthy query filters=*healthy*
+    handle @healthy { file_server }
+
+    @sick query filters=*unhealthy*
+    handle @sick { respond "[]" }
+
+    @starting query filters=*starting*
+    handle @starting { respond "[]" }
+
+    handle { file_server }
+  }
+
+  handle { respond 404 }
+}

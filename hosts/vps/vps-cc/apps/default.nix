@@ -23,7 +23,7 @@
     ./crowdsec-agent
     ./crowdsec-firewall-bouncer
     ./dhp
-    ./dockerproxy.nix
+    ./homepage-labels.nix
     ./fluent-bit
     ./mosdns.nix
     ./sub-converter.nix
