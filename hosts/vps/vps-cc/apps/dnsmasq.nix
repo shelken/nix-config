@@ -1,7 +1,10 @@
-{ config, ... }:
+{ config, myvars, ... }:
+let
+  address = myvars.networking.hostAddress."vps-cc-ts".address;
+in
 #############################################################
 #
-#  dnsmasq：宿主机的解析入口，只发布到 127.0.0.1:53
+#  dnsmasq：宿主机的解析入口：宿主 loopback 上的 53，加 tailnet 地址上的 5353（给 Gatus 探测）
 #
 #  这里试过走 nixpkgs 的原生 module，落不下来：`services.dnsmasq.configFile`
 #  是 readOnly 的，配置只能由 `settings` 生成，而这份配置里的主域名与集群网关
