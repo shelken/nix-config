@@ -70,6 +70,11 @@ in
   # 1.14 的上游单元以 sing-box 用户运行，并带 CAP_NET_ADMIN 等能力，tun 与监听 53 都不需要 root
   services.sing-box.enable = true;
 
+  # system 栈的 TCP 经 TUN 回注内核，需在输入链的 conntrack 检查前放行。
+  networking.firewall.trustedInterfaces = lib.optionals config.services.sing-box.enable [
+    "tun0"
+  ];
+
   # 订阅 URL：secrets 仓库 sops/secrets/hosts/hk1box.yaml 的 sing-box-sub-url 键
   sops.secrets.sing-box-sub-url = { };
 

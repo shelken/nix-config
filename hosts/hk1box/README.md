@@ -7,7 +7,7 @@ HK1 Box（Amlogic S905X3，4G 内存，千兆网口）当单臂旁路由，只�
 ## 组成
 
 - `default.nix`：主机名、静态网络（地址取自 `vars/networking.nix`）、转发与 sysctl、防火墙、sops
-- `sing-box.nix`：sing-box 服务与订阅拉取（开机一次，之后每 6 小时）
+- `sing-box.nix`：sing-box 服务、TUN 入站放行与订阅拉取
 - `hardware.nix`：内核参数、设备树编译、initrd 驱动、extlinux 与晶晨引导文件的安装
 - `bootfs.nix` + `boot/*.cmd`：厂商 u-boot 要读的 autoscript 与主线 u-boot（`u-boot.ext` / `u-boot.emmc`）
 - `disk.nix`：eMMC 的 MBR 分区，前 68MiB 留给厂商 bootloader
@@ -34,15 +34,20 @@ HK1 Box（Amlogic S905X3，4G 内存，千兆网口）当单臂旁路由，只�
 
 mac / ios / router 三份 yaml 由 `singbox-config` 生成：模板与 1Password 引用在 `modules/features/network/singbox-config/`，订阅服务地址取 sops 的 `main-domain`
 
+白名单设备的源 IP 直接写在 `templates/router.yaml` 的 DNS 与 route 两处列表，与 `vars/networking.nix` 同一网段。改名单改这两处，再生成订阅 URL
+
+改模板后先 `just hm`，让已安装的生成器指向新模板，再生成：
+
 ```bash
-singbox-config router        # 填充模板 → sbtools check → encode，URL 进剪切板
+singbox-config router
 ```
 
-- 白名单设备在 `auto_redirect` 预匹配阶段被 `bypass`，内核直接转发给主路由，不进 sing-box
-- 名单内的设备，网关与 DNS 都指向这台；名单外的设备即使 DNS 指过来，拿到的也是真实 IP 而不是 fakeip
-- 手机要把这个 Wi-Fi 的「私有地址」改成固定，否则 MAC 会变
+- 名单外设备在 `auto_redirect` 预匹配阶段被 `bypass`，内核直接转发给主路由，不进 sing-box
+- 名单内设备的网关指向这台，可使用盒子 DNS 或经盒子访问公网 DNS；发给主路由的 DNS 查询不在本方案接管范围内
+- DNS 白名单按源 IP 匹配，名单外设备即使把 DNS 指向盒子，也不会拿到盒子的 fakeip
+- 手机等设备开随机 MAC 不影响识别；白名单按 IP 匹配，需在主路由给设备配固定租约
 
-改名单就改模板里的 MAC 条目，重新 `singbox-config router`，再按下一节更新 sops 里的 URL
+改名单后重新生成订阅 URL，再按下一节更新 sops 中的 `sing-box-sub-url`
 
 ## 前置二：secrets 仓库
 
@@ -51,9 +56,9 @@ singbox-config router        # 填充模板 → sbtools check → encode，URL �
 1. `age-keygen -o hk1box-age.txt`，私钥不进任何仓库
 2. `.sops.yaml` 加一条 `sops/secrets/hosts/hk1box\.yaml$`，接收方是管理员公钥加这台的公钥
 3. 新建 `sops/secrets/hosts/hk1box.yaml`，写一个键 `sing-box-sub-url`，值是上一节的订阅 URL
-4. 推送后回本仓库 `nix flake update secrets`
+4. 推送后回本仓库 `just upp secrets`
 
-这个文件不存在时正式系统无法求值，试机镜像不读它。换了 URL 后手动拉一次：
+这个文件不存在时正式系统无法求值，试机镜像不读它。更换 URL 并部署后不会自动重拉，需手动执行：
 
 ```bash
 ssh root@hk1box systemctl start sing-box-sub-update
