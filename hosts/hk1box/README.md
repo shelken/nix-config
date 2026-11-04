@@ -36,6 +36,19 @@ mac / ios / router 三份 yaml 由 `singbox-config` 生成：模板与 1Password
 
 白名单设备的源 IP 直接写在 `templates/router.yaml` 的 DNS 与 route 两处列表，与 `vars/networking.nix` 同一网段。改名单改这两处，再生成订阅 URL
 
+### DNS 归属与放行
+
+底模只留与部署无关的策略，本网解析器地址、部署域名与内网入口、放行（不被改写）的解析器清单、白名单四项都由 `templates/router.yaml` 的 overlay 提供：
+
+| overlay 内容                               | 作用                                                                                                                                                                                                      |
+| :----------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dns.servers` 的 `dns-lan`                 | 本网解析器，填主路由地址。底模的 `Lan-dns`、`local` / `lan` / `home.arpa`、`MyDirect-dns`、`clash_mode: direct`、`PTR` 五处 DNS 规则与 `route.default_domain_resolver` 都指向这个 tag，缺了配置直接起不来 |
+| `dns.rules` 的两条部署域名 predefined 规则 | 部署域名与内网入口的固定应答                                                                                                                                                                              |
+| `route.rules` 的放行解析器规则             | 发往清单内解析器的查询不进本机 DNS，由内核直接放行；该解析器对内网域的负向应答不再被本机改写                                                                                                              |
+| 白名单                                     | 名单外设备的连接在 `auto_redirect` 预匹配阶段被旁路，由内核直接转发，不进 sing-box                                                                                                                        |
+
+`route.rules` 的三条顺序固定为「放行解析器 → 53 劫持 → 白名单 `bypass`」：第一条要给设备显式指定的解析器留出口，白名单那条匹配的是「不在名单里」的整台设备，换序会把名单外设备的 DNS 一起放走。
+
 改模板后先 `just hm`，让已安装的生成器指向新模板，再生成：
 
 ```bash
@@ -47,7 +60,7 @@ singbox-config router
 - DNS 白名单按源 IP 匹配，名单外设备即使把 DNS 指向盒子，也不会拿到盒子的 fakeip
 - 手机等设备开随机 MAC 不影响识别；白名单按 IP 匹配，需在主路由给设备配固定租约
 
-改名单后重新生成订阅 URL，再按下一节更新 sops 中的 `sing-box-sub-url`
+改名单或上面前三项后重新生成订阅 URL，再按下一节更新 sops 中的 `sing-box-sub-url`
 
 ## 前置二：secrets 仓库
 

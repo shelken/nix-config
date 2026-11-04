@@ -1,9 +1,14 @@
-# 旁路由：白名单与 clash secret 只在这里
+# 旁路由：白名单、本网解析器地址、部署域名与放行清单只在这里
 #
 # invert 反转整条规则，所以「排除白名单」必须两层：外层 AND 限定 inbound: tun-in，
 # 内层只反转源 IP 条件。写在同一层会把 dns-in 的查询也翻成命中。
 # 白名单按源 IP 匹配：透明 DNS 在 auto_redirect 预匹配阶段取不到源 MAC。
 # IP 与 vars/networking.nix 同网，改名单直接改这里的两处列表。
+#
+# 底模不在本网的解析器只有 dns-lan 这一个 tag，地址由这里给（底模已没有
+# dns-local-system）；route.default_domain_resolver 也指向它，缺了整个配置起不来。
+# route.rules 顺序是固定的：放行解析器 → 53 劫持 → 白名单 bypass。白名单 bypass
+# 匹配的是「不在名单里」的整台设备，排在 53 劫持之前会把名单外设备的 DNS 一起放走。
 subs:
   - "{{ op://Personal/proxy/subs-miaona }}"
 nodes:
@@ -14,20 +19,47 @@ template_url: https://raw.githubusercontent.com/shelken/proxy/main/config/sing-b
 overlay: |
   {
     "experimental": { "clash_api": { "secret": "{{ op://Personal/proxy/clash-secret }}" } },
-    "dns": { "rules": [
-      {
-        "invert": true,
-        "server": "dns-local-system",
-        "source_ip_cidr": [
-          "192.168.6.80/32",
-          "192.168.6.81/32",
-          "192.168.6.110/32",
-          "192.168.6.125/32",
-          "192.168.6.213/32"
-        ]
-      }
-    ] },
+    "dns": {
+      "servers": [{ "type": "udp", "tag": "dns-lan", "server": "192.168.6.1" }],
+      "rules": [
+        {
+          "invert": true,
+          "server": "dns-lan",
+          "source_ip_cidr": [
+            "192.168.6.80/32",
+            "192.168.6.81/32",
+            "192.168.6.110/32",
+            "192.168.6.125/32",
+            "192.168.6.213/32"
+          ]
+        },
+        {
+          "domain_suffix": [".int.ooooo.space"],
+          "query_type": ["A"],
+          "action": "predefined",
+          "answer": ["*. IN A 192.168.69.46"]
+        },
+        {
+          "domain_suffix": ["int.ooooo.space"],
+          "action": "predefined"
+        }
+      ]
+    },
     "route": { "rules": [
+      {
+        "inbound": ["tun-in"],
+        "ip_cidr": ["223.5.5.5/32"],
+        "port": [53],
+        "network": ["udp", "tcp"],
+        "action": "bypass",
+        "outbound": "direct"
+      },
+      {
+        "inbound": ["tun-in"],
+        "port": [53],
+        "network": ["udp", "tcp"],
+        "action": "hijack-dns"
+      },
       {
         "type": "logical",
         "mode": "and",
