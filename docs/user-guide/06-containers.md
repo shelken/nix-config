@@ -112,6 +112,7 @@ virtualisation.oci-containers.containers.openlist = {
 - 需要宿主机网络栈的容器（`derp`、`hysteria2`、`anytls`、`crowdsec-firewall-bouncer`）写 `extraOptions = [ "--network=host" ]`，这时不要写 `networks`，对应端口由 `hosts/vps/common.nix` 的防火墙放行
 - Docker 守护进程要等 tailscaled，`hosts/vps/common.nix` 里已有 `docker.service` 的 `after`/`wants`
 - 新服务接入：`networks = [ "homelab" ];`，端口写 `"${address}:<宿主端口>:<容器端口>"`
+- `caddy` 的 2576 是给 Homepage 的只读 label 列表，由 `apps/homepage-labels.nix` 从容器声明渲染（只有 `Id`/`Names`/`Image`/`State`/`Status`/`Labels`，不含容器 env 与挂载路径）；`dnsmasq` 在 tailnet 地址上的 `5353/udp` 供 Gatus 做解析探测
 
 ## 生命周期与依赖
 
@@ -147,24 +148,23 @@ virtualisation.oci-containers.containers.openlist = {
 
 `hosts/vps/vps-cc/apps/` 一个文件一个服务
 
-| 服务                        | 形态                                          | 备注                                            |
-| --------------------------- | --------------------------------------------- | ----------------------------------------------- |
-| `node-exporter`             | 无状态：只读挂宿主机目录                      | 端口只到 Tailscale                              |
-| `openlist`                  | 有状态：数据目录 + HTTP 健康检查              | 专门给 kopia 使用，连接 139 网盘                |
-| `kopia`                     | 依赖型：openlist 可用后才真正跑起来           | 仓库配置由 sops 渲染，策略与入口脚本随目录挂    |
-| `dnsmasq`                   | 容器：宿主解析入口                            | 配置含 sops 值，只发布 127.0.0.1:53             |
-| `caddy`                     | 容器：公网入口 80/443                         | 镜像自带 Cloudflare DNS 与 CrowdSec AppSec 插件 |
-| `crowdsec-agent`            | 容器：agent-only，连远程 LAPI                 | Caddy 的 AppSec 后端（`crowdsec-agent:7422`）   |
-| `crowdsec-firewall-bouncer` | 容器 + host 网络：操作宿主机 iptables         | 与 NixOS 防火墙并行工作                         |
-| `dhp`                       | 容器：Docker Hub 的 pull-through 代理         | 数据目录 `/data/docker/dhp/data`                |
-| `dockerproxy`               | 容器：docker socket 只读代理                  | 给 tailnet 侧的 Gatus 与 Homepage 用            |
-| `fluent-bit`                | 容器：读 docker socket 与 `/var/log`          | 日志转集群 VictoriaLogs，db 落在宿主机          |
-| `mosdns`                    | 容器：配置烘在自建镜像里                      | 5054 仍对外（`vdns` 的明文 DNS 入口）           |
-| `sub-converter`             | 容器：自建镜像                                | Caddy 按容器名反代，端口只发布到宿主 loopback   |
-| `sbtools-server`            | 容器：自建镜像，单个私钥变量                  | 不发布端口，只有 Caddy 走 homelab 网络访问      |
-| `derp`                      | 容器 + host 网络：TLS 由 Caddy 终止           | `8666/tcp`、`3478/udp`                          |
-| `hysteria2`                 | 容器 + host 网络：复用 Caddy 的 wildcard 证书 | `10357/udp`                                     |
-| `anytls`                    | 容器 + host 网络：入口脚本负责自签证书        | `5444/tcp`                                      |
+| 服务                        | 形态                                          | 备注                                                                              |
+| --------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------- |
+| `node-exporter`             | 无状态：只读挂宿主机目录                      | 端口只到 Tailscale                                                                |
+| `openlist`                  | 有状态：数据目录 + HTTP 健康检查              | 专门给 kopia 使用，连接 139 网盘                                                  |
+| `kopia`                     | 依赖型：openlist 可用后才真正跑起来           | 仓库配置由 sops 渲染，策略与入口脚本随目录挂                                      |
+| `dnsmasq`                   | 容器：宿主解析入口                            | 配置含 sops 值；宿主 `127.0.0.1:53`，另在 tailnet 地址开 `5353/udp` 供 Gatus 探测 |
+| `caddy`                     | 容器：公网入口 80/443                         | 镜像自带 Cloudflare DNS 与 CrowdSec AppSec 插件                                   |
+| `crowdsec-agent`            | 容器：agent-only，连远程 LAPI                 | Caddy 的 AppSec 后端（`crowdsec-agent:7422`）                                     |
+| `crowdsec-firewall-bouncer` | 容器 + host 网络：操作宿主机 iptables         | 与 NixOS 防火墙并行工作                                                           |
+| `dhp`                       | 容器：Docker Hub 的 pull-through 代理         | 数据目录 `/data/docker/dhp/data`                                                  |
+| `fluent-bit`                | 容器：读 docker socket 与 `/var/log`          | 日志转集群 VictoriaLogs，db 落在宿主机                                            |
+| `mosdns`                    | 容器：配置烘在自建镜像里                      | 5054 仍对外（`vdns` 的明文 DNS 入口）                                             |
+| `sub-converter`             | 容器：自建镜像                                | Caddy 按容器名反代，端口只发布到宿主 loopback                                     |
+| `sbtools-server`            | 容器：自建镜像，单个私钥变量                  | 不发布端口，只有 Caddy 走 homelab 网络访问                                        |
+| `derp`                      | 容器 + host 网络：TLS 由 Caddy 终止           | `8666/tcp`、`3478/udp`                                                            |
+| `hysteria2`                 | 容器 + host 网络：复用 Caddy 的 wildcard 证书 | `10357/udp`                                                                       |
+| `anytls`                    | 容器 + host 网络：入口脚本负责自签证书        | `5444/tcp`                                                                        |
 
 只有 dnsmasq 试过走原生 module 但落不下来（`services.dnsmasq.configFile` 是 readOnly，配置只能由 `settings` 生成，而它含 sops 值）；其余服务各自的阻碍写在对应服务文件的头部注释里。判断标准是「原生 module 能否原样覆盖配置与进程语义」，不是「有没有 module」：`services.tailscale.derper`、`services.sing-box`、`services.fluent-bit` 都存在，但分别把 nginx、证书目录、单位硬化写死在 module 里，搬过去要改的就不只是声明了
 
