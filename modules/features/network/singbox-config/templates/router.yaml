@@ -1,7 +1,9 @@
 # 旁路由：白名单与 clash secret 只在这里
 #
 # invert 反转整条规则，所以「排除白名单」必须两层：外层 AND 限定 inbound: tun-in，
-# 内层只反转 MAC。写在同一层会把 dns-in 的查询也翻成命中。
+# 内层只反转源 IP 条件。写在同一层会把 dns-in 的查询也翻成命中。
+# 白名单按源 IP 匹配：透明 DNS 在 auto_redirect 预匹配阶段取不到源 MAC。
+# IP 与 vars/networking.nix 同网，改名单直接改这里的两处列表。
 subs:
   - "{{ op://Personal/proxy/subs-miaona }}"
 nodes:
@@ -16,12 +18,12 @@ overlay: |
       {
         "invert": true,
         "server": "dns-local-system",
-        "source_mac_address": [
-          "{{ op://Personal/proxy/mac-1 }}",
-          "{{ op://Personal/proxy/mac-2 }}",
-          "{{ op://Personal/proxy/mac-3 }}",
-          "{{ op://Personal/proxy/mac-4 }}",
-          "{{ op://Personal/proxy/mac-5 }}"
+        "source_ip_cidr": [
+          "192.168.6.80/32",
+          "192.168.6.81/32",
+          "192.168.6.110/32",
+          "192.168.6.125/32",
+          "192.168.6.213/32"
         ]
       }
     ] },
@@ -37,12 +39,12 @@ overlay: |
             "invert": true,
             "rules": [
               {
-                "source_mac_address": [
-                  "{{ op://Personal/proxy/mac-1 }}",
-                  "{{ op://Personal/proxy/mac-2 }}",
-                  "{{ op://Personal/proxy/mac-3 }}",
-                  "{{ op://Personal/proxy/mac-4 }}",
-                  "{{ op://Personal/proxy/mac-5 }}"
+                "source_ip_cidr": [
+                  "192.168.6.80/32",
+                  "192.168.6.81/32",
+                  "192.168.6.110/32",
+                  "192.168.6.125/32",
+                  "192.168.6.213/32"
                 ]
               }
             ]
