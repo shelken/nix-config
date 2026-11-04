@@ -10,7 +10,10 @@
   metrics {
     per_host
   }
-  admin :2019
+  # 管理面只留在容器内（unix socket）：对外没有 L4 入口，
+  # 原来 `admin :2019` 意味着同 homelab 网络的容器与 tailnet 节点都能直连管理面，
+  # 而 Caddy 管理面无认证：GET /config/ 读生效配置（含已替换的 CF token）、POST /load 重配整站
+  admin unix//run/caddy-admin.sock
   # 所有服务全局配置块
   servers {
     protocols h1 h2 h3
@@ -22,6 +25,27 @@
     appsec_url http://crowdsec-agent:7422
     # 必须大于 crowdsec-agent 的 auth_timeout(2s)，否则内层认证耗尽外层预算
     appsec_timeout 5s
+  }
+}
+
+# 2019 上唯一对外开放的入口：只读门面，只放行监控真正用到的两个 GET
+#   Prometheus  /metrics                    kube-prometheus-stack ScrapeConfig caddy-vps-cc
+#   Homepage    /reverse_proxy/upstreams    caddy widget（widget.js: endpoint: reverse_proxy/upstreams）
+# 其余路径一律 403；管理面本身在 unix//run/caddy-admin.sock，容器外拿不到。
+# 容器内绑 :2019 即可——对外的地址范围由 docker 的 "${address}:2019:2019/tcp" 决定。
+# 注意：容器里想手动 reload 要用 caddy reload --address unix//run/caddy-admin.sock
+http://:2019 {
+  @readonly {
+    method GET
+    path /metrics /reverse_proxy/upstreams
+  }
+  handle @readonly {
+    reverse_proxy unix//run/caddy-admin.sock {
+      header_up Host localhost
+    }
+  }
+  handle {
+    respond "forbidden" 403
   }
 }
 

@@ -108,6 +108,7 @@ virtualisation.oci-containers.containers.openlist = {
 - 服务之间用容器名互解，kopia 连 openlist 的 WebDAV 走的就是 `http://openlist:80/dav/main`
 - 对外端口默认只发布到 Tailscale 地址。`127.0.0.1` 会让 tailnet 侧的 Gatus、Prometheus 也访问不到，`0.0.0.0` 等于直接放公网
 - 例外只有两类，都按旧 Compose 原样保留：公网入口（`caddy` 的 80/443、`mosdns` 的 5054 明文 DNS）发布到所有地址；只给宿主机自己用的（`dnsmasq` 的 53、`sub-converter` 的 25500）发布到 `127.0.0.1`
+- `caddy` 的 2019 不是管理面：它只是只读门面，只放行 `GET /metrics` 与 `GET /reverse_proxy/upstreams`（Prometheus 与 Homepage caddy widget 用），其余路径 403；Caddy 管理面在容器内的 unix socket 上，容器外与 tailnet 都够不到
 - 需要宿主机网络栈的容器（`derp`、`hysteria2`、`anytls`、`crowdsec-firewall-bouncer`）写 `extraOptions = [ "--network=host" ]`，这时不要写 `networks`，对应端口由 `hosts/vps/common.nix` 的防火墙放行
 - Docker 守护进程要等 tailscaled，`hosts/vps/common.nix` 里已有 `docker.service` 的 `after`/`wants`
 - 新服务接入：`networks = [ "homelab" ];`，端口写 `"${address}:<宿主端口>:<容器端口>"`
