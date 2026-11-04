@@ -33,12 +33,9 @@ let
     Labels = container.labels;
   }) labelled;
 
-  serveDir = pkgs.linkFarm "homepage-docker-labels" [
-    {
-      name = "containers/json";
-      path = pkgs.writeText "containers.json" (builtins.toJSON entries);
-    }
-  ];
+  # 用 writeTextDir 而不是 linkFarm：linkFarm 只产出指向别处的符号链接，单独把这个
+  # 目录挂进容器后链接目标不存在，file_server 会 404
+  serveDir = pkgs.writeTextDir "containers/json" (builtins.toJSON entries);
 in
 {
   # 往已声明的 caddy 容器上并列表：list 类型的选项会自动合并
