@@ -16,8 +16,8 @@ URL 由 sbtools 写进剪切板。私密值只落在临时目录，退出即删�
   clash-secret       router 的 clash API secret
 
 订阅服务地址取 sops 的 main-domain，脚本里拼成 https://subs.<main-domain>。
-router overlay 里的本网解析器地址（dns-lan）、放行解析器清单、白名单源 IP 与 clash API 的
-监听地址都直接写在 templates/router.yaml。
+router 模板里的白名单占位符由 _singbox-config.nix 的 whitelistCidrs 渲染；本网解析器地址
+（dns-lan）、放行解析器清单与 clash API 的监听地址直接写在 templates/router.yaml。
 EOF
   exit 2
 }
@@ -44,8 +44,13 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 yaml="$work/$variant.yaml"
 
-echo "→ 填充模板：@templatesDir@/$variant.yaml"
-sec-run op inject -i "@templatesDir@/$variant.yaml" -o "$yaml"
+case $variant in
+  router) template="@routerTemplate@" ;;
+  *) template="@templatesDir@/$variant.yaml" ;;
+esac
+
+echo "→ 填充模板：$template"
+sec-run op inject -i "$template" -o "$yaml"
 chmod 600 "$yaml"
 
 # 不跑 sbtools check：那一步要启动 sing-box 内核，本机没装就报「启动内核失败（sing-box）」。

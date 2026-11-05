@@ -1,9 +1,9 @@
-# 旁路由：白名单、本网解析器地址与放行清单只在这里
+# 旁路由：本网解析器地址与放行清单只在这里；白名单源 IP 由 singbox-config 的 nix 渲染
 #
 # invert 反转整条规则，所以「排除白名单」必须两层：外层 AND 限定 inbound: tun-in，
 # 内层只反转源 IP 条件。写在同一层会把 dns-in 的查询也翻成命中。
 # 白名单按源 IP 匹配：透明 DNS 在 auto_redirect 预匹配阶段取不到源 MAC。
-# IP 与 vars/networking.nix 同网，改名单直接改这里的两处列表。
+# 两处 source_ip_cidr 的值由 _singbox-config.nix 的 whitelistCidrs 渲染进来。
 #
 # 底模的路由角色不列本网解析器的定义（type: local 对 *.local 固定走内置 mDNS），
 # 所以 dns-lan 这个 tag 的地址由这里给；route.default_domain_resolver 也指向它，
@@ -33,13 +33,7 @@ overlay: |
         {
           "invert": true,
           "server": "dns-lan",
-          "source_ip_cidr": [
-            "192.168.6.80/32",
-            "192.168.6.81/32",
-            "192.168.6.110/32",
-            "192.168.6.125/32",
-            "192.168.6.213/32"
-          ]
+          "source_ip_cidr": [@whitelistCidrs@]
         }
       ]
     },
@@ -69,13 +63,7 @@ overlay: |
             "invert": true,
             "rules": [
               {
-                "source_ip_cidr": [
-                  "192.168.6.80/32",
-                  "192.168.6.81/32",
-                  "192.168.6.110/32",
-                  "192.168.6.125/32",
-                  "192.168.6.213/32"
-                ]
+                "source_ip_cidr": [@whitelistCidrs@]
               }
             ]
           }

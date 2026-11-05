@@ -9,8 +9,8 @@ let
     workstations = {
       user = "shelken";
       hosts = {
-        yuuko = "192.168.6.11";
-        sakamoto = "192.168.6.144";
+        yuuko = "192.168.6.11"; # yuuko 千兆有线
+        sakamoto = "192.168.6.144"; # sakamoto 千兆有线
         mio = "192.168.6.248";
       };
     };
@@ -19,18 +19,9 @@ let
     homelab = {
       user = "shelken";
       hosts = {
-        # sakamoto-k8s = "192.168.6.80";
-        sakamoto-k8s = {
-          address = "127.0.0.1";
-          port = 60122;
-          proxyJump = "sakamoto";
-        }; # lima-control-plane-ubuntu2404 socket-net
+        sakamoto-k8s = "192.168.6.80"; # lima-control-plane-ubuntu2404
         homelab-1 = "192.168.6.110"; # pve-qemu-worker-ubuntu2404
-        yuuko-k8s = {
-          address = "127.0.0.1";
-          port = 60123;
-          proxyJump = "yuuko";
-        };
+        yuuko-k8s = "192.168.6.81";
       };
     };
 
