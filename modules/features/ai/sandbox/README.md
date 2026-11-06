@@ -286,7 +286,7 @@ PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 
 ### 默认放行模型服务的私网端口
 
-家里的模型服务（`cpa.int.ooooo.space`、`commandcode.int.ooooo.space`）都解析到私网 `192.168.69.46`。执行上下文默认拒绝全部私网，每个项目都要在 `.sandbox.yaml` 声明这个 IP，OMP 才能调用模型；不声明时默认模型请求反复重试，表现为卡住。模型服务是每个 Agent 都要用的基础依赖，不属于某个项目
+家里的模型服务（`cpa.int.ooooo.space`）都解析到私网 `192.168.69.46`。执行上下文默认拒绝全部私网，每个项目都要在 `.sandbox.yaml` 声明这个 IP，OMP 才能调用模型；不声明时默认模型请求反复重试，表现为卡住。模型服务是每个 Agent 都要用的基础依赖，不属于某个项目
 
 所以 `sb.yaml` 的 `network.default_grant` 列出所有上下文默认放行的私网目标，只接受 `IP:端口`，当前只放行 `192.168.69.46:443`。范围按端口收窄，同一台机器的其他端口仍需项目声明。它是上下文级授权，不写进 VM 配置、不改变上限指纹，修改后下一个新上下文即生效
 

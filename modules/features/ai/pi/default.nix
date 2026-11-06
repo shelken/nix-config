@@ -75,10 +75,13 @@
       piSettings = builtins.fromJSON (builtins.readFile ./settings.json);
       sandboxExclude = piSettings.sandboxExclude or [ ];
       entrySource = p: if builtins.isString p then p else p.source;
-      unknownExcludes = builtins.filter (n: !(builtins.any (p: entrySource p == n) piSettings.packages)) sandboxExclude;
+      unknownExcludes = builtins.filter (
+        n: !(builtins.any (p: entrySource p == n) piSettings.packages)
+      ) sandboxExclude;
       sandboxSettings =
-        assert lib.assertMsg (unknownExcludes == [ ])
-          "pi settings.json 的 sandboxExclude 有 packages 里不存在的条目: ${toString unknownExcludes}";
+        assert lib.assertMsg (
+          unknownExcludes == [ ]
+        ) "pi settings.json 的 sandboxExclude 有 packages 里不存在的条目: ${toString unknownExcludes}";
         jsonFormat.generate "pi-settings-sandbox.json" (
           builtins.removeAttrs piSettings [ "sandboxExclude" ]
           // {
@@ -127,7 +130,6 @@
         ".pi/agent/permissions.yaml" = mylib.mkConfigFile config ../omp/permissions.yaml;
 
         ".pi/agent/caveman.json" = linkPiConfig "caveman.json";
-        ".pi/agent/context-prune/settings.json" = linkPiConfig "context-prune.json";
         ".pi/agent/extensions/pi-recap.json" = linkPiConfig "pi-recap.json";
         ".pi/agent/extensions/pi-rename.json" = linkPiConfig "pi-rename.json";
         ".pi/agent/extensions/pi-vision-handoff.json" = linkPiConfig "pi-vision-handoff.json";

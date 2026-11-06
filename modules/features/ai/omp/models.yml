@@ -3,14 +3,6 @@ providers:
     baseUrl: https://cpa.int.ooooo.space
     apiKey: CPA_PI_API_KEY
     api: anthropic-messages
-  commandcode-local:
-    baseUrl: https://commandcode.int.ooooo.space/v1
-    apiKey: COMMANDCODE_API_KEY
-    api: openai-completions
-    discovery:
-      type: openai-models-list
-      timeoutMs: 3000
-  # 不要使用magpie name
   mp:
     baseUrl: http://127.0.0.1:3425/v1
     api: openai-responses

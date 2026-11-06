@@ -46,8 +46,6 @@ secrets:
     passthrough:
       - "*"
   COMMANDCODE_API_KEY:
-    allow:
-      - "commandcode.int.ooooo.space"
     passthrough:
       - "*"
   WX_PI_API_KEY:
