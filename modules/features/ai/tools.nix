@@ -1,5 +1,4 @@
 # 共享工具登记表：ai 侧条目（omp/pi/codex/claude-code/bun，ADR 0003）
-# omp postInstall 承接原 home.activation.installOmpPlugins 的插件补齐逻辑。
 {
   config,
   lib,
@@ -7,7 +6,6 @@
 }:
 {
   flake.modules.homeManager.ai.shelken.dev.tools = {
-    # mise 共享工具
     # 1.3.13 无 BUN_CONFIG_HTTP_IDLE_TIMEOUT，安装会在半开连接上永久挂起
     bun.mise = "1.4.2";
     codex.mise = "0.160.1";
@@ -18,8 +16,17 @@
         version = "latest";
         minimum_release_age = "0h";
       };
-      # 插件目录与清单严格对齐：与清单、锁文件及已装目录一致时直接跳过，不一致时重新安装。
-      # 宿主激活与沙箱 sb sync 共用 install.sh。清单路径在运行时决定：guest 由 guest-env.sh 导出
+      # OMP 只在 $XDG_DATA_HOME/omp 已存在时才把插件放进 XDG 目录
+      sandboxDirs = [
+        "$XDG_DATA_HOME/omp"
+        "$XDG_STATE_HOME/omp"
+        "$XDG_CACHE_HOME/omp"
+      ];
+      sandboxEnv = {
+        SB_OMP_MANIFEST = "$SB_CONFIG_DIR/.omp/agent/plugins-package.json";
+        SB_BUN_CACHE_DIR = "$SB_MISE_CACHE_DIR/bun-cache";
+      };
+      # 宿主激活与沙箱 sb sync 共用 install.sh。清单路径在运行时决定：guest 由 sandboxEnv 导出
       # SB_OMP_MANIFEST 指向沙箱版清单（已按 sandboxExclude 过滤），宿主没有该变量，用仓库原件。
       postInstall = ''
         bash ${./omp/plugins/install.sh} "''${SB_OMP_MANIFEST:-${./omp/plugins/package.json}}"

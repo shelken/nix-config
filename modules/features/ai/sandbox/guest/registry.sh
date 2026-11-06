@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 # guest/registry.sh: 上下文注册表与槽位生命周期管理
-# 职责：
-# 1. 槽位锁管理 (acquire_slot_lock, release_slot_lock)
-# 2. 扫除僵死上下文 (sweep_dead_contexts)
-# 3. 槽位原子分配与元数据发布 (allocate_slot)，不碰网络；调用方在 allocate_slot 之后自己 net_up
-# 4. 退出资源回收与槽位归还 (release_slot)，回收死上下文和归还槽位时调用 net_down 拆网络
+# 槽位分配不碰网络：调用方在 allocate_slot 之后自己 net_up；回收死上下文与 release_slot 会 net_down。
+# 宿主 sb 在启动 launcher 之前，用 <contexts>/<ctx_id>/starting 标记把有 imports 的上下文登记为「启动中」（py/sb/cli.py）。
 #
 # allocate_slot 返回时持有槽位锁（fd 9），设置：
 #   CURRENT_SLOT           本上下文的槽位号
@@ -13,7 +10,7 @@
 # 调用方在启动结束后 release_slot_lock
 set -euo pipefail
 
-CONTEXTS_DIR="/run/sandbox/contexts"
+CONTEXTS_DIR="$SB_CONTEXTS_DIR"
 MAX_SLOTS=64
 STARTUP_GRACE_SECS=120
 SLOT_LOCK="$CONTEXTS_DIR/.slot.lock"

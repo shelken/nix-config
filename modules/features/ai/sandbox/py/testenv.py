@@ -74,8 +74,8 @@ elif cmd == "exec":
             print(st["busy"])
     elif rest[1:2] == ["/fake/guest-status"]:
         for t in st["missing"]:
-            print("missing\t" + t)
-    elif rest[1:2] == ["-c"] and "sync-guest.sh" in rest[2]:
+            print(t)
+    elif rest[1:2] == ["/fake/sync-guest"]:
         rc = st["sync_rc"]
     elif rest[1:2] == ["/fake/launcher"]:
         rc = st["run_rc"]
@@ -94,6 +94,9 @@ class SbEnv:
         self._git("-C", str(self.project), "commit", "-q", "--allow-empty", "-m", "i")
 
         self.mise = self.tmp / "mise"
+        (self.mise / "data").mkdir(parents=True)
+        self.publish = self.tmp / "publish"
+        (self.publish / "current").mkdir(parents=True)
         self.config_file = self.tmp / "sb-config.json"
         self.policy = self.tmp / "sb.yaml"
         self.state = self.tmp / "msb-state.json"
@@ -111,15 +114,7 @@ class SbEnv:
         msb.write_text(FAKE_MSB.format(python=sys.executable))
         msb.chmod(0o755)
 
-        self.config_file.write_text(
-            json.dumps(
-                {
-                    "msb_config": str(self.tmp / "msb-config.json"), "msb_home": str(self.tmp / "msbhome"), "policy_yaml": str(self.policy),
-                    "launcher": "/fake/launcher", "guest_status": "/fake/guest-status",
-                    "mise": {"host_dir": str(self.mise), "guest_mount": "/opt/sandbox-mise", "mount_mode": "rw"},
-                }
-            )
-        )  # fmt: skip
+        self.write_config()
         self.set_policy()
         # 不继承调用者的环境：MSB_HOME、SB_* 指向真实目录，sb trust 会把批准记录写进去
         inherited = {k: os.environ[k] for k in ("LANG", "LC_ALL", "TMPDIR") if k in os.environ}
@@ -129,9 +124,18 @@ class SbEnv:
             "PATH": f"{bindir}:{os.environ['PATH']}",
             "PYTHONPATH": str(HERE),
             "SB_CONFIG_FILE": str(self.config_file),
-            "SB_NO_HOST_CREDENTIALS": "1",
             "FAKE_MSB_STATE": str(self.state),
         }
+
+    def write_config(self, **overrides):
+        config = {
+            "msb_config": str(self.tmp / "msb-config.json"), "msb_home": str(self.tmp / "msbhome"), "policy_yaml": str(self.policy),
+            "publish_dir": str(self.publish), "launcher": "/fake/launcher", "guest_status": "/fake/guest-status", "guest_sync": "/fake/sync-guest",
+            "sync_lock": str(self.tmp / "sync.lock"), "host_credentials": False,
+            "guest": {"config_mount": "/run/sandbox-config", "contexts_dir": "/run/sandbox/contexts", "data_dir": "/data"},
+            "mise": {"host_dir": str(self.mise), "guest_mount": "/opt/sandbox-mise"},
+        }  # fmt: skip
+        self.config_file.write_text(json.dumps({**config, **overrides}))
 
     def close(self):
         subprocess.run(["rm", "-rf", str(self.tmp)])
@@ -142,7 +146,8 @@ class SbEnv:
 
     def set_policy(self, **overrides):
         policy = {
-            "cpus": 2, "mount_roots": ["~/Code"],
+            "image": "ubuntu", "cpus": 2, "memory": "8G", "volume": {"name": "sb-main-data", "size": "8G"},
+            "mount_roots": ["~/Code"],
             "network": {"policy": "public", "allow": ["public", "dns", "host:tcp:8317"], "default_grant": ["192.168.1.5:8080"]},
         }  # fmt: skip
         policy.update(overrides)

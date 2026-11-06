@@ -1,7 +1,4 @@
-"""主 VM 生命周期与授权流程测试：真实的 `python -m sb`，假的 msb（见 testenv.py）。
-
-运行（需要 yq、git）：nix shell nixpkgs#yq-go -c python3 test_lifecycle.py
-"""
+"""主 VM 生命周期与授权流程测试：真实的 `python -m sb`，假的 msb（见 testenv.py）。"""
 
 import json
 import unittest
@@ -24,9 +21,43 @@ class LifecycleTest(unittest.TestCase):
         self.assertEqual(st["volumes"], ["sb-main-data"])
         self.assertEqual(st["vm"]["conf"]["cpus"], 2)
         self.assertEqual(len(self.e.calls("create")), 1)
-        syncs = [c for c in self.e.calls("exec") if "sync-guest.sh" in " ".join(c)]
+        syncs = [c for c in self.e.calls("exec") if "/fake/sync-guest" in c]
         self.assertEqual(len(syncs), 1)
         self.assertIn("创建并启动成功", r.stderr)
+
+    def test_vm_is_created_with_the_real_mise_path_not_the_fingerprint_placeholder(self):
+        self.e.sb("up")
+        mounts = self.e.msb_state()["vm"]["conf"]["mounts"]
+        self.assertIn(f"{self.e.mise.resolve()}:/opt/sandbox-mise:rw", mounts)
+        self.assertIn(f"{self.e.publish.resolve()}:/run/sandbox-config:ro,stat-virt=relaxed", mounts)
+        self.assertIn({"named": "sb-main-data", "target": "/data"}, mounts)
+        self.assertFalse([m for m in mounts if "__SB_MISE_HOST__" in str(m)])
+
+    def test_up_without_a_published_config_or_mise_dir_explains_what_to_run(self):
+        (self.e.publish / "current").rmdir()
+        r = self.e.sb("up")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("沙箱配置尚未发布", r.stderr)
+        self.assertEqual(self.e.calls("create"), [])
+        (self.e.publish / "current").mkdir()
+        self.e.write_config(mise={"host_dir": str(self.e.tmp / "missing"), "guest_mount": "/opt/sandbox-mise"})
+        self.assertIn("共用 mise 目录不存在", self.e.sb("up").stderr)
+
+    def test_a_sb_yaml_field_of_the_wrong_type_is_an_error(self):
+        for key, bad in [("cpus", "4"), ("memory", 8), ("image", None), ("network", "public"), ("volume", {"name": "v"})]:
+            with self.subTest(key=key):
+                self.e.set_policy(**{key: bad})
+                r = self.e.sb("up")
+                self.assertEqual(r.returncode, 1, r.stderr)
+                self.assertIn(f"{key}", r.stderr)
+                self.assertEqual(self.e.calls("create"), [])
+
+    def test_a_secret_without_an_allow_target_is_rejected_before_msb_sees_it(self):
+        self.e.set_policy(secrets={"K": {"passthrough": ["*"]}})
+        r = self.e.sb("up")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("secrets.K 至少要有一个 allow 目标", r.stderr)
+        self.assertEqual(self.e.calls("create"), [])
 
     def test_up_again_reuses_vm_without_create_or_sync(self):
         self.e.sb("up")
@@ -34,7 +65,9 @@ class LifecycleTest(unittest.TestCase):
         r = self.e.sb("up")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("复用现有 VM", r.stderr)
-        self.assertEqual([c[0] for c in self.e.calls()[before:]], ["volume", "inspect"])
+        changing = {"create", "start", "stop", "rm", "exec"}
+        after = self.e.calls()[before:]
+        self.assertEqual([c for c in after if c[0] in changing or c[:2] == ["volume", "create"]], [])
 
     def test_up_starts_a_stopped_vm_with_unchanged_ceiling(self):
         self.e.sb("up")
@@ -78,17 +111,22 @@ class LifecycleTest(unittest.TestCase):
     def test_mise_host_path_does_not_change_the_ceiling_fingerprint(self):
         self.e.sb("up")
         moved = self.e.tmp / "elsewhere"
-        r = self.e.sb("up", SB_MISE_HOST_DIR=str(moved))
+        (moved / "data").mkdir(parents=True)
+        self.e.write_config(mise={"host_dir": str(moved), "guest_mount": "/opt/sandbox-mise"})
+        r = self.e.sb("up")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("复用现有 VM", r.stderr)
         self.assertEqual(len(self.e.calls("create")), 1)
 
     def test_secrets_and_mount_roots_are_part_of_the_ceiling(self):
         self.e.sb("up")
-        old = self.vm_fp()
-        self.e.set_policy(secrets={"K": {"value": "v"}})
-        self.e.sb("up")
-        self.assertNotEqual(self.vm_fp(), old)
+        for change in ({"secrets": {"K": {"allow": ["example.com"]}}}, {"mount_roots": ["~/Code", "~/Other"]}):
+            with self.subTest(change=change):
+                old = self.vm_fp()
+                self.e.set_policy(**change)
+                r = self.e.sb("up")
+                self.assertEqual(r.returncode, 0, r.stderr)
+                self.assertNotEqual(self.vm_fp(), old)
 
     def test_rm_refuses_while_busy_unless_forced(self):
         self.e.sb("up")
@@ -116,14 +154,25 @@ class LifecycleTest(unittest.TestCase):
         self.e.set_policy(cpus=5)
         self.assertIn("上限一致: inconsistent", self.e.sb("status").stdout)
 
-    def test_sync_starts_a_stopped_vm_and_passes_arguments_through(self):
+    def test_status_says_unknown_when_the_current_ceiling_cannot_be_computed(self):
+        self.e.sb("up")
+        (self.e.publish / "current").rmdir()
+        out = self.e.sb("status").stdout
+        self.assertIn("上限一致: unknown", out)
+        self.assertIn("沙箱配置尚未发布", out)
+
+    def test_sync_starts_a_stopped_vm(self):
         self.e.sb("up")
         self.e.sb("down")
-        r = self.e.sb("sync", "--force")
+        r = self.e.sb("sync")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.e.msb_state()["vm"]["status"], "Running")
-        sync_call = [c for c in self.e.calls("exec") if "sync-guest.sh" in " ".join(c)][-1]
-        self.assertEqual(sync_call[-1], "--force")
+        self.assertEqual(len([c for c in self.e.calls("exec") if "/fake/sync-guest" in c]), 2)
+
+    def test_sync_rejects_arguments(self):
+        r = self.e.sb("sync", "--force")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("sb sync 不接受参数", r.stderr)
 
     def test_sync_failure_exit_code_is_returned(self):
         self.e.sb("up")
@@ -213,8 +262,9 @@ class RunTest(unittest.TestCase):
         self.e.msb_state(copy_rc=1)
         r = self.e.sb("run", "true")
         self.assertNotEqual(r.returncode, 0)
-        execs = [c for c in self.e.calls("exec")]
-        self.assertTrue(any(c[-2:-1] == ["-rf"] or "rm" in c for c in execs), execs)
+        execs = self.e.calls("exec")
+        stage_dir = self.e.calls("copy")[0][2].split(":")[1].split("/imports/")[0]
+        self.assertIn(["exec", "sb-main", "--", "rm", "-rf", stage_dir], execs)
         self.assertFalse(any("/fake/launcher" in c and "--check-busy" not in c for c in execs))
 
     def test_every_msb_call_gets_the_resolved_state_location_even_without_it_in_the_caller_env(self):

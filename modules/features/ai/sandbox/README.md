@@ -30,12 +30,12 @@ flowchart LR
 
 | 组件 | 文件 | 职责 |
 | --- | --- | --- |
-| 装配 | [default.nix](./default.nix)、[_manifest.nix](./_manifest.nix) | `default.nix` 装配三个深模块并暴露 HM 选项；`_manifest.nix` 是路径、工具与断言的单一事实来源 |
-| 共用 mise 层 | [_mise-layer.nix](./_mise-layer.nix) | 宿主目录、guest 挂载点、挂载模式、上下文环境的唯一定义，shell 里没有内置默认值 |
+| 装配 | [default.nix](./default.nix)、[_manifest.nix](./_manifest.nix) | `default.nix` 装配三个深模块并暴露 HM 选项；`_manifest.nix` 是宿主路径、guest 固定路径、声明文件落点与断言的单一事实来源 |
+| 共用 mise 层 | [_mise-layer.nix](./_mise-layer.nix) | 宿主目录、guest 挂载点、上下文环境的唯一定义，shell 里没有内置默认值 |
 | 配置物化 | [_config.nix](./_config.nix) | 收集声明文件，原子发布到 `~/.config/sandbox/current` 并修剪过期版本 |
-| Guest 运行时 | [_guest.nix](./_guest.nix)、[launcher.sh](./launcher.sh)、[guest/](./guest/)、[sync-guest.sh](./sync-guest.sh)、[guest-status.sh](./guest-status.sh) | Linux 工具闭包、环境脚本与 bubblewrap 隔离执行器；`guest/` 含 plan、netns、registry、layout |
-| 宿主 CLI | [_host.nix](./_host.nix)、[py/sb/](./py/sb/) | `_host.nix` 生成 msb 配置与 `sb-config.json`（Nix 到 sb 的唯一配置通道）并打包 `sb`、`omp-sb`；`py/sb` 是 CLI 本体，`msb.py` 是 msb 命令行的唯一 seam |
-| 能力上限 | [sb.yaml](./sb.yaml) | 原生 YAML 策略基线，部署到 `~/.config/sandbox/sb.yaml` |
+| Guest 运行时 | [_guest.nix](./_guest.nix)、[launcher.sh](./launcher.sh)、[guest/](./guest/)、[sync-guest.sh](./sync-guest.sh)、[guest-status.sh](./guest-status.sh) | Linux 工具闭包、`guest-env.sh`（guest 里固定路径与环境的唯一出处）与 bubblewrap 隔离执行器；`guest/` 含 plan、netns、registry、layout |
+| 宿主 CLI | [_host.nix](./_host.nix)、[py/sb/](./py/sb/) | `_host.nix` 生成 msb 配置与 `sb-config.json`（Nix 到 sb 的唯一配置通道）并打包 `sb`、`omp-sb`；`py/sb` 是 CLI 本体：`ceiling.py` 把 `sb.yaml` 解析成带类型的能力上限，`msb.py` 是 msb 命令行的唯一 seam |
+| 能力上限 | [sb.yaml](./sb.yaml) | 原生 YAML 策略基线，经 `sb-config.json` 的 `policy_yaml` 指向 Nix store 里的这份 |
 
 ## 术语与不变量
 
@@ -46,7 +46,7 @@ flowchart LR
 - **批准 (Approval)**: 用户用 `sb trust` 对项目 `.sandbox.yaml` 的规范化内容哈希做的记录。未批准或内容变了，启动直接报错
 - **项目配置 (Project Config)**: 项目仓库根 `.sandbox.yaml`，请求导入文件、私网目标和额外路径；批准后才生效
 - **执行计划 (Plan)**: `sb` 解析、校验能力上限与项目配置后交给 launcher 的数据，host → guest 的唯一契约。类型在 [py/sb/plan.py](./py/sb/plan.py)，guest 里只有 [guest/plan.sh](./guest/plan.sh) 解析它，改字段要同步两处，[py/test_contract.py](./py/test_contract.py) 校验两边一致。_避免_: plan_json（那只是它的序列化）
-- **发布目录 (Published Config)**: `~/.config/sandbox/current` 指向的版本化目录，只读挂进 VM 的 `/run/sandbox-config`，含声明配置副本、`mise.toml`、`guest-env.sh`、`sync-guest.sh`、`declared-paths`、`writable-roots`。旧版本保留 7 天
+- **发布目录 (Published Config)**: `~/.config/sandbox/current` 指向的版本化目录，只读挂进 VM 的 `/run/sandbox-config`，含声明配置副本、`mise.toml`、`guest-env.sh`、`declared-paths`、`writable-roots`。旧版本保留 7 天
 - **沙箱基础环境 (Sandbox Base)**: 沙箱启动与隔离所需的 Linux 工具，由 sandbox 模块管理，不属于共享工具。不含 C 工具链，见「设计决策」
 - **补齐 (Sync)**: 显式安装已登记但缺失的 mise 工具和插件。_避免_: 升级、更新
 - **共用安装层 (Shared Install Layer)**: 宿主上由所有沙箱 VM 共用的一份 mise 安装产物与下载缓存。_避免_: 共享缓存、镜像卷
@@ -91,7 +91,7 @@ flowchart LR
 | `network` | 只接受 `IP` 或 `IP:端口` | 上下文专有 iptables 链里先于私网拒绝规则放行 |
 | `paths` | 必须在 `mount_roots` 内 | 同路径绑定，`:ro` 或 `readonly: true` 为只读 |
 
-此外两项自动授权：项目根（git 仓库根，不在仓库内时取当前目录）可写绑定；worktree 的 git common dir 不在项目内时自动加绑，它不在挂载根内则拒绝启动
+字段类型写错（如 `network` 写成字符串而不是列表）直接报错，不会被当作没写。此外两项自动授权：项目根（git 仓库根，不在仓库内时取当前目录）可写绑定；worktree 的 git common dir 不在项目内时自动加绑，它不在挂载根内则拒绝启动
 
 **批准**：项目有 `.sandbox.yaml` 时，`sb run`、`sb shell`、`omp-sb` 要求它已批准，否则报错并提示 `sb trust`，不弹提示。`sb trust` 对规范化内容（键排序、去注释）算 SHA-256，记入 `$MSB_HOME/approvals/<哈希>`；只看内容、不看路径，同一份文件在所有 worktree 里只批准一次，文件一变（含被 Agent 修改）要重新批准。记录在宿主上，沙箱里的 `sb` 被宿主命令桩拒绝，Agent 批准不了自己
 
@@ -112,7 +112,7 @@ sequenceDiagram
   G->>G: 退出：删网络资源与上下文目录
 ```
 
-- **视图**：bubblewrap 映射到 UID 1000。只读：`/usr`、`/etc`、`/nix/store`、`/.msb/tls`（msb CA，缺失时 OMP 的模型发现全部失败）、共用 mise 层与配置目录；可写：`/data`、项目根、额外路径、imports 的目标目录（在上下文里只剩导入的文件）。`/run` 是 tmpfs，看不到其他上下文的 imports
+- **视图**：bubblewrap 映射到 UID 1000。只读：`/usr`、`/etc`、`/nix/store`、`/.msb/tls`（msb CA，缺失时 OMP 的模型发现全部失败）、发布目录；可写：`/data`、共用 mise 层（见「共用 mise 安装层」）、项目根、额外路径、imports 的目标目录（在上下文里只剩导入的文件）。`/run` 是 tmpfs，看不到其他上下文的 imports
 - **网络**：每个槽位一个 `/30` 子网（`10.200.x.y`），独立 netns 与 veth，NAT 出口；地址池 64 个，即最多 64 个并发上下文
 - **并发**：清扫、选槽、发布 `meta.json` 在 guest 内一把 flock 下串行，网络资源按槽位命名，不会互相覆盖
 - **复制窗口**：宿主复制 imports 期间目录还没有 `meta.json`，靠 `starting` 标记保护（120 秒内清扫跳过它，忙碌计数算上它）；复制失败或中断时宿主删除该目录
@@ -167,6 +167,9 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 | `package` | nixpkgs 属性名，默认取登记名；与 `mise` 互斥 |
 | `mise` | mise 规格，版本字符串或属性集 |
 | `files` | 随工具进沙箱的声明配置，宿主照常作为 `home.file`。这是 Nix 配置进沙箱的唯一入口，宿主与沙箱都从它派生 |
+| `sandboxFiles` | 同一文件在沙箱里的替代内容，按目标路径覆盖 `files` 的同名条目 |
+| `sandboxEnv` | 沙箱内额外导出的环境变量，写进 `guest-env.sh`；值可引用 `SB_CONFIG_DIR` 等 guest 变量 |
+| `sandboxDirs` | 沙箱内必须预先存在的目录（例如 OMP 只在 `$XDG_DATA_HOME/omp` 存在时才把插件放进 XDG 目录） |
 | `postInstall` | 宿主激活时与 `sb sync` 时各运行一次 |
 
 条目在 [dev/tools-base.nix](../../dev/tools-base.nix)（rg、fd、jq、gh、node、python3、uv 走 Nix；prek 走 mise）与 [ai/tools.nix](../tools.nix)（omp、pi、codex、claude-code、bun，走 mise）。宿主独有的工具不登记
@@ -177,13 +180,13 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 
 ### 共用 mise 安装层
 
-mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-linux`（`SB_MISE_HOST_DIR`，首次使用自动创建），挂到所有 VM 的 `/opt/sandbox-mise`，新 VM 不必重新下载。目录、挂载点、挂载模式与上下文环境只在 [_mise-layer.nix](./_mise-layer.nix) 定义。mise 的 state、shims 与用户层配置留在各 VM 数据卷
+mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-linux`（`just hm` 创建），挂到所有 VM 的 `/opt/sandbox-mise`，新 VM 不必重新下载。目录、挂载点与上下文环境只在 [_mise-layer.nix](./_mise-layer.nix) 定义。mise 的 state、shims 与用户层配置留在各 VM 数据卷
 
 上下文对共用层可写：在上下文里 `mise trust`、`mise install` 即可装项目工具，产物落在宿主目录，重建 VM 后和其他 VM 都复用。launcher 设 `MISE_PREFER_OFFLINE=1` 而不是 `MISE_OFFLINE=1`：后者连安装下载也拒绝，前者让已装的 `latest` 工具直接用本地版本，不必每次联网等版本列表
 
 ### `sb sync`
 
-在 VM 内（不在上下文内）运行 [sync-guest.sh](./sync-guest.sh)：
+在 VM 内（不在上下文内）运行 [sync-guest.sh](./sync-guest.sh)（Nix store 里的版本，路径经 `sb-config.json` 的 `guest_sync` 给出）：
 
 - 共用目录下的 `.sync.lock` 做跨 VM 写锁，不区分 VM 忙闲
 - `mise install` 只补缺，不升级、不删除
@@ -219,7 +222,7 @@ guest 里的 launcher、netns、registry、layout 本质是调 `ip`、`iptables`
 只用标准库。YAML 经 `yq` 转 JSON 而不用 PyYAML：批准哈希用 `yq`，换解析器会让 YAML 1.1 与 1.2 的差异（`yes`/`no`、八进制）悄悄改变授权内容或让历史批准失效。能力上限指纹逐字节沿用 `jq -S -c` 的规范化，已有主 VM 不会被判定「上限已变」
 
 - 代价：宿主多依赖 `python3` 与 `yq`；`msb` 与 `sec-run` 仍取用户 `PATH`
-- 日常配置只有 Nix 生成的 `sb-config.json`；`SB_CONFIG`、`SB_SANDBOX_CONFIG`、`SB_MISE_HOST_DIR`、`SB_MISE_LOCK_DIR`、`SB_NO_HOST_CREDENTIALS`、`MSB_HOME`、`MSB_CONFIG_PATH` 只服务验证
+- `sb` 只读 Nix 生成的 `sb-config.json`；验证脚本用 `SB_TEST_CONFIG` 换成一份改写过的，不靠逐项环境变量覆盖。`MSB_HOME`、`MSB_CONFIG_PATH` 是 msb 自己的变量，优先于文件里的值
 - `sb` 每次调用 `msb` 都显式传入解析后的 `MSB_HOME` 与 `MSB_CONFIG_PATH`，不依赖用户 shell 是否导出，锁、批准记录与 msb 状态目录因此始终是同一处
 
 ### 一台主 VM 承载所有执行上下文
@@ -345,7 +348,7 @@ pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么当
 
 - 宿主只有一个共用目录，取真实物理路径；所有 VM 把它挂到 `/opt/sandbox-mise`。指纹只含 guest 侧声明 `/opt/sandbox-mise:rw`，宿主路径变化不触发重建
 - 共用的只有安装产物与下载缓存；`state`、`shims`、可写用户层配置归各 VM 数据盘
-- guest 环境变量只有一个来源 `/run/sandbox-config/current/guest-env.sh`，`sb sync`、执行上下文、`guest-status.sh` 统一 source
+- guest 的固定路径（发布目录、上下文注册目录、数据盘、XDG）与环境变量只有一个来源 `guest-env.sh`，`sb sync`、执行上下文、`guest-status.sh` 统一 source；`sb` 需要的两处路径经 `sb-config.json` 的 `guest` 段由同一份 Nix 定义给出。工具自己的环境变量与预建目录由登记表条目的 `sandboxEnv`、`sandboxDirs` 声明
 - `sb sync` 不清理下载缓存；主 VM 首次创建后自动 sync 一次，复用已有 VM 时不自动 sync
 - 上下文可写共用层，项目工具在上下文内 `mise install`，不经 `sb sync`。原先上下文只读，是为了让 sync 成为唯一写入方；但威胁模型只防误操作，Agent 本来就能下载并运行任意程序，只读挡不住什么，反而让项目 `mise.toml` 里的工具（kustomize、helm、flux 等）无法使用。上下文的安装不拿 `.sync.lock`，并发安装同一版本由 mise 自己串行
 - Home Manager 激活会重置 PATH：`postInstall` 先加登记表中的 Nix 工具，再加 mise shims，Nix 运行时不会被旧 mise shim 遮蔽
@@ -373,5 +376,5 @@ bash modules/features/ai/sandbox/e2e/smoke.sh
 宿主 CLI 由三份单元测试覆盖，不需要 VM：[py/test_plan.py](./py/test_plan.py)（真实 git 仓库与 YAML 驱动 `sb plan --json`）、[py/test_lifecycle.py](./py/test_lifecycle.py)（假 `msb` 驱动生命周期、批准与 imports 暂存，见 [py/testenv.py](./py/testenv.py)）、[py/test_contract.py](./py/test_contract.py)（真实 Plan 交给 `guest/plan.sh` 解析，校验两端一致）。测试环境不继承调用者的 `MSB_HOME`。PR 上由 [sandbox-host-tests](../../../../.github/workflows/sandbox-host-tests.yml) 运行
 
 ```bash
-cd modules/features/ai/sandbox/py && nix shell nixpkgs#python3 nixpkgs#bash nixpkgs#jq nixpkgs#yq-go nixpkgs#git -c python3 -m unittest test_plan test_lifecycle test_contract
+cd modules/features/ai/sandbox/py && nix shell nixpkgs#python3 nixpkgs#bash nixpkgs#jq nixpkgs#yq-go nixpkgs#git -c python3 -m unittest discover
 ```

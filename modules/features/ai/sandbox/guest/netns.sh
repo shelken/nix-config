@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# guest/netns.sh: 上下文网络隔离与防火墙规则管理
-# 职责：
-# 1. 唯一网络参数推导 (calc_slot_network)
-# 2. 网络命名空间、veth 虚拟网卡与 iptables 安全放行规则配置 (net_up)，放行目标读 PLAN_DEFAULT_ALLOW、PLAN_NETWORK
-# 3. 统一的网络资源拆卸与清理 (net_down)
 set -euo pipefail
 
 calc_slot_network() {
@@ -42,10 +37,8 @@ net_up() {
   iptables -C FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT 2>/dev/null || \
     iptables -I FORWARD 1 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
-  # 清理旧残留
   net_down "$slot"
 
-  # 建立 veth 与 netns
   ip netns add "$SLOT_NETNS"
   ip link add "$SLOT_VETH_HOST" type veth peer name "$SLOT_VETH_IN"
   ip link set "$SLOT_VETH_IN" netns "$SLOT_NETNS"
@@ -57,11 +50,9 @@ net_up() {
   ip -n "$SLOT_NETNS" link set lo up
   ip -n "$SLOT_NETNS" route add default via "$SLOT_IP_HOST"
 
-  # 配置链放行规则
   iptables -N "$SLOT_CHAIN"
   iptables -A FORWARD -s "$SLOT_IP_GUEST" -j "$SLOT_CHAIN"
 
-  # DNS 放行
   while IFS= read -r dns; do
     if [[ "$dns" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
       iptables -A "$SLOT_CHAIN" -d "$dns" -p udp --dport 53 -j ACCEPT
@@ -69,7 +60,6 @@ net_up() {
     fi
   done < <(grep '^nameserver' /etc/resolv.conf 2>/dev/null | awk '{print $2}')
 
-  # 宿主服务放行
   local host_ip
   host_ip="$(grep 'host.microsandbox.internal' /etc/hosts 2>/dev/null | awk '{print $1}' | grep '^[0-9]' | head -n 1 || true)"
   [[ -z "$host_ip" ]] && host_ip="$(ip route show default 2>/dev/null | awk '{print $3}' | head -n 1 || true)"
@@ -81,7 +71,6 @@ net_up() {
     fi
   done
 
-  # 项目获准私网放行
   for target in "${PLAN_NETWORK[@]}"; do
     if [[ "$target" =~ ^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+):([0-9]+)$ ]]; then
       iptables -A "$SLOT_CHAIN" -d "${BASH_REMATCH[1]}" -p tcp --dport "${BASH_REMATCH[2]}" -j ACCEPT
@@ -90,13 +79,11 @@ net_up() {
     fi
   done
 
-  # 私网网段全拦截 (家庭网段 192.168.0.0/16 默认在此拦截)
   iptables -A "$SLOT_CHAIN" -d 10.0.0.0/8 -j REJECT
   iptables -A "$SLOT_CHAIN" -d 172.16.0.0/12 -j REJECT
   iptables -A "$SLOT_CHAIN" -d 192.168.0.0/16 -j REJECT
   iptables -A "$SLOT_CHAIN" -d 100.64.0.0/10 -j REJECT
   iptables -A "$SLOT_CHAIN" -d 169.254.0.0/16 -j REJECT
 
-  # 放行其余所有公网目标
   iptables -A "$SLOT_CHAIN" -j ACCEPT
 }

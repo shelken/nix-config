@@ -1,7 +1,3 @@
-# Agent 沙箱 Home Manager 特性装配入口 (Seam)
-# 职责：
-# 汇集 SandboxManifest 规范，装配 SandboxConfig、SandboxGuest、SandboxHost 三个深模块，
-# 声明 options 并挂载 activation 动作。
 {
   flake.modules.homeManager.ai =
     {
@@ -13,10 +9,8 @@
       ...
     }:
     let
-      # 1. 唯一事实来源与静态断言 (SandboxManifest)
       manifest = import ./_manifest.nix { inherit config lib; };
 
-      # 2. Linux 执行隔离深模块 (SandboxGuest)：负责交叉编译、bwrap 容器隔离、sync 与 status 打包
       guest = import ./_guest.nix {
         inherit
           pkgs
@@ -26,7 +20,6 @@
           ;
       };
 
-      # 3. 配置物化深模块 (SandboxConfig)：声明文件收集与原子发布，自取 guest 的 guest-env 与 sync 脚本
       sandboxConfig = import ./_config.nix {
         inherit
           pkgs
@@ -36,7 +29,6 @@
           ;
       };
 
-      # 4. 宿主驱动与 CLI 深模块 (SandboxHost)：负责接收原生 sb.yaml、VM 调度与 sb / omp-sb 打包
       host = import ./_host.nix {
         inherit
           pkgs
@@ -44,7 +36,7 @@
           manifest
           guest
           ;
-        policyFile = ./sb.yaml; # 原生 YAML 传入
+        policyFile = ./sb.yaml;
       };
     in
     {
@@ -61,15 +53,12 @@
         programs.mise.globalConfig.tools.microsandbox = "0.7.7";
 
         home.sessionVariables = host.sessionVariables;
-        home.file.".config/sandbox/sb.yaml".source = ./sb.yaml;
 
-        # 共用 mise 目录就绪性标记：data 与 cache 子目录随激活创建（不破坏已有内容）
         home.activation.sandboxSharedMiseDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          mkdir -p "${manifest.miseLayer.hostDir}/data" "${manifest.miseLayer.hostDir}/cache"
+          mkdir -p "${manifest.miseLayer.hostDir}/${manifest.miseLayer.dataSub}" "${manifest.miseLayer.hostDir}/${manifest.miseLayer.cacheSub}"
         '';
 
-        # 配置发布：在宿主把 live-edit 软链解引用成自包含副本，guest 才能读到
-        # 发布目录路径固定，内容变化不改变上限指纹
+        # guest 读不到宿主上 live-edit 的软链，所以发布成自包含副本；发布目录路径固定，内容变化不改变上限指纹
         home.activation.sandboxPublishConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
           run ${sandboxConfig.publishScript}
         '';

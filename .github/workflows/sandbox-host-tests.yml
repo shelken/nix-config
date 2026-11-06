@@ -5,6 +5,7 @@ on:
     paths:
       - modules/features/ai/sandbox/py/**
       - modules/features/ai/sandbox/guest/plan.sh
+      - modules/features/ai/sandbox/guest-status.sh
       - .github/workflows/sandbox-host-tests.yml
 
 permissions:
@@ -25,9 +26,8 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
 
-      # 宿主 sb 的单元测试（假 msb，不需要 VM）与 host → guest 的执行计划契约测试
       - name: Run unit tests
         working-directory: modules/features/ai/sandbox/py
         run: >
           nix shell nixpkgs#python3 nixpkgs#bash nixpkgs#jq nixpkgs#yq-go nixpkgs#git --command
-          python3 -m unittest test_plan test_lifecycle test_contract
+          python3 -m unittest discover

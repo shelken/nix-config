@@ -1,10 +1,10 @@
 # 工具补齐
 
-`sb sync` 把登记的 mise 工具和 OMP 插件补齐到沙箱，多个 sync 同时执行时排队（上限 600 秒，超时非零退出）。mise 工具只补缺；OMP 插件每次按清单重建，恢复缺失插件，删除清单外插件和旧登记表，保留下载缓存。项目自己的 mise 工具由上下文内的 `mise install` 安装，同样写入共用层。
+`sb sync` 把登记的 mise 工具和 OMP 插件补齐到沙箱，多个 sync 同时执行时排队（上限 600 秒，超时非零退出）。mise 工具只补缺；OMP 插件按清单对齐：已一致时跳过，缺失时恢复，清单外的插件和旧登记表被删除，保留下载缓存。项目自己的 mise 工具由上下文内的 `mise install` 安装，同样写入共用层。
 
 ## Sub-features
 
-- `sync-noop` 工具已齐时 mise 不再下载，OMP 插件仍使用保留的锁文件和缓存重建
+- `sync-noop` 工具已齐时 mise 不再下载，OMP 插件与清单一致时跳过安装
 - `sync-serial` 两个 sync 同时启动时串行完成，都成功
 - `sync-tty` 在真实终端里 `sb sync` 能执行（msb 的 `--stream` 在 stdin 是终端时报错，文案为 `--stream requires piped stdin or --no-stdin`）；stdin 是终端、stdout 被管道时 `sb run` 也能执行
 - `sync-private` 私有插件经 bun 安装，GitHub 凭据来自 `GITHUB_TOKEN` 占位符
@@ -23,9 +23,9 @@
 Preconditions:
 
 - 首次启动已完成
-- 共用层目录 `M=${SB_MISE_HOST_DIR:-$HOME/Data/sandboxes/mise/aarch64-linux}`（默认值来自 `_mise-layer.nix`，由 `sb` 包装脚本注入），harness 不隔离它，下面的 `sb sync` 写的是真实共用层
+- 共用层目录 `M=$(jq -r .mise.host_dir "$WORK/sb-config.json")`（来自 `_mise-layer.nix`），harness 不隔离它，下面的 `sb sync` 写的是真实共用层
 
-- **重复 sync。** 运行 `$V run sync1 -- $V sb sync & $V run sync2 -- $V sb sync & wait`。`sync1.rc` 与 `sync2.rc` 都是 `0`，两份 `.out` 或 `.err` 含「工具与插件补齐成功」。mise 不重复下载已安装工具，Bun 缓存目录保留；插件重建会更新文件，不以两次 `du` 相等作为判据
+- **重复 sync。** 运行 `$V run sync1 -- $V sb sync & $V run sync2 -- $V sb sync & wait`。`sync1.rc` 与 `sync2.rc` 都是 `0`，两份 `.out` 或 `.err` 含「工具与插件补齐成功」。mise 不重复下载已安装工具，Bun 缓存目录保留
 - **恢复插件。** 运行 `$V msb exec sb-main -- bash -c 'p=/data/xdg/data/omp/plugins; rm -rf "$p/node_modules/pi-trae-provider"; mkdir -p "$p/node_modules/hand-installed"; printf "{}\n" > "$p/omp-plugins.lock.json"'`，再运行 `$V run sync-repair -- $V sb sync`。`sync-repair.rc` 为 `0`。运行 `$V msb exec sb-main -- bash -c 'p=/data/xdg/data/omp/plugins; test -d "$p/node_modules/pi-trae-provider" && test ! -e "$p/node_modules/hand-installed" && test ! -e "$p/omp-plugins.lock.json"'`，退出码为 `0`。本项在测试 VM 的数据卷中执行，不修改共用下载缓存
 - **终端里 sync。** `$V run` 的 stdin 不是终端，测不到这一项，要用 `script` 分配 pty：`script -q /dev/null $V sb sync`，退出码为 `0`，输出含「工具与插件补齐成功」，不含「`--stream` requires piped stdin」。再运行 `script -q /dev/null bash -c "$V sb run echo hi | cat"`，输出含 `hi`，不含同一报错
 - **工具可用。** 运行 `$V run tools -- $V sb run bash -c 'for c in rg fd jq gh node python3 uv omp pi codex claude bun mise git; do echo "$c: $($c --version 2>&1 | head -1)"; done'`。`tools.out` 恰好 14 行，每行 `<名字>: ` 之后是版本号，没有 `not found`。这份名单是 mise 登记表加基础工具的子集，增删登记项时同步检查

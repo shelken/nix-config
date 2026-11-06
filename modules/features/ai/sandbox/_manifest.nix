@@ -1,9 +1,3 @@
-# 沙箱声明规范与单一事实来源 (SandboxManifest)
-# 职责：
-# 1. 集中从 Home Manager config 提取沙箱所有工具、环境变量与路径规范
-# 2. 集中执行 3 重静态断言检查（路径合规、不嵌套、目标覆盖）
-# 3. 只做规范化与断言，不生成 derivation：配置清单与发布文件在 _config，git 配置在 _guest
-# 4. 对外输出单一 manifest 对象，杜绝散装传参导致的功能丢失
 {
   config,
   lib,
@@ -13,10 +7,8 @@ let
   devMiseTools = config.shelken.dev.miseTools;
   devWritableRoots = config.shelken.dev.sandbox.writableRoots;
 
-  # 含 default.nix 声明的 sb、just 与其他功能登记的拦截桩，由模块系统合并
   devHostCommands = config.shelken.dev.sandbox.hostCommands;
 
-  # 规范化路径集合
   statePaths = {
     msbHome = "${config.home.homeDirectory}/Data/sandboxes/msb";
     cacheDir = "${config.home.homeDirectory}/.cache/microsandbox";
@@ -25,11 +17,30 @@ let
 
   miseLayer = import ./_mise-layer.nix { homeDir = config.home.homeDirectory; };
 
-  # 静态断言检查
-  under = root: p: p == root || lib.hasPrefix "${root}/" p;
-  targets = lib.concatMap (
-    tool: builtins.attrNames tool.files ++ builtins.attrNames tool.sandboxFiles
+  # VM 内的固定路径：guest-env.sh、launcher、sb-config.json 都从这里取
+  guestPaths = rec {
+    configMount = "/run/sandbox-config";
+    configDir = "${configMount}/current";
+    contextsDir = "/run/sandbox/contexts";
+    dataDir = "/data";
+  };
+
+  # 每个声明文件在沙箱里的 (落点, 来源)：同名条目以 sandboxFiles 的内容覆盖 files 的
+  sandboxOverrides = lib.foldl' (acc: tool: acc // tool.sandboxFiles) { } (
+    builtins.attrValues devTools
+  );
+  declaredEntries = lib.concatMap (
+    tool:
+    lib.mapAttrsToList (target: file: {
+      inherit target;
+      path =
+        sandboxOverrides.${target}
+          or (if builtins.isAttrs file && file ? source then file.source else file);
+    }) (tool.files // tool.sandboxFiles)
   ) (builtins.attrValues devTools);
+
+  under = root: p: p == root || lib.hasPrefix "${root}/" p;
+  targets = map (e: e.target) declaredEntries;
 
   assertions = [
     {
@@ -66,9 +77,10 @@ in
     assertions
     statePaths
     miseLayer
+    guestPaths
+    declaredEntries
     ;
 
-  # 规范化后的 git 身份；生成 git 配置文件是 guest 的事
   gitUser = config.programs.git.settings.user;
 
   tools = devTools;
