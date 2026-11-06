@@ -318,6 +318,33 @@ function herdrPrompt(pane: string, prompt: string): boolean {
   return false;
 }
 
+// split 后立刻 agent start，新 pane 的 shell 还在跑 .zshrc 启动子进程，start 返回结构化
+// agent_pane_busy（herdr#2773/#3208），--timeout 不覆盖这个前置检查。pane get/list 没有就绪
+// 字段（agent_status 恒为 unknown），唯一权威信号是 start 自身的 agent_pane_busy；
+// 再用 pane process-info 的 shell_pid 确认 pane 里仍是活着的 shell，在固定期限内重试。
+const HERDR_START_READY_MS = 10_000;
+
+function paneShellAlive(pane: string): boolean | undefined {
+  try {
+    const shellPid = herdr(["pane", "process-info", "--pane", pane]).result.process_info?.shell_pid;
+    return typeof shellPid === "number" && shellPid > 0;
+  } catch { return undefined; } // 查不到状态时不作终止依据，交给期限兜底
+}
+
+function herdrAgentStart(agentName: string, newPane: string, args: string[]): any {
+  const deadline = Date.now() + HERDR_START_READY_MS;
+  for (;;) {
+    try {
+      return herdr(["agent", "start", agentName, "--kind", "pi", "--pane", newPane, "--", ...args]);
+    } catch (e: any) {
+      let code: string | undefined;
+      try { code = JSON.parse(String(e.stderr || e.stdout || ""))?.error?.code; } catch { /* 非结构化错误 */ }
+      if (code !== "agent_pane_busy" || Date.now() >= deadline || paneShellAlive(newPane) === false) throw e;
+      execSync("sleep 0.25");
+    }
+  }
+}
+
 const herdrTerm: Term = {
   start({ agentName, g, prompt, promptFile }) {
     const newPane = layoutPane(process.env.HERDR_PANE_ID!);
@@ -327,7 +354,7 @@ const herdrTerm: Term = {
     let sessionFile: string | null = null;
     try {
       execFileSync("herdr", ["pane", "run", newPane, `export PI_CODING_AGENT_DIR=${subHome}`]);
-      const startOut = herdr(["agent", "start", agentName, "--kind", "pi", "--pane", newPane, "--", "--model", g.model, "--thinking", g.thinking, "--tools", g.tools, ...(promptFile ? ["--append-system-prompt", promptFile] : [])]);
+      const startOut = herdrAgentStart(agentName, newPane, ["--model", g.model, "--thinking", g.thinking, "--tools", g.tools, ...(promptFile ? ["--append-system-prompt", promptFile] : [])]);
       const sf = startOut?.result?.agent?.agent_session?.value;
       const m = typeof sf === "string" ? sf.match(/(sessions\/--[^/]+\/[^/]+\.jsonl)/) : null;
       if (m) sessionFile = join(subHome, m[1]);
