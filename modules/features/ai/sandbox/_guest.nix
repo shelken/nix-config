@@ -1,4 +1,3 @@
-# Guest 运行时：Linux 工具闭包、guest-env.sh，以及 sb-launcher、sync-guest、guest-status 三个 guest 脚本的打包。
 {
   pkgs,
   lib,
@@ -111,7 +110,9 @@ let
     export XDG_STATE_HOME="$SB_DATA_DIR/xdg/state"
     export XDG_CACHE_HOME="$SB_DATA_DIR/xdg/cache"
     export XDG_CONFIG_HOME="$SB_DATA_DIR/xdg/config"
-    export MISE_DATA_DIR="$SB_MISE_LAYER/data"
+    export SB_MISE_DATA_DIR="$SB_MISE_LAYER/${miseLayer.dataSub}"
+    export SB_MISE_CACHE_DIR="$SB_MISE_LAYER/${miseLayer.cacheSub}"
+    export MISE_DATA_DIR="$SB_MISE_DATA_DIR"
     export MISE_CACHE_DIR="$XDG_CACHE_HOME/mise"
     export MISE_STATE_DIR="$XDG_STATE_HOME/mise"
     export MISE_SHIMS_DIR="$XDG_DATA_HOME/mise/shims"
@@ -163,7 +164,6 @@ let
     }
   }/bin/guest-status";
 
-  # guest/ 下四个模块内嵌进同一个脚本，launcher.sh 直接调用它们的函数
   launcher = "${
     linuxPkgs.writeShellApplication {
       name = "sb-launcher";

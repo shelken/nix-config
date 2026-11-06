@@ -80,7 +80,7 @@ cmd_doctor() {
   check "sec-run 可用（真实凭据注入）" "command -v sec-run"
   check "共用 mise 目录存在" "test -d '$HOME/Data/sandboxes/mise/aarch64-linux'"
   check "已 setup：sb 可执行且受 GC root 保护" "test -x '$WORK/gen/home-path/bin/sb'"
-  check "隔离配置已发布（含 sync-guest.sh）" "test -f '$WORK/sbcfg/current/sync-guest.sh'"
+  check "隔离配置已发布" "test -f '$WORK/sbcfg/current/guest-env.sh'"
   check "测试项目在挂载根内" "test -d '$PROJ/.git'"
   check "msb 配置的 home 指向隔离目录" "jq -e --arg h '$WORK/msb' '.home == \$h' '$WORK/msb.json'"
   check "Linux 构建器可用" "nix build --no-link --impure --expr '(builtins.getFlake \"nixpkgs\").legacyPackages.aarch64-linux.runCommand \"probe-\${toString builtins.currentTime}\" {} \"uname -m > \$out\"'"
@@ -103,7 +103,7 @@ cmd_run() {
 }
 
 cmd_smoke() {
-  cmd_run smoke -- env SB_BIN="$(sb_bin)" SB_PUBLISH_DIR="$WORK/sbcfg" bash "$REPO/modules/features/ai/sandbox/e2e/smoke.sh"
+  cmd_run smoke -- env SB_BIN="$(sb_bin)" SB_PUBLISH_DIR="$WORK/sbcfg" SB_CONFIG_FILE="$WORK/sb-config.json" bash "$REPO/modules/features/ai/sandbox/e2e/smoke.sh"
   tail -n 3 "$EVIDENCE/smoke.out"
 }
 

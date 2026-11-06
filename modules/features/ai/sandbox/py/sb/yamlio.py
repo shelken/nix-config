@@ -21,7 +21,6 @@ def _yq(path: str, *expr: str) -> bytes:
 
 
 def load_mapping(path: str) -> dict[str, Any]:
-    """空文件当作空映射；顶层不是映射就报错。"""
     return mapping(json.loads(_yq(path, ".")), path)
 
 
@@ -35,6 +34,16 @@ def mapping(value: Any, where: str) -> dict[str, Any]:
         return {}
     if not isinstance(value, dict):
         raise SbError(f"{where} 必须是映射，当前是 {type(value).__name__}")
+    return value
+
+
+_KIND_NAMES = {str: "字符串", int: "整数", dict: "映射"}
+
+
+def required(data: dict[str, Any], key: str, kind: type, where: str) -> Any:
+    value = data.get(key)
+    if not isinstance(value, kind) or isinstance(value, bool):
+        raise SbError(f"{where} 的 {key} 必须是{_KIND_NAMES[kind]}")
     return value
 
 

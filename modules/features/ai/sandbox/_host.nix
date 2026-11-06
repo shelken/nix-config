@@ -24,12 +24,13 @@ let
     publish_dir = manifest.statePaths.publishDir;
     launcher = "${guest.launcher}";
     guest_status = "${guest.guestStatus}";
+    guest_sync = "${guest.syncGuestScript}";
     sync_lock = "${manifest.miseLayer.hostDir}/.sync.lock";
     host_credentials = true;
     guest = {
       config_mount = manifest.guestPaths.configMount;
-      config_dir = manifest.guestPaths.configDir;
       contexts_dir = manifest.guestPaths.contextsDir;
+      data_dir = manifest.guestPaths.dataDir;
     };
     mise = {
       host_dir = manifest.miseLayer.hostDir;

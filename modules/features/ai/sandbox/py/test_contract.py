@@ -1,18 +1,22 @@
 """host → guest 契约测试：真实的 `sb plan --json` 产出 Plan，交给 guest/plan.sh 的 parse_plan 解析，
 每个字段两边必须一致。改 Plan 字段而没同步 plan.sh，这里会失败。
 
-运行（需要 bash ≥ 4、jq、yq、git）：
-  nix shell nixpkgs#bash nixpkgs#jq nixpkgs#yq-go -c python3 -m unittest test_contract
+需要 bash ≥ 4（macOS 自带的 3.2 不行）、jq、yq、git。
 """
 
 import json
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
+from sb.vm import missing_tools
 from testenv import SbEnv
 
-PLAN_SH = Path(__file__).parent.parent / "guest" / "plan.sh"
+SANDBOX = Path(__file__).parent.parent
+PLAN_SH = SANDBOX / "guest" / "plan.sh"
+GUEST_STATUS_SH = SANDBOX / "guest-status.sh"
 
 # 每个变量一行 KEY=值，数组每项一行；空数组不输出，用来确认 set -u 下空数组不报 unbound
 DUMP = r"""
@@ -66,6 +70,9 @@ class ContractTest(unittest.TestCase):
         plan = self.host_plan()
         got = guest_parse(json.dumps(plan))
 
+        # 新增的 Plan 字段要先让 guest/plan.sh 读取、再加进这个集合，否则这里失败
+        guest_fields = {"project_root", "git_common_dir", "imports", "network", "paths", "default_allow"}
+        self.assertEqual(set(plan) - {"approval"}, guest_fields)
         self.assertEqual(got["ROOT"], [plan["project_root"]])
         self.assertEqual(got["GCD"], [plan["git_common_dir"]])
         self.assertEqual(got["ALLOW"], plan["default_allow"])
@@ -85,6 +92,21 @@ class ContractTest(unittest.TestCase):
         plan = self.host_plan()
         self.assertEqual(plan["paths"][0]["path"], str(self.e.project / "back\\slash"))
         self.assertEqual(guest_parse(json.dumps(plan))["PATH"], [f"{plan['paths'][0]['path']}\tfalse"])
+
+    def test_guest_status_output_is_what_the_host_parses_as_missing_tools(self):
+        with tempfile.TemporaryDirectory() as d:
+            mise = Path(d) / "mise"
+            mise.write_text("#!/bin/sh\necho '{\"bun\": [], \"npm:@scope/pkg\": []}'\n")
+            mise.chmod(0o755)
+            r = subprocess.run(["bash", str(GUEST_STATUS_SH)], capture_output=True, text=True, env={"PATH": f"{d}:/usr/bin:/bin"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+        class GuestMsb:
+            def capture(self, *args):
+                return SimpleNamespace(returncode=0, stdout=r.stdout)
+
+        cfg = SimpleNamespace(guest_status="/fake/guest-status")
+        self.assertEqual(missing_tools(cfg, GuestMsb()), ["bun", "npm:@scope/pkg"])
 
     def test_malformed_plan_is_rejected(self):
         r = subprocess.run(["bash", "-c", DUMP, "x", str(PLAN_SH), "not json"], capture_output=True, text=True)

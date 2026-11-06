@@ -28,5 +28,5 @@ Preconditions:
 
 ## Gotchas
 
-- `first.err` 出现「sync-guest.sh: No such file」说明挂的不是本分支的发布配置，检查 `$V doctor` 的「隔离配置已发布」。这不让 `sb run` 失败，症状是「缺失工具」
+- `first.err` 出现找不到 `guest-env.sh` 说明挂的不是本分支的发布配置，检查 `$V doctor` 的「隔离配置已发布」。首次自动 sync 失败不让 `sb run` 失败，症状是「缺失工具」
 - 只删 VM 不删卷再启动，也走「首次创建」分支并自动 sync；重建（上限变化）不自动 sync

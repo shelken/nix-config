@@ -152,7 +152,10 @@ def _resolve_paths(items: list[Any], project_root: str, home: str, allowed_roots
             readonly = item.endswith(":ro")
             p = item.removesuffix(":ro")
         elif isinstance(item, dict) and isinstance(item.get("path"), str):
-            p, readonly = item["path"], item.get("readonly") is True
+            unknown = set(item) - {"path", "readonly"}
+            if unknown or not isinstance(item.get("readonly", False), bool):
+                raise SbError(f".sandbox.yaml 的 paths 映射只接受 path 与布尔值 readonly: {json.dumps(item, ensure_ascii=False)}")
+            p, readonly = item["path"], item.get("readonly", False)
         else:
             raise SbError(f".sandbox.yaml 的 paths 每项必须是路径字符串或带 path 的映射: {json.dumps(item, ensure_ascii=False)}")
         p = expand_path(p, home)

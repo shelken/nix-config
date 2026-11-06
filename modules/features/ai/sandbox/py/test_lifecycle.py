@@ -1,7 +1,4 @@
-"""主 VM 生命周期与授权流程测试：真实的 `python -m sb`，假的 msb（见 testenv.py）。
-
-运行（需要 yq、git）：nix shell nixpkgs#yq-go -c python3 test_lifecycle.py
-"""
+"""主 VM 生命周期与授权流程测试：真实的 `python -m sb`，假的 msb（见 testenv.py）。"""
 
 import json
 import unittest
@@ -24,7 +21,7 @@ class LifecycleTest(unittest.TestCase):
         self.assertEqual(st["volumes"], ["sb-main-data"])
         self.assertEqual(st["vm"]["conf"]["cpus"], 2)
         self.assertEqual(len(self.e.calls("create")), 1)
-        syncs = [c for c in self.e.calls("exec") if "sync-guest.sh" in " ".join(c)]
+        syncs = [c for c in self.e.calls("exec") if "/fake/sync-guest" in c]
         self.assertEqual(len(syncs), 1)
         self.assertIn("创建并启动成功", r.stderr)
 
@@ -35,7 +32,8 @@ class LifecycleTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("复用现有 VM", r.stderr)
         changing = {"create", "start", "stop", "rm", "exec"}
-        self.assertEqual([c for c in self.e.calls()[before:] if c[0] in changing], [])
+        after = self.e.calls()[before:]
+        self.assertEqual([c for c in after if c[0] in changing or c[:2] == ["volume", "create"]], [])
 
     def test_up_starts_a_stopped_vm_with_unchanged_ceiling(self):
         self.e.sb("up")
@@ -128,7 +126,7 @@ class LifecycleTest(unittest.TestCase):
         r = self.e.sb("sync")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.e.msb_state()["vm"]["status"], "Running")
-        self.assertEqual(len([c for c in self.e.calls("exec") if "sync-guest.sh" in " ".join(c)]), 2)
+        self.assertEqual(len([c for c in self.e.calls("exec") if "/fake/sync-guest" in c]), 2)
 
     def test_sync_rejects_arguments(self):
         r = self.e.sb("sync", "--force")

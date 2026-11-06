@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# guest/netns.sh: 每个槽位一个网络命名空间与一条 iptables 链。放行目标读 PLAN_DEFAULT_ALLOW、PLAN_NETWORK。
 set -euo pipefail
 
 calc_slot_network() {
@@ -80,7 +79,6 @@ net_up() {
     fi
   done
 
-  # 未被上面放行的私网网段一律拒绝
   iptables -A "$SLOT_CHAIN" -d 10.0.0.0/8 -j REJECT
   iptables -A "$SLOT_CHAIN" -d 172.16.0.0/12 -j REJECT
   iptables -A "$SLOT_CHAIN" -d 192.168.0.0/16 -j REJECT

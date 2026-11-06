@@ -110,7 +110,6 @@
 
       config = lib.mkMerge [
         {
-          # 校验：缺失字段与互斥字段断言
           assertions = lib.concatLists (
             lib.mapAttrsToList (name: tool: [
               {
@@ -126,10 +125,8 @@
             ]) cfg
           );
 
-          # 宿主生成器：Nix 条目进 home.packages
           home.packages = nixPackages;
 
-          # mise 条目 -> 规格表：宿主与沙箱共用
           shelken.dev.miseTools = lib.listToAttrs (
             lib.concatMap (
               name:
@@ -143,10 +140,8 @@
             ) (builtins.attrNames cfg)
           );
 
-          # 宿主生成器：mise 条目进 programs.mise.globalConfig.tools
           programs.mise.globalConfig.tools = config.shelken.dev.miseTools;
 
-          # 宿主生成器：postInstall 进 home.activation
           home.activation = lib.listToAttrs (
             lib.concatMap (
               name:
@@ -164,7 +159,6 @@
             ) (builtins.attrNames cfg)
           );
 
-          # 宿主生成器：files 随工具照常作为 home.file
           home.file = lib.mkMerge (lib.mapAttrsToList (_: tool: lib.mkIf (tool.files != { }) tool.files) cfg);
         }
       ];

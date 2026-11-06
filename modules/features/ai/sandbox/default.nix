@@ -54,9 +54,8 @@
 
         home.sessionVariables = host.sessionVariables;
 
-        # sb 与 guest 假定共用 mise 目录及其 data、cache 子目录已存在
         home.activation.sandboxSharedMiseDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          mkdir -p "${manifest.miseLayer.hostDir}/data" "${manifest.miseLayer.hostDir}/cache"
+          mkdir -p "${manifest.miseLayer.hostDir}/${manifest.miseLayer.dataSub}" "${manifest.miseLayer.hostDir}/${manifest.miseLayer.cacheSub}"
         '';
 
         # guest 读不到宿主上 live-edit 的软链，所以发布成自包含副本；发布目录路径固定，内容变化不改变上限指纹

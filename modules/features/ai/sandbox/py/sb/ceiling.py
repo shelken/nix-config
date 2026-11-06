@@ -8,14 +8,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from .errors import SbError
-from .yamlio import load_mapping, mapping, str_list
+from .yamlio import load_mapping, mapping, required, str_list
 
 IP = r"[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+"
 IP_PORT = re.compile(rf"^{IP}:[0-9]+$")
 IP_OR_IP_PORT = re.compile(rf"^{IP}(:[0-9]+)?$")
-
-DEFAULT_NETWORK = {"policy": "public", "allow": ["public", "dns"]}
-
 
 def expand_path(p: str, home: str) -> str:
     if p == "~" or p.startswith("~/"):
@@ -46,20 +43,20 @@ class Ceiling:
             raise SbError(f"找不到全局能力上限配置文件: {path}")
         raw = load_mapping(path)
 
-        network = dict(mapping(raw.get("network"), "sb.yaml 的 network") or DEFAULT_NETWORK)
+        network = dict(required(raw, "network", dict, "sb.yaml"))
         grants = str_list(network.pop("default_grant", None), "sb.yaml 的 network.default_grant")
         for grant in grants:
             if not IP_PORT.match(grant):
                 raise SbError(f"sb.yaml network.default_grant 只接受 IP:端口: {grant}")
         allow = str_list(network.get("allow"), "sb.yaml 的 network.allow")
 
-        volume = mapping(raw.get("volume"), "sb.yaml 的 volume")
+        volume = required(raw, "volume", dict, "sb.yaml")
         return Ceiling(
-            image=raw.get("image") or "ubuntu",
-            cpus=raw.get("cpus") or 4,
-            memory=raw.get("memory") or "8G",
-            volume_name=volume.get("name") or "sb-main-data",
-            volume_size=volume.get("size") or "8G",
+            image=required(raw, "image", str, "sb.yaml"),
+            cpus=required(raw, "cpus", int, "sb.yaml"),
+            memory=required(raw, "memory", str, "sb.yaml"),
+            volume_name=required(volume, "name", str, "sb.yaml 的 volume"),
+            volume_size=required(volume, "size", str, "sb.yaml 的 volume"),
             mount_roots=[expand_path(r, home) for r in str_list(raw.get("mount_roots"), "sb.yaml 的 mount_roots")],
             network=network,
             default_grants=grants,

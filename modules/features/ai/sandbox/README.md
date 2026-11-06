@@ -46,7 +46,7 @@ flowchart LR
 - **批准 (Approval)**: 用户用 `sb trust` 对项目 `.sandbox.yaml` 的规范化内容哈希做的记录。未批准或内容变了，启动直接报错
 - **项目配置 (Project Config)**: 项目仓库根 `.sandbox.yaml`，请求导入文件、私网目标和额外路径；批准后才生效
 - **执行计划 (Plan)**: `sb` 解析、校验能力上限与项目配置后交给 launcher 的数据，host → guest 的唯一契约。类型在 [py/sb/plan.py](./py/sb/plan.py)，guest 里只有 [guest/plan.sh](./guest/plan.sh) 解析它，改字段要同步两处，[py/test_contract.py](./py/test_contract.py) 校验两边一致。_避免_: plan_json（那只是它的序列化）
-- **发布目录 (Published Config)**: `~/.config/sandbox/current` 指向的版本化目录，只读挂进 VM 的 `/run/sandbox-config`，含声明配置副本、`mise.toml`、`guest-env.sh`、`sync-guest.sh`、`declared-paths`、`writable-roots`。旧版本保留 7 天
+- **发布目录 (Published Config)**: `~/.config/sandbox/current` 指向的版本化目录，只读挂进 VM 的 `/run/sandbox-config`，含声明配置副本、`mise.toml`、`guest-env.sh`、`declared-paths`、`writable-roots`。旧版本保留 7 天
 - **沙箱基础环境 (Sandbox Base)**: 沙箱启动与隔离所需的 Linux 工具，由 sandbox 模块管理，不属于共享工具。不含 C 工具链，见「设计决策」
 - **补齐 (Sync)**: 显式安装已登记但缺失的 mise 工具和插件。_避免_: 升级、更新
 - **共用安装层 (Shared Install Layer)**: 宿主上由所有沙箱 VM 共用的一份 mise 安装产物与下载缓存。_避免_: 共享缓存、镜像卷
@@ -112,7 +112,7 @@ sequenceDiagram
   G->>G: 退出：删网络资源与上下文目录
 ```
 
-- **视图**：bubblewrap 映射到 UID 1000。只读：`/usr`、`/etc`、`/nix/store`、`/.msb/tls`（msb CA，缺失时 OMP 的模型发现全部失败）、共用 mise 层与配置目录；可写：`/data`、项目根、额外路径、imports 的目标目录（在上下文里只剩导入的文件）。`/run` 是 tmpfs，看不到其他上下文的 imports
+- **视图**：bubblewrap 映射到 UID 1000。只读：`/usr`、`/etc`、`/nix/store`、`/.msb/tls`（msb CA，缺失时 OMP 的模型发现全部失败）、发布目录；可写：`/data`、共用 mise 层（见「共用 mise 安装层」）、项目根、额外路径、imports 的目标目录（在上下文里只剩导入的文件）。`/run` 是 tmpfs，看不到其他上下文的 imports
 - **网络**：每个槽位一个 `/30` 子网（`10.200.x.y`），独立 netns 与 veth，NAT 出口；地址池 64 个，即最多 64 个并发上下文
 - **并发**：清扫、选槽、发布 `meta.json` 在 guest 内一把 flock 下串行，网络资源按槽位命名，不会互相覆盖
 - **复制窗口**：宿主复制 imports 期间目录还没有 `meta.json`，靠 `starting` 标记保护（120 秒内清扫跳过它，忙碌计数算上它）；复制失败或中断时宿主删除该目录
@@ -186,7 +186,7 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 
 ### `sb sync`
 
-在 VM 内（不在上下文内）运行 [sync-guest.sh](./sync-guest.sh)：
+在 VM 内（不在上下文内）运行 [sync-guest.sh](./sync-guest.sh)（Nix store 里的版本，路径经 `sb-config.json` 的 `guest_sync` 给出）：
 
 - 共用目录下的 `.sync.lock` 做跨 VM 写锁，不区分 VM 忙闲
 - `mise install` 只补缺，不升级、不删除

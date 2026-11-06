@@ -1,4 +1,3 @@
-# 发布脚本：把声明配置解引用成自包含的版本化目录，再原子切换 current。
 {
   pkgs,
   lib,
@@ -10,7 +9,6 @@ let
   devMiseTools = manifest.miseTools;
   devWritableRoots = manifest.writableRoots;
 
-  # 工具本体装在共用层；这份声明只读发布给 guest
   miseToml = (pkgs.formats.toml { }).generate "sandbox-mise.toml" {
     tools = devMiseTools;
   };
@@ -31,7 +29,7 @@ let
 
   publishScript =
     let
-      inherit (guest) guestEnvSh syncGuestScript;
+      inherit (guest) guestEnvSh;
     in
     pkgs.writeShellScript "publish-sandbox-config" ''
       set -euo pipefail
@@ -61,7 +59,6 @@ let
       done < ${configManifest}
       ln -sfn ${miseToml} "$tmp/mise.toml"
       ln -sfn ${guestEnvSh} "$tmp/guest-env.sh"
-      ln -sfn ${syncGuestScript} "$tmp/sync-guest.sh"
       ln -sfn ${declaredPaths} "$tmp/declared-paths"
       ln -sfn ${writableRootsFile} "$tmp/writable-roots"
       mv "$tmp" "$dst"

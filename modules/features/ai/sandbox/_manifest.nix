@@ -1,5 +1,3 @@
-# 沙箱声明的规范化与静态断言：从 Home Manager config 取出工具、路径与声明文件，对外是单一 manifest 对象。
-# 不生成 derivation：发布文件在 _config，git 配置在 _guest。
 {
   config,
   lib,

@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
-# sb-launcher: 沙箱 Guest 内部执行上下文隔离调度器
 # 由 _guest.nix 内嵌 guest/ 下四个模块，并在最前加载 guest-env.sh（路径与环境）。
-# 流程：解析执行计划 → 槽位分配 → 网络隔离 → 布局规划 → bubblewrap 启动。
 set -euo pipefail
 
-# 快速检查活跃上下文数 (--check-busy)
 if [[ "${1:-}" == "--check-busy" ]]; then
   count_active_contexts
   exit 0
@@ -24,7 +21,6 @@ shift 3
 parse_plan "$PLAN_JSON"
 
 # 启动序列：槽位锁覆盖到布局结束，其他启动者在此排队
-#   allocate_slot → net_up → prepare_declared_layout → release_slot_lock
 allocate_slot "$CTX_ID"
 
 # 退出清理钩子放在 net_up 之前：网络配置中途失败也会拆掉已建的部分并归还槽位

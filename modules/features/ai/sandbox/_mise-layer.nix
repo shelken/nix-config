@@ -5,11 +5,14 @@
   # 宿主上的安装目录，所有 VM 共用；新 VM 不必重新下载
   hostDir = "${homeDir}/Data/sandboxes/mise/aarch64-linux";
 
-  # 所有 VM 一律把宿主目录挂到这里。上限指纹只含 guest 侧声明，不含宿主真实路径
+  # 所有 VM 一律把宿主目录挂到这里，且可写：项目自己的 mise.toml 声明的工具要能在上下文里 `mise install`，
+  # 产物落在宿主并跨 VM 复用。威胁模型只防误操作，只读挡不住 Agent 在项目里下载并运行程序
+  # （理由见 README「共用 mise 安装层」）。上限指纹只含 guest 侧声明，不含宿主真实路径
   guestMount = "/opt/sandbox-mise";
 
-  # 一律可写挂载：项目自己的 mise.toml 声明的工具要能在上下文里 `mise install`，产物落在宿主并跨 VM 复用
-  # 威胁模型只防误操作，只读挡不住 Agent 在项目里下载并运行程序（理由见 README「共用 mise 安装层」）
+  # 安装目录下的子目录；宿主激活创建，guest 与 sb 假定它们已存在
+  dataSub = "data";
+  cacheSub = "cache";
 
   # 只在执行上下文的进程里设置，sb sync 不带：
   # 不用 MISE_OFFLINE，它连安装下载也禁止；PREFER_OFFLINE 只在本地已有版本时不联网，

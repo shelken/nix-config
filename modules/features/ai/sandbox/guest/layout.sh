@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# guest/layout.sh: 声明配置与可写根布局规划
 # 可写根映射到数据盘 $SB_DATA_DIR/home/<root>；声明文件逐项只读挂在根上，祖先目录钉成挂载点，防止改名绕过只读。
 #
 # 读：HOME、SB_DATA_DIR、SB_CONFIG_DIR、SB_CONFIG_MOUNT、XDG_CONFIG_HOME（guest-env.sh）；写：AGENT_ROOTS（数据盘可写根映射）、LAYOUT_ARGS（bwrap 参数）、MOUNT_POINTS（祖先挂载点）

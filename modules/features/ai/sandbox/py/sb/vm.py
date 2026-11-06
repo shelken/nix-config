@@ -74,7 +74,7 @@ def desired(cfg: Config) -> Desired:
         raise SbError(f"共用 mise 目录不存在：{cfg.mise_host_dir}，先执行 just hm")
 
     mounts: list[Any] = [
-        {"named": ceiling.volume_name, "target": "/data"},
+        {"named": ceiling.volume_name, "target": cfg.guest_data_dir},
         "/nix/store:/nix/store:ro,stat-virt=relaxed",
         f"{os.path.realpath(cfg.publish_dir)}:{cfg.guest_config_mount}:ro,stat-virt=relaxed",
         f"{_MISE_PLACEHOLDER}:{cfg.mise_guest_mount}:rw",
@@ -97,7 +97,6 @@ class BusyQueryError(Exception):
 
 
 def count_contexts(cfg: Config, msb: Msb) -> int:
-    """主 VM 里正在运行的执行上下文数；VM 没在运行为 0，查不出来抛 BusyQueryError。"""
     if msb.status(VM_NAME) != "Running":
         return 0
     r = msb.capture("exec", VM_NAME, "--", "bash", cfg.launcher, "--check-busy")
@@ -114,12 +113,10 @@ def missing_tools(cfg: Config, msb: Msb) -> list[str]:
     r = msb.capture("exec", VM_NAME, "--", "bash", cfg.guest_status)
     if r.returncode != 0:
         raise SbError(f"查询 {VM_NAME} 缺失工具失败 (rc={r.returncode})")
-    rows = [line.split("\t") for line in r.stdout.split("\n") if line]
-    return [row[1] for row in rows if row[0] == "missing" and len(row) > 1]
+    return r.stdout.split()
 
 
 def ensure(cfg: Config, msb: Msb) -> None:
-    """让主 VM 处于「运行中且能力上限一致」，必要时创建或重建。"""
     with lifecycle_lock(cfg, "启动/重建"):
         _ensure_locked(cfg, msb)
 
@@ -206,8 +203,8 @@ def status_report(cfg: Config, msb: Msb) -> str:
 
     try:
         current_fp = desired(cfg).fingerprint
-    except (SbError, OSError):
-        current_fp = "-"
+    except (SbError, OSError) as e:
+        current_fp = f"不可用 ({e})"
 
     if status == "Not created":
         match = "not_created"

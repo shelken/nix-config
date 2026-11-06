@@ -1,6 +1,5 @@
 """执行计划端到端测试：临时目录里的真实 git 仓库与 YAML，驱动真实的 `sb plan --json`。
 
-运行（需要 yq、git）：nix shell nixpkgs#yq-go -c python3 test_plan.py
 YAML 用 JSON 写，它是合法 YAML，yq 照常解析。
 """
 
@@ -12,6 +11,7 @@ import unittest
 from testenv import SbEnv
 
 CEILING = {
+    "image": "ubuntu", "cpus": 2, "memory": "8G", "volume": {"name": "sb-main-data", "size": "8G"},
     "mount_roots": ["~/Code"],
     "network": {"allow": ["public", "dns", "host:tcp:8317"], "default_grant": ["192.168.1.5:8080"]},
 }
@@ -84,9 +84,15 @@ class PlanTest(unittest.TestCase):
                 self.assertIn("只接受 IP 或 IP:端口", self.rejected({"network": [bad]}))
 
     def test_a_field_of_the_wrong_type_is_an_error_not_an_empty_grant(self):
-        for field, bad in [("network", "10.0.0.5:80"), ("network", [8080]), ("imports", "a.txt"), ("paths", {"d": 1})]:
+        cases = [
+            ("network", "10.0.0.5:80", "network 必须是列表"),
+            ("network", [8080], "network 的每一项必须是非空字符串"),
+            ("imports", "a.txt", "imports 必须是列表"),
+            ("paths", {"d": 1}, "paths 必须是列表"),
+        ]
+        for field, bad, message in cases:
             with self.subTest(field=field, bad=bad):
-                self.assertIn(field, self.rejected({field: bad}))
+                self.assertIn(message, self.rejected({field: bad}))
         self.ceiling["mount_roots"] = "~/Code"
         self.assertIn("mount_roots 必须是列表", self.rejected())
 
@@ -134,6 +140,12 @@ class PlanTest(unittest.TestCase):
                 {"path": str(self.proj / "d3"), "readonly": True},
             ],
         )
+
+    def test_an_unknown_path_key_is_rejected_instead_of_silently_granting_write(self):
+        (self.proj / "d").mkdir()
+        for bad in ({"path": "d", "ro": True}, {"path": "d", "readonly": "yes"}):
+            with self.subTest(bad=bad):
+                self.assertIn("只接受 path 与布尔值 readonly", self.rejected({"paths": [bad]}))
 
     def test_path_must_exist_and_stay_inside_mount_roots_after_following_symlinks(self):
         os.symlink("/etc", self.proj / "esc")

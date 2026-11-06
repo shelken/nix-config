@@ -1,5 +1,3 @@
-"""sb 子命令分发。每个子命令一个函数，返回进程退出码。"""
-
 from __future__ import annotations
 
 import json

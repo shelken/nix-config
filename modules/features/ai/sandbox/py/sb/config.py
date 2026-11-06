@@ -20,16 +20,16 @@ VM_NAME = "sb-main"
 
 @dataclass(frozen=True)
 class Config:
-    msb_config: str
     msb_home: str
     policy_yaml: str
     publish_dir: str
     launcher: str
     guest_status: str
     sync_lock: str
+    guest_sync: str
     guest_config_mount: str
-    guest_config_dir: str
     guest_contexts_dir: str
+    guest_data_dir: str
     mise_host_dir: str
     mise_guest_mount: str
     host_credentials: bool
@@ -43,10 +43,6 @@ class Config:
     @property
     def lock_dir(self) -> str:
         return os.path.join(self.msb_home, "locks")
-
-    @property
-    def guest_sync(self) -> str:
-        return f"{self.guest_config_dir}/sync-guest.sh"
 
     @cached_property
     def ceiling(self) -> Ceiling:
@@ -63,16 +59,16 @@ class Config:
         msb_home = env.get("MSB_HOME") or nix["msb_home"]
         guest = nix["guest"]
         return Config(
-            msb_config=msb_config,
             msb_home=msb_home,
             policy_yaml=nix["policy_yaml"],
             publish_dir=nix["publish_dir"],
             launcher=nix["launcher"],
             guest_status=nix["guest_status"],
             sync_lock=nix["sync_lock"],
+            guest_sync=nix["guest_sync"],
             guest_config_mount=guest["config_mount"],
-            guest_config_dir=guest["config_dir"],
             guest_contexts_dir=guest["contexts_dir"],
+            guest_data_dir=guest["data_dir"],
             mise_host_dir=nix["mise"]["host_dir"],
             mise_guest_mount=nix["mise"]["guest_mount"],
             host_credentials=nix["host_credentials"],
