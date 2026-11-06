@@ -5,7 +5,7 @@
 ## Sub-features
 
 - `omp-db` OMP 数据库建在 `/data/xdg/data/omp`，不写 `~/.omp/agent`
-- `omp-discovery` `models.yml` 里声明了 `discovery` 的 provider 出现在模型列表：私网域名的（`cpa`、`commandcode-local`）一定出现，走宿主端口的（如 `mp`）只在宿主服务在跑时出现
+- `omp-discovery` `models.yml` 里声明了 `discovery` 的 provider 出现在模型列表：私网域名的（`cpa`）一定出现，走宿主端口的（如 `mp`）只在宿主服务在跑时出现
 - `omp-chat` 用便宜模型完成一次单轮对话
 - `omp-no-project-grant` 项目不写 `.sandbox.yaml` 也能访问模型服务
 - `pi-packages` pi 首次启动安装沙箱清单中的 packages；清单排除 `simple-plannotator`，无需编译 `node-pty`；之后启动复用已安装的包
@@ -24,7 +24,7 @@ Preconditions:
 
 - 首次启动已完成，测试项目没有 `.sandbox.yaml`
 
-- **列出 provider。** 运行 `$V run providers -- $V sb run bash -c 'omp models | grep -E "^[a-z].*\([0-9]+\)$"'`。输出含 `cpa`、`commandcode-local`，宿主服务在跑时还含 `mp`
+- **列出 provider。** 运行 `$V run providers -- $V sb run bash -c 'omp models | grep -E "^[a-z].*\([0-9]+\)$"'`。输出含 `cpa`，宿主服务在跑时还含 `mp`
 - **单轮对话。** 运行 `$V run chat -- timeout 120 $V sb run omp --model="$MODEL" -p '只回复两个字母：OK'`。`chat.out` 含 `OK`，`chat.rc` 为 `0`
 - **数据库位置。** 运行 `$V msb exec sb-main -- ls /data/xdg/data/omp`。列出 `agent.db`、`models.db`
 - **pi 沙箱清单。** 运行 `$V run pi-settings -- $V sb run cat /root/.pi/agent/settings.json`。`pi-settings.rc` 为 `0`，输出不含 `simple-plannotator` 或 `sandboxExclude`

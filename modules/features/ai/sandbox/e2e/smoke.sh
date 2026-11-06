@@ -149,7 +149,7 @@ fi
 echo "[+] sb: $SB_BIN"
 echo "[+] 临时隔离环境: $E2E_DIR"
 
-REAL_CONFIG="${SB_CONFIG_FILE:-$(grep -o '/nix/store/[a-z0-9]*-sb-config.json' "$SB_BIN" | head -n 1)}"
+REAL_CONFIG="${SB_TEST_CONFIG:-$(grep -o '/nix/store/[a-z0-9]*-sb-config.json' "$SB_BIN" | head -n 1)}"
 [[ -n "$REAL_CONFIG" ]] || { echo "[-] 在 $SB_BIN 里找不到 sb-config.json" >&2; exit 1; }
 
 # 共用 mise 目录: 只挂载、绝不写入（缺失即失败，绝不代建）
@@ -159,20 +159,9 @@ if [[ ! -d "$MISE_HOST_DIR" ]]; then
   exit 1
 fi
 
-# 一次性发布目录：guest-env.sh 取自与 sb 同一次构建的发布产物（SB_PUBLISH_DIR 给定，或由本次构建的发布脚本发布到临时目录），
-# 空声明清单与空可写根清单表示本 e2e 不需要任何声明配置
-if [[ -z "${SB_PUBLISH_DIR:-}" ]]; then
-  [[ -n "${app_dir:-}" ]] || { echo "[-] 指定 SB_BIN 时必须同时指定 SB_PUBLISH_DIR（同一次构建的发布目录）" >&2; exit 1; }
-  publish_script="$(grep -o '/nix/store/[a-z0-9]*-publish-sandbox-config' "$app_dir/activate" | head -n 1)"
-  [[ -n "$publish_script" ]] || { echo "[-] 激活脚本里找不到 publish-sandbox-config" >&2; exit 1; }
-  SB_PUBLISH_DIR="$E2E_DIR/published"
-  "$publish_script" "$SB_PUBLISH_DIR"
-fi
-PUBLISHED="$(resolve "$SB_PUBLISH_DIR/current")/guest-env.sh"
-[[ -e "$PUBLISHED" ]] || { echo "[-] 找不到已发布的 guest-env.sh: $PUBLISHED" >&2; exit 1; }
+# 一次性发布目录：空声明清单与空可写根清单表示本 e2e 不需要任何声明配置
 CFG_DIR="$E2E_DIR/sandbox-config"
 mkdir -p "$CFG_DIR/current"
-ln -s "$(readlink -f "$PUBLISHED")" "$CFG_DIR/current/guest-env.sh"
 : > "$CFG_DIR/current/declared-paths"
 : > "$CFG_DIR/current/writable-roots"
 
@@ -184,7 +173,7 @@ jq --arg policy "$TEST_YAML" --arg publish "$CFG_DIR" --arg lock "$E2E_DIR/sync.
 run_sb() {
   MSB_CONFIG_PATH="$E2E_MSB_CONFIG" \
     MSB_HOME="$E2E_MSB_HOME" \
-    SB_CONFIG_FILE="$SB_E2E_CONFIG" \
+    SB_TEST_CONFIG="$SB_E2E_CONFIG" \
     "$SB_BIN" "$@"
 }
 

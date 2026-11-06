@@ -50,6 +50,11 @@ class Ceiling:
                 raise SbError(f"sb.yaml network.default_grant 只接受 IP:端口: {grant}")
         allow = str_list(network.get("allow"), "sb.yaml 的 network.allow")
 
+        secrets = mapping(raw.get("secrets"), "sb.yaml 的 secrets")
+        for name, secret in secrets.items():
+            if not str_list(mapping(secret, f"sb.yaml 的 secrets.{name}").get("allow"), f"sb.yaml 的 secrets.{name}.allow"):
+                raise SbError(f"sb.yaml 的 secrets.{name} 至少要有一个 allow 目标，msb 不接受没有替换目标的 secret")
+
         volume = required(raw, "volume", dict, "sb.yaml")
         return Ceiling(
             image=required(raw, "image", str, "sb.yaml"),
@@ -61,5 +66,5 @@ class Ceiling:
             network=network,
             default_grants=grants,
             default_allow=[a for a in allow if a.startswith("host:tcp:")],
-            secrets=mapping(raw.get("secrets"), "sb.yaml 的 secrets"),
+            secrets=secrets,
         )

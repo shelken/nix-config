@@ -1,6 +1,6 @@
 """宿主配置：Nix 生成的 sb-config.json，是 sb 读取外部事实的唯一入口。
 
-sb 的其余模块都不碰 os.environ。验证与测试换一份 sb-config.json（SB_CONFIG_FILE 指向它）即可
+sb 的其余模块都不碰 os.environ。验证与测试换一份 sb-config.json 即可
 改变目录、策略文件与凭据行为；MSB_HOME、MSB_CONFIG_PATH 是 msb 自己的变量，优先于文件里的值。
 """
 

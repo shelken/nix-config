@@ -5,6 +5,7 @@ on:
     paths:
       - modules/features/ai/sandbox/py/**
       - modules/features/ai/sandbox/guest/plan.sh
+      - modules/features/ai/sandbox/guest-status.sh
       - .github/workflows/sandbox-host-tests.yml
 
 permissions:

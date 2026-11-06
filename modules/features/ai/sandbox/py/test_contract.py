@@ -5,6 +5,7 @@
 """
 
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -98,7 +99,7 @@ class ContractTest(unittest.TestCase):
             mise = Path(d) / "mise"
             mise.write_text("#!/bin/sh\necho '{\"bun\": [], \"npm:@scope/pkg\": []}'\n")
             mise.chmod(0o755)
-            r = subprocess.run(["bash", str(GUEST_STATUS_SH)], capture_output=True, text=True, env={"PATH": f"{d}:/usr/bin:/bin"})
+            r = subprocess.run(["bash", str(GUEST_STATUS_SH)], capture_output=True, text=True, env={**os.environ, "PATH": f"{d}:{os.environ['PATH']}"})
         self.assertEqual(r.returncode, 0, r.stderr)
 
         class GuestMsb:
@@ -107,6 +108,14 @@ class ContractTest(unittest.TestCase):
 
         cfg = SimpleNamespace(guest_status="/fake/guest-status")
         self.assertEqual(missing_tools(cfg, GuestMsb()), ["bun", "npm:@scope/pkg"])
+
+    def test_guest_status_fails_when_mise_fails_instead_of_reporting_nothing_missing(self):
+        with tempfile.TemporaryDirectory() as d:
+            mise = Path(d) / "mise"
+            mise.write_text("#!/bin/sh\nexit 1\n")
+            mise.chmod(0o755)
+            r = subprocess.run(["bash", str(GUEST_STATUS_SH)], capture_output=True, text=True, env={**os.environ, "PATH": f"{d}:{os.environ['PATH']}"})
+        self.assertNotEqual(r.returncode, 0)
 
     def test_malformed_plan_is_rejected(self):
         r = subprocess.run(["bash", "-c", DUMP, "x", str(PLAN_SH), "not json"], capture_output=True, text=True)

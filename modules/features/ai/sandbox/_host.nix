@@ -48,7 +48,7 @@ let
       pkgs.git
     ];
     text = ''
-      export SB_CONFIG_FILE="''${SB_CONFIG_FILE:-${sbConfig}}"
+      export SB_CONFIG_FILE="''${SB_TEST_CONFIG:-${sbConfig}}"
       export PYTHONPATH=${
         lib.fileset.toSource {
           root = ./py;

@@ -25,6 +25,40 @@ class LifecycleTest(unittest.TestCase):
         self.assertEqual(len(syncs), 1)
         self.assertIn("创建并启动成功", r.stderr)
 
+    def test_vm_is_created_with_the_real_mise_path_not_the_fingerprint_placeholder(self):
+        self.e.sb("up")
+        mounts = self.e.msb_state()["vm"]["conf"]["mounts"]
+        self.assertIn(f"{self.e.mise.resolve()}:/opt/sandbox-mise:rw", mounts)
+        self.assertIn(f"{self.e.publish.resolve()}:/run/sandbox-config:ro,stat-virt=relaxed", mounts)
+        self.assertIn({"named": "sb-main-data", "target": "/data"}, mounts)
+        self.assertFalse([m for m in mounts if "__SB_MISE_HOST__" in str(m)])
+
+    def test_up_without_a_published_config_or_mise_dir_explains_what_to_run(self):
+        (self.e.publish / "current").rmdir()
+        r = self.e.sb("up")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("沙箱配置尚未发布", r.stderr)
+        self.assertEqual(self.e.calls("create"), [])
+        (self.e.publish / "current").mkdir()
+        self.e.write_config(mise={"host_dir": str(self.e.tmp / "missing"), "guest_mount": "/opt/sandbox-mise"})
+        self.assertIn("共用 mise 目录不存在", self.e.sb("up").stderr)
+
+    def test_a_sb_yaml_field_of_the_wrong_type_is_an_error(self):
+        for key, bad in [("cpus", "4"), ("memory", 8), ("image", None), ("network", "public"), ("volume", {"name": "v"})]:
+            with self.subTest(key=key):
+                self.e.set_policy(**{key: bad})
+                r = self.e.sb("up")
+                self.assertEqual(r.returncode, 1, r.stderr)
+                self.assertIn(f"{key}", r.stderr)
+                self.assertEqual(self.e.calls("create"), [])
+
+    def test_a_secret_without_an_allow_target_is_rejected_before_msb_sees_it(self):
+        self.e.set_policy(secrets={"K": {"passthrough": ["*"]}})
+        r = self.e.sb("up")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("secrets.K 至少要有一个 allow 目标", r.stderr)
+        self.assertEqual(self.e.calls("create"), [])
+
     def test_up_again_reuses_vm_without_create_or_sync(self):
         self.e.sb("up")
         before = len(self.e.calls())
@@ -86,7 +120,7 @@ class LifecycleTest(unittest.TestCase):
 
     def test_secrets_and_mount_roots_are_part_of_the_ceiling(self):
         self.e.sb("up")
-        for change in ({"secrets": {"K": {"value": "v"}}}, {"mount_roots": ["~/Code", "~/Other"]}):
+        for change in ({"secrets": {"K": {"allow": ["example.com"]}}}, {"mount_roots": ["~/Code", "~/Other"]}):
             with self.subTest(change=change):
                 old = self.vm_fp()
                 self.e.set_policy(**change)
@@ -119,6 +153,13 @@ class LifecycleTest(unittest.TestCase):
         self.assertIn("缺失工具: bun, gh", out)
         self.e.set_policy(cpus=5)
         self.assertIn("上限一致: inconsistent", self.e.sb("status").stdout)
+
+    def test_status_says_unknown_when_the_current_ceiling_cannot_be_computed(self):
+        self.e.sb("up")
+        (self.e.publish / "current").rmdir()
+        out = self.e.sb("status").stdout
+        self.assertIn("上限一致: unknown", out)
+        self.assertIn("沙箱配置尚未发布", out)
 
     def test_sync_starts_a_stopped_vm(self):
         self.e.sb("up")

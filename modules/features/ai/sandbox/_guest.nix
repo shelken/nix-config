@@ -125,11 +125,10 @@ let
     mkdir -p ${guestDirs}
   '';
 
-  # 各 guest 脚本先在这里定位发布目录再加载 guest-env.sh：它在发布目录里，引导路径只能由 Nix 注入
+  # 直接加载 store 里的 guest-env.sh，与脚本本身同版本，不依赖发布目录
   guestEnvPrelude = ''
-    export SB_CONFIG_DIR=${guestPaths.configDir}
     # shellcheck source=/dev/null
-    source "$SB_CONFIG_DIR/guest-env.sh"
+    source ${guestEnvSh}
   '';
 
   syncGuestScript = "${

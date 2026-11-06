@@ -205,9 +205,14 @@ def status_report(cfg: Config, msb: Msb) -> str:
         current_fp = desired(cfg).fingerprint
     except (SbError, OSError) as e:
         current_fp = f"不可用 ({e})"
+        current_known = False
+    else:
+        current_known = True
 
     if status == "Not created":
         match = "not_created"
+    elif not current_known:
+        match = "unknown"
     elif vm_fp != "-" and vm_fp == current_fp:
         match = "consistent"
     else:

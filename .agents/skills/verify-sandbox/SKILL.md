@@ -9,7 +9,7 @@ description: 验证 nix-config 的 Agent 沙箱（sb、omp-sb、sb sync、launch
 
 先读 [`features/README.md`](features/README.md)，按改动影响选所有对应 feature；一个方便入口通过不代表 map 里其他入口也通过
 
-所有操作经 [`scripts/verify.sh`](scripts/verify.sh)。它把 `SB_CONFIG_FILE`（`setup` 时由真实产物的 `sb-config.json` 改写，换了策略文件与发布目录）、`MSB_HOME`、`MSB_CONFIG_PATH` 一起指向隔离目录，日常主 VM（`~/Data/sandboxes/msb` 里的 `sb-main`）与宿主 `~/.config/sandbox` 不受影响。并行跑两套时用不同的 `SB_VERIFY_RUN`
+所有操作经 [`scripts/verify.sh`](scripts/verify.sh)。它把 `SB_TEST_CONFIG`（`setup` 时由真实产物的 `sb-config.json` 改写，换了策略文件与发布目录）、`MSB_HOME`、`MSB_CONFIG_PATH` 一起指向隔离目录，日常主 VM（`~/Data/sandboxes/msb` 里的 `sb-main`）与宿主 `~/.config/sandbox` 不受影响。并行跑两套时用不同的 `SB_VERIFY_RUN`
 
 ## Launch
 

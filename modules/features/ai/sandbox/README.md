@@ -222,7 +222,7 @@ guest 里的 launcher、netns、registry、layout 本质是调 `ip`、`iptables`
 只用标准库。YAML 经 `yq` 转 JSON 而不用 PyYAML：批准哈希用 `yq`，换解析器会让 YAML 1.1 与 1.2 的差异（`yes`/`no`、八进制）悄悄改变授权内容或让历史批准失效。能力上限指纹逐字节沿用 `jq -S -c` 的规范化，已有主 VM 不会被判定「上限已变」
 
 - 代价：宿主多依赖 `python3` 与 `yq`；`msb` 与 `sec-run` 仍取用户 `PATH`
-- `sb` 只读 Nix 生成的 `sb-config.json`（`SB_CONFIG_FILE` 指向它）；验证与测试换一份改写过的 `sb-config.json`，不靠逐项环境变量覆盖。`MSB_HOME`、`MSB_CONFIG_PATH` 是 msb 自己的变量，优先于文件里的值
+- `sb` 只读 Nix 生成的 `sb-config.json`；验证脚本用 `SB_TEST_CONFIG` 换成一份改写过的，不靠逐项环境变量覆盖。`MSB_HOME`、`MSB_CONFIG_PATH` 是 msb 自己的变量，优先于文件里的值
 - `sb` 每次调用 `msb` 都显式传入解析后的 `MSB_HOME` 与 `MSB_CONFIG_PATH`，不依赖用户 shell 是否导出，锁、批准记录与 msb 状态目录因此始终是同一处
 
 ### 一台主 VM 承载所有执行上下文

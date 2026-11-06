@@ -23,7 +23,7 @@ sb_bin() {
 # 会话里继承的 MSB_CONFIG_PATH 指向日常配置，其中的 home 字段会覆盖 MSB_HOME，必须同时替换；
 # sb 读的 sb-config.json 换成 setup 里由真实产物改写的那份
 iso_env() {
-  env SB_CONFIG_FILE="$WORK/sb-config.json" \
+  env SB_TEST_CONFIG="$WORK/sb-config.json" \
     MSB_HOME="$WORK/msb" MSB_CONFIG_PATH="$WORK/msb.json" "$@"
 }
 
@@ -103,7 +103,7 @@ cmd_run() {
 }
 
 cmd_smoke() {
-  cmd_run smoke -- env SB_BIN="$(sb_bin)" SB_PUBLISH_DIR="$WORK/sbcfg" SB_CONFIG_FILE="$WORK/sb-config.json" bash "$REPO/modules/features/ai/sandbox/e2e/smoke.sh"
+  cmd_run smoke -- env SB_BIN="$(sb_bin)" SB_TEST_CONFIG="$WORK/sb-config.json" bash "$REPO/modules/features/ai/sandbox/e2e/smoke.sh"
   tail -n 3 "$EVIDENCE/smoke.out"
 }
 
