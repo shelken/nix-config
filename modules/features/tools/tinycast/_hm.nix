@@ -6,15 +6,13 @@
   ...
 }:
 let
-  # 目录名保持 tinycast：HM 以源路径 basename 生成 store 链接名（hm_tinycast），迁移前后一致
-  scriptsDir = ./tinycast;
+  scriptsDir = ./scripts;
 
-  # 自动扫描 tinycast 目录下的全部 .sh 脚本并构建为 CLI 包
   scriptFiles = lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".sh" name) (
     builtins.readDir scriptsDir
   );
 
-  basePackages = lib.mapAttrs' (
+  scripts = lib.mapAttrs' (
     fileName: _:
     let
       name = lib.removeSuffix ".sh" fileName;
@@ -24,38 +22,44 @@ let
     )
   ) scriptFiles;
 
-  # 显示器输入源预设别名，方便命令行直接一键调用
-  displayPresets = {
-    display-switch-dp = "17";
-    display-switch-tv = "18";
-    display-switch-mio = "15";
-  };
+  # 显示器输入源：17/18/15 是 GE278UR 的 DDC inputSelect 源码值，CLI 别名与启动器条目共用这张表
+  displayInputs = [
+    {
+      id = "dp";
+      source = "17";
+      label = "DP (sakamoto)";
+      icon = "display";
+    }
+    {
+      id = "tv";
+      source = "18";
+      label = "HDMI1 (tv)";
+      icon = "tv";
+    }
+    {
+      id = "mio";
+      source = "15";
+      label = "HDMI2 (mio)";
+      icon = "display";
+    }
+  ];
 
-  presetPackages = lib.mapAttrsToList (
-    name: source:
-    pkgs.writeShellScriptBin name ''
-      exec ${lib.getExe basePackages.display-switch} "${source}"
+  displaySwitch = lib.getExe scripts.display-switch;
+
+  displayPackages = map (
+    input:
+    pkgs.writeShellScriptBin "display-switch-${input.id}" ''
+      exec ${displaySwitch} "${input.source}"
     ''
-  ) displayPresets;
+  ) displayInputs;
 
-  # 基于命令名称生成确定性标准 UUID (8-4-4-4-12)
-  mkUUID =
-    name:
-    let
-      h = builtins.hashString "sha256" name;
-    in
-    "${builtins.substring 0 8 h}-${builtins.substring 8 4 h}-${builtins.substring 12 4 h}-${builtins.substring 16 4 h}-${builtins.substring 20 12 h}";
+  displayCommands = map (input: {
+    name = "显示器切到 ${input.label}";
+    command = "${displaySwitch} ${input.source}";
+    iconSymbol = input.icon;
+  }) displayInputs;
 
-  # 原生 App 快捷键 (直连 Bundle ID，双向 Toggle：前台隐藏/后台唤起)
-  appHotkeys = {
-    "alt-f" = "com.apple.finder";
-    "alt-w" = "com.tencent.xinWeChat";
-    "alt-c" = "dev.zed.Zed";
-    "alt-shift-enter" = "net.kovidgoyal.kitty";
-  };
-
-  # 声明需要在 Tinycast 启动器中直接搜索和调用的自定义命令
-  commands = [
+  customCommands = [
     {
       name = "Helium (Debug)";
       command = ''open -a "Helium" --args "--remote-debugging-port=9333"'';
@@ -64,98 +68,59 @@ let
     }
     {
       name = "New Kitty Window";
-      command = lib.getExe basePackages.new-kitty;
+      command = lib.getExe scripts.new-kitty;
       iconSymbol = "terminal";
     }
     {
       name = "写出剪贴板内容";
-      command = lib.getExe basePackages.pb-type;
+      command = lib.getExe scripts.pb-type;
       iconSymbol = "keyboard";
     }
-    {
-      name = "显示器切到 DP (sakamoto)";
-      command = "${lib.getExe basePackages.display-switch} 17";
-      iconSymbol = "display";
-    }
-    {
-      name = "显示器切到 HDMI1 (tv)";
-      command = "${lib.getExe basePackages.display-switch} 18";
-      iconSymbol = "tv";
-    }
-    {
-      name = "显示器切到 HDMI2 (mio)";
-      command = "${lib.getExe basePackages.display-switch} 15";
-      iconSymbol = "display";
-    }
-  ];
+  ]
+  ++ displayCommands;
 
-  hotkeyedCommands = builtins.filter (c: c ? hotkey) commands;
+  # App 以命令 id 索引别名、收藏与快捷键，所以 id 必须由名字稳定派生
+  commandID =
+    name:
+    let
+      h = builtins.hashString "sha256" name;
+    in
+    "${builtins.substring 0 8 h}-${builtins.substring 8 4 h}-${builtins.substring 12 4 h}-${builtins.substring 16 4 h}-${builtins.substring 20 12 h}";
 
-  # 生成 targets.darwin.defaults 所需的偏好字典 (快捷键使用 mylib.darwinKeyCombo 统一换算)
-  tinycastDefaults =
-    (lib.mapAttrs' (
-      chord: bundleID: lib.nameValuePair "hotkey.app.${bundleID}" (mylib.darwinKeyCombo chord)
-    ) appHotkeys)
-    // {
-      boundAppBundleIDs = builtins.attrValues appHotkeys;
-    }
-    // (lib.listToAttrs (
-      map (cmd: {
-        name = "hotkey.customCommand.${lib.toLower (mkUUID cmd.name)}";
-        value = mylib.darwinKeyCombo cmd.hotkey;
-      }) hotkeyedCommands
-    ))
-    // {
-      boundCustomCommandIDs = map (cmd: lib.toLower (mkUUID cmd.name)) hotkeyedCommands;
-      customCommandsEnabled = true;
-      customCommandsShowInLauncher = true;
-    };
-  managedCommands = map (cmd: {
-    id = mkUUID cmd.name;
+  hotkeyedCommands = builtins.filter (cmd: cmd ? hotkey) customCommands;
+
+  commandRecords = map (cmd: {
+    id = commandID cmd.name;
     inherit (cmd) name command iconSymbol;
-  }) commands;
+  }) customCommands;
 
-  # 原生 Swift 同步器：直接操作 Tinycast 的 UserDefaults，无外部 shell 工具管道转换
-  syncScript = pkgs.writeText "sync-tinycast.swift" ''
-    import Foundation
-
-    guard let defaults = UserDefaults(suiteName: "com.tinycast.app") else { exit(1) }
-
-    let managedJSON = CommandLine.arguments[1]
-    guard let managedData = managedJSON.data(using: .utf8),
-          let managedList = try? JSONSerialization.jsonObject(with: managedData) as? [[String: Any]]
-    else { exit(1) }
-
-    let managedIDs = Set(managedList.compactMap { $0["id"] as? String })
-
-    var currentList: [[String: Any]] = []
-    if let existingData = defaults.data(forKey: "customCommands"),
-       let decoded = try? JSONSerialization.jsonObject(with: existingData) as? [[String: Any]] {
-        currentList = decoded.filter {
-            guard let id = $0["id"] as? String else { return true }
-            return !managedIDs.contains(id)
-        }
-    }
-
-    currentList.append(contentsOf: managedList)
-
-    guard let mergedData = try? JSONSerialization.data(withJSONObject: currentList) else { exit(1) }
-    if defaults.data(forKey: "customCommands") != mergedData {
-        defaults.set(mergedData, forKey: "customCommands")
-    }
-  '';
+  # 命令内容与它的快捷键都不进 settings.json，App 只能从 UserDefaults 读到，所以这两项留在这里。
+  # App 快捷键、启动器可见性等偏好一律写在 settings.json：镜像打开后 App 以文件为准，
+  # 在这里重复声明只会被文件清掉。
+  tinycastDefaults = {
+    boundCustomCommandIDs = map (cmd: commandID cmd.name) hotkeyedCommands;
+    settingsFileEnabled = true;
+  }
+  // builtins.listToAttrs (
+    map (cmd: {
+      name = "hotkey.customCommand.${commandID cmd.name}";
+      value = mylib.darwinKeyCombo cmd.hotkey;
+    }) hotkeyedCommands
+  );
 in
 {
-  home.packages = (builtins.attrValues basePackages) ++ presetPackages;
-  # 原生接管快捷键与命令索引映射
+  home.packages = builtins.attrValues scripts ++ displayPackages;
+
   targets.darwin.defaults."com.tinycast.app" = tinycastDefaults;
 
-  # 软链接脚本目录至 ~/.config/tinycast/scripts，便于调试
   xdg.configFile."tinycast/scripts" = mylib.mkConfigFile config scriptsDir;
 
-  # 激活时同步到 Tinycast，使其在启动器中立即可被搜索调用
-  # 先导入快捷键偏好，再合并命令列表，避免两个激活步骤的写入顺序不明确。
+  # settings.json 由 App 回写，所以源文件必须可写：liveEdit 主机软链到仓库，其他主机链到只读
+  # 的 Store 路径，启动时照常应用，但 App 内改动保存会失败
+  xdg.configFile."tinycast/settings.json" = mylib.mkConfigFile config ./settings.json;
+
+  # 排在 setDarwinDefaults 之后，避免两个步骤的写入顺序不明确
   home.activation.tinycastCustomCommands = lib.hm.dag.entryAfter [ "setDarwinDefaults" ] ''
-    /usr/bin/swift ${syncScript} '${builtins.toJSON managedCommands}'
+    /usr/bin/swift ${./sync-commands.swift} '${builtins.toJSON commandRecords}'
   '';
 }
