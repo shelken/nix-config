@@ -5,6 +5,34 @@ set -e
 
 CURRENT_HOST=$(hostname)
 
+# vps-cc 与 sakamoto 的云端 kopia 共用本脚本（modules/features/backup/_kopia-server/），改这里两边一起生效。
+# 云端仓库的配置含 WebDAV 凭据，由 env 在启动时生成，所以仓库配置的字段只在这里写一份；
+# 本地仓库的配置是挂进来的静态文件，不设 KOPIA_WEBDAV_*。
+# 不挂 sops 渲染的文件：macOS 上它在符号链接下面，密钥轮换换代后，运行中的容器会读到 Operation not permitted
+if [ -n "${KOPIA_WEBDAV_URL:-}" ]; then
+    (
+        umask 077
+        cat >"$KOPIA_CONFIG_PATH" <<JSON
+{
+  "storage": {
+    "type": "webdav",
+    "config": {
+      "url": "$KOPIA_WEBDAV_URL",
+      "username": "$KOPIA_WEBDAV_USERNAME",
+      "password": "$KOPIA_WEBDAV_PASSWORD"
+    }
+  },
+  "caching": {
+    "cacheDirectory": "/app/cache",
+    "maxCacheSize": 5242880000,
+    "maxMetadataCacheSize": 5242880000,
+    "maxListCacheDuration": 30
+  }
+}
+JSON
+    )
+fi
+
 echo "检查 Kopia 仓库连接..."
 if ! kopia repository status >/dev/null; then
     echo "无法打开 Kopia 仓库，请检查 repository.config、KOPIA_PASSWORD 和 S3 后端。" >&2

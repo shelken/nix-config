@@ -25,9 +25,7 @@ hosts/vps/vps-cc/
     ├── default.nix            聚合：后端、共享网络、统一重启策略、绑定地址
     ├── node-exporter.nix      服务文件，没有附带文件时
     └── kopia/
-        ├── default.nix        服务文件
-        ├── entrypoint.sh      随容器挂进去的文件
-        └── policy.json
+        └── default.nix        服务文件；入口脚本与策略与 sakamoto 共用，在 modules/features/backup/_kopia-server/
 ```
 
 | 规则         | 说明                                                                                             |
@@ -66,13 +64,13 @@ hosts/vps/vps-cc/
 
 ## 环境变量与密钥从哪来
 
-| 内容                     | 放哪                                                                            | 例子                                    |
-| ------------------------ | ------------------------------------------------------------------------------- | --------------------------------------- |
-| 非机密的运行参数         | 容器 `environment`                                                              | `TZ`、`HTTP_PORT`                       |
-| 口令、token、Webhook URL | 私有 `secrets` 仓库的 sops 字段，模板渲染成 env 文件，容器读 `environmentFiles` | openlist 的 admin 口令                  |
-| 含机密的配置文件         | sops 模板渲染整个文件，再按 `volumes` 挂进容器                                  | kopia 的仓库配置里有 WebDAV 凭据        |
-| 主机事实（地址等）       | `vars/networking.nix` 的 `hostAddress` 表                                       | `vps-cc-ts` 的 tailnet 地址             |
-| 不含机密的文件           | 跟服务放同一目录，直接挂 `Nix store` 路径                                       | kopia 的 `policy.json`、`entrypoint.sh` |
+| 内容                     | 放哪                                                                            | 例子                                   |
+| ------------------------ | ------------------------------------------------------------------------------- | -------------------------------------- |
+| 非机密的运行参数         | 容器 `environment`                                                              | `TZ`、`HTTP_PORT`                      |
+| 口令、token、Webhook URL | 私有 `secrets` 仓库的 sops 字段，模板渲染成 env 文件，容器读 `environmentFiles` | openlist 的 admin 口令                 |
+| 含机密的配置文件         | sops 模板渲染整个文件，再按 `volumes` 挂进容器                                  | 其余服务需要整个含机密的文件时         |
+| 主机事实（地址等）       | `vars/networking.nix` 的 `hostAddress` 表                                       | `vps-cc-ts` 的 tailnet 地址            |
+| 不含机密的文件           | 跟服务放同一目录，直接挂 `Nix store` 路径                                       | kopia 的入口脚本与策略（两台主机共用） |
 
 以一个 token 为例
 

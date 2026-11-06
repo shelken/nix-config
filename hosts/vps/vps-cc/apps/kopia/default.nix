@@ -7,6 +7,9 @@ let
   # 切换前必须按 docs/user-guide/06-containers.md 核对线上实际卷名，
   # 对不上只会丢一份缓存与对账指纹，kopia 会重新对账
   cacheVolume = "homelab-compose_kopia_cache";
+
+  # 镜像、入口脚本与策略与 sakamoto 的 kopia 共用，不在本目录放副本
+  kopiaServer = import ../../../../../modules/features/backup/_kopia-server;
 in
 {
   systemd.tmpfiles.rules = [
@@ -25,36 +28,14 @@ in
     content = ''
       KOPIA_PASSWORD=${config.sops.placeholder."kopia/password"}
       KOPIA_WEBHOOK_URL=${config.sops.placeholder."kopia/webhook-url"}
-    '';
-    restartUnits = [ "docker-kopia.service" ];
-  };
-
-  # 仓库配置里有 WebDAV 凭据，只能由模板在激活时渲染；
-  # 其余字段与 Compose 里的 repository.config 一致
-  sops.templates."kopia-repository.config" = {
-    content = ''
-      {
-        "storage": {
-          "type": "webdav",
-          "config": {
-            "url": "http://openlist:80/dav/main",
-            "username": "${config.sops.placeholder."openlist/webdav-username"}",
-            "password": "${config.sops.placeholder."openlist/webdav-password"}"
-          }
-        },
-        "caching": {
-          "cacheDirectory": "/app/cache",
-          "maxCacheSize": 5242880000,
-          "maxMetadataCacheSize": 5242880000,
-          "maxListCacheDuration": 30
-        }
-      }
+      KOPIA_WEBDAV_USERNAME=${config.sops.placeholder."openlist/webdav-username"}
+      KOPIA_WEBDAV_PASSWORD=${config.sops.placeholder."openlist/webdav-password"}
     '';
     restartUnits = [ "docker-kopia.service" ];
   };
 
   virtualisation.oci-containers.containers.kopia = {
-    image = "kopia/kopia:0.23.1@sha256:89fd95ee2942880ca00eae964266958a394421ddbdf69bca62e38afc55f5900e";
+    inherit (kopiaServer) image;
     autoStart = true;
     entrypoint = "/app/scripts/entrypoint.sh";
     # 策略与 webhook 对账按 `shelken@<主机名>` 找目标，必须保持 vps
@@ -65,6 +46,8 @@ in
       KOPIA_CACHE_DIRECTORY = "/config/cache";
       KOPIA_LOG_DIR = "/config/logs";
       KOPIA_MIN_SEVERITY = "warning";
+      # 仓库配置由共用的 entrypoint.sh 按这三项生成，凭据在 kopia.env 里
+      KOPIA_WEBDAV_URL = "http://openlist:80/dav/main";
     };
     environmentFiles = [ config.sops.templates."kopia.env".path ];
     # 只给启动顺序与依赖；旧 Compose 等的是 openlist 的「健康」状态，
@@ -76,9 +59,8 @@ in
       "${cacheVolume}:/config/cache"
       "${logDir}:/config/logs"
       "/data:/backup/data:ro"
-      "${config.sops.templates."kopia-repository.config".path}:/config/repository.config:ro"
-      "${./policy.json}:/config/policy.json:ro"
-      "${./entrypoint.sh}:/app/scripts/entrypoint.sh:ro"
+      "${kopiaServer.policy}:/config/policy.json:ro"
+      "${kopiaServer.entrypoint}:/app/scripts/entrypoint.sh:ro"
     ];
     labels = {
       "homepage.group" = "VPS";

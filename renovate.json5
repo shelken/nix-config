@@ -37,7 +37,10 @@
       // 迁移后升级源在这里，不认这块就等于镜像从此不再升级
       customType: "regex",
       description: "服务声明里的容器镜像",
-      managerFilePatterns: ["/(^|/)hosts/[^/]+/[^/]+/apps/.+\\.nix$/"],
+      managerFilePatterns: [
+        "/(^|/)hosts/[^/]+/[^/]+/apps/.+\\.nix$/",
+        "/(^|/)modules/features/backup/_kopia-server/default\\.nix$/",
+      ],
       matchStrings: [
         'image = "(?<depName>[^"@]+):(?<currentValue>[^"@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?"',
       ],
@@ -135,6 +138,13 @@
       description: "VPS 容器镜像：合成一个 PR，手动合并",
       matchFileNames: ["hosts/vps/vps-cc/apps/**"],
       groupName: "vps container images",
+      automerge: false,
+    },
+    {
+      // 两台主机的 kopia 服务端共用这一处镜像，升级会同时作用于 vps-cc 与 sakamoto
+      description: "kopia 服务端镜像（vps-cc 与 sakamoto 共用）：单独一个 PR，手动合并",
+      matchFileNames: ["modules/features/backup/_kopia-server/default.nix"],
+      groupName: "kopia server image",
       automerge: false,
     },
     {
