@@ -33,6 +33,7 @@ let
     findutils
     gawk
     openssh
+    dig
   ];
 
   sharedTools = lib.concatMap (tool: lib.optional (tool.package != null) linuxPkgs.${tool.package}) (
