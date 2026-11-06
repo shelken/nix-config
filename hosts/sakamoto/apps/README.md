@@ -34,13 +34,14 @@ kopia 的 `entrypoint.sh` 与云端仓库的 `policy.json` 和 vps-cc 共用同�
 
 launchd agent（Label `space.ooooo.sakamoto-compose`，`gui` 域）负责拉起与对账：
 
-| 改了什么                      | 收敛                                                                                            |
-| ----------------------------- | ----------------------------------------------------------------------------------------------- |
-| `compose.yaml`                | `sakamoto-compose` 的 store 路径变，plist 跟着变，agent 重载后立刻 `up`，重建服务定义变了的容器 |
-| `configs/` 里的文件、密钥的值 | plist 不变，sops 重新渲染 env 后，下一轮 `StartInterval`（≤15 分钟）的 `up` 重建受影响的容器    |
-| 都没有变化                    | `StartInterval` 15 分钟兜底                                                                     |
+| 改了什么                                      | 收敛                                                                                                              |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `compose.yaml`、`configs/` 里的文件、密钥的值 | plist 不变，下一轮 `StartInterval`（≤15 分钟）的 `up` 重建受影响的容器；`default.nix` 里 CLI 本身变了才会立刻重载 |
+| 都没有变化                                    | `StartInterval` 15 分钟兜底                                                                                       |
 
-只改配置或密钥想立刻生效：`sakamoto-compose up`。
+改了 `compose.yaml`、配置或密钥想立刻生效：`sakamoto-compose up`。
+
+`docker compose -f` 用的是固定路径 `~/.config/sakamoto-compose/compose.yaml`（符号链接，指向 store）。Compose 创建容器时把这个路径写进 `config_files` 与 `working_dir` 标签，OrbStack 按它分组；用 store 路径的话，每改一次 `compose.yaml` 路径就变，没被重建的容器保留旧标签，会多出一组。
 
 没有用 `WatchPaths` 监视渲染目录：它在符号链接下面，sops 换代后 launchd 的监视时灵时不灵（实测三轮换代只触发一轮）。
 
@@ -71,4 +72,4 @@ sakamoto-compose logs
 sakamoto-compose check      # 只校验解析与插值，不动容器
 ```
 
-镜像升级：`compose.yaml` 里的 tag 由 renovate 的 `sakamoto container images` 规则合成一个 PR，合并后 `just hm`（或 `just deploy sakamoto`），agent 重载后立刻 `up`，只重建 tag 变了的容器。
+镜像升级：`compose.yaml` 里的 tag 由 renovate 的 `sakamoto container images` 规则合成一个 PR，合并后 `just hm`（或 `just deploy sakamoto`），再 `sakamoto-compose up`（或等 15 分钟的 agent），只重建 tag 变了的容器。

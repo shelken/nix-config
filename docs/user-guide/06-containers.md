@@ -176,7 +176,7 @@ virtualisation.oci-containers.containers.openlist = {
 
 | 内容                                | 放哪                                                                                             |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `compose.yaml`                      | 单个文件进 store（`${./compose.yaml}`）                                                          |
+| `compose.yaml`                      | 进 store，`~/.config/sakamoto-compose/compose.yaml` 是固定路径的链接，`docker compose -f` 用它   |
 | `configs/` 里的静态配置             | 每个文件单独进 store，路径写进 env 文件，`compose.yaml` 用 `volumes: - ${CADDYFILE}:...:ro` 引用 |
 | 口令、token、数据目录               | sops 模板渲染成 env 文件，`docker compose --env-file` 取用                                       |
 | 含机密的配置（云端 kopia 仓库配置） | 不挂文件：WebDAV 地址与凭据走环境变量，`entrypoint.sh` 启动时生成                                |
