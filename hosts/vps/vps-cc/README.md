@@ -66,7 +66,7 @@ limactl delete --force nixos-anywhere-vps
 | 静态 IP、网关、MTU 1400，重启后不丢                                       | 通过                                                                               |
 | sshd 监听 60223，仅密钥登录，root 与 shelken 都能登录，密码登录被拒       | 通过                                                                               |
 | 口令哈希由 sops 在开机时解到 `/run/secrets-for-users`，写入 `/etc/shadow` | 哈希已写入（`$y$`）；**口令本身是否正确没有测，切换后由你在 VNC 或 `sudo` 时验证** |
-| zramSwap、BBR、inotify、journald 200M                                     | 通过                                                                               |
+| zramSwap、BBR、inotify、journald 2G                                       | 通过                                                                               |
 | 防火墙放行清单与 `common.nix` 一致                                        | 通过                                                                               |
 | docker 守护进程启动、晚于 tailscaled、能拉镜像                            | 通过                                                                               |
 | deploy-rs 推送更新，配置把 SSH 堵死后自动回滚                             | 通过，前提见下表「第一次 `deploy` 后配置变坏」一行                                 |
@@ -204,7 +204,9 @@ just deploy vps-cc
 
 deploy-rs 用 root + 密钥推送，激活后新开一个 SSH 连接确认，30 秒内连不上就自动回滚。防火墙、网络、sshd 的改动尤其要依赖它
 
-部署前 Mac 上的 `linux-builder` 必须在运行，x86_64-linux 的构建靠它。构建之后再改已跟踪文件，会让一串系统组装层的小派生重建（nix-config #181）。想知道会不会重建，用 `nix build <路径> --dry-run`；判断某个工具会不会在本机编译，先 `nix path-info --store https://cache.nixos.org <路径>` 查缓存，`--dry-run` 只列清单、不下载。
+构建位置由 `flake.nix` 的 `hosts.vps-cc.deploy.remoteBuild` 控制，当前为 `true`：Mac 求值，VPS 构建并激活，日常部署不需要本机 `linux-builder`。临时本地构建与构建模式查询见 [VPS 指南「日常更新」](../../../docs/user-guide/05-vps.md#日常更新)
+
+构建之后再改已跟踪文件，会让一串系统组装层的小派生重建（nix-config #181）。想知道会不会重建，用 `nix build <路径> --dry-run`；判断某个工具是否有官方缓存，先 `nix path-info --store https://cache.nixos.org <路径>`，`--dry-run` 只列清单、不下载
 
 ## 切换后发现的问题
 
