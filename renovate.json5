@@ -37,10 +37,7 @@
       // 迁移后升级源在这里，不认这块就等于镜像从此不再升级
       customType: "regex",
       description: "服务声明里的容器镜像",
-      managerFilePatterns: [
-        "/(^|/)hosts/[^/]+/[^/]+/apps/.+\\.nix$/",
-        "/(^|/)modules/features/backup/_kopia-server/default\\.nix$/",
-      ],
+      managerFilePatterns: ["/(^|/)hosts/[^/]+/[^/]+/apps/.+\\.nix$/"],
       matchStrings: [
         'image = "(?<depName>[^"@]+):(?<currentValue>[^"@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?"',
       ],
@@ -141,18 +138,20 @@
       automerge: false,
     },
     {
-      // 两台主机的 kopia 服务端共用这一处镜像，升级会同时作用于 vps-cc 与 sakamoto
-      description: "kopia 服务端镜像（vps-cc 与 sakamoto 共用）：单独一个 PR，手动合并",
-      matchFileNames: ["modules/features/backup/_kopia-server/default.nix"],
-      groupName: "kopia server image",
-      automerge: false,
-    },
-    {
       // sakamoto 的镜像在 compose.yaml 里，内置的 docker-compose manager 认识这个文件名；
       // 迁移前升级源在 home-ops 的同名 compose 文件上
       description: "sakamoto 容器镜像：合成一个 PR，手动合并",
       matchFileNames: ["hosts/sakamoto/apps/**"],
       groupName: "sakamoto container images",
+      automerge: false,
+    },
+    {
+      // vps-cc 与 sakamoto 的 kopia 写同一个仓库，版本必须一起前进：
+      // 两处镜像合成一个 PR。放在按文件分组的两条规则之后，覆盖它们的 groupName
+      description: "kopia 镜像（vps-cc 与 sakamoto 共用仓库）：两处合成一个 PR，手动合并",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["kopia/kopia"],
+      groupName: "kopia container images",
       automerge: false,
     },
     {

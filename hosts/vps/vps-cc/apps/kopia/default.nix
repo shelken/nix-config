@@ -8,8 +8,8 @@ let
   # 对不上只会丢一份缓存与对账指纹，kopia 会重新对账
   cacheVolume = "homelab-compose_kopia_cache";
 
-  # 镜像、入口脚本与策略与 sakamoto 的 kopia 共用，不在本目录放副本
-  kopiaServer = import ../../../../../modules/features/backup/_kopia-server;
+  # 入口脚本与策略与 sakamoto 的 kopia 共用，不在本目录放副本
+  shared = ../../../../../modules/features/backup/_kopia-server;
 in
 {
   systemd.tmpfiles.rules = [
@@ -35,7 +35,7 @@ in
   };
 
   virtualisation.oci-containers.containers.kopia = {
-    inherit (kopiaServer) image;
+    image = "kopia/kopia:0.23.1@sha256:89fd95ee2942880ca00eae964266958a394421ddbdf69bca62e38afc55f5900e";
     autoStart = true;
     entrypoint = "/app/scripts/entrypoint.sh";
     # 策略与 webhook 对账按 `shelken@<主机名>` 找目标，必须保持 vps
@@ -59,8 +59,8 @@ in
       "${cacheVolume}:/config/cache"
       "${logDir}:/config/logs"
       "/data:/backup/data:ro"
-      "${kopiaServer.policy}:/config/policy.json:ro"
-      "${kopiaServer.entrypoint}:/app/scripts/entrypoint.sh:ro"
+      "${shared + "/policy.json"}:/config/policy.json:ro"
+      "${shared + "/entrypoint.sh"}:/app/scripts/entrypoint.sh:ro"
     ];
     labels = {
       "homepage.group" = "VPS";

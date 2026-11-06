@@ -35,14 +35,14 @@ let
   # 容器要读的静态配置，键名即 compose.yaml 里 volumes 引用的变量。
   # 必须是 volumes 而不是 configs:：Compose 的服务 hash 不含 configs 的路径与内容，改了配置 up 不会重建容器；
   # volumes 的源路径在 hash 里，每个文件单独进 store、路径随内容变，所以改哪个文件只重建用到它的服务
-  # 与 vps-cc 共用的 kopia 镜像、入口脚本与策略
-  kopiaServer = import ../../../modules/features/backup/_kopia-server;
+  # 与 vps-cc 共用的 kopia 入口脚本与策略
+  kopiaShared = ../../../modules/features/backup/_kopia-server;
 
   configFiles = {
     CADDYFILE = ./configs/caddy/Caddyfile;
     MIRROR_CONFIG = ./configs/mirror-config.yaml;
-    KOPIA_POLICY = kopiaServer.policy;
-    KOPIA_ENTRYPOINT = kopiaServer.entrypoint;
+    KOPIA_POLICY = kopiaShared + "/policy.json";
+    KOPIA_ENTRYPOINT = kopiaShared + "/entrypoint.sh";
     KOPIA_LOCAL_REPOSITORY_CONFIG = ./configs/kopia/local/repository.config;
     KOPIA_LOCAL_POLICY = ./configs/kopia/local/policy.json;
   };
@@ -224,7 +224,6 @@ in
           OPENLIST_WEBDAV_PASSWORD=${placeholder "drive/webdav/password"}
           SAKAMOTO_DATA_DIR=${externalDisks.sakamotoData}
           LOCAL_REPO_DIR=${externalDisks.localRepo}
-          KOPIA_IMAGE=${kopiaServer.image}
           ${configFileLines}
         '';
       };

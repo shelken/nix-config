@@ -217,7 +217,7 @@ services:
 
   # ==================== Kopia Backup (Cloud) ====================
   kopia:
-    image: ${KOPIA_IMAGE}
+    image: kopia/kopia:0.23.1
     container_name: kopia
     hostname: sakamoto
     networks:
@@ -257,7 +257,7 @@ services:
 
   # ==================== Kopia Backup (Local) ====================
   kopia-local:
-    image: ${KOPIA_IMAGE}
+    image: kopia/kopia:0.23.1
     container_name: kopia-local
     hostname: sakamoto-local
     networks:
