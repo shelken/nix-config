@@ -1,7 +1,4 @@
-# singbox-config：填充模板 → 校验 → encode 成订阅 URL
-#
-# 逻辑在 singbox-config.sh，这里注入两个路径。用 replaceStrings
-# 而不是 pkgs.replaceVars：后者要 readFile 一个 store 路径，会引入 IFD。
+# singbox-config：填充模板 → encode 成订阅 URL；逻辑在 singbox-config.sh
 {
   config,
   lib,
@@ -13,14 +10,11 @@ let
   script = pkgs.writeShellApplication {
     name = "singbox-config";
     runtimeInputs = [ pkgs.coreutils ];
-    text =
-      lib.replaceStrings
-        [ "@templatesDir@" "@mainDomainFile@" ]
-        [
-          "${./templates}"
-          "${config.sops.secrets.singbox-main-domain.path}"
-        ]
-        (builtins.readFile ./singbox-config.sh);
+    runtimeEnv = {
+      TEMPLATES_DIR = "${./templates}";
+      MAIN_DOMAIN_FILE = config.sops.secrets.singbox-main-domain.path;
+    };
+    text = builtins.readFile ./singbox-config.sh;
   };
 in
 {

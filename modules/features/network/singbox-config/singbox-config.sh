@@ -11,7 +11,7 @@ URL 由 sbtools 写进剪切板。私密值只落在临时目录，退出即删�
 模板里用到的 1Password 条目（都在 vault Personal 的 proxy 条目里，一个字段一项）：
   subs-miaona        机场订阅 URL
   vps-hy2            \
-  vps-hy2-v6          > 私有节点 URI（mac / router 三条，ios 两条）
+  vps-hy2-v6          > 私有节点 URI（三个变体各三条）
   vps-anytls         /
   clash-secret       router 的 clash API secret
 
@@ -29,14 +29,8 @@ case $variant in
   *) usage ;;
 esac
 
-main_domain_file="@mainDomainFile@"
-if [[ ! -r $main_domain_file ]]; then
-  echo "读不到 sops 密文：$main_domain_file（本机未启用 secrets，或还没激活过）" >&2
-  exit 1
-fi
-main_domain=$(< "$main_domain_file")
-if [[ -z $main_domain ]]; then
-  echo "sops 的 main-domain 是空的：$main_domain_file" >&2
+if ! main_domain=$(< "$MAIN_DOMAIN_FILE") || [[ -z $main_domain ]]; then
+  echo "读不到 sops 的 main-domain：$MAIN_DOMAIN_FILE（本机未启用 secrets，或还没激活过）" >&2
   exit 1
 fi
 
@@ -44,7 +38,7 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 yaml="$work/$variant.yaml"
 
-template="@templatesDir@/$variant.yaml"
+template="$TEMPLATES_DIR/$variant.yaml"
 
 echo "→ 填充模板：$template"
 sec-run op inject -i "$template" -o "$yaml"
