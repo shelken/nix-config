@@ -29,8 +29,11 @@ let
   # 改名会新建两个空卷：kopia 需要重新对账，还会丢掉缓存
   projectName = "homelab-compose";
 
-  # 单个文件进 store：改 default.nix 或 README.md 不会换它的路径
-  composeFile = "${./compose.yaml}";
+  # 传给 docker compose -f 的是固定路径的符号链接，不是 store 路径。
+  # Compose 创建容器时把 -f 的路径写进标签（working_dir、config_files），OrbStack 按它分组；
+  # 没被重建的容器保留旧标签，store 路径随内容变，每改一次 compose.yaml 就会多出一组。
+  # 固定路径下标签不随内容变，只会有一组
+  composeFile = "${config.xdg.configHome}/sakamoto-compose/compose.yaml";
 
   # 容器要读的静态配置，键名即 compose.yaml 里 volumes 引用的变量。
   # 必须是 volumes 而不是 configs:：Compose 的服务 hash 不含 configs 的路径与内容，改了配置 up 不会重建容器；
@@ -232,8 +235,8 @@ in
       # 登录后 RunAtLoad 跑一次，StartInterval 负责补漏（开机时外接盘还没挂上、容器被手工删掉），
       # 也是密钥值轮换后的收敛路径：env 变了，下一轮 up 会重建受影响的容器。
       # 不用 WatchPaths：渲染目录在符号链接下面，sops 换代后 launchd 的监视时灵时不灵（实测三轮只触发一轮）；
-      # compose.yaml 改了时 CLI 的 store 路径变、plist 跟着变，Home Manager 会重新加载并立刻再跑一次；
-      # 只改配置文件或密钥时 plist 不变，等下一轮，或手动 sakamoto-compose up
+      # compose.yaml、配置文件或密钥变了时 plist 都不变，等下一轮，或手动 sakamoto-compose up；
+      # 只有 default.nix 里 CLI 本身变了，plist 才跟着变，Home Manager 会重新加载并立刻再跑一次
       launchd.agents.sakamoto-compose = {
         enable = true;
         config = {
@@ -251,6 +254,8 @@ in
           StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/sakamoto-compose.err.log";
         };
       };
+
+      xdg.configFile."sakamoto-compose/compose.yaml".source = ./compose.yaml;
 
       home.packages = [ composeCli ];
     })
