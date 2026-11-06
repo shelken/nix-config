@@ -36,6 +36,7 @@ flowchart LR
 | 配置物化深模块 | [_config.nix](./_config.nix) | 声明文件收集、解引用工作区软链、原子发布至 `~/.config/sandbox/current` 并修剪过期版本 |
 | Guest 运行时与隔离器 | [_guest.nix](./_guest.nix)、[launcher.sh](./launcher.sh)、[guest/](./guest/)、[sync-guest.sh](./sync-guest.sh)、[guest-status.sh](./guest-status.sh) | 封装 Linux 工具闭包与环境脚本；内聚 netns、registry、layout 三个窄接口子模块与 bubblewrap 隔离执行器 |
 | 宿主驱动与 CLI | [_host.nix](./_host.nix)、[sb.sh](./sb.sh) | 封装 microsandbox 驱动配置，接收原生 `sb.yaml`，统一 `die()` 报错，组装 `sb` 与 `omp-sb` 命令行工具 |
+| 执行计划 | [py/sb/plan.py](./py/sb/plan.py) | 把 `sb.yaml` 能力上限与项目 `.sandbox.yaml` 授权解析成 host → guest 的唯一数据契约（`Plan`）；打包成 `sb-plan`，`sb.sh` 调用它。YAML 经 `yq` 转 JSON，与批准哈希同一个解析器 |
 | 能力上限 | [sb.yaml](./sb.yaml) | 原生 YAML 策略基线，部署到 `~/.config/sandbox/sb.yaml`，供日常查看与编辑 |
 ## 术语与不变量
 
@@ -410,3 +411,9 @@ bash modules/features/ai/sandbox/e2e/smoke.sh
 需要宿主有 `msb`、ubuntu 镜像缓存、能访问公网与 Linux 构建器；默认现场构建 `sb`，可用 `SB_BIN` 指定。首次创建 VM 会自动执行一次 `sb sync`；冒烟测试的发布目录里没有 `sync-guest.sh`，那次 sync 在 guest 内直接跳过，共用 mise 层只被挂载、不被写入
 
 冒烟测试之外的行为验证（首次启动、OMP 调模型、sync、生命周期与授权）见项目技能 [verify-sandbox](../../../../.agents/skills/verify-sandbox/SKILL.md)
+
+执行计划的规则由 [py/test_plan.py](./py/test_plan.py) 覆盖：临时目录里的真实 git 仓库、worktree 与 YAML，驱动真实的 `python -m sb plan`，不需要 VM
+
+```bash
+cd modules/features/ai/sandbox/py && nix shell nixpkgs#yq-go -c python3 test_plan.py
+```

@@ -40,6 +40,7 @@
       host = import ./_host.nix {
         inherit
           pkgs
+          lib
           manifest
           guest
           ;
