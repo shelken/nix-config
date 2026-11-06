@@ -237,6 +237,8 @@ services:
       KOPIA_LOG_DIR: /config/logs
       KOPIA_PASSWORD: ${KOPIA_PASSWORD}
       # 云端仓库配置由 entrypoint.sh 按这三项在启动时生成
+      # 用 compose 专属的 openlist 账号，它的根目录就是 kopia 目录，所以仓库在 /dav/main。
+      # 不能用 drive/webdav（客户端 kopia 的账号，根目录在上一级）：同一个仓库在那边是 /dav/backup/kopia/main
       KOPIA_WEBDAV_URL: https://drive.${MAIN_DOMAIN}/dav/main
       KOPIA_WEBDAV_USERNAME: ${OPENLIST_WEBDAV_USERNAME}
       KOPIA_WEBDAV_PASSWORD: ${OPENLIST_WEBDAV_PASSWORD}
