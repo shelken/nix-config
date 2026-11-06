@@ -88,7 +88,7 @@ in
   };
 
   virtualisation.oci-containers.containers.anytls = {
-    image = "ghcr.io/sagernet/sing-box:v1.14.2@sha256:afbffd294c5eb3519cc7b4587299ef189bb0a2ca2f667cb6301fdb6b9bce9558";
+    image = "ghcr.io/sagernet/sing-box:v1.14.4@sha256:0788ffbddab2c68a99a2dd4780bbc50902f159af6f589df3ee74a8389d278279";
     autoStart = true;
     entrypoint = "/entrypoint.sh";
     environmentFiles = [ config.sops.templates."anytls.env".path ];
