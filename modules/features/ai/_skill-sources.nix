@@ -19,6 +19,12 @@
     frontmatter.install-anti-slop.disable-model-invocation = true;
   };
 
+  caldo-skills = {
+    input = "caldo-skills";
+    base = ".";
+    skills.untangle-codebase = "skills/untangle-codebase";
+  };
+
   # pstack 把 CLI/TUI 验收委托给这个 skill；只取 control-cli，
   # control-ui 由本机 agent-browser 承担，见 skills/pstack-harness。
   cursor-team-kit = {

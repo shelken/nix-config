@@ -42,6 +42,25 @@
         "type": "github"
       }
     },
+    "caldo-skills": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1793905642,
+        "narHash": "sha256-FY4dg5Pm/rpg3oWarfCDTneA1qZ6v6GIQhalEsvgjVY=",
+        "ref": "main",
+        "rev": "f3cf47774975a7d9fca45730babf4ff7ad765ada",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/caldoai/skills"
+      },
+      "original": {
+        "ref": "main",
+        "rev": "f3cf47774975a7d9fca45730babf4ff7ad765ada",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/caldoai/skills"
+      }
+    },
     "catppuccin": {
       "inputs": {
         "nixpkgs": [
@@ -588,6 +607,7 @@
       "inputs": {
         "anti-slop": "anti-slop",
         "anyrun": "anyrun",
+        "caldo-skills": "caldo-skills",
         "catppuccin": "catppuccin",
         "cursor-plugins": "cursor-plugins",
         "deploy-rs": "deploy-rs",

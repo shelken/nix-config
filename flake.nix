@@ -410,6 +410,11 @@
       flake = false;
     };
 
+    caldo-skills = {
+      url = "git+https://github.com/caldoai/skills?ref=main&rev=f3cf47774975a7d9fca45730babf4ff7ad765ada&shallow=1";
+      flake = false;
+    };
+
     cursor-plugins = {
       url = "git+https://github.com/cursor/plugins?ref=main&rev=6f6c9e62585436f69e560138d46709026fa5c69f&shallow=1";
       flake = false;

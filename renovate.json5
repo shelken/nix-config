@@ -74,6 +74,7 @@
       matchManagers: ["nix"],
       matchDepNames: [
         "anti-slop",
+        "caldo-skills",
         "cursor-plugins",
         "diagram-design",
         "humanlayer-skills",
