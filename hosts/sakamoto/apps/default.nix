@@ -61,11 +61,15 @@ let
     "drive/webdav/password"
     "compose-sakamoto/cloudflare-api-token"
     "compose-sakamoto/data-dir"
-    "compose-sakamoto/local-repo-dir"
     "compose-sakamoto/rustfs-password"
     "compose-sakamoto/rustfs-user"
-    "compose-sakamoto/sakamoto-data-dir"
   ];
+  # 外接盘上的两个固定路径，与旧 compose 里写死的一致；不是机密，不进 sops。
+  # 写在 env 里而不是 compose.yaml：开机检查要读同一份来确认盘已挂载
+  externalDisks = {
+    sakamotoData = "/Volumes/sakamoto-data";
+    localRepo = "/Volumes/BackUp3T/kopia-local-repo";
+  };
   placeholder = name: config.sops.placeholder.${name};
 
   # 手动入口与 agent 共用同一份逻辑：agent 每 15 分钟跑一次 up，人工用同一个命令排障
@@ -215,8 +219,8 @@ in
           KOPIA_WEBHOOK_URL=${placeholder "kopia/webhook-url"}
           OPENLIST_WEBDAV_USERNAME=${placeholder "drive/webdav/username"}
           OPENLIST_WEBDAV_PASSWORD=${placeholder "drive/webdav/password"}
-          SAKAMOTO_DATA_DIR=${placeholder "compose-sakamoto/sakamoto-data-dir"}
-          LOCAL_REPO_DIR=${placeholder "compose-sakamoto/local-repo-dir"}
+          SAKAMOTO_DATA_DIR=${externalDisks.sakamotoData}
+          LOCAL_REPO_DIR=${externalDisks.localRepo}
           ${configFileLines}
         '';
       };

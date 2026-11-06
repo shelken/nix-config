@@ -179,7 +179,7 @@ virtualisation.oci-containers.containers.openlist = {
 | ----------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `compose.yaml`                      | 单个文件进 store（`${./compose.yaml}`）                                                          |
 | `configs/` 里的静态配置             | 每个文件单独进 store，路径写进 env 文件，`compose.yaml` 用 `volumes: - ${CADDYFILE}:...:ro` 引用 |
-| 口令、token、外接盘路径             | sops 模板渲染成 env 文件，`docker compose --env-file` 取用                                       |
+| 口令、token、数据目录               | sops 模板渲染成 env 文件，`docker compose --env-file` 取用                                       |
 | 含机密的配置（云端 kopia 仓库配置） | 不挂文件：WebDAV 地址与凭据走环境变量，`entrypoint.sh` 启动时生成                                |
 | 启动                                | HM 的 launchd agent（`gui` 域、`RunAtLoad` + 每 15 分钟），与人工入口共用                        |
 
@@ -187,7 +187,7 @@ virtualisation.oci-containers.containers.openlist = {
 
 - `compose.yaml` 顶部写死 `name: homelab-compose`：命名卷带项目名前缀，项目名跟着 compose 文件所在目录变（在 store 里就是 `store`）时会新建两个空卷
 - 配置文件用 `volumes:` 而不是 `configs:`：Compose 的服务 hash 不含 `configs:` 的路径与内容，改了文件 `up` 也不会重建；`volumes:` 的源路径在 hash 里，改哪个文件只重建用到它的服务
-- 外接盘路径走 sops，不进公开仓库；`sakamoto-compose up` 先逐个 `test -d`，盘没挂载直接退出，不让 Docker 以 root 新建空目录把备份写到本地盘
+- 外接盘路径（`default.nix` 的 `externalDisks`）与旧 compose 里写死的一致，不是机密；`sakamoto-compose up` 先逐个 `test -d`，盘没挂载直接退出，不让 Docker 以 root 新建空目录把备份写到本地盘
 
 ```bash
 sakamoto-compose up         # 等 OrbStack 与密钥就绪、检查数据目录，再 up -d

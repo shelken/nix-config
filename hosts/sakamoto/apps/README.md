@@ -13,7 +13,7 @@
 
 渲染出来的 `~/.config/sops-nix/secrets/rendered/sakamoto-compose.env`（权限 0400，明文不进 Nix store）是 compose 的唯一 `--env-file`：
 
-- 域名、数据目录、外接盘路径、口令与 token
+- 域名、数据目录、口令与 token（来自 sops），外接盘的两个固定路径（明文，`default.nix` 的 `externalDisks`）
 - `CADDYFILE`、`MIRROR_CONFIG` 等变量：`configs/` 里每个文件各自的 store 路径，`compose.yaml` 用 `volumes:` 把它们挂进容器
 
 入口脚本 `configs/kopia/entrypoint.sh` 在 git 里是 100755，进 store 后保留执行位，容器可以直接执行。

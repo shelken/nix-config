@@ -291,7 +291,7 @@ services:
       - ${KOPIA_ENTRYPOINT}:/app/scripts/entrypoint.sh:ro
       - kopia_local_cache:/config/cache
       - ${DOCKER_DATA_DIR}/kopia-local/logs:/config/logs
-      # 外接盘路径不落公开仓库，由 sops 渲染的 env 提供；盘没挂载时 sakamoto-compose 会拒绝启动
+      # 外接盘路径由 env 提供（default.nix 的 externalDisks）；盘没挂载时 sakamoto-compose 会拒绝启动
       - ${SAKAMOTO_DATA_DIR}:/backup/sakamoto-data:ro
       - ${LOCAL_REPO_DIR}:/repo
     ports:
