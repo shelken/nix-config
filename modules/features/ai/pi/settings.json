@@ -7,6 +7,7 @@
     "+codemode"
   ],
   "enabledModels": [
+    "anthropic/claude-sonnet-5-5:high",
     "mp/loomy/DeepSeek-V4.1-Flash:high",
     "mp/codex/gpt-5.6-sol:high",
     "mp/codex/gpt-6.1-sol:xhigh",
