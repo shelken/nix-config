@@ -87,7 +87,7 @@ services:
       RUSTFS_CONSOLE_ADDRESS: ":9001"
       RUSTFS_CONSOLE_ENABLE: "true"
     volumes:
-      - "${MINIO_DATA_DIR}:/data"
+      - "${DOCKER_DATA_DIR}/minio/data:/data"
     ports:
       - "9001:9001"
       - "9000:9000"
@@ -137,7 +137,7 @@ services:
     volumes:
       - ${MIRROR_CONFIG}:/etc/distribution/config.yml:ro
       - "/etc/localtime:/etc/localtime:ro"
-      - "${MIRROR_DATA_DIR}/ghcr/data:/var/lib/registry"
+      - "${DOCKER_DATA_DIR}/mirror/ghcr/data:/var/lib/registry"
     ports:
       - "5001:5000"
     deploy:
@@ -161,7 +161,7 @@ services:
     volumes:
       - ${MIRROR_CONFIG}:/etc/distribution/config.yml:ro
       - "/etc/localtime:/etc/localtime:ro"
-      - "${MIRROR_DATA_DIR}/quay/data:/var/lib/registry"
+      - "${DOCKER_DATA_DIR}/mirror/quay/data:/var/lib/registry"
     ports:
       - "5002:5000"
     deploy:
@@ -185,7 +185,7 @@ services:
     volumes:
       - ${MIRROR_CONFIG}:/etc/distribution/config.yml:ro
       - "/etc/localtime:/etc/localtime:ro"
-      - "${MIRROR_DATA_DIR}/mirror-gcr/data:/var/lib/registry"
+      - "${DOCKER_DATA_DIR}/mirror/mirror-gcr/data:/var/lib/registry"
     ports:
       - "5003:5000"
     deploy:
@@ -209,7 +209,7 @@ services:
     volumes:
       - ${MIRROR_CONFIG}:/etc/distribution/config.yml:ro
       - "/etc/localtime:/etc/localtime:ro"
-      - "${MIRROR_DATA_DIR}/k8s/data:/var/lib/registry"
+      - "${DOCKER_DATA_DIR}/mirror/k8s/data:/var/lib/registry"
     ports:
       - "5005:5000"
     deploy:
@@ -235,7 +235,7 @@ services:
       KOPIA_CONFIG_PATH: /config/repository.config
       KOPIA_CACHE_DIRECTORY: /config/cache
       KOPIA_LOG_DIR: /config/logs
-      KOPIA_PASSWORD: ${KOPIA_MAIN_PASSWORD}
+      KOPIA_PASSWORD: ${KOPIA_PASSWORD}
       # 云端仓库配置由 entrypoint.sh 按这三项在启动时生成
       KOPIA_WEBDAV_URL: https://drive.${MAIN_DOMAIN}/dav/main
       KOPIA_WEBDAV_USERNAME: ${OPENLIST_WEBDAV_USERNAME}
@@ -248,7 +248,7 @@ services:
       - ${KOPIA_ENTRYPOINT}:/app/scripts/entrypoint.sh:ro
       - kopia_cache:/config/cache
       - ${DOCKER_DATA_DIR}/kopia/logs:/config/logs
-      - ${MINIO_DATA_DIR}:/backup/minio:ro
+      - ${DOCKER_DATA_DIR}/minio/data:/backup/minio:ro
       - ${DOCKER_DATA_DIR}:/backup/compose:ro
     ports:
       - "51515:51515"
@@ -282,7 +282,7 @@ services:
       KOPIA_CONFIG_PATH: /config/repository.config
       KOPIA_CACHE_DIRECTORY: /config/cache
       KOPIA_LOG_DIR: /config/logs
-      KOPIA_PASSWORD: ${KOPIA_LOCAL_REPO_PASSWORD}
+      KOPIA_PASSWORD: ${KOPIA_PASSWORD}
       KOPIA_WEBHOOK_URL: ${KOPIA_WEBHOOK_URL}
       KOPIA_MIN_SEVERITY: warning
     volumes:

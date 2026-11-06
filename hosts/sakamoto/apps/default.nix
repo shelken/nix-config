@@ -51,21 +51,19 @@ let
   envFile = config.sops.templates."sakamoto-compose.env".path;
 
   # 键名即私有 secrets 仓库（sops/secrets/shelken/default.yaml）里的键。
+  # 前四项是别处已在用的公共键（域名、kopia 口令、云盘 WebDAV 凭据），其余在 compose-sakamoto/ 下；
   # 值沿用旧 Bitwarden 条目 compose-sakamoto 的字段，迁移时不要顺手轮换
   secretNames = [
+    "main-domain"
+    "kopia/password"
+    "drive/webdav/username"
+    "drive/webdav/password"
     "compose-sakamoto/caddy-cloudflare-api-token"
-    "compose-sakamoto/docker-data-dir"
-    "compose-sakamoto/kopia-local-repo-password"
-    "compose-sakamoto/kopia-main-password"
+    "compose-sakamoto/data-dir"
     "compose-sakamoto/kopia-webhook-url"
     "compose-sakamoto/local-repo-dir"
-    "compose-sakamoto/main-domain"
-    "compose-sakamoto/minio-data-dir"
     "compose-sakamoto/minio-root-password"
     "compose-sakamoto/minio-root-user"
-    "compose-sakamoto/mirror-data-dir"
-    "compose-sakamoto/openlist-webdav-password"
-    "compose-sakamoto/openlist-webdav-username"
     "compose-sakamoto/sakamoto-data-dir"
   ];
   placeholder = name: config.sops.placeholder.${name};
@@ -81,7 +79,7 @@ let
       compose_file=${composeFile}
       env_file=${envFile}
       project=${projectName}
-      required_keys=(DOCKER_DATA_DIR MINIO_DATA_DIR MIRROR_DATA_DIR SAKAMOTO_DATA_DIR LOCAL_REPO_DIR)
+      required_keys=(DOCKER_DATA_DIR SAKAMOTO_DATA_DIR LOCAL_REPO_DIR)
 
       usage() {
         cat <<'USAGE'
@@ -208,18 +206,15 @@ in
       # UID/GID 与通用 TZ 没有服务引用，不再复制过来
       sops.templates."sakamoto-compose.env" = {
         content = ''
-          MAIN_DOMAIN=${placeholder "compose-sakamoto/main-domain"}
-          DOCKER_DATA_DIR=${placeholder "compose-sakamoto/docker-data-dir"}
-          MINIO_DATA_DIR=${placeholder "compose-sakamoto/minio-data-dir"}
-          MIRROR_DATA_DIR=${placeholder "compose-sakamoto/mirror-data-dir"}
+          MAIN_DOMAIN=${placeholder "main-domain"}
+          DOCKER_DATA_DIR=${placeholder "compose-sakamoto/data-dir"}
           MINIO_ROOT_USER=${placeholder "compose-sakamoto/minio-root-user"}
           MINIO_ROOT_PASSWORD=${placeholder "compose-sakamoto/minio-root-password"}
           CADDY_CLOUDFLARE_API_TOKEN=${placeholder "compose-sakamoto/caddy-cloudflare-api-token"}
-          KOPIA_MAIN_PASSWORD=${placeholder "compose-sakamoto/kopia-main-password"}
-          KOPIA_LOCAL_REPO_PASSWORD=${placeholder "compose-sakamoto/kopia-local-repo-password"}
+          KOPIA_PASSWORD=${placeholder "kopia/password"}
           KOPIA_WEBHOOK_URL=${placeholder "compose-sakamoto/kopia-webhook-url"}
-          OPENLIST_WEBDAV_USERNAME=${placeholder "compose-sakamoto/openlist-webdav-username"}
-          OPENLIST_WEBDAV_PASSWORD=${placeholder "compose-sakamoto/openlist-webdav-password"}
+          OPENLIST_WEBDAV_USERNAME=${placeholder "drive/webdav/username"}
+          OPENLIST_WEBDAV_PASSWORD=${placeholder "drive/webdav/password"}
           SAKAMOTO_DATA_DIR=${placeholder "compose-sakamoto/sakamoto-data-dir"}
           LOCAL_REPO_DIR=${placeholder "compose-sakamoto/local-repo-dir"}
           ${configFileLines}
