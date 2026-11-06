@@ -128,6 +128,8 @@
           force = true;
         };
         ".pi/agent/permissions.yaml" = mylib.mkConfigFile config ../omp/permissions.yaml;
+        # 整个目录软链：新增模板直接放进 prompts/，免改本文件
+        ".pi/agent/prompts" = linkPi "prompts";
 
         ".pi/agent/caveman.json" = linkPiConfig "caveman.json";
         ".pi/agent/extensions/pi-recap.json" = linkPiConfig "pi-recap.json";
