@@ -42,7 +42,7 @@
         # prior instructions」，对模型是一条高优先级的用户指令。replies 只让 ask 的回复唤醒会话，
         # 普通 send 仍会在下一个回合注入，但不再伪造这条用户消息。会话启动或 /reload 时读取
         ".pi/agent/intercom/config.json".source = jsonFormat.generate "pi-intercom-config.json" {
-          inboundTrigger = "replies";
+          inboundTrigger = "always";
         };
       };
     };

@@ -19,7 +19,6 @@ modelRoles:
   claude-lite: anthropic/claude-haiku-5-5:max
   claude: anthropic/claude-sonnet-5-5:high
   claude-max: anthropic/claude-opus-5-5:medium
-  reviewer-general: "@gpt:xhigh"
   reviewer-gemini: google-antigravity/gemini-3.8-flash:high
   reviewer-ds: "@dsf"
   reviewer-glm: "@glm-max"
@@ -33,10 +32,10 @@ modelRoles:
   web: google/gemini-2.5-flash
   gog: google-antigravity/gemini-3.8-flash:high
   plan: "@reviewer-gpt"
-  smol: "@claude-lite"
+  smol: "@gpt-lite"
   scout: "@dsf"
   default: "@dsf"
-  task: "@reviewer-gemini"
+  task: "@dsf"
   slow: "@gpt:high"
 cycleOrder:
   - smol
@@ -77,7 +76,7 @@ statusLine:
     - usage
 task:
   agentModelOverrides:
-    reviewer: "@reviewer-general"
+    reviewer: "@reviewer-ds"
     reviewer-gemini: "@reviewer-gemini"
     reviewer-ds: "@reviewer-ds"
     reviewer-glm: "@reviewer-glm"

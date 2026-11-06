@@ -67,7 +67,7 @@
       to-spec = "skills/engineering/to-spec";
       writing-for-agents = "skills/productivity/writing-for-agents";
       loop-me = "skills/in-progress/loop-me";
-      code-review = "skills/engineering/code-review";
+      # code-review = "skills/engineering/code-review";
       implement = "skills/engineering/implement";
       implement-spec = "skills/engineering/implement-spec";
       setup-matt-pocock-skills = "skills/engineering/setup-matt-pocock-skills";
