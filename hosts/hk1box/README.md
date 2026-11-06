@@ -34,7 +34,7 @@ HK1 Box（Amlogic S905X3，4G 内存，千兆网口）当单臂旁路由，只�
 
 mac / ios / router 三份 yaml 由 `singbox-config` 生成：模板与 1Password 引用在 `modules/features/network/singbox-config/`，订阅服务地址取 sops 的 `main-domain`
 
-白名单设备的源 IP 写在 `modules/features/network/singbox-config/_singbox-config.nix` 的 `whitelistCidrs`：已在 `vars/networking.nix` 登记的设备引用它的 `address`，没登记的写 IP。nix 渲染进 `templates/router.yaml` 的 DNS 与 route 两处列表，与 `vars/networking.nix` 同一网段。改名单改这一处，再生成订阅 URL
+白名单设备的源 IP 写在 `hosts/hk1box/sing-box.nix` 的 `whitelist`：已在 `vars/networking.nix` 登记的设备引用它的 `address`，没登记的写 IP，与 `vars/networking.nix` 同一网段。`templates/router.yaml` 的 DNS 与 route 两处列表只留占位符 `"source_ip_cidr": "@whitelist@"`，盒子每次拉取订阅后替换。改名单只改这一处并部署，不用重新生成订阅 URL
 
 ### DNS 归属与放行
 

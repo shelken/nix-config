@@ -1,9 +1,11 @@
-# 旁路由：本网解析器地址与放行清单只在这里；白名单源 IP 由 singbox-config 的 nix 渲染
+# 旁路由：本网解析器地址与放行清单只在这里；白名单源 IP 在 hosts/hk1box/sing-box.nix
 #
 # invert 反转整条规则，所以「排除白名单」必须两层：外层 AND 限定 inbound: tun-in，
 # 内层只反转源 IP 条件。写在同一层会把 dns-in 的查询也翻成命中。
 # 白名单按源 IP 匹配：透明 DNS 在 auto_redirect 预匹配阶段取不到源 MAC。
-# 两处 source_ip_cidr 的值由 _singbox-config.nix 的 whitelistCidrs 渲染进来。
+# 两处 source_ip_cidr 的 "@whitelist@" 是占位符：盒子每次拉取订阅后，由 hosts/hk1box/sing-box.nix
+# 的 whitelist 替换，白名单改动不进订阅 URL。
+# 内核 merge 不校验 CIDR，且把单元素数组写成标量，所以占位符直接写成标量。
 #
 # 底模的路由角色不列本网解析器的定义（type: local 对 *.local 固定走内置 mDNS），
 # 所以 dns-lan 这个 tag 的地址由这里给；route.default_domain_resolver 也指向它，
@@ -42,7 +44,7 @@ overlay: |
         {
           "invert": true,
           "server": "dns-lan",
-          "source_ip_cidr": [@whitelistCidrs@]
+          "source_ip_cidr": "@whitelist@"
         }
       ]
     },
@@ -72,7 +74,7 @@ overlay: |
             "invert": true,
             "rules": [
               {
-                "source_ip_cidr": [@whitelistCidrs@]
+                "source_ip_cidr": "@whitelist@"
               }
             ]
           }
