@@ -38,6 +38,9 @@ let
       export DEFAULT_YAML="${policyFile}"
       export LAUNCHER="${guest.launcher}"
       export GUEST_STATUS="${guest.guestStatus}"
+      export SB_MISE_HOST_DIR="''${SB_MISE_HOST_DIR:-${manifest.miseLayer.hostDir}}"
+      export SB_MISE_GUEST_MOUNT="${manifest.miseLayer.guestMount}"
+      export SB_MISE_MOUNT_MODE="${manifest.miseLayer.mountMode}"
 
       ${builtins.readFile ./sb.sh}
     '';

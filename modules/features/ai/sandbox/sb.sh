@@ -21,7 +21,9 @@ GUEST_STATUS="${GUEST_STATUS:-}"
 
 export MSB_CONFIG_PATH="${MSB_CONFIG_PATH:-$DEFAULT_MSB_CONFIG}"
 export MSB_HOME="${MSB_HOME:-$DEFAULT_MSB_HOME}"
-export SB_MISE_HOST_DIR="${SB_MISE_HOST_DIR:-$HOME/Data/sandboxes/mise/aarch64-linux}"
+# 共用 mise 层的目录、挂载点与模式由 _mise-layer.nix 经 _host.nix 注入，这里没有内置默认值
+: "${SB_MISE_HOST_DIR:?}" "${SB_MISE_GUEST_MOUNT:?}" "${SB_MISE_MOUNT_MODE:?}"
+export SB_MISE_HOST_DIR
 SB_APPROVAL_DIR="$MSB_HOME/approvals"
 SB_LOCK_DIR="$MSB_HOME/locks"
 mkdir -p "$SB_LOCK_DIR"
@@ -361,7 +363,7 @@ generate_msb_config() {
   local mise_real
   mise_real="$(realpath "$SB_MISE_HOST_DIR")"
   local sb_mise_json
-  sb_mise_json="$(printf '%s\n' "$mise_real:/opt/sandbox-mise:rw" | jq -R . | jq -s .)"
+  sb_mise_json="$(printf '%s\n' "$mise_real:$SB_MISE_GUEST_MOUNT:$SB_MISE_MOUNT_MODE" | jq -R . | jq -s .)"
   SB_MISE_HOST_DIR_REAL="$mise_real"
 
   local network_json secrets_json
@@ -386,8 +388,10 @@ generate_msb_config() {
 
 get_config_fingerprint() {
   local conf_file="$1"
-  jq -S -c --arg mise_mount "${SB_MISE_HOST_DIR_REAL:-$SB_MISE_HOST_DIR}:/opt/sandbox-mise:rw" '
-    .mounts |= map(if . == $mise_mount then "__SB_MISE_HOST__:/opt/sandbox-mise:rw" else . end)
+  jq -S -c \
+    --arg mise_mount "${SB_MISE_HOST_DIR_REAL:-$SB_MISE_HOST_DIR}:$SB_MISE_GUEST_MOUNT:$SB_MISE_MOUNT_MODE" \
+    --arg mise_placeholder "__SB_MISE_HOST__:$SB_MISE_GUEST_MOUNT:$SB_MISE_MOUNT_MODE" '
+    .mounts |= map(if . == $mise_mount then $mise_placeholder else . end)
   ' "$conf_file" | sha256sum | cut -d' ' -f1
 }
 

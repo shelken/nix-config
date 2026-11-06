@@ -32,6 +32,7 @@ flowchart LR
 | --- | --- | --- |
 | 顶层装配 Seam | [default.nix](./default.nix) | 极小装配入口（~50 行），消费单一 manifest 装配三个深模块并暴露 HM 选项 |
 | 单一事实来源 | [_manifest.nix](./_manifest.nix) | 集中提取路径、工具与断言，生成统一 manifest 对象，杜绝散装传参 |
+| 共用 mise 层定义 | [_mise-layer.nix](./_mise-layer.nix) | 宿主目录、guest 挂载点、挂载模式、上下文环境的唯一定义；`sb`、launcher、guest-env 都从它派生，shell 里没有内置默认值 |
 | 配置物化深模块 | [_config.nix](./_config.nix) | 声明文件收集、解引用工作区软链、原子发布至 `~/.config/sandbox/current` 并修剪过期版本 |
 | Guest 运行时与隔离器 | [_guest.nix](./_guest.nix)、[launcher.sh](./launcher.sh)、[guest/](./guest/)、[sync-guest.sh](./sync-guest.sh)、[guest-status.sh](./guest-status.sh) | 封装 Linux 工具闭包与环境脚本；内聚 netns、registry、layout 三个窄接口子模块与 bubblewrap 隔离执行器 |
 | 宿主驱动与 CLI | [_host.nix](./_host.nix)、[sb.sh](./sb.sh) | 封装 microsandbox 驱动配置，接收原生 `sb.yaml`，统一 `die()` 报错，组装 `sb` 与 `omp-sb` 命令行工具 |
@@ -174,7 +175,7 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 
 ### 共用 mise 安装层
 
-mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-linux`（`SB_MISE_HOST_DIR`，首次使用自动创建），挂到所有 VM 的 `/opt/sandbox-mise`，新 VM 不必重新下载。mise 的 state、shims 与用户层配置 `/data/mise/config.toml` 留在各 VM 数据卷
+mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-linux`（`SB_MISE_HOST_DIR`，首次使用自动创建），挂到所有 VM 的 `/opt/sandbox-mise`，新 VM 不必重新下载。目录、挂载点、挂载模式与上下文环境只在 [_mise-layer.nix](./_mise-layer.nix) 定义，由 `sb` 包装脚本和 launcher 包装脚本注入。mise 的 state、shims 与用户层配置 `/data/mise/config.toml` 留在各 VM 数据卷
 
 上下文对共用层可写，不设 `MISE_AUTO_INSTALL=0`：Agent 或用户在上下文里 `mise trust`、`mise install` 即可装项目工具，产物落在宿主目录，VM 重建后、其他 VM 的上下文里都直接复用。信任记录在数据卷 `/data/xdg/state/mise`，同一 VM 内跨上下文保留。launcher 设 `MISE_PREFER_OFFLINE=1` 而不是 `MISE_OFFLINE=1`：后者连安装下载也拒绝（实测 `offline mode is enabled`）；前者让已装的 `latest` 工具直接用本地版本，不再每次启动联网白等（实测 minio/mc 的版本列表约 14 MB，超过 mise 的超时）。`sb sync` 不在上下文里，不受影响
 

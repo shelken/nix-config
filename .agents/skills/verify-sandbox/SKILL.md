@@ -67,7 +67,7 @@ $V cleanup
 隔离环境替代了真实 `just hm` 激活，以下步骤在这里不执行，只能在授权的 `just hm` 后观察：
 
 - 激活脚本把配置发布到宿主 `~/.config/sandbox/current`，以及创建共用 mise 目录
-- `MSB_HOME`、`MSB_CONFIG_PATH` 由 Home Manager 会话变量注入，需新开终端生效；`SB_MISE_HOST_DIR` 不注入，由 `sb.sh` 自己的默认值决定
+- `MSB_HOME`、`MSB_CONFIG_PATH` 由 Home Manager 会话变量注入，需新开终端生效；`SB_MISE_HOST_DIR` 不注入，由 `_mise-layer.nix` 经 `sb` 包装脚本注入的默认值决定
 - 日常 `sb-main` 使用 `~/Data/sandboxes/msb`；隔离环境里的 VM 同样叫 `sb-main`，只能靠 `MSB_HOME` 区分
 
 ## Gotchas

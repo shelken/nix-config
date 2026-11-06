@@ -2,12 +2,11 @@
 # 职责：
 # 1. 集中从 Home Manager config 提取沙箱所有工具、环境变量与路径规范
 # 2. 集中执行 3 重静态断言检查（路径合规、不嵌套、目标覆盖）
-# 3. 统一生成只读 mise 配置、文件清单 (configManifest, declaredPaths, writableRootsFile)
+# 3. 只做规范化与断言，不生成 derivation：配置清单与发布文件在 _config，git 配置在 _guest
 # 4. 对外输出单一 manifest 对象，杜绝散装传参导致的功能丢失
 {
   config,
   lib,
-  pkgs,
 }:
 let
   devTools = config.shelken.dev.tools;
@@ -21,16 +20,10 @@ let
   statePaths = {
     msbHome = "${config.home.homeDirectory}/Data/sandboxes/msb";
     cacheDir = "${config.home.homeDirectory}/.cache/microsandbox";
-    sharedMiseDir = "${config.home.homeDirectory}/Data/sandboxes/mise/aarch64-linux";
     publishDir = "${config.home.homeDirectory}/.config/sandbox";
   };
 
-  # Git 全局配置（用于克隆和私有依赖凭据改写）
-  gitConfig = (pkgs.formats.gitIni { }).generate "sandbox-git-config" {
-    user = config.programs.git.settings.user;
-    credential."https://github.com".helper = "!gh auth git-credential";
-    url."https://github.com/".insteadOf = "git@github.com:";
-  };
+  miseLayer = import ./_mise-layer.nix { homeDir = config.home.homeDirectory; };
 
   # 静态断言检查
   under = root: p: p == root || lib.hasPrefix "${root}/" p;
@@ -67,60 +60,16 @@ let
       }";
     }
   ];
-
-  # guest 只读层 mise 配置
-  readOnlyMiseToml = (pkgs.formats.toml { }).generate "sandbox-mise.toml" {
-    tools = devMiseTools;
-  };
-
-  # 收集工具声明文件与沙箱覆盖项
-  toolTargets =
-    tool:
-    lib.mapAttrsToList (target: file: { inherit target file; }) tool.files
-    ++ lib.mapAttrsToList (target: file: { inherit target file; }) (
-      removeAttrs tool.sandboxFiles (builtins.attrNames tool.files)
-    );
-  allToolFiles = lib.concatMap toolTargets (builtins.attrValues devTools);
-
-  sandboxOverrides = lib.foldl' (acc: tool: acc // tool.sandboxFiles) { } (
-    builtins.attrValues devTools
-  );
-  resolveEntry =
-    item:
-    if sandboxOverrides ? ${item.target} then
-      sandboxOverrides.${item.target}
-    else if builtins.isAttrs item.file && item.file ? source then
-      item.file.source
-    else
-      item.file;
-
-  configEntries = map (item: {
-    inherit (item) target;
-    path = resolveEntry item;
-  }) allToolFiles;
-
-  configManifest = pkgs.writeText "sandbox-config-manifest" (
-    lib.concatStringsSep "\n" (map (e: "${e.target}\t${toString e.path}") configEntries) + "\n"
-  );
-
-  declaredPaths = pkgs.writeText "declared-paths" (
-    lib.concatStringsSep "\n" (map (e: e.target) configEntries) + "\n"
-  );
-
-  writableRootsFile = pkgs.writeText "writable-roots" (
-    lib.concatMapStrings (r: "${r}\n") (lib.unique (lib.sort lib.lessThan devWritableRoots))
-  );
 in
 {
   inherit
     assertions
-    gitConfig
     statePaths
-    readOnlyMiseToml
-    configManifest
-    declaredPaths
-    writableRootsFile
+    miseLayer
     ;
+
+  # 规范化后的 git 身份；生成 git 配置文件是 guest 的事
+  gitUser = config.programs.git.settings.user;
 
   tools = devTools;
   miseTools = devMiseTools;
