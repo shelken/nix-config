@@ -5,18 +5,42 @@
   "compaction": {
     "reserveTokens": 22000,
     "modelOverrides": {
-      "mp/codex/gpt-6.1-sol": { "reserveTokens": 100000 },
-      "zed/anthropic/claude-sonnet-5-5": { "reserveTokens": 472000 },
-      "anthropic/claude-sonnet-5-5": { "reserveTokens": 600000 },
-      "mp/workbuddy/deepseek-v4.1-flash": { "reserveTokens": 600000 },
-      "mp/workbuddy-ai/deepseek-v4.1-flash-sg": { "reserveTokens": 600000 },
-      "cpa/qwenworkcn/pro": { "reserveTokens": 600000 },
-      "cpa/workbuddy/deepseek-v4.1-flash": { "reserveTokens": 600000 },
-      "cpa/workbuddy/glm-5.2": { "reserveTokens": 600000 },
-      "cpa/workbuddy/glm-5.3-flash": { "reserveTokens": 600000 },
-      "trae/glm-5.3": { "reserveTokens": 600000 },
-      "mp/loomy/DeepSeek-V4.1-Flash": { "reserveTokens": 648576 },
-      "antigravity/gemini-3.8-flash": { "reserveTokens": 648576 }
+      "mp/codex/gpt-6.1-sol": {
+        "reserveTokens": 100000
+      },
+      "zed/anthropic/claude-sonnet-5-5": {
+        "reserveTokens": 472000
+      },
+      "anthropic/claude-sonnet-5-5": {
+        "reserveTokens": 600000
+      },
+      "mp/workbuddy/deepseek-v4.1-flash": {
+        "reserveTokens": 600000
+      },
+      "mp/workbuddy-ai/deepseek-v4.1-flash-sg": {
+        "reserveTokens": 600000
+      },
+      "cpa/qwenworkcn/pro": {
+        "reserveTokens": 600000
+      },
+      "cpa/workbuddy/deepseek-v4.1-flash": {
+        "reserveTokens": 600000
+      },
+      "cpa/workbuddy/glm-5.2": {
+        "reserveTokens": 600000
+      },
+      "cpa/workbuddy/glm-5.3-flash": {
+        "reserveTokens": 600000
+      },
+      "trae/glm-5.3": {
+        "reserveTokens": 600000
+      },
+      "mp/loomy/DeepSeek-V4.1-Flash": {
+        "reserveTokens": 648576
+      },
+      "antigravity/gemini-3.8-flash": {
+        "reserveTokens": 648576
+      }
     }
   },
   "defaultThinkingLevel": "high",
@@ -27,7 +51,7 @@
     "anthropic/claude-sonnet-5-5:high",
     "mp/loomy/DeepSeek-V4.1-Flash:high",
     "mp/codex/gpt-5.6-sol:high",
-    "mp/codex/gpt-6.1-sol:xhigh",
+    "mp/codex/gpt-6.1-sol:high",
     "mp/workbuddy/deepseek-v4.1-flash:high",
     "mp/workbuddy-ai/deepseek-v4.1-flash-sg:high",
     "cpa/gpt-5.6-luna:high",

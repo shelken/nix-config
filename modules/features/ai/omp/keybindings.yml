@@ -5,5 +5,5 @@ app.display.reset: []
 # 遵循 Pi 习惯：选择/切换模型
 app.model.select: Ctrl+L
 
-app.message.followUp: Super+Shift+Enter
+app.message.followUp: Ctrl+Shift+Enter
 app.message.dequeue: Ctrl+Shift+Q
