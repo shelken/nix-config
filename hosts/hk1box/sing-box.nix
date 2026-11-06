@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  myvars,
   pkgs,
   ...
 }:
@@ -9,8 +10,10 @@
 #  sing-box：配置从订阅服务拉取，与 Mac / iOS 同一条链路
 #
 #  订阅 URL 由 Mac 上 `sbtools encode -c <路由器用的 yaml>` 生成，yaml 里
-#  template_url 指向 proxy 仓库的 template-router.json，设备白名单、clash API 的 secret
-#  都写在 overlay 里，随载荷加密，不出现在任何仓库的明文中。
+#  template_url 指向 proxy 仓库的 template-router.json，节点与 clash API 的 secret
+#  写在 overlay 里，随载荷加密，不出现在任何仓库的明文中。
+#  设备白名单是公开 IP，不进载荷：overlay 里只留占位符，拉取后由下面的 whitelist 替换，
+#  所以改白名单只需部署，不用重新生成 URL。
 #  URL 本身等同凭据（能换出完整节点配置），放在 secrets 仓库的 sops 文件里。
 #
 #  拉取：开机一次 + 每 6 小时一次；先 `sing-box check`，内容有变化才原子替换并重启。
@@ -24,6 +27,21 @@ let
   stateDir = "/var/lib/sing-box-sub";
   configFile = "${stateDir}/config.json";
   sing-box = config.services.sing-box.package;
+
+  # 旁路由白名单：名单内设备的透明 DNS 与流量走盒子，名单外由内核直接转发。
+  # 地址取 vars/networking.nix 的登记；没登记的设备写裸 IP（统一补 /32）
+  lan = myvars.networking.hostAddress;
+  whitelist = builtins.toJSON (
+    map (ip: "${ip}/32") [
+      lan."sakamoto-k8s".address
+      lan."yuuko-k8s".address
+      lan."homelab-1".address
+      lan."pve".address
+      lan."yuuko".address
+      lan."sakamoto".address
+      "192.168.6.125" # quest
+    ]
+  );
   # 试机镜像（./image.nix）清空了 sops.secrets，但被关掉的服务的定义仍会被求值，
   # 所以这里给一个缺省路径，免得取不到属性；正式系统里始终用 sops 给出的路径
   urlFile =
@@ -35,18 +53,25 @@ let
       pkgs.coreutils
       pkgs.curl
       pkgs.diffutils
+      pkgs.jq
       pkgs.systemd
       sing-box
     ];
     text = ''
+      raw=$(mktemp -p ${stateDir} .raw.XXXXXX)
       tmp=$(mktemp -p ${stateDir} .config.XXXXXX)
       work=$(mktemp -d)
-      trap 'rm -rf "$tmp" "$work"' EXIT
+      trap 'rm -rf "$raw" "$tmp" "$work"' EXIT
 
       # URL 带着加密载荷，经 stdin 交给 curl，不出现在进程参数与日志里
       printf 'url = "%s"\n' "$(tr -d '\n' < ${urlFile})" \
         | curl --config - --fail --silent --show-error --location \
-            --max-time 120 --retry 3 --retry-delay 10 --output "$tmp"
+            --max-time 120 --retry 3 --retry-delay 10 --output "$raw"
+
+      # 订阅里的 "source_ip_cidr": "@whitelist@" 换成本机白名单（服务端内核 merge 把单元素数组写成标量）
+      jq --argjson w ${lib.escapeShellArg whitelist} \
+        'walk(if type == "object" and .source_ip_cidr == "@whitelist@" then .source_ip_cidr = $w else . end)' \
+        "$raw" > "$tmp"
 
       # 工作目录指向临时目录，check 不在 stateDir 里留下缓存文件
       sing-box check -D "$work" -c "$tmp"
