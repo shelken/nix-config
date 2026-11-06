@@ -54,16 +54,16 @@ let
   envFile = config.sops.templates."sakamoto-compose.env".path;
 
   # 键名即私有 secrets 仓库（sops/secrets/shelken/default.yaml）里的键。
-  # 前五项是跨主机共用的键（域名、kopia 口令与 webhook、云盘 WebDAV 凭据），其余在 compose-sakamoto/ 下；
+  # 前三项是跨主机共用的键（域名、kopia 口令与 webhook），其余在 compose-sakamoto/ 下；
   # 值沿用旧 Bitwarden 条目 compose-sakamoto 的字段，迁移时不要顺手轮换
   secretNames = [
     "main-domain"
     "kopia/password"
     "kopia/webhook-url"
-    "drive/webdav/username"
-    "drive/webdav/password"
     "compose-sakamoto/cloudflare-api-token"
     "compose-sakamoto/data-dir"
+    "compose-sakamoto/openlist-webdav-password"
+    "compose-sakamoto/openlist-webdav-username"
     "compose-sakamoto/rustfs-password"
     "compose-sakamoto/rustfs-user"
   ];
@@ -220,8 +220,8 @@ in
           CADDY_CLOUDFLARE_API_TOKEN=${placeholder "compose-sakamoto/cloudflare-api-token"}
           KOPIA_PASSWORD=${placeholder "kopia/password"}
           KOPIA_WEBHOOK_URL=${placeholder "kopia/webhook-url"}
-          OPENLIST_WEBDAV_USERNAME=${placeholder "drive/webdav/username"}
-          OPENLIST_WEBDAV_PASSWORD=${placeholder "drive/webdav/password"}
+          OPENLIST_WEBDAV_USERNAME=${placeholder "compose-sakamoto/openlist-webdav-username"}
+          OPENLIST_WEBDAV_PASSWORD=${placeholder "compose-sakamoto/openlist-webdav-password"}
           SAKAMOTO_DATA_DIR=${externalDisks.sakamotoData}
           LOCAL_REPO_DIR=${externalDisks.localRepo}
           ${configFileLines}
