@@ -1,0 +1,20 @@
+# 本配置仅放置通用的config部分。
+version: 0.1
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+  delete:
+    enabled: true
+  maintenance:
+    uploadpurging:
+      enabled: true
+      age: 720h
+      dryrun: false
+      interval: 24h
+    readonly:
+      enabled: false
+proxy:
+  # 远端地址由 compose 的 REGISTRY_PROXY_REMOTEURL 注入；registry 没有容量上限，只能按时间过期
+  ttl: 720h
+http:
+  addr: 0.0.0.0:5000

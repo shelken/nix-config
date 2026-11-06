@@ -1,0 +1,300 @@
+# sakamoto 的业务容器，原先由 home-ops 的 compose/sakamoto 声明。
+# 运行时仍是 OrbStack + Compose：配置文件在 Nix store，路径由 default.nix 渲染的 env 文件提供（${CADDYFILE} 等），
+# 操作步骤见 README.md
+#
+# 配置文件一律写成 volumes 而不是 configs:：Compose 的服务 hash 不含 configs 的路径与内容，
+# 改了配置 up 不会重建容器；volumes 的源路径在 hash 里，store 路径随文件内容变，只有用到它的服务会重建
+#
+# 项目名固定：命名卷带项目名前缀（homelab-compose_kopia_cache），
+# 不写它时项目名会跟着目录名变，等于新建两个空卷并丢掉 kopia 的对账缓存
+name: homelab-compose
+
+networks:
+  homelab:
+    external: true
+
+volumes:
+  kopia_cache:
+  kopia_local_cache:
+
+services:
+  # ==================== Caddy ====================
+  caddy:
+    image: ghcr.io/shelken/caddy:2.11.7
+    container_name: caddy
+    labels:
+      - homepage.group=sakamoto
+      - homepage.name=caddy
+      - homepage.icon=caddy.svg
+      - homepage.description=
+      - homepage.widget.type=caddy
+      - homepage.widget.url=http://sakamoto.lan:2019
+    network_mode: host
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+      MAIN_DOMAIN: ${MAIN_DOMAIN}
+      CLOUDFLARE_API_TOKEN: ${CADDY_CLOUDFLARE_API_TOKEN}
+    volumes:
+      - ${CADDYFILE}:/etc/caddy/Caddyfile:ro
+      - "${DOCKER_DATA_DIR}/caddy/site:/srv"
+      - "${DOCKER_DATA_DIR}/caddy/data:/data"
+      - "${DOCKER_DATA_DIR}/caddy/config:/config"
+    deploy:
+      replicas: 1
+
+  # ==================== Docker Proxy ====================
+  dockerproxy:
+    image: tecnativa/docker-socket-proxy:v0.5.0
+    container_name: dockerproxy
+    restart: always
+    labels:
+      - homepage.group=sakamoto
+      - homepage.name=docker-proxy
+      - homepage.icon=docker-moby.svg
+      - homepage.description=
+    networks:
+      - homelab
+    environment:
+      - CONTAINERS=1
+      - SERVICES=1
+      - TASKS=1
+    ports:
+      - "2575:2375"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    deploy:
+      replicas: 1
+
+  # ==================== RustFS ====================
+  rustfs:
+    image: rustfs/rustfs:1.0.0@sha256:8cc9801755448b71a786705ce76692c77e14936cccd87cf2fc31842e58f4d1ff
+    container_name: rustfs
+    labels:
+      - homepage.group=sakamoto
+      - homepage.name=rustfs
+      - homepage.icon=rustfs.svg
+      - homepage.description=对象存储
+    user: "10001:10001"
+    networks:
+      - homelab
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+      RUSTFS_ACCESS_KEY: ${MINIO_ROOT_USER}
+      RUSTFS_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ADDRESS: ":9001"
+      RUSTFS_CONSOLE_ENABLE: "true"
+    volumes:
+      - "${DOCKER_DATA_DIR}/minio/data:/data"
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    deploy:
+      replicas: 1
+
+  # ==================== Nvidia DLS ====================
+  nvidia-dls:
+    image: collinwebdesigns/fastapi-dls:2.0.3
+    container_name: nvidia-dls
+    labels:
+      - homepage.group=sakamoto
+      - homepage.name=nvidia-dls
+      - homepage.icon=docker-moby.svg
+      - homepage.description=
+    networks:
+      - homelab
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+      DLS_URL: nvidia-dls.${MAIN_DOMAIN}
+      DLS_PORT: 443
+      LEASE_EXPIRE_DAYS: 90
+      DATABASE: sqlite:////app/database/db.sqlite
+      DEBUG: false
+    ports:
+      - "5100:443"
+    volumes:
+      - ${DOCKER_DATA_DIR}/nvidia-dls/cert:/app/cert
+      - ${DOCKER_DATA_DIR}/nvidia-dls/db:/app/database
+
+  # ==================== Mirror - GHCR ====================
+  mirror-ghcr:
+    image: registry:3.1
+    container_name: "mirror-ghcr"
+    labels:
+      - homepage.group=sakamoto
+      - homepage.name=mirror-ghcr
+      - homepage.icon=docker-moby.svg
+      - homepage.description=
+    restart: always
+    networks:
+      - homelab
+    environment:
+      REGISTRY_LOG_LEVEL: debug
+      REGISTRY_PROXY_REMOTEURL: https://ghcr.io
+    volumes:
+      - ${MIRROR_CONFIG}:/etc/distribution/config.yml:ro
+      - "/etc/localtime:/etc/localtime:ro"
+      - "${DOCKER_DATA_DIR}/mirror/ghcr/data:/var/lib/registry"
+    ports:
+      - "5001:5000"
+    deploy:
+      replicas: 1
+
+  # ==================== Mirror - Quay ====================
+  mirror-quay:
+    image: registry:3.1
+    container_name: "mirror-quay"
+    labels:
+      - homepage.group=sakamoto
+      - homepage.name=mirror-quay
+      - homepage.icon=docker-moby.svg
+      - homepage.description=
+    restart: always
+    networks:
+      - homelab
+    environment:
+      REGISTRY_LOG_LEVEL: debug
+      REGISTRY_PROXY_REMOTEURL: https://quay.io
+    volumes:
+      - ${MIRROR_CONFIG}:/etc/distribution/config.yml:ro
+      - "/etc/localtime:/etc/localtime:ro"
+      - "${DOCKER_DATA_DIR}/mirror/quay/data:/var/lib/registry"
+    ports:
+      - "5002:5000"
+    deploy:
+      replicas: 1
+
+  # ==================== Mirror - GCR ====================
+  mirror-gcr:
+    image: registry:3.1
+    container_name: "mirror-gcr"
+    labels:
+      - homepage.group=sakamoto
+      - homepage.name=mirror-gcr
+      - homepage.icon=docker-moby.svg
+      - homepage.description=
+    restart: always
+    networks:
+      - homelab
+    environment:
+      REGISTRY_LOG_LEVEL: debug
+      REGISTRY_PROXY_REMOTEURL: https://mirror.gcr.io
+    volumes:
+      - ${MIRROR_CONFIG}:/etc/distribution/config.yml:ro
+      - "/etc/localtime:/etc/localtime:ro"
+      - "${DOCKER_DATA_DIR}/mirror/mirror-gcr/data:/var/lib/registry"
+    ports:
+      - "5003:5000"
+    deploy:
+      replicas: 1
+
+  # ==================== Mirror - K8s ====================
+  mirror-k8s:
+    image: registry:3.1
+    container_name: "mirror-k8s"
+    labels:
+      - homepage.group=sakamoto
+      - homepage.name=mirror-k8s
+      - homepage.icon=docker-moby.svg
+      - homepage.description=
+    restart: always
+    networks:
+      - homelab
+    environment:
+      REGISTRY_LOG_LEVEL: debug
+      REGISTRY_PROXY_REMOTEURL: https://registry.k8s.io
+    volumes:
+      - ${MIRROR_CONFIG}:/etc/distribution/config.yml:ro
+      - "/etc/localtime:/etc/localtime:ro"
+      - "${DOCKER_DATA_DIR}/mirror/k8s/data:/var/lib/registry"
+    ports:
+      - "5005:5000"
+    deploy:
+      replicas: 1
+
+  # ==================== Kopia Backup (Cloud) ====================
+  kopia:
+    image: kopia/kopia:0.23.1
+    container_name: kopia
+    hostname: sakamoto
+    networks:
+      - homelab
+    restart: always
+    labels:
+      - homepage.group=sakamoto
+      - homepage.name=kopia
+      - homepage.icon=kopia.svg
+      - homepage.href=http://sakamoto.lan:51515/tasks
+      - homepage.description=云端备份
+    entrypoint: ["/app/scripts/entrypoint.sh"]
+    environment:
+      TZ: Asia/Shanghai
+      KOPIA_CONFIG_PATH: /config/repository.config
+      KOPIA_CACHE_DIRECTORY: /config/cache
+      KOPIA_LOG_DIR: /config/logs
+      KOPIA_PASSWORD: ${KOPIA_PASSWORD}
+      # 云端仓库配置由 entrypoint.sh 按这三项在启动时生成
+      KOPIA_WEBDAV_URL: https://drive.${MAIN_DOMAIN}/dav/main
+      KOPIA_WEBDAV_USERNAME: ${OPENLIST_WEBDAV_USERNAME}
+      KOPIA_WEBDAV_PASSWORD: ${OPENLIST_WEBDAV_PASSWORD}
+      KOPIA_WEBHOOK_URL: ${KOPIA_WEBHOOK_URL}
+      # 仅在失败/警告时通知，成功时不通知 (可选值: report, warning, error)
+      KOPIA_MIN_SEVERITY: warning
+    volumes:
+      - ${KOPIA_POLICY}:/config/policy.json:ro
+      - ${KOPIA_ENTRYPOINT}:/app/scripts/entrypoint.sh:ro
+      - kopia_cache:/config/cache
+      - ${DOCKER_DATA_DIR}/kopia/logs:/config/logs
+      - ${DOCKER_DATA_DIR}/minio/data:/backup/minio:ro
+      - ${DOCKER_DATA_DIR}:/backup/compose:ro
+    ports:
+      - "51515:51515"
+    deploy:
+      replicas: 1
+
+  # ==================== Kopia Backup (Local) ====================
+  kopia-local:
+    image: kopia/kopia:0.23.1
+    container_name: kopia-local
+    hostname: sakamoto-local
+    networks:
+      - homelab
+    restart: always
+    labels:
+      - homepage.group=sakamoto
+      - homepage.name=kopia-local
+      - homepage.icon=kopia.svg
+      - homepage.href=http://sakamoto.lan:51516/tasks
+      - homepage.description=本地备份
+    entrypoint: ["/app/scripts/entrypoint.sh"]
+    command:
+      [
+        "--address=0.0.0.0:51516",
+        "--without-password",
+        "--insecure",
+        "--allow-extremely-dangerous-unauthenticated-server-on-the-network",
+      ]
+    environment:
+      TZ: Asia/Shanghai
+      KOPIA_CONFIG_PATH: /config/repository.config
+      KOPIA_CACHE_DIRECTORY: /config/cache
+      KOPIA_LOG_DIR: /config/logs
+      KOPIA_PASSWORD: ${KOPIA_PASSWORD}
+      KOPIA_WEBHOOK_URL: ${KOPIA_WEBHOOK_URL}
+      KOPIA_MIN_SEVERITY: warning
+    volumes:
+      - ${KOPIA_LOCAL_REPOSITORY_CONFIG}:/config/repository.config:ro
+      - ${KOPIA_LOCAL_POLICY}:/config/policy.json:ro
+      - ${KOPIA_ENTRYPOINT}:/app/scripts/entrypoint.sh:ro
+      - kopia_local_cache:/config/cache
+      - ${DOCKER_DATA_DIR}/kopia-local/logs:/config/logs
+      # 外接盘路径由 env 提供（default.nix 的 externalDisks）；盘没挂载时 sakamoto-compose 会拒绝启动
+      - ${SAKAMOTO_DATA_DIR}:/backup/sakamoto-data:ro
+      - ${LOCAL_REPO_DIR}:/repo
+    ports:
+      - "51516:51516"
+    deploy:
+      replicas: 1

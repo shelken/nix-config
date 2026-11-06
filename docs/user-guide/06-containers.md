@@ -2,6 +2,8 @@
 
 `vps-cc` 上原先由 home-ops 的 docker compose 部署的业务容器，现在由本仓库声明：`virtualisation.oci-containers`，Docker 后端。这一页说明怎么引入一个服务，代码放哪、环境变量与密钥从哪来、网络与端口怎么定、怎么切换与回退
 
+`sakamoto`（macOS）的业务容器同样搬进了本仓库，但运行时仍是 OrbStack 里的 Compose，差异见文末「sakamoto（macOS）：声明在仓库里，运行时仍是 Compose」
+
 代码在 `hosts/vps/vps-cc/apps/`，VPS 上的业务容器已全部纳管，见文末「当前已纳管的服务」
 
 ## 先决定用哪种方式
@@ -23,9 +25,7 @@ hosts/vps/vps-cc/
     ├── default.nix            聚合：后端、共享网络、统一重启策略、绑定地址
     ├── node-exporter.nix      服务文件，没有附带文件时
     └── kopia/
-        ├── default.nix        服务文件
-        ├── entrypoint.sh      随容器挂进去的文件
-        └── policy.json
+        └── default.nix        服务文件；入口脚本与策略与 sakamoto 共用，在 modules/features/backup/_kopia-server/
 ```
 
 | 规则         | 说明                                                                                             |
@@ -64,13 +64,13 @@ hosts/vps/vps-cc/
 
 ## 环境变量与密钥从哪来
 
-| 内容                     | 放哪                                                                            | 例子                                    |
-| ------------------------ | ------------------------------------------------------------------------------- | --------------------------------------- |
-| 非机密的运行参数         | 容器 `environment`                                                              | `TZ`、`HTTP_PORT`                       |
-| 口令、token、Webhook URL | 私有 `secrets` 仓库的 sops 字段，模板渲染成 env 文件，容器读 `environmentFiles` | openlist 的 admin 口令                  |
-| 含机密的配置文件         | sops 模板渲染整个文件，再按 `volumes` 挂进容器                                  | kopia 的仓库配置里有 WebDAV 凭据        |
-| 主机事实（地址等）       | `vars/networking.nix` 的 `hostAddress` 表                                       | `vps-cc-ts` 的 tailnet 地址             |
-| 不含机密的文件           | 跟服务放同一目录，直接挂 `Nix store` 路径                                       | kopia 的 `policy.json`、`entrypoint.sh` |
+| 内容                     | 放哪                                                                            | 例子                                   |
+| ------------------------ | ------------------------------------------------------------------------------- | -------------------------------------- |
+| 非机密的运行参数         | 容器 `environment`                                                              | `TZ`、`HTTP_PORT`                      |
+| 口令、token、Webhook URL | 私有 `secrets` 仓库的 sops 字段，模板渲染成 env 文件，容器读 `environmentFiles` | openlist 的 admin 口令                 |
+| 含机密的配置文件         | sops 模板渲染整个文件，再按 `volumes` 挂进容器                                  | 其余服务需要整个含机密的文件时         |
+| 主机事实（地址等）       | `vars/networking.nix` 的 `hostAddress` 表                                       | `vps-cc-ts` 的 tailnet 地址            |
+| 不含机密的文件           | 跟服务放同一目录，直接挂 `Nix store` 路径                                       | kopia 的入口脚本与策略（两台主机共用） |
 
 以一个 token 为例
 
@@ -170,8 +170,36 @@ virtualisation.oci-containers.containers.openlist = {
 
 旧声明（home-ops 的 `compose/vps/`）已随这次迁移整体删除，回退步骤见「加一个服务的步骤」最后一条（先撤本仓库声明，再起 Compose，顺序反了容器会被删两次）
 
+## sakamoto（macOS）：声明在仓库里，运行时仍是 Compose
+
+`sakamoto` 的业务容器（caddy、四个 registry mirror、rustfs、nvidia-dls、dockerproxy 与两个 kopia）同样由本仓库声明，代码在 `hosts/sakamoto/apps/`。与 VPS 的唯一区别：macOS 侧没有 `oci-containers` 这类原生模块，容器、命名卷与 `homelab` 网络都在 OrbStack 里，所以保留 `compose.yaml`，只是把它与 `configs/` 里的文件搬进 Nix store，容器挂 store 路径
+
+| 内容                                | 放哪                                                                                             |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `compose.yaml`                      | 单个文件进 store（`${./compose.yaml}`）                                                          |
+| `configs/` 里的静态配置             | 每个文件单独进 store，路径写进 env 文件，`compose.yaml` 用 `volumes: - ${CADDYFILE}:...:ro` 引用 |
+| 口令、token、数据目录               | sops 模板渲染成 env 文件，`docker compose --env-file` 取用                                       |
+| 含机密的配置（云端 kopia 仓库配置） | 不挂文件：WebDAV 地址与凭据走环境变量，`entrypoint.sh` 启动时生成                                |
+| 启动                                | HM 的 launchd agent（`gui` 域、`RunAtLoad` + 每 15 分钟），与人工入口共用                        |
+
+三处与旧 Compose 不同的约定：
+
+- `compose.yaml` 顶部写死 `name: homelab-compose`：命名卷带项目名前缀，项目名跟着 compose 文件所在目录变（在 store 里就是 `store`）时会新建两个空卷
+- 配置文件用 `volumes:` 而不是 `configs:`：Compose 的服务 hash 不含 `configs:` 的路径与内容，改了文件 `up` 也不会重建；`volumes:` 的源路径在 hash 里，改哪个文件只重建用到它的服务
+- 外接盘路径（`default.nix` 的 `externalDisks`）与旧 compose 里写死的一致，不是机密；`sakamoto-compose up` 先逐个 `test -d`，盘没挂载直接退出，不让 Docker 以 root 新建空目录把备份写到本地盘
+
+```bash
+sakamoto-compose up         # 等 OrbStack 与密钥就绪、检查数据目录，再 up -d
+sakamoto-compose status
+sakamoto-compose logs
+sakamoto-compose recreate   # 无条件重建全部容器，排障用
+```
+
+agent 日志在 `~/Library/Logs/sakamoto-compose.log`；切换与回退见 `hosts/sakamoto/apps/README.md`
+
 ## 相关
 
-- 旧声明：home-ops 的 `compose/vps/docker-compose.yml`（已删除，历史里可查）
+- 旧声明：home-ops 的 `compose/vps/docker-compose.yml`、`compose/sakamoto/`（都已删除，历史里可查）
+- 服务目录：`hosts/sakamoto/apps/`（`README.md` 是切换与回退手册）
 - 官方实现：nixpkgs 的 `nixos/modules/virtualisation/oci-containers.nix`
 - 系统侧：`hosts/vps/common.nix`（tailscale、docker）、`05-vps.md`（接管与部署）
