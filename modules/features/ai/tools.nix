@@ -8,9 +8,16 @@
   flake.modules.homeManager.ai.shelken.dev.tools = {
     # 1.3.13 无 BUN_CONFIG_HTTP_IDLE_TIMEOUT，安装会在半开连接上永久挂起
     bun.mise = "1.4.2";
-    codex.mise = "0.160.1";
-    claude-code.mise = "2.1.304";
+    codex = {
+      mise = "0.160.1";
+      sandboxCommand = "codex";
+    };
+    claude-code = {
+      mise = "2.1.304";
+      sandboxCommand = "claude";
+    };
     omp = {
+      sandboxCommand = "omp";
       mise = {
         name = "oh-my-pi";
         version = "latest";
@@ -33,6 +40,7 @@
       '';
     };
     pi = {
+      sandboxCommand = "pi";
       mise = {
         name = "npm:@earendil-works/pi-coding-agent";
         version = "latest";

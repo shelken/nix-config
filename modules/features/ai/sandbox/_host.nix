@@ -59,16 +59,19 @@ let
     '';
   };
 
-  ompSb = pkgs.writeShellScriptBin "omp-sb" ''
-    set -euo pipefail
-    exec ${sb}/bin/sb run omp "$@"
-  '';
+  # 登记表条目声明 sandboxCommand，就得到 <名>-sb
+  harnessSbs = lib.concatMap (
+    tool:
+    lib.optional (tool.sandboxCommand != null) (
+      pkgs.writeShellScriptBin "${tool.sandboxCommand}-sb" ''
+        set -euo pipefail
+        exec ${sb}/bin/sb run ${tool.sandboxCommand} "$@"
+      ''
+    )
+  ) (builtins.attrValues manifest.tools);
 in
 {
-  packages = [
-    sb
-    ompSb
-  ];
+  packages = [ sb ] ++ harnessSbs;
   sessionVariables = {
     MSB_HOME = msbHome;
     MSB_CONFIG_PATH = "${msbConfig}";

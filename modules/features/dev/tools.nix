@@ -75,6 +75,15 @@
                   description = "沙箱内必须预先存在的目录，写法同 sandboxEnv 的值；guest-env.sh 加载时创建";
                 };
 
+                sandboxCommand = lib.mkOption {
+                  type = lib.types.nullOr lib.types.str;
+                  default = null;
+                  description = ''
+                    沙箱内这个工具的可执行名（Agent harness 才需要）。设置后，启用沙箱的宿主会得到
+                    `<可执行名>-sb` 命令，等价于 `sb run <可执行名> "$@"`。
+                  '';
+                };
+
                 postInstall = lib.mkOption {
                   type = lib.types.nullOr lib.types.lines;
                   default = null;

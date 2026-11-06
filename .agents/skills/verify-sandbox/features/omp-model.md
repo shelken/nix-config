@@ -16,6 +16,7 @@
 - `omp-sb --model=<模型> -p '<提示>'`
 - `omp-sb` 交互会话
 - `sb run omp …`
+- `pi-sb --model=<模型> -p '<提示>'`（`codex-sb`、`claude-sb` 同理，等价于 `sb run <名> …`）
 - `sb run pi …`
 
 ## Driving it with verify.sh

@@ -9,6 +9,7 @@
 | 想做的事                        | 命令                                 |
 | ------------------------------- | ------------------------------------ |
 | 在沙箱里启动 OMP                | `omp-sb`（参数原样转给 OMP）         |
+| 在沙箱里启动 pi、Codex、Claude  | `pi-sb`、`codex-sb`、`claude-sb`     |
 | 在沙箱里跑一条命令              | `sb run git status`                  |
 | 进沙箱开一个 bash               | `sb shell`                           |
 | 看当前项目拿到了哪些授权        | `sb plan`                            |
@@ -40,6 +41,8 @@
    cd ~/Code/my-app
    omp-sb
    ```
+
+`pi-sb`、`codex-sb`、`claude-sb` 用法与 `omp-sb` 相同。新增 harness 时在登记表条目里写 `sandboxCommand`，就自动得到 `<名>-sb`
 
 首次启动耗时数分钟：自动创建数据卷、拉起主 VM，并执行一次 `sb sync` 安装 omp、pi、codex 等工具。后续启动仅需数秒
 

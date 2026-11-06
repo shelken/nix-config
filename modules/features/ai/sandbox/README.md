@@ -1,6 +1,6 @@
 # Agent 沙箱
 
-`sb` 与 `omp-sb` 让 Agent 在 Linux 虚拟机里运行，只看得到当前项目。本文讲机制；日常操作见 [用户指南](../../../../docs/user-guide/03-agent-sandbox.md)
+`sb` 与 `omp-sb`、`pi-sb` 等 harness 命令让 Agent 在 Linux 虚拟机里运行，只看得到当前项目。本文讲机制；日常操作见 [用户指南](../../../../docs/user-guide/03-agent-sandbox.md)
 
 威胁模型只防 Agent 误操作（越界删除、误连其他项目的私网服务），不防恶意逃逸。设计原因见文末「设计决策」；共享工具登记表的决策见 [ADR 0003](../../../../docs/adr/0003-shared-tool-single-declaration.md)
 
@@ -34,7 +34,7 @@ flowchart LR
 | 共用 mise 层 | [_mise-layer.nix](./_mise-layer.nix) | 宿主目录、guest 挂载点、上下文环境的唯一定义，shell 里没有内置默认值 |
 | 配置物化 | [_config.nix](./_config.nix) | 收集声明文件，原子发布到 `~/.config/sandbox/current` 并修剪过期版本 |
 | Guest 运行时 | [_guest.nix](./_guest.nix)、[launcher.sh](./launcher.sh)、[guest/](./guest/)、[sync-guest.sh](./sync-guest.sh)、[guest-status.sh](./guest-status.sh) | Linux 工具闭包、`guest-env.sh`（guest 里固定路径与环境的唯一出处）与 bubblewrap 隔离执行器；`guest/` 含 plan、netns、registry、layout |
-| 宿主 CLI | [_host.nix](./_host.nix)、[py/sb/](./py/sb/) | `_host.nix` 生成 msb 配置与 `sb-config.json`（Nix 到 sb 的唯一配置通道）并打包 `sb`、`omp-sb`；`py/sb` 是 CLI 本体：`ceiling.py` 把 `sb.yaml` 解析成带类型的能力上限，`msb.py` 是 msb 命令行的唯一 seam |
+| 宿主 CLI | [_host.nix](./_host.nix)、[py/sb/](./py/sb/) | `_host.nix` 生成 msb 配置与 `sb-config.json`（Nix 到 sb 的唯一配置通道）并打包 `sb`，以及登记表里每个声明了 `sandboxCommand` 的 harness 的 `<名>-sb`（`omp-sb`、`pi-sb`、`codex-sb`、`claude-sb`），它们等价于 `sb run <名> "$@"`；`py/sb` 是 CLI 本体：`ceiling.py` 把 `sb.yaml` 解析成带类型的能力上限，`msb.py` 是 msb 命令行的唯一 seam |
 | 能力上限 | [sb.yaml](./sb.yaml) | 原生 YAML 策略基线，经 `sb-config.json` 的 `policy_yaml` 指向 Nix store 里的这份 |
 
 ## 术语与不变量
@@ -93,11 +93,11 @@ flowchart LR
 
 字段类型写错（如 `network` 写成字符串而不是列表）直接报错，不会被当作没写。此外两项自动授权：项目根（git 仓库根，不在仓库内时取当前目录）可写绑定；worktree 的 git common dir 不在项目内时自动加绑，它不在挂载根内则拒绝启动
 
-**批准**：项目有 `.sandbox.yaml` 时，`sb run`、`sb shell`、`omp-sb` 要求它已批准，否则报错并提示 `sb trust`，不弹提示。`sb trust` 对规范化内容（键排序、去注释）算 SHA-256，记入 `$MSB_HOME/approvals/<哈希>`；只看内容、不看路径，同一份文件在所有 worktree 里只批准一次，文件一变（含被 Agent 修改）要重新批准。记录在宿主上，沙箱里的 `sb` 被宿主命令桩拒绝，Agent 批准不了自己
+**批准**：项目有 `.sandbox.yaml` 时，`sb run`、`sb shell`、`<名>-sb` 要求它已批准，否则报错并提示 `sb trust`，不弹提示。`sb trust` 对规范化内容（键排序、去注释）算 SHA-256，记入 `$MSB_HOME/approvals/<哈希>`；只看内容、不看路径，同一份文件在所有 worktree 里只批准一次，文件一变（含被 Agent 修改）要重新批准。记录在宿主上，沙箱里的 `sb` 被宿主命令桩拒绝，Agent 批准不了自己
 
 ## 执行上下文
 
-每次 `sb run`、`sb shell`、`omp-sb` 新建一个上下文，流程：
+每次 `sb run`、`sb shell`、`<名>-sb` 新建一个上下文，流程：
 
 ```mermaid
 sequenceDiagram
@@ -170,6 +170,7 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 | `sandboxFiles` | 同一文件在沙箱里的替代内容，按目标路径覆盖 `files` 的同名条目 |
 | `sandboxEnv` | 沙箱内额外导出的环境变量，写进 `guest-env.sh`；值可引用 `SB_CONFIG_DIR` 等 guest 变量 |
 | `sandboxDirs` | 沙箱内必须预先存在的目录（例如 OMP 只在 `$XDG_DATA_HOME/omp` 存在时才把插件放进 XDG 目录） |
+| `sandboxCommand` | harness 在沙箱内的可执行名（omp、pi、codex、claude）；宿主据此生成 `<可执行名>-sb`，不写则不生成 |
 | `postInstall` | 宿主激活时与 `sb sync` 时各运行一次 |
 
 条目在 [dev/tools-base.nix](../../dev/tools-base.nix)（rg、fd、jq、gh、node、python3、uv 走 Nix；prek 走 mise）与 [ai/tools.nix](../tools.nix)（omp、pi、codex、claude-code、bun，走 mise）。宿主独有的工具不登记
