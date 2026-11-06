@@ -21,6 +21,15 @@ nodes:
 template_url: https://raw.githubusercontent.com/shelken/proxy/main/config/sing-box/template-router.json
 overlay: |
   {
+    "services": [
+      {
+        "type": "api",
+        "tag": "rpc-api",
+        "listen": "0.0.0.0",
+        "listen_port": 9091,
+        "secret": "{{ op://Personal/proxy/clash-secret }}"
+      }
+    ],
     "experimental": {
       "clash_api": {
         "external_controller": "0.0.0.0:9090",
