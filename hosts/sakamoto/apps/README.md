@@ -72,4 +72,4 @@ sakamoto-compose logs
 sakamoto-compose check      # 只校验解析与插值，不动容器
 ```
 
-镜像升级：`compose.yaml` 里的 tag 由 renovate 的 `sakamoto container images` 规则合成一个 PR，合并后 `just hm`（或 `just deploy sakamoto`），再 `sakamoto-compose up`（或等 15 分钟的 agent），只重建 tag 变了的容器。
+镜像升级：`compose.yaml` 里的 tag 由 renovate 的 `homelab container images` 规则（与 vps-cc 的镜像同一个 PR）合成一个 PR，合并后 `just hm`（或 `just deploy sakamoto`），再 `sakamoto-compose up`（或等 15 分钟的 agent），只重建 tag 变了的容器。
