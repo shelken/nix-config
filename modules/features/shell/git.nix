@@ -22,6 +22,7 @@
           ".DS_Store"
           ".idea"
           ".papercuts.jsonl"
+          ".pi/notes/"
         ];
         attributes = [
         ];
