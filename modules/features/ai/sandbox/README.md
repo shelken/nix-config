@@ -28,16 +28,15 @@ flowchart LR
   H -- /opt/sandbox-mise --> M
 ```
 
-| 模块 / 组件 | 文件 | 职责 |
+| 组件 | 文件 | 职责 |
 | --- | --- | --- |
-| 顶层装配 Seam | [default.nix](./default.nix) | 极小装配入口（~50 行），消费单一 manifest 装配三个深模块并暴露 HM 选项 |
-| 单一事实来源 | [_manifest.nix](./_manifest.nix) | 集中提取路径、工具与断言，生成统一 manifest 对象，杜绝散装传参 |
-| 共用 mise 层定义 | [_mise-layer.nix](./_mise-layer.nix) | 宿主目录、guest 挂载点、挂载模式、上下文环境的唯一定义；`sb`、launcher、guest-env 都从它派生，shell 里没有内置默认值 |
-| 配置物化深模块 | [_config.nix](./_config.nix) | 声明文件收集、解引用工作区软链、原子发布至 `~/.config/sandbox/current` 并修剪过期版本 |
-| Guest 运行时与隔离器 | [_guest.nix](./_guest.nix)、[launcher.sh](./launcher.sh)、[guest/](./guest/)、[sync-guest.sh](./sync-guest.sh)、[guest-status.sh](./guest-status.sh) | 封装 Linux 工具闭包与环境脚本；内聚 netns、registry、layout 三个窄接口子模块与 bubblewrap 隔离执行器 |
-| 宿主驱动与 CLI | [_host.nix](./_host.nix)、[py/sb/](./py/sb/) | `_host.nix` 生成 microsandbox 驱动配置与 `sb-config.json`（Nix 到 sb 的唯一配置通道），打包 `sb` 与 `omp-sb`。`py/sb` 是 CLI 本体：`cli` 分发子命令，`vm` 算期望配置、能力上限指纹并驱动就绪状态机，`msb` 是 msb 命令行的唯一 seam，`approvals`、`sync`、`locks`、`config` 各管一件事 |
-| 执行计划 | [py/sb/plan.py](./py/sb/plan.py) | 把 `sb.yaml` 能力上限与项目 `.sandbox.yaml` 授权解析成 host → guest 的唯一数据契约（`Plan`），launcher 经 `PLAN_JSON` 消费。YAML 经 `yq` 转 JSON，与批准哈希同一个解析器 |
-| 能力上限 | [sb.yaml](./sb.yaml) | 原生 YAML 策略基线，部署到 `~/.config/sandbox/sb.yaml`，供日常查看与编辑 |
+| 装配 | [default.nix](./default.nix)、[_manifest.nix](./_manifest.nix) | `default.nix` 装配三个深模块并暴露 HM 选项；`_manifest.nix` 是路径、工具与断言的单一事实来源 |
+| 共用 mise 层 | [_mise-layer.nix](./_mise-layer.nix) | 宿主目录、guest 挂载点、挂载模式、上下文环境的唯一定义，shell 里没有内置默认值 |
+| 配置物化 | [_config.nix](./_config.nix) | 收集声明文件，原子发布到 `~/.config/sandbox/current` 并修剪过期版本 |
+| Guest 运行时 | [_guest.nix](./_guest.nix)、[launcher.sh](./launcher.sh)、[guest/](./guest/)、[sync-guest.sh](./sync-guest.sh)、[guest-status.sh](./guest-status.sh) | Linux 工具闭包、环境脚本与 bubblewrap 隔离执行器；`guest/` 含 plan、netns、registry、layout |
+| 宿主 CLI | [_host.nix](./_host.nix)、[py/sb/](./py/sb/) | `_host.nix` 生成 msb 配置与 `sb-config.json`（Nix 到 sb 的唯一配置通道）并打包 `sb`、`omp-sb`；`py/sb` 是 CLI 本体，`msb.py` 是 msb 命令行的唯一 seam |
+| 能力上限 | [sb.yaml](./sb.yaml) | 原生 YAML 策略基线，部署到 `~/.config/sandbox/sb.yaml` |
+
 ## 术语与不变量
 
 - **主 VM (Main VM)**: 长期运行的一台沙箱 VM，承载所有日常执行上下文。_避免_: 全局 VM、sb-default
@@ -45,9 +44,9 @@ flowchart LR
 - **能力上限 (Capability Ceiling)**: 一台沙箱 VM 创建时固定的挂载根、VM 级网络策略（公网、DNS、私网整体放开）和 secret 集合，只能通过重建 VM 改变
 - **能力授权 (Capability Grant)**: 某个执行上下文实际获得的额外路径、导入文件和私网目标。额外路径是挂载根的子集；导入文件和私网目标没有上限，由批准决定
 - **批准 (Approval)**: 用户用 `sb trust` 对项目 `.sandbox.yaml` 的规范化内容哈希做的记录。未批准或内容变了，启动直接报错
-- **项目配置 (Project Config)**: 项目仓库根 `.sandbox.yaml`，请求导入文件、私网目标和额外目录；批准后才生效
-- **执行计划 (Plan)**: `sb` 把能力上限与项目配置解析、校验后交给 launcher 的数据：项目根、git common dir、导入文件、额外路径、放行的私网目标与宿主端口。它是 host → guest 的唯一契约，类型定义在 [py/sb/plan.py](./py/sb/plan.py)，改字段要同步改 `launcher.sh` 与 `guest/` 里读它的地方。_避免_: plan_json（那只是它的序列化）
-- **发布目录 (Published Config)**: `~/.config/sandbox/current` 指向的版本化目录，含声明配置副本、`mise.toml`、`guest-env.sh`、`sync-guest.sh`、`declared-paths` 与 `writable-roots`，只读挂进 VM 的 `/run/sandbox-config`。旧版本保留 7 天：数据盘没有 `.declared-paths` 记录时，清理残留占位要靠它们推出上次的声明清单
+- **项目配置 (Project Config)**: 项目仓库根 `.sandbox.yaml`，请求导入文件、私网目标和额外路径；批准后才生效
+- **执行计划 (Plan)**: `sb` 解析、校验能力上限与项目配置后交给 launcher 的数据，host → guest 的唯一契约。类型在 [py/sb/plan.py](./py/sb/plan.py)，guest 里只有 [guest/plan.sh](./guest/plan.sh) 解析它，改字段要同步两处，[py/test_contract.py](./py/test_contract.py) 校验两边一致。_避免_: plan_json（那只是它的序列化）
+- **发布目录 (Published Config)**: `~/.config/sandbox/current` 指向的版本化目录，只读挂进 VM 的 `/run/sandbox-config`，含声明配置副本、`mise.toml`、`guest-env.sh`、`sync-guest.sh`、`declared-paths`、`writable-roots`。旧版本保留 7 天
 - **沙箱基础环境 (Sandbox Base)**: 沙箱启动与隔离所需的 Linux 工具，由 sandbox 模块管理，不属于共享工具。不含 C 工具链，见「设计决策」
 - **补齐 (Sync)**: 显式安装已登记但缺失的 mise 工具和插件。_避免_: 升级、更新
 - **共用安装层 (Shared Install Layer)**: 宿主上由所有沙箱 VM 共用的一份 mise 安装产物与下载缓存。_避免_: 共享缓存、镜像卷
@@ -94,7 +93,7 @@ flowchart LR
 
 此外两项自动授权：项目根（git 仓库根，不在仓库内时取当前目录）可写绑定；worktree 的 git common dir 不在项目内时自动加绑，它不在挂载根内则拒绝启动
 
-**批准**：项目有 `.sandbox.yaml` 时，`sb run`、`sb shell`、`omp-sb` 要求它已批准，否则直接报错并提示 `sb trust`，不弹提示、不等待输入。`sb trust` 对规范化内容（键排序、去注释，只改格式或注释不失效）算 SHA-256，记入 `$MSB_HOME/approvals/<哈希>`。批准只看内容、不看路径，所以同一份文件在所有 worktree 里只批准一次；文件一变（包括被 Agent 修改）就要重新批准。`sb plan` 显示批准状态。记录在宿主上，沙箱里的 `sb` 被宿主命令桩拒绝，Agent 批准不了自己
+**批准**：项目有 `.sandbox.yaml` 时，`sb run`、`sb shell`、`omp-sb` 要求它已批准，否则报错并提示 `sb trust`，不弹提示。`sb trust` 对规范化内容（键排序、去注释）算 SHA-256，记入 `$MSB_HOME/approvals/<哈希>`；只看内容、不看路径，同一份文件在所有 worktree 里只批准一次，文件一变（含被 Agent 修改）要重新批准。记录在宿主上，沙箱里的 `sb` 被宿主命令桩拒绝，Agent 批准不了自己
 
 ## 执行上下文
 
@@ -113,11 +112,11 @@ sequenceDiagram
   G->>G: 退出：删网络资源与上下文目录
 ```
 
-- **视图**：bubblewrap 映射到 UID 1000，只读绑定 `/usr`、`/etc`、`/nix/store`、`/.msb/tls`（msb CA，`NODE_EXTRA_CA_CERTS` 指向这里，缺失时 OMP 的模型发现全部失败）、共用 mise 层与配置目录；可写绑定 `/data`、项目根、额外路径与 imports 的目标目录（该目录在上下文里只剩导入的文件）。`/run` 是 tmpfs，上下文看不到 `/run/sandbox/contexts` 里其他上下文的 imports。launcher 预先创建 `/data/xdg/*/omp`，OMP 只在这些目录存在时才把数据库放到 `/data`
-- **网络**：每个槽位一个 `/30` 子网（`10.200.x.y`），独立 netns 与 veth，NAT 出口。地址池 64 个，即单台主 VM 最多 64 个并发上下文
-- **并发**：清扫、选槽、发布 `meta.json` 在 guest 内一把 flock 下串行；网络资源按唯一槽位命名，不会互相覆盖。cleanup 删本进程槽位的网络资源与上下文目录；槽位在锁内按占用情况分配，同一槽位不会有两个存活 launcher
-- **复制窗口**：宿主复制 imports 期间目录还没有 `meta.json`，靠 `starting` 标记保护：120 秒宽限内清扫跳过它，忙碌计数也算上它。复制失败或宿主中断时宿主删除该目录
-- **残留清扫**：每次启动与忙碌判断都会清理 PID 已死的上下文（连同它登记的 netns、veth 与 iptables 链）。被硬杀进程留下的同名网络资源由下一个拿到该槽位的上下文在 `ip netns add` / `iptables -N` 之前就地清掉
+- **视图**：bubblewrap 映射到 UID 1000。只读：`/usr`、`/etc`、`/nix/store`、`/.msb/tls`（msb CA，缺失时 OMP 的模型发现全部失败）、共用 mise 层与配置目录；可写：`/data`、项目根、额外路径、imports 的目标目录（在上下文里只剩导入的文件）。`/run` 是 tmpfs，看不到其他上下文的 imports
+- **网络**：每个槽位一个 `/30` 子网（`10.200.x.y`），独立 netns 与 veth，NAT 出口；地址池 64 个，即最多 64 个并发上下文
+- **并发**：清扫、选槽、发布 `meta.json` 在 guest 内一把 flock 下串行，网络资源按槽位命名，不会互相覆盖
+- **复制窗口**：宿主复制 imports 期间目录还没有 `meta.json`，靠 `starting` 标记保护（120 秒内清扫跳过它，忙碌计数算上它）；复制失败或中断时宿主删除该目录
+- **残留清扫**：每次启动与忙碌判断都清理 PID 已死的上下文及其网络资源；被硬杀留下的同名资源由下一个拿到该槽位的上下文就地清掉
 
 ## 网络与 secret
 
@@ -133,15 +132,15 @@ FORWARD 默认 DROP。公网只在 VM 级控制，不做上下文级限制
 
 secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符，请求发往该 secret 的 `allow` 目标时才换成真实值，token 不落盘。GitHub 的 `git@github.com:` remote 在 guest 内改写为 HTTPS，配合 `GITHUB_TOKEN` 占位符认证；不共享宿主 SSH 私钥
 
-占位符本身也会进入对话：Agent 读到含 `$MSB_<名字>` 的文件或文档、执行 `env` 时，它就留在上下文里，随后每一轮请求体都带着它发往模型服务。msb 对发往 `allow` 之外目标的占位符默认拦截并切断连接，客户端看到的是首字节前的 `ECONNRESET`，`usage` 全为 0。所以 `sb.yaml` 给每个 secret 设 `passthrough: ["*"]`：占位符原样发往任何目标，**凭据**不会泄露，真实值仍只替换给 `allow` 里的目标
+占位符会随对话进入请求体。msb 对发往 `allow` 之外目标的占位符默认拦截并切断连接（客户端看到首字节前的 `ECONNRESET`），所以 `sb.yaml` 给每个 secret 设 `passthrough: ["*"]`：占位符原样放行，真实值仍只替换给 `allow` 里的目标
 
-这只保证连接不断，不保证占位符不外传：它是稳定的明文字符串，会随请求离开本机，被模型服务和中间方记录，模型也可能把它回显到输出。`passthrough` 生效后 msb 不再产生 `secret violation`，宿主 `runtime.log` 也就不能再用来发现占位符进了对话；要确认，在会话 jsonl 或 `~/Data/sandboxes/msb/sandboxes/sb-main/logs/exec.log` 里 grep `$MSB_`
+这只保证连接不断，不保证占位符不外传：它是稳定的明文字符串，会被模型服务和中间方记录，模型也可能回显。`passthrough` 生效后 msb 不再产生 `secret violation`，要确认占位符是否进了对话，在会话 jsonl 或 guest 的 `exec.log` 里 grep `$MSB_`
 
 ### 已知局限
 
-- **私网在 VM 级是放开的。** 只有执行上下文内的进程受上下文链约束；不在上下文里运行的 guest 进程（`sb sync` 里的 mise 与 `bun install`、`msb exec` 进入的 root 进程）也能连私网。威胁模型只防 Agent 误操作，Agent 始终在上下文内，所以接受
+- **私网在 VM 级是放开的。** 不在上下文里运行的 guest 进程（`sb sync` 里的 mise 与 `bun install`、`msb exec` 进入的 root 进程）也能连私网。Agent 始终在上下文内，威胁模型只防误操作，所以接受
 - **批准只覆盖 `.sandbox.yaml` 的内容。** `imports.src` 指向的宿主文件内容变了不需要重新批准；内容相同的 `.sandbox.yaml` 放在别处也视为已批准
-- **`sb trust` 不逐项确认。** 它直接记录批准，批准前要自己先看 `sb plan` 的清单
+- **`sb trust` 不逐项确认。** 批准前要自己先看 `sb plan` 的清单
 
 ## 主 VM 生命周期
 
@@ -178,17 +177,19 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 
 ### 共用 mise 安装层
 
-mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-linux`（`SB_MISE_HOST_DIR`，首次使用自动创建），挂到所有 VM 的 `/opt/sandbox-mise`，新 VM 不必重新下载。目录、挂载点、挂载模式与上下文环境只在 [_mise-layer.nix](./_mise-layer.nix) 定义，由 `sb` 包装脚本和 launcher 包装脚本注入。mise 的 state、shims 与用户层配置 `/data/mise/config.toml` 留在各 VM 数据卷
+mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-linux`（`SB_MISE_HOST_DIR`，首次使用自动创建），挂到所有 VM 的 `/opt/sandbox-mise`，新 VM 不必重新下载。目录、挂载点、挂载模式与上下文环境只在 [_mise-layer.nix](./_mise-layer.nix) 定义。mise 的 state、shims 与用户层配置留在各 VM 数据卷
 
-上下文对共用层可写，不设 `MISE_AUTO_INSTALL=0`：Agent 或用户在上下文里 `mise trust`、`mise install` 即可装项目工具，产物落在宿主目录，VM 重建后、其他 VM 的上下文里都直接复用。信任记录在数据卷 `/data/xdg/state/mise`，同一 VM 内跨上下文保留。launcher 设 `MISE_PREFER_OFFLINE=1` 而不是 `MISE_OFFLINE=1`：后者连安装下载也拒绝（实测 `offline mode is enabled`）；前者让已装的 `latest` 工具直接用本地版本，不再每次启动联网白等（实测 minio/mc 的版本列表约 14 MB，超过 mise 的超时）。`sb sync` 不在上下文里，不受影响
+上下文对共用层可写：在上下文里 `mise trust`、`mise install` 即可装项目工具，产物落在宿主目录，重建 VM 后和其他 VM 都复用。launcher 设 `MISE_PREFER_OFFLINE=1` 而不是 `MISE_OFFLINE=1`：后者连安装下载也拒绝，前者让已装的 `latest` 工具直接用本地版本，不必每次联网等版本列表
 
 ### `sb sync`
 
 在 VM 内（不在上下文内）运行 [sync-guest.sh](./sync-guest.sh)：
 
-- 跨 VM 的写锁：共用目录下的 `.sync.lock`
-- `mise install` 只补缺，不升级、不删除；不区分 VM 忙闲
-- 运行各工具的 `postInstall`，其中 OMP 插件按 [package.json](../omp/plugins/package.json) 执行：与清单、锁文件及已装目录一致时直接跳过，不一致时先装到暂存目录，装成功才把整个 `node_modules` 换成暂存结果（清单之外的条目因此消失），装失败时旧目录原样保留。私有依赖用 `GITHUB_TOKEN` 占位符认证，安装失败时 `sb sync` 以非零退出，原因见「设计决策」
+- 共用目录下的 `.sync.lock` 做跨 VM 写锁，不区分 VM 忙闲
+- `mise install` 只补缺，不升级、不删除
+- 运行各工具的 `postInstall`。OMP 插件按 [package.json](../omp/plugins/package.json) 重建：先装到暂存目录（沿用 Bun 缓存），成功后才整体替换旧目录，清单外的插件因此消失；失败时恢复旧目录并以非零退出，恢复也失败则输出备份路径。宿主激活时失败只警告
+- 私有依赖用 `gh auth token` 读到的令牌认证（只传给本次 Bun 安装，guest 内是占位符），`git+ssh://`、`ssh://` 在本次安装中改走 https
+- 宿主与沙箱要装不同插件时，在清单顶层写 `sandboxExclude`：列出的依赖只从沙箱清单去掉，不在 `dependencies` 里则构建失败
 
 ## 配置与数据位置
 
@@ -201,18 +202,9 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 | 其他运行状态（pi-fff 数据库、intercom 运行目录、插件自己的设置等） | 留在工具默认位置，例如 `/root/.pi/agent/fff`，落在可写根里，所有上下文共用 |
 | msb 运行数据 | `~/Data/sandboxes/msb`（`MSB_HOME`），镜像缓存 `~/.cache/microsandbox` |
 
-可写根由登记表 `shelken.dev.sandbox.writableRoots` 声明（omp、pi、skills 各自声明自己的根，相对 `$HOME`），经发布目录的 `writable-roots` 交给 launcher；launcher 自己不带任何路径，数据卷位置固定为 `/data/home/<相对根>`。新增或删除根只改 Nix。构建期 assertion 要求：根是 `$HOME` 下的相对路径、互不嵌套，且每个 `shelken.dev.tools.*.files` 目标落在某个根下或在 `.config/` 下。当前的对应：
+可写根由 `shelken.dev.sandbox.writableRoots` 声明（omp、pi、skills 各自声明，相对 `$HOME`），经发布目录的 `writable-roots` 交给 launcher，launcher 自己不带路径；数据卷位置固定为 `/data/home/<相对根>`，新增或删除根只改 Nix。构建期 assertion：根是 `$HOME` 下的相对路径、互不嵌套，每个 `files` 目标落在某个根下或 `.config/` 下。当前三个根：`.omp/agent`、`.pi/agent`、`.agents`
 
-| 上下文内路径 | 数据卷位置 | 用途 |
-| --- | --- | --- |
-| `/root/.omp/agent` | `/data/home/.omp/agent` | OMP 用户级配置目录：声明配置只读，其余（如自建 `hooks/`、`commands/`）可写 |
-| `/root/.pi/agent` | `/data/home/.pi/agent` | pi 与 pi 插件的配置和运行状态：`fff/`、`intercom/`、`npm/`、`git/`、`sessions/` 等 |
-| `/root/.agents` | `/data/home/.agents` | skills 与模型提示词，几乎全是声明配置 |
-| `$XDG_CONFIG_HOME/<X>` | `/data/xdg/config/<X>` | 宿主 `~/.config/<X>` 的声明配置（ponytail、rpiv-web-tools），只读 |
-
-配置发布后，复用中的 VM 新开的上下文即读到新配置，不改指纹，不触发重建。运行中的上下文继续读启动时的版本：发布脚本保留旧版本 7 天，只清理更早的。guest 不跟随宿主 live-edit 软链
-
-上下文外（`sb sync`、`msb exec`）的 `/root/.omp/agent`、`/root/.pi/agent`、`/root/.agents` 是指向只读发布目录的符号链接（`sync-guest.sh` 按 `writable-roots` 逐项建立），看不到上下文里的可写根。上下文布局只由 launcher 负责，改它不改指纹
+配置发布后，复用中的 VM 新开的上下文读到新配置，不改指纹、不重建；运行中的上下文继续读启动时的版本。上下文外（`sb sync`、`msb exec`）的 `/root/.omp/agent`、`/root/.pi/agent`、`/root/.agents` 是指向只读发布目录的符号链接，看不到可写根
 
 ## 设计决策
 
@@ -220,199 +212,151 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 
 ### 宿主 CLI 用 Python，guest 脚本留在 shell
 
-宿主 `sb` 做的是结构化数据处理：合并两份 YAML、校验路径是否落在允许根内、拼 VM 配置并算指纹、维护批准状态、驱动一台 VM 的状态机。这些用 shell 写要靠 jq/yq 串联，同一条「路径在允许根内」循环抄过三份，还得用注释提醒命令替换里 `set -e` 不生效。Python 让执行计划成为一个有类型的 `Plan`，`msb` 命令行成为一个可替换的 seam，生命周期状态机可以用假的 msb 在没有 VM 的机器上测
+宿主 `sb` 做结构化数据处理：合并两份 YAML、校验路径、拼 VM 配置并算指纹、维护批准、驱动 VM 状态机。用 shell 写要靠 jq/yq 串联，同一条「路径在允许根内」循环抄过三份。Python 让执行计划成为有类型的 `Plan`，`msb` 成为可替换的 seam，生命周期状态机可用假 msb 在没有 VM 的机器上测
 
-guest 里的 launcher、netns、registry、layout 留在 shell：它们本质是调 `ip`、`iptables`、`bwrap`、`flock`，shell 就是合适的语言，guest 闭包也不必带 Python（闭包大小是专门砍过的）
+guest 里的 launcher、netns、registry、layout 本质是调 `ip`、`iptables`、`bwrap`、`flock`，留在 shell；guest 闭包也不必带 Python
 
-Python 只用标准库。YAML 经 `yq` 转 JSON 而不用 PyYAML：批准哈希用的是 `yq`，换解析器会让 YAML 1.1 与 1.2 的差异（`yes`/`no`、八进制、冒号分隔的整数）悄悄改变授权内容或让历史批准失效。能力上限指纹逐字节沿用 `jq -S -c` 的规范化，已有主 VM 不会因为换实现被判定为「上限已变」
+只用标准库。YAML 经 `yq` 转 JSON 而不用 PyYAML：批准哈希用 `yq`，换解析器会让 YAML 1.1 与 1.2 的差异（`yes`/`no`、八进制）悄悄改变授权内容或让历史批准失效。能力上限指纹逐字节沿用 `jq -S -c` 的规范化，已有主 VM 不会被判定「上限已变」
 
 - 代价：宿主多依赖 `python3` 与 `yq`；`msb` 与 `sec-run` 仍取用户 `PATH`
-- 测试环境覆盖变量只服务验证：`SB_CONFIG`、`SB_SANDBOX_CONFIG`、`SB_MISE_HOST_DIR`、`SB_MISE_LOCK_DIR`、`SB_NO_HOST_CREDENTIALS`、`MSB_HOME`、`MSB_CONFIG_PATH`；日常只有 Nix 生成的 `sb-config.json`
-- `sb` 每次调用 `msb` 都显式传入解析后的 `MSB_HOME` 与 `MSB_CONFIG_PATH`，锁、批准记录和 `msb` 的状态目录因此始终是同一处，不依赖用户 shell 是否导出这两个变量
+- 日常配置只有 Nix 生成的 `sb-config.json`；`SB_CONFIG`、`SB_SANDBOX_CONFIG`、`SB_MISE_HOST_DIR`、`SB_MISE_LOCK_DIR`、`SB_NO_HOST_CREDENTIALS`、`MSB_HOME`、`MSB_CONFIG_PATH` 只服务验证
+- `sb` 每次调用 `msb` 都显式传入解析后的 `MSB_HOME` 与 `MSB_CONFIG_PATH`，不依赖用户 shell 是否导出，锁、批准记录与 msb 状态目录因此始终是同一处
 
 ### 一台主 VM 承载所有执行上下文
 
-日常习惯是多个 OMP 同时在不同项目运行。每个项目一台 VM，内存成本高、管理也更复杂；把整个 `~/Code` 可写挂载给一台 VM，Agent 又能误删其他项目。microsandbox 0.7.7 的挂载、网络规则和 secret 在 VM 创建时固定，运行中修改要重启，会打断同一 VM 内其他 OMP。复现：
+多个 OMP 同时在不同项目运行是日常。每个项目一台 VM 内存成本高；把整个 `~/Code` 可写挂载给一台 VM，Agent 又能误删其他项目。microsandbox 0.7.7 的挂载、网络规则和 secret 在创建时固定，运行中修改要重启，会打断其他 OMP。复现：
 
 ```bash
 msb modify --help
 PROBE=x msb modify --secret PROBE@example.com --dry-run <sandbox>
 ```
 
-所以只有一台主 VM，每次启动新建一个执行上下文，同项目可并存多个，启动新上下文不影响已运行的上下文。OMP 数据、工具和缓存在所有上下文内共用一份可写状态，与宿主多个 OMP 共用一份 XDG 数据的语义一致
+所以只有一台主 VM，每次启动新建一个执行上下文，同项目可并存多个，互不影响。OMP 数据、工具、缓存在所有上下文内共用一份可写状态，与宿主多个 OMP 共用 XDG 数据一致
 
-考虑过的替代方案：
+放弃的方案：
 
-- **每个项目或每个 OMP 一台 VM**：并发 4 个时启动后宿主内存约 2.8 至 2.9 GB，比单 VM 多约 1.1 GB，还要管理多台 VM
-- **单活动槽位，切换项目时替换 VM**：会打断其他项目正在运行的 OMP
-- **私网项目使用单独 VM**：每个上下文独立网络命名空间已能在主 VM 内按项目精确放行私网目标
-- **guest 内按 UID 过滤网络**：guest 内核缺少 iptables `owner` 匹配模块，做不到
-- **VM 级挂载凭据目录**：新增目录要重建 VM；运行时复制不需要，并保证宿主文件不被写回
-- **项目配置放宿主集中目录**：Agent 无法修改，但新项目要在另一处登记。现在 Agent 改仓库内的 `.sandbox.yaml`，下次启动前必须由用户重新批准
+- **每个项目或 OMP 一台 VM**：4 个并发时宿主内存多约 1.1 GB，还要管多台 VM
+- **切换项目时替换 VM**：会打断其他项目的 OMP
+- **guest 内按 UID 过滤网络**：guest 内核缺少 iptables `owner` 模块
+- **VM 级挂载凭据目录**：新增目录要重建 VM
+- **项目配置放宿主集中目录**：新项目要另处登记；现在 Agent 改仓库内的 `.sandbox.yaml` 后，下次启动前必须重新批准
 
 代价：
 
-- launcher 是唯一的隔离执行者。launcher 缺陷或内核逃逸会暴露整个能力上限，所以上限必须是可接受的最坏情况
-- 公网只在 VM 级控制，不做上下文级限制；按项目精确控制只覆盖私网目标
-- 同一主 VM 内某个上下文耗尽内存，可能波及其他上下文
-- 资源与隔离实测记录见 wiki 页面 `microsandbox-concurrency-resource-cost`
+- launcher 是唯一的隔离执行者，缺陷或内核逃逸会暴露整个能力上限，上限必须是可接受的最坏情况
+- 公网只在 VM 级控制；某个上下文耗尽内存可能波及其他上下文。实测记录见 wiki 页面 `microsandbox-concurrency-resource-cost`
 
 ### 不做附加 VM、待升级登记和破坏性 sync
 
-审查发现的问题大多集中在三处：附加 VM 的并发生命周期（同时首次进入、最后退出撞上新进入、各自数据盘与 shims）、主 VM 忙时的待升级登记、`sb sync` 的忙闲两套模式及其与生命周期的竞态。日常使用是多个项目、多个 Agent 同进同一台主 VM，这些机制都不在这条主路径上，所以不做：
+审查发现的问题集中在附加 VM 的并发生命周期、主 VM 忙时的待升级登记、`sb sync` 的忙闲两套模式。日常是多个 Agent 同进同一台主 VM，这些都不在主路径上，所以不做：
 
-- 不提供单项目专用 VM。所有执行上下文都在主 VM，隔离由执行上下文提供
-- 能力上限变化时，主 VM 空闲则下一次启动自动重建；仍有执行上下文则报错并给出上下文数，不登记待升级
-- 只用一把宿主生命周期锁，只包住「检查上限指纹、必要时重建、启动 VM」。不做宿主侧预约，忙闲只看 guest 内 launcher 的上下文登记
-- `sb sync` 不区分忙闲，不重建插件依赖的下载缓存，因此不需要判断忙闲，也不需要生命周期锁
-- `sb status` 只报告缺失的 mise 工具，不报告插件安装状态
+- 不提供单项目专用 VM
+- 上限变化时主 VM 空闲则下次启动重建；有上下文在运行则报错并给出数量，不登记待升级
+- 只有一把宿主生命周期锁，只包住「检查指纹、必要时重建、启动 VM」；忙闲只看 guest 内 launcher 的登记
+- `sb sync` 不区分忙闲，不需要生命周期锁
+- `sb status` 只报告缺失的 mise 工具，不报告插件状态
 
 代价：
 
-- 主 VM 忙时，某项目需要超出当前上限的能力，只能等主 VM 空闲后重建
-- `sb status` 不显示待升级，也不显示插件是否装全；插件结果只看 `sb sync` 输出
-- 插件目录每次 `sb sync` 都与清单严格对齐，手装的插件会被删除；需要临时插件时改清单
-- 改了 `sb.yaml` 且两个 Agent 在同一两秒内启动时，后启动的上下文可能在启动阶段被重建打断，重新启动即可
-- 忙时 `sb sync` 可能在运行中的 OMP 底下更新插件文件；插件已加载进内存，风险低
+- 主 VM 忙时，需要超出上限的能力只能等空闲后重建
+- 插件目录每次 `sb sync` 都与清单严格对齐，手装的会被删，临时插件要改清单
+- 改了 `sb.yaml` 且两个 Agent 在两秒内启动时，后启动的可能被重建打断，重启即可；忙时 `sb sync` 可能在运行中的 OMP 底下更新插件文件，插件已加载进内存，风险低
 
 ### 项目授权由宿主侧批准决定，私网在 VM 级整体放开
 
-最初 `sb.yaml` 的 `network.allow` 逐项列出项目可申请的私网 IP，并写进 msb 的 VM 配置。这带来两个问题：
+最初 `sb.yaml` 的 `network.allow` 逐项列出项目可申请的私网 IP，写进 msb 的 VM 配置，带来两个问题：
 
-1. 改授权就要重建主 VM，而重建要求没有 Agent 在运行，日常同时开着多个 Agent 时几乎总被挡住
-2. 上限是全局的。一个 IP 放进 `allow` 后，任何项目的 `.sandbox.yaml` 都能申请，而它在仓库里，Agent 改了就在下次启动生效
+1. 改授权要重建主 VM，而重建要求没有 Agent 在运行，同时开多个 Agent 时几乎总被挡住
+2. 上限是全局的：一个 IP 放进 `allow`，任何项目的 `.sandbox.yaml` 都能申请，而它在仓库里，Agent 改了下次启动就生效
 
-实测 msb 的 `allow` 支持 `private` 目标组：只写 `public` 时，对内网 kube-apiserver 的明文 HTTP 请求被拒绝连接，加上 `private` 后收到应用层的 `400 Bad Request`。而每个执行上下文的 iptables 链本来就按源地址逐项限制私网目标（[launcher.sh](./launcher.sh)），VM 级逐项列 IP 是重复的一层。
+msb 的 `allow` 支持 `private` 目标组：只写 `public` 时对内网明文 HTTP 请求被拒绝连接，加上 `private` 后收到应用层 `400`。而每个上下文的 iptables 链本来就按源地址逐项限制私网（[launcher.sh](./launcher.sh)），VM 级逐项列 IP 是重复的一层
 
-所以 VM 级放开私网，逐项限制只由上下文内的 iptables 链完成；导入文件和私网目标不设上限，是否放行由 `sb trust` 的批准决定。`paths` 仍受 `mount_roots` 限制，因为挂载是 VM 级的，同样计入批准。批准记录在宿主上，Agent 批准不了自己
+所以 VM 级放开私网，逐项限制只由上下文内的 iptables 链完成；导入文件和私网目标不设上限，由 `sb trust` 的批准决定。`paths` 仍受 `mount_roots` 限制（挂载是 VM 级的），同样计入批准
 
-考虑过的替代方案：
+放弃的方案：
 
-- **保留逐项上限，只放宽重建条件**：不改变信任模型，Agent 改文件仍然自动扩权
-- **批准按路径加哈希**：同一份文件在每个 worktree 里都要重新批准，没有收益
-- **交互式提示**：在后台、脚本、自动开 Agent 的场景会卡住
-- **宿主侧项目授权文件（不进仓库）**：原本为公开仓库不能写内网 IP 设计，核实后仓库已大量包含内网 IP，这个理由不成立，需要时再加
+- **保留逐项上限，只放宽重建条件**：Agent 改文件仍然自动扩权
+- **批准按路径加哈希**：每个 worktree 都要重新批准，没有收益
+- **交互式提示**：后台、脚本、自动开 Agent 时会卡住
 
-代价：
-
-- 改授权（新增一个 IP、换一个导入文件）不再触发 VM 重建，也不被运行中的 Agent 挡住
-- 批准不覆盖 `imports.src` 指向的宿主文件的内容变化
-- 改 `network.allow` 的 VM 级策略仍会改变上限指纹、触发一次重建
-- 不在上下文里运行的 guest 进程也能连私网，见「已知局限」
+代价：改 `network.allow` 的 VM 级策略仍会改变上限指纹、触发一次重建；其余局限见「已知局限」
 
 ### 默认放行模型服务的私网端口
 
-家里的模型服务（`cpa.int.ooooo.space`）都解析到私网 `192.168.69.46`。执行上下文默认拒绝全部私网，每个项目都要在 `.sandbox.yaml` 声明这个 IP，OMP 才能调用模型；不声明时默认模型请求反复重试，表现为卡住。模型服务是每个 Agent 都要用的基础依赖，不属于某个项目
+模型服务解析到私网 IP，而执行上下文默认拒绝全部私网。每个项目都要在 `.sandbox.yaml` 声明它，OMP 才能调用模型，不声明时请求反复重试、表现为卡住；模型服务是每个 Agent 的基础依赖，不属于某个项目
 
-所以 `sb.yaml` 的 `network.default_grant` 列出所有上下文默认放行的私网目标，只接受 `IP:端口`，当前只放行 `192.168.69.46:443`。范围按端口收窄，同一台机器的其他端口仍需项目声明。它是上下文级授权，不写进 VM 配置、不改变上限指纹，修改后下一个新上下文即生效
+所以 `sb.yaml` 的 `network.default_grant` 列出所有上下文默认放行的私网目标，只接受 `IP:端口`，按端口收窄，同一台机器的其他端口仍需项目声明。它是上下文级授权，不进 VM 配置、不改指纹，改后下一个新上下文即生效
 
-考虑过的替代方案：
-
-- **按 IP 整体默认放行**：配置更简单，但所有项目都能访问该机器上的全部服务
-- **保持每个项目声明**：不改代码，但每个新项目都要先写 `.sandbox.yaml` 才能用 OMP
+放弃的方案：按 IP 整体放行（项目能访问该机器上的全部服务）；保持每个项目声明（每个新项目要先写 `.sandbox.yaml` 才能用 OMP）
 
 ### 导入文件按目标目录绑定
 
-原来 `imports` 只能把文件放到上下文内的 `/imports/<文件名>`。home-ops 这类项目用 mise 把 `KUBECONFIG` 固定为 `$HOME/.kube/home-ops.yaml`，工具只认这个路径，所以没法用
+`imports` 原来只能放到上下文内的 `/imports/<文件名>`，而 home-ops 这类项目用 mise 把 `KUBECONFIG` 固定为 `$HOME/.kube/home-ops.yaml`，工具只认这个路径。所以每项写 `src` 与 `target`：同一目标目录的导入共用一个暂存目录，launcher 整体绑定到该目录。不做单文件绑定，否则上下文内的原子改名报 `Device or resource busy`。保留位置见「授权」表；导入文件在上下文内权限为 `600`
 
-所以每项写 `src` 与 `target`。同一目标目录的导入共用一个暂存目录，launcher 把它整体绑定到该目录，不做单文件绑定，否则上下文内的原子改名会报 `Device or resource busy`（实测）。保留位置不能做目标目录：家目录本身、`/`、系统目录、`/data`、`/run`、`/.msb`，以及 launcher 铺设 agent 配置目录的 `~/.omp`、`~/.agents`、`~/.pi`；同一个 `target` 不能重复。导入文件在上下文内只对上下文用户可读写（`600`）
+不做：OAuth 登录态不导入（OMP 的登录态在共享的 `/data/xdg/data/omp`，在沙箱里登录一次即可）；不写回宿主
 
-不做：
-
-- OAuth 登录态不导入。OMP 的登录态在 `agent.db`，位于共享的 `/data/xdg/data/omp`，在沙箱里登录一次即可持久化并被所有项目共用
-- 不写回宿主。上下文内的修改随上下文退出丢弃
-
-考虑过的替代方案：
-
-- **单文件绑定**：目录遮蔽的副作用消失，但原子改名失败
-- **把凭据放进 `/data` 持久化**：`/data` 绑进所有上下文，项目凭据会对其他项目可见
-
-代价：目标目录在上下文里只剩导入的文件
+放弃的方案：单文件绑定（原子改名失败）；把凭据放进 `/data` 持久化（对其他项目可见）。代价：目标目录在上下文里只剩导入的文件
 
 ### agent 配置目录整体可写，声明配置逐项只读
 
-原来 `/root/.omp/agent`、`/root/.pi`、`/root/.agents` 是指向只读发布目录的符号链接，整个目录只读。凡是把状态写在配置目录旁边的插件都会失败：pi-fff 建不了数据库（`Failed to create directory: Read-only file system`），pi-intercom 建不了 `~/.pi/agent/intercom` 运行目录，插件自己的设置文件也写不进去
+原来 `/root/.omp/agent`、`/root/.pi`、`/root/.agents` 是指向只读发布目录的符号链接，把状态写在配置目录旁边的插件全部失败（pi-fff 建不了数据库，pi-intercom 建不了运行目录）
 
-现在和宿主一致：三个目录是数据卷上的可写根，所有上下文共用；Nix 定义的路径按来源判断，逐项 `--ro-bind` 到上面：
+现在与宿主一致：三个目录是数据卷上的可写根，所有上下文共用；Nix 定义的路径逐项 `--ro-bind` 到上面：
 
-- 挂载单元就是发布清单的每一项：文件项绑文件，目录项（如 `.agents/skills/<名>`、`.omp/agent/agents`）绑整个目录。同目录里别人放的文件可写，`extensions/` 这类目录因此可以混放
-- launcher 只解析一次 `current`，清单与挂载源来自同一版本目录；源缺失直接报错并指出路径，不跳过
-- 嵌套声明项的祖先目录（如 `extensions/`、`intercom/`、`/data/xdg/config/<X>`），以及 `/root` 和各根的上层目录（由 `writable-roots` 推出，如 `/root/.omp`、`/root/.pi`），也都做成挂载点。内核只拒绝改名挂载点本身，改名普通祖先会把下面的只读挂载一起移走，原位置就能建出可写的同名替身（实测，经上下文路径或 `/data` 后备路径都成立）。做成挂载点后改名一律 `Device or resource busy`。`imports` 的目标也不得落在这些挂载点或根下，同样由清单推出
-- 挂载点在数据卷上留下空文件或空目录占位。声明从文件改成目录（或反过来）时，旧占位会让 bwrap 报 `Destination is not a file` 而起不来。launcher 在启动锁内检查：类型不符的空占位，没有别的上下文在运行时删除；有别的上下文时报错，占位是它们的挂载点，类型要变就等全部退出后再整理；非空内容一律报错，不自动删，里面可能是别的上下文的运行状态
-- 声明删除或改名后，旧落点的空占位不再被挂载遮住，工具会把它当真文件加载：`extensions/guard.ts` 改成 `extensions/guard/` 后，OMP 读到空的 `guard.ts`，报「Extension does not export a valid factory function」。launcher 把上次布局用的清单记在 `/data/home/.declared-paths`，启动锁内没有别的上下文时，删除新清单里已经没有的空占位，再写入新清单；有别的上下文时这次跳过，等下次独占启动。旧数据卷没有这份记录时，用 `/run/sandbox-config` 下保留的历史版本清单代替。非空内容不删，可能是运行状态
-- 发布脚本保留旧版本 7 天。挂载钉住启动时的版本目录，立即删除旧版本会让运行中的上下文读不到复制来的条目（live-edit 主机上的 `settings.json`、`AGENTS.md` 等，实测）
+- 挂载单元就是发布清单的每一项：文件项绑文件，目录项绑整个目录；同目录里别人放的文件可写
+- launcher 只解析一次 `current`；源缺失直接报错并指出路径，不跳过
+- 嵌套声明项的祖先目录，以及 `/root` 和各根的上层目录也做成挂载点：内核只拒绝改名挂载点本身，改名普通祖先会把下面的只读挂载一起移走，原位置就能建出可写的同名替身（实测）。`imports` 的目标也不得落在这些挂载点或根下
+- 挂载点在数据卷上留下空占位。声明的类型变了（文件变目录），或声明被删除时，旧占位会让 bwrap 起不来，或被工具当成真文件加载（如空的 `guard.ts`）。launcher 在启动锁内、没有别的上下文时清掉不符的空占位，上次布局的清单记在 `/data/home/.declared-paths`；有别的上下文时报错或跳过，非空内容一律不删，里面可能是运行状态
+- 发布脚本保留旧版本 7 天：挂载钉住启动时的版本目录，立即删除会让运行中的上下文读不到复制来的条目
 
-考虑过的替代方案：
+放弃的方案：
 
-- **整目录只读**：即原来的做法，插件写状态全部失败
-- **符号链接农场**：可写目录里逐项链接到发布目录。插件 unlink 或原子替换就能把链接换成普通文件，只读只是约定
-- **根的清单写在 launcher 里**：同一份知识在 Nix 与 shell 各有一份，还要在 tmpfs 挂载点、`imports` 保留位置、`sync-guest.sh` 里各抄一遍，新增根时漏一处就留下可改名的祖先目录
-- **从 `files` 目标路径推断根**：`.agents/x`、`.omp/agent/x`、`.config/x` 的根深度不一致，只能把规则硬编码，等于换个地方写死
-- **持久化整个 HOME**：最省事，但 `/root` 其余部分也会跨上下文共用，`.sandbox.yaml` 的 `imports` 隔离失效
+- **整目录只读**：插件写状态全部失败
+- **符号链接农场**：插件原子替换就能把链接换成普通文件，只读只是约定
+- **根的清单写在 launcher**：同一份知识在 Nix 与 shell 各一份，新增根时漏一处就留下可改名的祖先目录
+- **从 `files` 目标路径推断根**：各根深度不一致，只能硬编码
+- **持久化整个 HOME**：`/root` 其余部分也跨上下文共用，`imports` 隔离失效
 
 代价：
 
-- 每次启动多约 180 个挂载，实测启动多 35ms 左右
-- 可写区里新建的 `hooks/`、`tools/`、`SYSTEM.md`、`RULES.md`、`commands/`、`rules/` 会对之后所有项目生效（OMP 从这些位置自动加载），不预留占位
-- 沙箱里的运行状态与宿主分开：`auth.json`、`agent.db` 等不从宿主导入，在沙箱里登录一次后留在数据卷共用；旧数据卷上的状态不迁移，新位置从空开始
-- 宿主 `just hm` 后，运行中的上下文仍是旧配置，重开上下文才生效
+- 每次启动多约 180 个挂载，约多 35ms
+- 可写区里新建的 `hooks/`、`tools/`、`SYSTEM.md`、`RULES.md`、`commands/`、`rules/` 会对之后所有项目生效（OMP 自动加载）
+- 沙箱里的运行状态与宿主分开：`auth.json`、`agent.db` 不从宿主导入，在沙箱里登录一次后留在数据卷
 
-已知局限：经 `/data` 后备路径可以把可写根本身改名（如 `mv /data/home/.pi /data/home/.pi-gone`）。声明配置的挂载钉着原目录，上下文视图不变，下次启动 launcher 重新建可写根，所以不是绕过；但数据卷上会留下改名后的孤儿目录。不做自动清理，无法区分用户故意改名与残留
+已知局限：经 `/data` 后备路径可以把可写根本身改名。不是绕过（声明配置的挂载钉着原目录），但会留下孤儿目录，不自动清理
 
 ### pi 在上下文里自己装 packages
 
-pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就当场装：npm 源装到 `~/.pi/agent/npm`，git 源 clone 到 `~/.pi/agent/git/<host>/<path>`，再装依赖；已装好的第二次启动不再安装。沙箱清单排除依赖 `node-pty` 的 `@shelken/simple-plannotator`，其余扩展按清单安装。
+pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么当场装（npm 源到 `~/.pi/agent/npm`，git 源到 `~/.pi/agent/git`），装好的第二次不再装。沙箱清单排除依赖 `node-pty` 的 `@shelken/simple-plannotator`
 
-所以：
+- 沙箱里的 `settings.json` 由 Nix 生成，去掉 `sandboxExclude` 列出的 packages 与该字段；宿主继续用仓库配置
+- 包落在可写根里，属于运行状态，所有上下文共用
+- `pi-dynamic-models` 的开关由 Nix 声明。cpa、mp 等 provider 在 `models.json` 里没有 `models`，只靠它向网关发现；不把 `modelOverrides` 静态化成 `models`（约 50 个模型会退化成 128k/16k/仅文本，宿主也受影响）
 
-- 沙箱里的 `settings.json` 由 Nix 生成，去掉 `sandboxExclude` 列出的 packages 和该字段本身；宿主继续使用仓库配置
-- 包落在可写根里，属于运行状态，所有上下文共用。不变量 6 管的是共用 mise 安装层，不涉及这里
-- `pi-dynamic-models` 的开关（`~/.pi/agent/extensions/pi-dynamic-models/config.json`）由 Nix 声明。cpa、mp 等 provider 在 `models.json` 里没有模型，只靠它向网关发现
+放弃的方案：在 `sb sync` 里装（sync 在上下文外，看到的是只读发布目录，且 pi 缺包仍会自己装）；`PI_OFFLINE=1`（同时关掉模型发现）；忽略 bun 安装脚本（需要原生模块的包可能装好却无法加载，所以直接排除需要现场编译的插件）
 
-考虑过的替代方案：
-
-- **在 `sb sync` 里装**：sync 在上下文外，看到的 `~/.pi/agent` 是只读发布目录，要么复刻 launcher 的挂载视图，要么照抄 pi 的安装布局；而且 pi 启动时缺包仍会自己装
-- **`PI_OFFLINE=1` 跳过装包**：同时关掉模型发现，cpa 等 provider 的模型全部找不到
-- **只对 pi 的 bun 忽略安装脚本**：需要原生模块的包可能装好却无法加载。沙箱直接排除需要现场编译的插件，其余包照常执行安装脚本
-
-代价：
-
-- 新数据卷上 pi 首启要安装清单中的 packages，耗时取决于网络和缓存；之后复用已安装的包
-- cpa、mp 在 `models.json` 里只有 `modelOverrides`，没有 `models`，所以只能靠发现；不把 `modelOverrides` 静态化成 `models`（会让约 50 个模型退化成 128k/16k/仅文本，宿主也受影响）。`pi-dynamic-models` 对没有缓存的 provider 在会话开始前发现一次，所以新数据卷上 `pi -p --model cpa/…` 第一次就能解析模型；实测清空 `~/.pi/agent/cache` 后一次成功
-
-已知限制，根因未查，也没有加 timeout、重试等绕过：
-
-- **同时首启多个 pi 可能失败。** 没有复核，原因没有查。新数据卷上先单独启动一个 pi、等装完，再并发使用；装完之后的并发没有单独验证
+已知限制，根因未查，也没有加 timeout 或重试：新数据卷上同时首启多个 pi 可能失败，先单独启动一个、等装完再并发
 
 ### 共用 mise 安装层
 
-主 VM 数据盘坏掉重建、一次性 e2e VM 启动时，mise 工具（bun、codex、oh-my-pi 等）和 OMP 插件都要重新下载安装，下载量大、耗时长。另外，若把宿主真实路径直接写进 VM 挂载配置，路径变化（如用户名、目录调整）会改变上限指纹，让复用中的 VM 被判定「上限不一致」而重建
+数据盘重建、一次性 e2e VM 启动时，mise 工具和 OMP 插件都要重新下载，量大耗时长。若把宿主真实路径写进 VM 挂载配置，路径变化（用户名、目录调整）还会改变上限指纹，让复用中的 VM 被判定「上限不一致」而重建
 
 所以：
 
-- 宿主只有一个共用目录，取真实物理路径（非符号链接）；msb 解析符号链接后仍指向同一目录
-- 所有 VM 一律把它挂到 `/opt/sandbox-mise`。上限指纹只含 guest 侧声明 `/opt/sandbox-mise:rw`，不含宿主真实路径，宿主路径变化不触发重建
-- 共用的只有安装产物与下载缓存；mise 的 `state`、`shims` 与可写用户层配置仍归各 VM 数据盘
-- guest 环境变量只有一个来源 `/run/sandbox-config/current/guest-env.sh`，由生成器生成，`sb sync`、执行上下文、`guest-status.sh` 统一 source
-- `sb sync` 在宿主侧经 flock（共用目录下的 `.sync.lock`）串行化，多 VM 并发 sync 不交叉写安装层
-- sync 不清理下载缓存，共用的下载缓存是资产
-- 主 VM 首次创建后自动 sync 一次；`sb run`、`sb shell`、`omp-sb` 复用已有 VM 时不自动 sync
-- 执行上下文可写共用层，项目工具在上下文内用 `mise install` 安装，不经 `sb sync`、不需要登记。原先上下文只读、安装只走 `sb sync`，目的是让 sync 成为唯一写入方；但威胁模型只防误操作，Agent 本来就能在项目里下载并运行任意程序，只读挡不住什么，反而让项目 `mise.toml` 里的工具（kustomize、helm、flux 等）在沙箱里无法使用。上下文的安装不拿 `.sync.lock`，并发安装同一版本由 mise 自己串行（实测 3 个上下文同时装 `shfmt@3.10.0`，1 个安装、2 个报告已安装，三者都能运行）
-- OMP 插件在 guest 内每次按沙箱清单重建。先把可写清单副本和旧 `bun.lock` 放入同级暂存目录，再使用保留的 Bun 缓存安装。安装成功后备份整个旧插件目录，再替换为新目录；清单外插件和旧登记表随旧目录删除。替换失败时恢复旧目录。私有依赖的 `git+ssh://git@github.com/…` 与 `ssh://git@github.com/…` 在本次安装中都改走 https（两条 `insteadOf`）。安装脚本通过 `gh auth token` 读取当前登录态，只向本次 Bun 安装传入 `GITHUB_TOKEN`；避免 Bun 把 SSH 用户名 `git` 带入 HTTPS 认证后被 credential helper 拒绝。guest 读到的是占位符，msb 在网络边界替换；宿主从现有 gh 登录态读取，同样不用 ssh
-- 宿主与沙箱要装不同的插件时，在清单顶层写 `sandboxExclude`：列出的依赖只从沙箱清单里去掉，宿主清单不变。沙箱清单由 Nix 在构建期生成（`sandboxFiles`）。`guest-env.sh` 导出 `SB_OMP_MANIFEST`，共享工具的安装命令把该路径传给 `install.sh`；宿主未设置时使用仓库原件。排除项不在 `dependencies` 里时构建失败
-- 安装或替换失败时 `sb sync` 以非零退出，宿主激活只打警告。替换前的备份包含插件、清单、锁文件和登记表；自动恢复也失败时输出备份路径并保留备份。缓存缺少所需内容时 Bun 可以联网下载
-- 宿主 Home Manager 激活会重置 PATH。`postInstall` 先加入登记表中的 Nix 工具，再加入 mise shims；Node 等 Nix 运行时不会被未配置版本的旧 mise shim 遮蔽。Bun 继续由 mise 提供
-- 依赖的安装脚本照常执行。沙箱基础环境不带 C 工具链，没有 linux 预编译产物的原生依赖装不上，这是刻意的取舍：唯一需要它的 `simple-plannotator`（依赖 `node-pty`）已从沙箱插件清单排除，宿主仍保留。实测省下约 331 MiB 闭包
+- 宿主只有一个共用目录，取真实物理路径；所有 VM 把它挂到 `/opt/sandbox-mise`。指纹只含 guest 侧声明 `/opt/sandbox-mise:rw`，宿主路径变化不触发重建
+- 共用的只有安装产物与下载缓存；`state`、`shims`、可写用户层配置归各 VM 数据盘
+- guest 环境变量只有一个来源 `/run/sandbox-config/current/guest-env.sh`，`sb sync`、执行上下文、`guest-status.sh` 统一 source
+- `sb sync` 不清理下载缓存；主 VM 首次创建后自动 sync 一次，复用已有 VM 时不自动 sync
+- 上下文可写共用层，项目工具在上下文内 `mise install`，不经 `sb sync`。原先上下文只读，是为了让 sync 成为唯一写入方；但威胁模型只防误操作，Agent 本来就能下载并运行任意程序，只读挡不住什么，反而让项目 `mise.toml` 里的工具（kustomize、helm、flux 等）无法使用。上下文的安装不拿 `.sync.lock`，并发安装同一版本由 mise 自己串行
+- Home Manager 激活会重置 PATH：`postInstall` 先加登记表中的 Nix 工具，再加 mise shims，Nix 运行时不会被旧 mise shim 遮蔽
+- 沙箱基础环境不带 C 工具链，没有 linux 预编译产物的原生依赖装不上，这是刻意取舍：唯一需要它的 `simple-plannotator` 已从沙箱清单排除，省下约 331 MiB 闭包
 
 代价：
 
-- 共用安装层损坏影响所有 VM，用 `sb sync` 重装自愈
-- 宿主目录体积随工具增长（约 1 至 2 GB 量级）
-- 沙箱里装不了需要现场编译的原生依赖（如 `node-pty`），负对照见 `ae7b2b5d` 的验证记录
-- 没有有效 GitHub 凭据时私有插件装不上，`sb sync` 失败
-- 上下文里的 `mise uninstall`、`mise prune` 会删掉所有 VM 共用的版本；登记工具用 `sb sync` 补回，项目工具再 `mise install`
-- 没有 mise shell 激活，命令找不到时不会自动安装；新工具要先 `mise install`（安装会生成 shim）
-- 需要现场编译的项目工具装不上，例如依赖原生扩展的 `pipx:` 包（实测 `pipx:homeassistant-cli` 报 `No such file or directory: 'gcc'`）
+- 共用层损坏影响所有 VM，用 `sb sync` 重装自愈；宿主目录约 1 至 2 GB
+- 需要现场编译的工具装不上（如 `node-pty`、依赖原生扩展的 `pipx:` 包）；没有有效 GitHub 凭据时私有插件装不上
+- 上下文里的 `mise uninstall`、`mise prune` 会删掉所有 VM 共用的版本：登记工具用 `sb sync` 补回，项目工具再 `mise install`
+- 没有 mise shell 激活，新工具要先 `mise install`（会生成 shim）
 
 ## 测试
 
@@ -422,12 +366,12 @@ pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么就
 bash modules/features/ai/sandbox/e2e/smoke.sh
 ```
 
-需要宿主有 `msb`、ubuntu 镜像缓存、能访问公网与 Linux 构建器；默认现场构建 `sb`，可用 `SB_BIN` 指定。首次创建 VM 会自动执行一次 `sb sync`；冒烟测试的发布目录里没有 `sync-guest.sh`，那次 sync 在 guest 内直接跳过，共用 mise 层只被挂载、不被写入
+需要宿主有 `msb`、ubuntu 镜像缓存、能访问公网与 Linux 构建器；默认现场构建 `sb`，可用 `SB_BIN` 指定
 
 冒烟测试之外的行为验证（首次启动、OMP 调模型、sync、生命周期与授权）见项目技能 [verify-sandbox](../../../../.agents/skills/verify-sandbox/SKILL.md)
 
-宿主 CLI 由两份单元测试覆盖，不需要 VM：[py/test_plan.py](./py/test_plan.py) 用临时目录里的真实 git 仓库、worktree 与 YAML 驱动真实的 `sb plan --json`；[py/test_lifecycle.py](./py/test_lifecycle.py) 用 [py/testenv.py](./py/testenv.py) 里假的 `msb`，驱动创建、复用、重建、忙时拒绝、`rm`、`status`、`sync`、批准流程与 imports 暂存。测试环境不继承调用者的 `MSB_HOME`，`sb trust` 不会写进真实的批准目录
+宿主 CLI 由三份单元测试覆盖，不需要 VM：[py/test_plan.py](./py/test_plan.py)（真实 git 仓库与 YAML 驱动 `sb plan --json`）、[py/test_lifecycle.py](./py/test_lifecycle.py)（假 `msb` 驱动生命周期、批准与 imports 暂存，见 [py/testenv.py](./py/testenv.py)）、[py/test_contract.py](./py/test_contract.py)（真实 Plan 交给 `guest/plan.sh` 解析，校验两端一致）。测试环境不继承调用者的 `MSB_HOME`。PR 上由 [sandbox-host-tests](../../../../.github/workflows/sandbox-host-tests.yml) 运行
 
 ```bash
-cd modules/features/ai/sandbox/py && nix shell nixpkgs#yq-go -c python3 -m unittest test_plan test_lifecycle
+cd modules/features/ai/sandbox/py && nix shell nixpkgs#python3 nixpkgs#bash nixpkgs#jq nixpkgs#yq-go nixpkgs#git -c python3 -m unittest test_plan test_lifecycle test_contract
 ```
