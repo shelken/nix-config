@@ -9,7 +9,7 @@ description: 验证 nix-config 的 Agent 沙箱（sb、omp-sb、sb sync、launch
 
 先读 [`features/README.md`](features/README.md)，按改动影响选所有对应 feature；一个方便入口通过不代表 map 里其他入口也通过
 
-所有操作经 [`scripts/verify.sh`](scripts/verify.sh)。它把 `SB_CONFIG`、`SB_SANDBOX_CONFIG`、`MSB_HOME`、`MSB_CONFIG_PATH` 一起指向隔离目录，日常主 VM（`~/Data/sandboxes/msb` 里的 `sb-main`）与宿主 `~/.config/sandbox` 不受影响。并行跑两套时用不同的 `SB_VERIFY_RUN`
+所有操作经 [`scripts/verify.sh`](scripts/verify.sh)。它把 `SB_CONFIG_FILE`（`setup` 时由真实产物的 `sb-config.json` 改写，换了策略文件与发布目录）、`MSB_HOME`、`MSB_CONFIG_PATH` 一起指向隔离目录，日常主 VM（`~/Data/sandboxes/msb` 里的 `sb-main`）与宿主 `~/.config/sandbox` 不受影响。并行跑两套时用不同的 `SB_VERIFY_RUN`
 
 ## Launch
 
@@ -67,7 +67,7 @@ $V cleanup
 隔离环境替代了真实 `just hm` 激活，以下步骤在这里不执行，只能在授权的 `just hm` 后观察：
 
 - 激活脚本把配置发布到宿主 `~/.config/sandbox/current`，以及创建共用 mise 目录
-- `MSB_HOME`、`MSB_CONFIG_PATH` 由 Home Manager 会话变量注入，需新开终端生效；`SB_MISE_HOST_DIR` 不注入，由 `_mise-layer.nix` 经 `sb` 包装脚本注入的默认值决定
+- `MSB_HOME`、`MSB_CONFIG_PATH` 由 Home Manager 会话变量注入，需新开终端生效；共用层目录取自 `sb-config.json` 的 `mise.host_dir`（来自 `_mise-layer.nix`）
 - 日常 `sb-main` 使用 `~/Data/sandboxes/msb`；隔离环境里的 VM 同样叫 `sb-main`，只能靠 `MSB_HOME` 区分
 
 ## Gotchas

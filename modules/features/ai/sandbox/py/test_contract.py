@@ -86,7 +86,7 @@ class ContractTest(unittest.TestCase):
         self.assertEqual(plan["paths"][0]["path"], str(self.e.project / "back\\slash"))
         self.assertEqual(guest_parse(json.dumps(plan))["PATH"], [f"{plan['paths'][0]['path']}\tfalse"])
 
-    def test_malformed_plan_fails_before_anything_is_allocated(self):
+    def test_malformed_plan_is_rejected(self):
         r = subprocess.run(["bash", "-c", DUMP, "x", str(PLAN_SH), "not json"], capture_output=True, text=True)
         self.assertNotEqual(r.returncode, 0)
 

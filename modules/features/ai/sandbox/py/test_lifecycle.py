@@ -34,7 +34,8 @@ class LifecycleTest(unittest.TestCase):
         r = self.e.sb("up")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("复用现有 VM", r.stderr)
-        self.assertEqual([c[0] for c in self.e.calls()[before:]], ["volume", "inspect"])
+        changing = {"create", "start", "stop", "rm", "exec"}
+        self.assertEqual([c for c in self.e.calls()[before:] if c[0] in changing], [])
 
     def test_up_starts_a_stopped_vm_with_unchanged_ceiling(self):
         self.e.sb("up")
@@ -78,17 +79,22 @@ class LifecycleTest(unittest.TestCase):
     def test_mise_host_path_does_not_change_the_ceiling_fingerprint(self):
         self.e.sb("up")
         moved = self.e.tmp / "elsewhere"
-        r = self.e.sb("up", SB_MISE_HOST_DIR=str(moved))
+        (moved / "data").mkdir(parents=True)
+        self.e.write_config(mise={"host_dir": str(moved), "guest_mount": "/opt/sandbox-mise"})
+        r = self.e.sb("up")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("复用现有 VM", r.stderr)
         self.assertEqual(len(self.e.calls("create")), 1)
 
     def test_secrets_and_mount_roots_are_part_of_the_ceiling(self):
         self.e.sb("up")
-        old = self.vm_fp()
-        self.e.set_policy(secrets={"K": {"value": "v"}})
-        self.e.sb("up")
-        self.assertNotEqual(self.vm_fp(), old)
+        for change in ({"secrets": {"K": {"value": "v"}}}, {"mount_roots": ["~/Code", "~/Other"]}):
+            with self.subTest(change=change):
+                old = self.vm_fp()
+                self.e.set_policy(**change)
+                r = self.e.sb("up")
+                self.assertEqual(r.returncode, 0, r.stderr)
+                self.assertNotEqual(self.vm_fp(), old)
 
     def test_rm_refuses_while_busy_unless_forced(self):
         self.e.sb("up")
@@ -116,14 +122,18 @@ class LifecycleTest(unittest.TestCase):
         self.e.set_policy(cpus=5)
         self.assertIn("上限一致: inconsistent", self.e.sb("status").stdout)
 
-    def test_sync_starts_a_stopped_vm_and_passes_arguments_through(self):
+    def test_sync_starts_a_stopped_vm(self):
         self.e.sb("up")
         self.e.sb("down")
-        r = self.e.sb("sync", "--force")
+        r = self.e.sb("sync")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.e.msb_state()["vm"]["status"], "Running")
-        sync_call = [c for c in self.e.calls("exec") if "sync-guest.sh" in " ".join(c)][-1]
-        self.assertEqual(sync_call[-1], "--force")
+        self.assertEqual(len([c for c in self.e.calls("exec") if "sync-guest.sh" in " ".join(c)]), 2)
+
+    def test_sync_rejects_arguments(self):
+        r = self.e.sb("sync", "--force")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("sb sync 不接受参数", r.stderr)
 
     def test_sync_failure_exit_code_is_returned(self):
         self.e.sb("up")
@@ -213,8 +223,9 @@ class RunTest(unittest.TestCase):
         self.e.msb_state(copy_rc=1)
         r = self.e.sb("run", "true")
         self.assertNotEqual(r.returncode, 0)
-        execs = [c for c in self.e.calls("exec")]
-        self.assertTrue(any(c[-2:-1] == ["-rf"] or "rm" in c for c in execs), execs)
+        execs = self.e.calls("exec")
+        stage_dir = self.e.calls("copy")[0][2].split(":")[1].split("/imports/")[0]
+        self.assertIn(["exec", "sb-main", "--", "rm", "-rf", stage_dir], execs)
         self.assertFalse(any("/fake/launcher" in c and "--check-busy" not in c for c in execs))
 
     def test_every_msb_call_gets_the_resolved_state_location_even_without_it_in_the_caller_env(self):

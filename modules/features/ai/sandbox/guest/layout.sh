@@ -1,14 +1,9 @@
 #!/usr/bin/env bash
 # guest/layout.sh: 声明配置与可写根布局规划
-# 职责：
-# 1. 解析 writable-roots 与 declared-paths 发布清单
-# 2. 映射数据盘可写根 (/data/home/<root>)
-# 3. 钉扎祖先目录为挂载点，防止改名绕过只读配置
-# 4. 生成 bubblewrap 挂载参数 (LAYOUT_ARGS)
-# 5. 清理声明删除或改名后遗留的空占位 (prune_stale_placeholders)
+# 可写根映射到数据盘 $SB_DATA_DIR/home/<root>；声明文件逐项只读挂在根上，祖先目录钉成挂载点，防止改名绕过只读。
 #
-# 读：HOME；写：AGENT_ROOTS（数据盘可写根映射）、LAYOUT_ARGS（bwrap 参数）、MOUNT_POINTS（祖先挂载点）
-# is_agent_layout_path 在 prepare_declared_layout 之后供 launcher 校验 imports 目标
+# 读：HOME、SB_DATA_DIR、SB_CONFIG_DIR、SB_CONFIG_MOUNT、XDG_CONFIG_HOME（guest-env.sh）；写：AGENT_ROOTS（数据盘可写根映射）、LAYOUT_ARGS（bwrap 参数）、MOUNT_POINTS（祖先挂载点）
+# reject_reserved_target 在 prepare_declared_layout 之后供 launcher 校验 imports 目标
 set -euo pipefail
 
 declare -A AGENT_ROOTS=()
@@ -18,7 +13,7 @@ MOUNT_POINTS=()
 declared_dst() {
   local t="$1"
   if [[ "$t" == .config/* ]]; then
-    printf '/data/xdg/config/%s\n' "${t#.config/}"
+    printf '%s/%s\n' "$XDG_CONFIG_HOME" "${t#.config/}"
   else
     printf '%s/%s\n' "$HOME" "$t"
   fi
@@ -43,8 +38,8 @@ mount_root_of() {
       return 0
     fi
   done
-  if [[ "$path" == /data/* ]]; then
-    printf '/data\n'
+  if [[ "$path" == "$SB_DATA_DIR"/* ]]; then
+    printf '%s\n' "$SB_DATA_DIR"
     return 0
   fi
   return 1
@@ -76,15 +71,22 @@ resolve_conflict() {
   exit 1
 }
 
-is_agent_layout_path() {
+reject_reserved_target() {
   local target="$1" p
-  for p in "${MOUNT_POINTS[@]}"; do
-    [[ "$target" == "$p" || "$target" == "$p/"* ]] && return 0
+  case "$target" in
+    "$HOME" | / | /usr | /usr/* | /bin | /bin/* | /lib | /lib/* | /lib64 | /lib64/* | /etc | /etc/* | \
+      /proc | /proc/* | /dev | /dev/* | /run | /run/* | /nix | /nix/* | /opt | /opt/* | \
+      "$SB_DATA_DIR" | "$SB_DATA_DIR"/* | /.msb | /.msb/*)
+      echo "[-] 错误: imports 的目标目录 $target 是沙箱保留位置" >&2
+      exit 1
+      ;;
+  esac
+  for p in "${MOUNT_POINTS[@]}" "${!AGENT_ROOTS[@]}"; do
+    if [[ "$target" == "$p" || "$target" == "$p/"* ]]; then
+      echo "[-] 错误: imports 的目标目录 $target 是沙箱保留位置" >&2
+      exit 1
+    fi
   done
-  for p in "${!AGENT_ROOTS[@]}"; do
-    [[ "$target" == "$p" || "$target" == "$p/"* ]] && return 0
-  done
-  return 1
 }
 
 # 发布目录在而清单缺失时不能静默放行：上下文会没有任何声明配置和只读保护
@@ -99,7 +101,7 @@ require_published() {
 # 声明删除或改名后，旧落点的空占位留在数据盘，工具会把它当真文件加载（OMP 读到空的 guard.ts 报
 # 「does not export a valid factory function」）。记录上次布局用的清单，删掉新清单里已经没有的空占位；
 # 旧数据盘没有记录时，用保留的历史发布清单代替。别的上下文可能正把它当挂载点用，所以只在独占时清理
-LAYOUT_STATE=/data/home/.declared-paths
+LAYOUT_STATE="$SB_DATA_DIR/home/.declared-paths"
 prune_stale_placeholders() {
   local others="$1" list="$2" t dst a
   local -a previous=()
@@ -107,7 +109,7 @@ prune_stale_placeholders() {
   if [[ -f "$LAYOUT_STATE" ]]; then
     previous=("$LAYOUT_STATE")
   else
-    previous=(/run/sandbox-config/v*/declared-paths)
+    previous=("$SB_CONFIG_MOUNT"/v*/declared-paths)
   fi
   while IFS= read -r t; do
     [[ -n "$t" ]] || continue
@@ -128,8 +130,7 @@ prune_stale_placeholders() {
 prepare_declared_layout() {
   local others="$1" cfg list roots_file rel t dst src want root p a
   local -a ancestors=() binds=() uppers=()
-  [[ -e /run/sandbox-config/current ]] || return 0
-  cfg="$(readlink -f /run/sandbox-config/current)"
+  cfg="$(readlink -f "$SB_CONFIG_DIR")"
   list="$cfg/declared-paths"
   roots_file="$cfg/writable-roots"
   require_published "$list"
@@ -139,7 +140,7 @@ prepare_declared_layout() {
   while IFS= read -r rel; do
     [[ -n "$rel" ]] || continue
     root="$HOME/$rel"
-    AGENT_ROOTS["$root"]="/data/home/$rel"
+    AGENT_ROOTS["$root"]="$SB_DATA_DIR/home/$rel"
     mkdir -p "${AGENT_ROOTS[$root]}"
     p="${root%/*}"
     while [[ "$p" == "$HOME/"* ]]; do

@@ -60,6 +60,21 @@
                   '';
                 };
 
+                sandboxEnv = lib.mkOption {
+                  type = lib.types.attrsOf lib.types.str;
+                  default = { };
+                  description = ''
+                    沙箱内（guest-env.sh）为这个工具额外导出的环境变量。值按 shell 双引号展开，
+                    可引用 SB_CONFIG_DIR、SB_MISE_LAYER、XDG_*_HOME 等 guest-env.sh 里先导出的变量。
+                  '';
+                };
+
+                sandboxDirs = lib.mkOption {
+                  type = lib.types.listOf lib.types.str;
+                  default = [ ];
+                  description = "沙箱内必须预先存在的目录，写法同 sandboxEnv 的值；guest-env.sh 加载时创建";
+                };
+
                 postInstall = lib.mkOption {
                   type = lib.types.nullOr lib.types.lines;
                   default = null;

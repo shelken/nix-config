@@ -2,11 +2,11 @@
 # 硬约束:
 #   - 一次性 MSB_HOME（mktemp 后取真实路径），绝不触碰日常主 VM；
 #     绝不全局 export MSB_HOME，msb 只以单命令前缀执行。
-#   - 共用 mise 目录只挂载、绝不写入/移动/删除：SB_SANDBOX_CONFIG 指向空
-#     目录，首次建 VM 的自动 sb sync 因找不到 sync-guest.sh 而跳过（上下文
-#     PATH 回落到 launcher 内置的 bash/coreutils/git/curl，无需 mise 工具）；
-#     SB_MISE_LOCK_DIR 指向临时目录，不在共用层创建锁文件。
-#   - SB_NO_HOST_CREDENTIALS=1 禁止 sec-run 注入宿主真实凭据。
+#   - 共用 mise 目录只挂载、绝不写入/移动/删除：发布目录里的 sync-guest.sh 是空操作，
+#     首次建 VM 的自动 sb sync 什么都不装（上下文只用 launcher 内置的
+#     bash/coreutils/git/curl，无需 mise 工具）；sync 锁放在临时目录，不在共用层创建锁文件。
+#   - host_credentials=false 禁止 sec-run 注入宿主真实凭据。
+#   - sb 读取的 sb-config.json 由真实产物的那份改写而来，只换目录、策略文件与上面两项。
 set -euo pipefail
 
 E2E_DIR=""
@@ -85,20 +85,6 @@ cat > "$E2E_MSB_CONFIG" <<EOF
 }
 EOF
 
-# 共用 mise 目录: 只挂载、绝不写入（缺失即失败，绝不代建）
-MISE_HOST_DIR="$(resolve "${SB_MISE_HOST_DIR:-$HOME/Data/sandboxes/mise/aarch64-linux}")"
-if [[ ! -d "$MISE_HOST_DIR" ]]; then
-  echo "[-] 共用 mise 目录不存在: $MISE_HOST_DIR" >&2
-  exit 1
-fi
-
-# 空沙箱配置目录: 让首次建 VM 的自动 sync 找不到 sync-guest.sh 而跳过；
-# 空声明清单与空可写根清单：满足 launcher 对发布目录的前置检查，并表示本 e2e 不需要任何声明配置（不是放宽检查）
-CFG_DIR="$E2E_DIR/empty-sandbox-config"
-mkdir -p "$CFG_DIR/current"
-: > "$CFG_DIR/current/declared-paths"
-: > "$CFG_DIR/current/writable-roots"
-
 WS="$E2E_DIR/workspace"
 mkdir -p "$WS"
 WS="$(resolve "$WS")"
@@ -163,14 +149,36 @@ fi
 echo "[+] sb: $SB_BIN"
 echo "[+] 临时隔离环境: $E2E_DIR"
 
+REAL_CONFIG="$(grep -o '/nix/store/[a-z0-9]*-sb-config.json' "$SB_BIN" | head -n 1)"
+[[ -n "$REAL_CONFIG" ]] || { echo "[-] 在 $SB_BIN 里找不到 sb-config.json" >&2; exit 1; }
+
+# 共用 mise 目录: 只挂载、绝不写入（缺失即失败，绝不代建）
+MISE_HOST_DIR="$(resolve "$(jq -r .mise.host_dir "$REAL_CONFIG")")"
+if [[ ! -d "$MISE_HOST_DIR" ]]; then
+  echo "[-] 共用 mise 目录不存在: $MISE_HOST_DIR" >&2
+  exit 1
+fi
+
+# 一次性发布目录：guest-env.sh 取自真实发布（SB_PUBLISH_DIR，默认日常发布目录），
+# 空声明清单与空可写根清单表示本 e2e 不需要任何声明配置，sync-guest.sh 是空操作
+PUBLISHED="$(resolve "${SB_PUBLISH_DIR:-$(jq -r .publish_dir "$REAL_CONFIG")}/current")/guest-env.sh"
+[[ -e "$PUBLISHED" ]] || { echo "[-] 找不到已发布的 guest-env.sh: $PUBLISHED（先 just hm）" >&2; exit 1; }
+CFG_DIR="$E2E_DIR/sandbox-config"
+mkdir -p "$CFG_DIR/current"
+ln -s "$(readlink -f "$PUBLISHED")" "$CFG_DIR/current/guest-env.sh"
+: > "$CFG_DIR/current/declared-paths"
+: > "$CFG_DIR/current/writable-roots"
+printf '#!/bin/sh\nexit 0\n' > "$CFG_DIR/current/sync-guest.sh"
+
+SB_E2E_CONFIG="$E2E_DIR/sb-config.json"
+jq --arg policy "$TEST_YAML" --arg publish "$CFG_DIR" --arg lock "$E2E_DIR/sync.lock" \
+  '.policy_yaml = $policy | .publish_dir = $publish | .sync_lock = $lock | .host_credentials = false' \
+  "$REAL_CONFIG" > "$SB_E2E_CONFIG"
+
 run_sb() {
   MSB_CONFIG_PATH="$E2E_MSB_CONFIG" \
     MSB_HOME="$E2E_MSB_HOME" \
-    SB_CONFIG="$TEST_YAML" \
-    SB_SANDBOX_CONFIG="$CFG_DIR" \
-    SB_MISE_HOST_DIR="$MISE_HOST_DIR" \
-    SB_MISE_LOCK_DIR="$E2E_DIR/locks" \
-    SB_NO_HOST_CREDENTIALS=1 \
+    SB_CONFIG_FILE="$SB_E2E_CONFIG" \
     "$SB_BIN" "$@"
 }
 

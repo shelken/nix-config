@@ -13,7 +13,8 @@ import sys
 import time
 from typing import Any
 
-from .config import Config, SbError
+from .config import Config
+from .errors import SbError
 
 
 class Msb:

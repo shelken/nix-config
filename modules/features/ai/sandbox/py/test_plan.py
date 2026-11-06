@@ -57,7 +57,6 @@ class PlanTest(unittest.TestCase):
         (self.proj / "a" / "b").mkdir(parents=True)
         plan = self.ok(cwd=self.proj / "a" / "b")
         self.assertEqual(plan["project_root"], str(self.proj))
-        self.assertEqual(plan["cwd"], str(self.proj / "a" / "b"))
 
     def test_project_outside_mount_roots_is_rejected(self):
         self.ceiling["mount_roots"] = ["~/Elsewhere"]
@@ -80,9 +79,16 @@ class PlanTest(unittest.TestCase):
         self.assertEqual(plan["network"], ["10.0.0.1", "10.0.0.9:80", "192.168.1.5:8080"])
 
     def test_network_rejects_anything_but_ip_or_ip_port(self):
-        for bad in ["host:80", "1.2.3", "1.2.3.4:abc", 8080]:
+        for bad in ["host:80", "1.2.3", "1.2.3.4:abc"]:
             with self.subTest(bad=bad):
                 self.assertIn("只接受 IP 或 IP:端口", self.rejected({"network": [bad]}))
+
+    def test_a_field_of_the_wrong_type_is_an_error_not_an_empty_grant(self):
+        for field, bad in [("network", "10.0.0.5:80"), ("network", [8080]), ("imports", "a.txt"), ("paths", {"d": 1})]:
+            with self.subTest(field=field, bad=bad):
+                self.assertIn(field, self.rejected({field: bad}))
+        self.ceiling["mount_roots"] = "~/Code"
+        self.assertIn("mount_roots 必须是列表", self.rejected())
 
     def test_imports_are_staged_by_sorted_target_directory(self):
         (self.proj / "a.txt").write_text("x")

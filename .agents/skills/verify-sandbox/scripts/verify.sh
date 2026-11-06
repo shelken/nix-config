@@ -20,9 +20,10 @@ sb_bin() {
   readlink -f "$WORK/gen/home-path/bin/sb"
 }
 
-# 会话里继承的 MSB_CONFIG_PATH 指向日常配置，其中的 home 字段会覆盖 MSB_HOME，必须同时替换
+# 会话里继承的 MSB_CONFIG_PATH 指向日常配置，其中的 home 字段会覆盖 MSB_HOME，必须同时替换；
+# sb 读的 sb-config.json 换成 setup 里由真实产物改写的那份
 iso_env() {
-  env SB_SANDBOX_CONFIG="$WORK/sbcfg" SB_CONFIG="$WORK/sb.yaml" \
+  env SB_CONFIG_FILE="$WORK/sb-config.json" \
     MSB_HOME="$WORK/msb" MSB_CONFIG_PATH="$WORK/msb.json" "$@"
 }
 
@@ -54,7 +55,13 @@ EOF
   local publish
   publish="$(grep -o '/nix/store/[a-z0-9]*-publish-sandbox-config' "$WORK/gen/activate" | head -n 1)"
   [[ -n "$publish" ]] || die "激活脚本里找不到 publish-sandbox-config，沙箱是否已为 $HOST 启用"
-  SANDBOX_CONFIG_DIR="$WORK/sbcfg" "$publish"
+  "$publish" "$WORK/sbcfg"
+
+  local real_config
+  real_config="$(grep -o '/nix/store/[a-z0-9]*-sb-config.json' "$(sb_bin)" | head -n 1)"
+  [[ -n "$real_config" ]] || die "在 sb 包装脚本里找不到 sb-config.json"
+  jq --arg policy "$WORK/sb.yaml" --arg publish "$WORK/sbcfg" \
+    '.policy_yaml = $policy | .publish_dir = $publish' "$real_config" > "$WORK/sb-config.json"
 
   if [[ ! -d "$PROJ/.git" ]]; then
     mkdir -p "$PROJ"
@@ -96,7 +103,7 @@ cmd_run() {
 }
 
 cmd_smoke() {
-  cmd_run smoke -- env SB_BIN="$(sb_bin)" bash "$REPO/modules/features/ai/sandbox/e2e/smoke.sh"
+  cmd_run smoke -- env SB_BIN="$(sb_bin)" SB_PUBLISH_DIR="$WORK/sbcfg" bash "$REPO/modules/features/ai/sandbox/e2e/smoke.sh"
   tail -n 3 "$EVIDENCE/smoke.out"
 }
 

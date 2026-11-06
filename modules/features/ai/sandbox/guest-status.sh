@@ -1,43 +1,9 @@
 #!/usr/bin/env bash
-# 只打印 TSV，JSON 组装在宿主侧做（避免多层引号嵌套）：
-#   missing<TAB><工具名>    mise 未安装的工具
+# 缺失的 mise 工具，每行一个：missing<TAB><工具名>。JSON 组装在宿主侧做（避免多层引号嵌套）。
 # 只报告缺失的 mise 工具，不检查插件安装状态，原因见 README「设计决策」。
-# 环境唯一来源：/run/sandbox-config/current/guest-env.sh。
-# mise.toml 缺失说明 VM 未挂载生成配置（例如一次性 VM），没有声明任何工具 → 无缺失项，退出码 0；
-# mise.toml 在而 guest-env.sh 缺失则报错退出 3。
+# 环境由 _guest.nix 的包装加载 guest-env.sh。
+# mise 查询失败必须非零退出：吞掉错误按空缺失列表继续，会把「查询失败」伪装成「全部已装」。
 set -euo pipefail
 
-# source 之前必须先定位发布目录，这是 guest-env.sh 里 SB_CONFIG_DIR 的引导值；
-# source 之后的脚本一律用 $SB_CONFIG_DIR。
-CONFIG_DIR=/run/sandbox-config/current
-
-if [[ ! -f "$CONFIG_DIR/mise.toml" ]]; then
-  exit 0
-fi
-
-if [[ ! -f "$CONFIG_DIR/guest-env.sh" ]]; then
-  echo "[-] 错误: 缺少 $CONFIG_DIR/guest-env.sh，无法确定工具环境" >&2
-  exit 3
-fi
-# shellcheck source=/dev/null
-source "$CONFIG_DIR/guest-env.sh"
-
-if ! command -v mise >/dev/null 2>&1; then
-  echo "[-] 错误: guest 内未找到 mise，无法查询缺失工具" >&2
-  exit 3
-fi
-
-# mise ls --missing 失败必须让状态查询非零退出：
-# 吞掉错误按空缺失列表继续会把「查询失败」伪装成「全部已装」
-missing_json="$(mise ls --missing --json)" || {
-  echo "[-] 错误: mise ls --missing 查询失败 (rc=$?)" >&2
-  exit 3
-}
-missing_names="$(printf '%s' "$missing_json" | jq -r 'keys[]')" || {
-  echo "[-] 错误: 解析 mise ls --missing 输出失败" >&2
-  exit 3
-}
-while IFS= read -r t; do
-  [[ -n "$t" ]] && printf 'missing\t%s\n' "$t"
-done <<< "$missing_names"
-exit 0
+missing_json="$(mise ls --missing --json)"
+jq -r 'keys[] | "missing\t\(.)"' <<< "$missing_json"

@@ -10,9 +10,10 @@ import sys
 import time
 
 from . import approvals, sync, vm
-from .config import VM_NAME, Config, SbError
+from .config import VM_NAME, Config
+from .errors import SbError
 from .msb import Msb
-from .plan import PlanError, Plan, resolve_plan
+from .plan import Plan, resolve_plan
 
 USAGE = """用法:
 sb up                创建或启动主 VM (sb-main)，已运行且上限一致则复用，上限变化且空闲则重建
@@ -27,12 +28,11 @@ sb shell             进入当前项目执行上下文的交互式 Bash shell"""
 
 
 def _plan(cfg: Config) -> Plan:
-    return resolve_plan(os.getcwd(), cfg.policy_yaml, home=cfg.home)
+    return resolve_plan(os.getcwd(), cfg.ceiling, cfg.home)
 
 
 def up(cfg: Config, msb: Msb, args: list[str]) -> int:
-    with vm.lifecycle_lock(cfg, "启动/重建"):
-        vm.ensure(cfg, msb)
+    vm.ensure(cfg, msb)
     return 0
 
 
@@ -65,7 +65,7 @@ def status(cfg: Config, msb: Msb, args: list[str]) -> int:
 def plan(cfg: Config, msb: Msb, args: list[str]) -> int:
     p = _plan(cfg)
     if args[:1] in (["--json"], ["-j"]):
-        print(json.dumps({**json.loads(p.to_json()), "approval": approvals.state(cfg, p.project_root)}, ensure_ascii=False, indent=2))
+        print(json.dumps({**p.to_dict(), "approval": approvals.state(cfg, p.project_root)}, ensure_ascii=False, indent=2))
     else:
         print(approvals.render(cfg, p))
     return 0
@@ -83,7 +83,11 @@ def trust(cfg: Config, msb: Msb, args: list[str]) -> int:
 
 
 def sync_cmd(cfg: Config, msb: Msb, args: list[str]) -> int:
-    return sync.run(cfg, msb, args)
+    if args:
+        raise SbError("sb sync 不接受参数")
+    vm.ensure_running(cfg, msb)
+    print(f"[sb] 正在沙箱 {VM_NAME} 内执行工具与插件补齐 (sb sync)...", file=sys.stderr)
+    return sync.run_locked(cfg, msb)
 
 
 def run(cfg: Config, msb: Msb, args: list[str]) -> int:
@@ -105,16 +109,15 @@ def run(cfg: Config, msb: Msb, args: list[str]) -> int:
         raise SbError("sb run 需要提供待执行的命令。示例: sb run git status")
 
     cwd = os.getcwd()
-    p = resolve_plan(cwd, cfg.policy_yaml, home=cfg.home)
+    p = _plan(cfg)
     if approvals.state(cfg, p.project_root) == "unapproved":
         raise SbError(f"{p.project_root}/.sandbox.yaml 未批准，或批准后已变更。先执行 sb plan 查看授权内容，确认后执行 sb trust")
     ctx_id = f"ctx_{int(time.time())}_{random.randrange(32768)}"
 
-    with vm.lifecycle_lock(cfg, "启动"):
-        vm.ensure(cfg, msb)
+    vm.ensure(cfg, msb)
 
     if p.imports:
-        _stage_imports(msb, ctx_id, p)
+        _stage_imports(cfg, msb, ctx_id, p)
 
     # Ctrl-C 会发给整个前台进程组，让子进程自己处理并把退出码传回来，父进程只是不抛 KeyboardInterrupt。
     # 用空处理函数而不是 SIG_IGN：忽略的信号会被 exec 继承，子进程就再也停不下来
@@ -125,9 +128,12 @@ def run(cfg: Config, msb: Msb, args: list[str]) -> int:
         signal.signal(signal.SIGINT, old)
 
 
-def _stage_imports(msb: Msb, ctx_id: str, p: Plan) -> None:
-    """把 imports 复制进 VM 里本次上下文的暂存目录。launcher 接手之前任何失败都要回收暂存目录。"""
-    guest_dir = f"/run/sandbox/contexts/{ctx_id}"
+def _stage_imports(cfg: Config, msb: Msb, ctx_id: str, p: Plan) -> None:
+    """把 imports 复制进 VM 里本次上下文的暂存目录。launcher 接手之前任何失败都要回收暂存目录。
+
+    `starting` 标记让 guest 的注册表在 launcher 接手之前不把这个目录当成僵死上下文（guest/registry.sh）。
+    """
+    guest_dir = f"{cfg.guest_contexts_dir}/{ctx_id}"
     stages = sorted({i.stage for i in p.imports})
     try:
         msb.must(
@@ -167,7 +173,7 @@ def main(argv: list[str]) -> int:
     try:
         cfg = Config.load()
         return COMMANDS[cmd](cfg, Msb(cfg), args)
-    except (SbError, PlanError) as e:
+    except SbError as e:
         print(f"[-] 错误: {e}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:
