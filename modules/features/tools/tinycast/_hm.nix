@@ -6,27 +6,23 @@
   ...
 }:
 let
-  # scripts/*.sh 各自构建成同名 CLI
   scriptsDir = ./scripts;
 
-  scripts =
-    lib.mapAttrs'
-      (
-        fileName: _:
-        let
-          name = lib.removeSuffix ".sh" fileName;
-        in
-        lib.nameValuePair name (
-          pkgs.writeShellScriptBin name (builtins.readFile (scriptsDir + "/${fileName}"))
-        )
-      )
-      (
-        lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".sh" name) (
-          builtins.readDir scriptsDir
-        )
-      );
+  scriptFiles = lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".sh" name) (
+    builtins.readDir scriptsDir
+  );
 
-  # 显示器输入源：CLI 别名与启动器条目共用这一张表
+  scripts = lib.mapAttrs' (
+    fileName: _:
+    let
+      name = lib.removeSuffix ".sh" fileName;
+    in
+    lib.nameValuePair name (
+      pkgs.writeShellScriptBin name (builtins.readFile (scriptsDir + "/${fileName}"))
+    )
+  ) scriptFiles;
+
+  # 显示器输入源：17/18/15 是 GE278UR 的 DDC inputSelect 源码值，CLI 别名与启动器条目共用这张表
   displayInputs = [
     {
       id = "dp";
@@ -63,7 +59,6 @@ let
     iconSymbol = input.icon;
   }) displayInputs;
 
-  # 启动器自定义命令；hotkey 只用于下面的 defaults，不进 App 的记录
   customCommands = [
     {
       name = "Helium (Debug)";
@@ -84,66 +79,46 @@ let
   ]
   ++ displayCommands;
 
-  # App 以命令 id 索引别名、收藏与快捷键，所以必须由名字生成稳定 UUID
-  mkUUID =
+  # App 以命令 id 索引别名、收藏与快捷键，所以 id 必须由名字稳定派生
+  commandID =
     name:
     let
       h = builtins.hashString "sha256" name;
     in
     "${builtins.substring 0 8 h}-${builtins.substring 8 4 h}-${builtins.substring 12 4 h}-${builtins.substring 16 4 h}-${builtins.substring 20 12 h}";
 
+  hotkeyedCommands = builtins.filter (cmd: cmd ? hotkey) customCommands;
+
   commandRecords = map (cmd: {
-    id = mkUUID cmd.name;
+    id = commandID cmd.name;
     inherit (cmd) name command iconSymbol;
   }) customCommands;
 
-  hotkeyedCommands = builtins.filter (cmd: cmd ? hotkey) customCommands;
-  managedCommandIDs = map (cmd: lib.toLower (mkUUID cmd.name)) hotkeyedCommands;
-
-  # 原生 App 快捷键：直连 Bundle ID，前景隐藏 / 后台唤起
-  appHotkeys = {
-    "alt-f" = "com.apple.finder";
-    "alt-w" = "com.tencent.xinWeChat";
-    "alt-c" = "dev.zed.Zed";
-    "alt-shift-enter" = "net.kovidgoyal.kitty";
-  };
-
-  appHotkeyDefaults = lib.mapAttrs' (
-    chord: bundleID: lib.nameValuePair "hotkey.app.${bundleID}" (mylib.darwinKeyCombo chord)
-  ) appHotkeys;
-
-  commandHotkeyDefaults = builtins.listToAttrs (
+  # 命令内容与它的快捷键都不进 settings.json，App 只能从 UserDefaults 读到，所以这两项留在这里。
+  # App 快捷键、启动器可见性等偏好一律写在 settings.json：镜像打开后 App 以文件为准，
+  # 在这里重复声明只会被文件清掉。
+  tinycastDefaults = {
+    boundCustomCommandIDs = map (cmd: commandID cmd.name) hotkeyedCommands;
+    settingsFileEnabled = true;
+  }
+  // builtins.listToAttrs (
     map (cmd: {
-      name = "hotkey.customCommand.${lib.toLower (mkUUID cmd.name)}";
+      name = "hotkey.customCommand.${commandID cmd.name}";
       value = mylib.darwinKeyCombo cmd.hotkey;
     }) hotkeyedCommands
   );
-
-  tinycastDefaults =
-    appHotkeyDefaults
-    // commandHotkeyDefaults
-    // {
-      boundAppBundleIDs = builtins.attrValues appHotkeys;
-      boundCustomCommandIDs = managedCommandIDs;
-      customCommandsEnabled = true;
-      customCommandsShowInLauncher = true;
-      # settings.json 镜像总开关：只有它为真，App 才读写下面那份文件
-      settingsFileEnabled = true;
-    };
 in
 {
   home.packages = builtins.attrValues scripts ++ displayPackages;
 
   targets.darwin.defaults."com.tinycast.app" = tinycastDefaults;
 
-  # 脚本目录软链出去，便于直接调试
   xdg.configFile."tinycast/scripts" = mylib.mkConfigFile config scriptsDir;
 
-  # settings.json 由 App 回写，必须软链到仓库内的可写源文件：非 liveEdit 主机会链到只读
-  # 的 Store 路径，App 保存失败并报错
+  # settings.json 由 App 回写，所以源文件必须可写：liveEdit 主机软链到仓库，其他主机链到只读
+  # 的 Store 路径，启动时照常应用，但 App 内改动保存会失败
   xdg.configFile."tinycast/settings.json" = mylib.mkConfigFile config ./settings.json;
 
-  # 自定义命令的内容不在 settings.json 里，只能由 activation 合并进 UserDefaults；
   # 排在 setDarwinDefaults 之后，避免两个步骤的写入顺序不明确
   home.activation.tinycastCustomCommands = lib.hm.dag.entryAfter [ "setDarwinDefaults" ] ''
     /usr/bin/swift ${./sync-commands.swift} '${builtins.toJSON commandRecords}'
