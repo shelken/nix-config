@@ -9,6 +9,11 @@ CURRENT_HOST=$(hostname)
 # 云端仓库的配置含 WebDAV 凭据，由 env 在启动时生成，所以仓库配置的字段只在这里写一份；
 # 本地仓库的配置是挂进来的静态文件，不设 KOPIA_WEBDAV_*。
 # 不挂 sops 渲染的文件：macOS 上它在符号链接下面，密钥轮换换代后，运行中的容器会读到 Operation not permitted
+#
+# atomicWrites：块直接 PUT 到最终名，不走「临时名 + MOVE 改名」。openlist 的 MOVE 偶发返回 201
+# 却没有真正改名（约 0.3%），索引会引用一个不存在的块，之后整个仓库无法加载清单；并发 MOVE 还会因
+# 数据库锁返回 500。openlist 对 PUT 是原子的（上传期间读者看不到，覆盖时旧版本一直可见，中断不留残文件），
+# 详见 shelken/home-ops#1763
 if [ -n "${KOPIA_WEBDAV_URL:-}" ]; then
     (
         umask 077
@@ -19,7 +24,8 @@ if [ -n "${KOPIA_WEBDAV_URL:-}" ]; then
     "config": {
       "url": "$KOPIA_WEBDAV_URL",
       "username": "$KOPIA_WEBDAV_USERNAME",
-      "password": "$KOPIA_WEBDAV_PASSWORD"
+      "password": "$KOPIA_WEBDAV_PASSWORD",
+      "atomicWrites": true
     }
   },
   "caching": {

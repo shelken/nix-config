@@ -222,7 +222,9 @@ services:
     hostname: sakamoto
     networks:
       - homelab
-    restart: always
+    # 入口脚本连不上仓库就 exit 1；无上限重启时每次都重跑一遍策略对账。
+    # 停住后由 sakamoto-compose 的 up 每 15 分钟再拉起一次
+    restart: "on-failure:10"
     labels:
       - homepage.group=sakamoto
       - homepage.name=kopia
@@ -264,7 +266,9 @@ services:
     hostname: sakamoto-local
     networks:
       - homelab
-    restart: always
+    # 入口脚本连不上仓库就 exit 1；无上限重启时每次都重跑一遍策略对账。
+    # 停住后由 sakamoto-compose 的 up 每 15 分钟再拉起一次
+    restart: "on-failure:10"
     labels:
       - homepage.group=sakamoto
       - homepage.name=kopia-local

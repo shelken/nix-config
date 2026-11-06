@@ -24,6 +24,7 @@
         key = "drive/webdav/password";
       };
 
+      ## atomicWrites：直接 PUT 到最终名，绕开 openlist 偶发「MOVE 返回成功却没改名」的问题，见 shelken/home-ops#1763
       ## NOTE: kopia 仓库存储结构随后端类型而异（S3 与 WebDAV 互不兼容），
       ## 载入旧库的数据不能直接连新库，迁移需在旧库上执行 repository sync-to
       templates."kopia-repository.config" = {
@@ -34,7 +35,8 @@
               "config": {
                 "url": "https://drive.${config.sops.placeholder.kopia-main-domain}/dav/backup/kopia/main",
                 "username": "${config.sops.placeholder.kopia-webdav-username}",
-                "password": "${config.sops.placeholder.kopia-webdav-password}"
+                "password": "${config.sops.placeholder.kopia-webdav-password}",
+                "atomicWrites": true
               }
             },
             "caching": {
