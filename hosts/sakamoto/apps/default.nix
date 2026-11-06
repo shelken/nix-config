@@ -5,8 +5,8 @@
 # OrbStack 里；换运行时等于把 10 个服务连数据一起再起一遍，与「把声明搬过来」是两件事。
 #
 # 这个目录管三件事：
-# 1. compose.yaml 与 configs/：服务声明与静态配置；整目录进 Nix store，容器挂 store 路径
-# 2. sops 模板：env 文件与 kopia 的云端仓库配置，激活时解密渲染，明文不进 store
+# 1. compose.yaml 与 configs/：服务声明与静态配置；每个文件单独进 Nix store，容器挂 store 路径
+# 2. sops 模板：env 文件（口令、数据目录，以及上面各文件的 store 路径），激活时解密渲染，明文不进 store
 # 3. launchd agent：GUI 登录（OrbStack 就绪）后拉起，之后每 15 分钟对账一次
 #
 # 切换、验收与回退步骤见同目录 README.md
@@ -18,20 +18,37 @@
   ...
 }:
 let
-  inherit (lib) genAttrs mkIf;
+  inherit (lib)
+    concatStringsSep
+    genAttrs
+    mapAttrsToList
+    mkIf
+    ;
 
   # 与旧 Compose 相同的项目名。命名卷带项目名前缀（homelab-compose_kopia_cache），
   # 改名会新建两个空卷：kopia 需要重新对账，还会丢掉缓存
   projectName = "homelab-compose";
 
-  # stack/ 整目录进 store，里面只放容器要读的文件（compose.yaml 与 configs/）：
-  # 改 default.nix 或 README.md 不会换 store 路径，也就不会白白重建挂 configs 的容器。
-  # compose.yaml 里的相对路径（./configs/...）按「compose 文件所在目录」解析，所以两者必须同级
-  composeFile = "${./stack}/compose.yaml";
+  # 单个文件进 store：改 default.nix 或 README.md 不会换它的路径
+  composeFile = "${./compose.yaml}";
 
-  # sops 在激活时渲染出来的文件。env 与云端仓库配置含机密，只能由模板产生
+  # 容器要读的静态配置，键名即 compose.yaml 里 volumes 引用的变量。
+  # 必须是 volumes 而不是 configs:：Compose 的服务 hash 不含 configs 的路径与内容，改了配置 up 不会重建容器；
+  # volumes 的源路径在 hash 里，每个文件单独进 store、路径随内容变，所以改哪个文件只重建用到它的服务
+  configFiles = {
+    CADDYFILE = ./configs/caddy/Caddyfile;
+    MIRROR_CONFIG = ./configs/mirror-config.yaml;
+    KOPIA_POLICY = ./configs/kopia/policy.json;
+    KOPIA_ENTRYPOINT = ./configs/kopia/entrypoint.sh;
+    KOPIA_LOCAL_REPOSITORY_CONFIG = ./configs/kopia/local/repository.config;
+    KOPIA_LOCAL_POLICY = ./configs/kopia/local/policy.json;
+  };
+  configFileLines = concatStringsSep "\n" (
+    mapAttrsToList (name: path: "${name}=${path}") configFiles
+  );
+
+  # sops 在激活时渲染出来的 env 文件，含机密，只能由模板产生
   envFile = config.sops.templates."sakamoto-compose.env".path;
-  kopiaMainRepositoryConfig = config.sops.templates."sakamoto-kopia-main-repository.config".path;
 
   # 键名即私有 secrets 仓库（sops/secrets/shelken/default.yaml）里的键。
   # 值沿用旧 Bitwarden 条目 compose-sakamoto 的字段，迁移时不要顺手轮换
@@ -71,7 +88,7 @@ let
       sakamoto-compose —— sakamoto 上 Compose 服务的统一入口
 
         up       等 OrbStack 与密钥就绪、检查数据目录，然后 docker compose up -d
-        recreate 同上，但强制重建容器（改了 configs/ 里挂载的文件内容后用）
+        recreate 同上，但无条件重建全部容器（排障用；配置与密钥变化时 up 本身就会重建对应容器）
         status   容器状态
         logs     跟随日志
         check    只做语法与插值校验，不动容器
@@ -100,7 +117,7 @@ let
       }
 
       compose() {
-        docker compose -f "$compose_file" --env-file "$env_file" -p "$project" "$@"
+        docker compose -f "$compose_file" --env-file "$env_file" "$@"
       }
 
       need_env() {
@@ -201,38 +218,20 @@ in
           KOPIA_MAIN_PASSWORD=${placeholder "compose-sakamoto/kopia-main-password"}
           KOPIA_LOCAL_REPO_PASSWORD=${placeholder "compose-sakamoto/kopia-local-repo-password"}
           KOPIA_WEBHOOK_URL=${placeholder "compose-sakamoto/kopia-webhook-url"}
+          OPENLIST_WEBDAV_USERNAME=${placeholder "compose-sakamoto/openlist-webdav-username"}
+          OPENLIST_WEBDAV_PASSWORD=${placeholder "compose-sakamoto/openlist-webdav-password"}
           SAKAMOTO_DATA_DIR=${placeholder "compose-sakamoto/sakamoto-data-dir"}
           LOCAL_REPO_DIR=${placeholder "compose-sakamoto/local-repo-dir"}
-          KOPIA_MAIN_REPOSITORY_CONFIG=${kopiaMainRepositoryConfig}
-        '';
-      };
-
-      # 云端仓库配置含 WebDAV 凭据。字段与旧 repository.config.tpl 一致：
-      # 仓库路径 /dav/main、hostname 用容器名 sakamoto（策略按 shelken@sakamoto 找目标），改动会导致连不上旧库
-      sops.templates."sakamoto-kopia-main-repository.config" = {
-        content = ''
-          {
-            "storage": {
-              "type": "webdav",
-              "config": {
-                "url": "https://drive.${placeholder "compose-sakamoto/main-domain"}/dav/main",
-                "username": "${placeholder "compose-sakamoto/openlist-webdav-username"}",
-                "password": "${placeholder "compose-sakamoto/openlist-webdav-password"}"
-              }
-            },
-            "caching": {
-              "cacheDirectory": "/app/cache",
-              "maxCacheSize": 5242880000,
-              "maxMetadataCacheSize": 5242880000,
-              "maxListCacheDuration": 30
-            }
-          }
+          ${configFileLines}
         '';
       };
 
       # 不写 domain：默认 gui，配 OrbStack 所在的 Aqua 会话；
-      # 登录后 RunAtLoad 跑一次，StartInterval 负责补漏（开机时外接盘还没挂上、容器被手工删掉）；
-      # plist 变化时 Home Manager 会重新加载，也会立刻再跑一次
+      # 登录后 RunAtLoad 跑一次，StartInterval 负责补漏（开机时外接盘还没挂上、容器被手工删掉），
+      # 也是密钥值轮换后的收敛路径：env 变了，下一轮 up 会重建受影响的容器。
+      # 不用 WatchPaths：渲染目录在符号链接下面，sops 换代后 launchd 的监视时灵时不灵（实测三轮只触发一轮）；
+      # compose.yaml 改了时 CLI 的 store 路径变、plist 跟着变，Home Manager 会重新加载并立刻再跑一次；
+      # 只改配置文件或密钥时 plist 不变，等下一轮，或手动 sakamoto-compose up
       launchd.agents.sakamoto-compose = {
         enable = true;
         config = {
@@ -244,9 +243,6 @@ in
           RunAtLoad = true;
           KeepAlive = false;
           StartInterval = 900;
-          # 轮换某个密钥的值时 plist 与 CLI 都没变化，RunAtLoad 不会触发；
-          # 盯住渲染目录，sops 写完 env 就立刻对账，不用等下一次 StartInterval
-          WatchPaths = [ (dirOf envFile) ];
           # launchd 的默认 PATH 只有 /usr/bin:/bin:/usr/sbin:/sbin，docker 在 /usr/local/bin
           EnvironmentVariables.PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
           StandardOutPath = "${config.home.homeDirectory}/Library/Logs/sakamoto-compose.log";

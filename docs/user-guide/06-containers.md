@@ -173,26 +173,27 @@ virtualisation.oci-containers.containers.openlist = {
 
 ## sakamoto（macOS）：声明在仓库里，运行时仍是 Compose
 
-`sakamoto` 的业务容器（caddy、四个 registry mirror、rustfs、nvidia-dls、dockerproxy 与两个 kopia）同样由本仓库声明，代码在 `hosts/sakamoto/apps/`。与 VPS 的唯一区别：macOS 侧没有 `oci-containers` 这类原生模块，容器、命名卷与 `homelab` 网络都在 OrbStack 里，所以保留 `compose.yaml`，只是把它与 `configs/` 一起搬进 Nix store，容器挂 store 路径
+`sakamoto` 的业务容器（caddy、四个 registry mirror、rustfs、nvidia-dls、dockerproxy 与两个 kopia）同样由本仓库声明，代码在 `hosts/sakamoto/apps/`。与 VPS 的唯一区别：macOS 侧没有 `oci-containers` 这类原生模块，容器、命名卷与 `homelab` 网络都在 OrbStack 里，所以保留 `compose.yaml`，只是把它与 `configs/` 里的文件搬进 Nix store，容器挂 store 路径
 
-| 内容                                     | 放哪                                                                      |
-| ---------------------------------------- | ------------------------------------------------------------------------- |
-| `stack/compose.yaml` 与 `stack/configs/` | `stack/` 整目录进 store（`${./stack}/compose.yaml`），容器挂 store 路径   |
-| 含机密的配置（云端 kopia 仓库配置）      | sops 模板渲染，`configs.<名>.file` 指到渲染路径                           |
-| 口令、token、外接盘路径                  | sops 模板渲染成 env 文件，`docker compose --env-file` 取用                |
-| 启动                                     | HM 的 launchd agent（`gui` 域、`RunAtLoad` + 每 15 分钟），与人工入口共用 |
+| 内容                                | 放哪                                                                                             |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `compose.yaml`                      | 单个文件进 store（`${./compose.yaml}`）                                                          |
+| `configs/` 里的静态配置             | 每个文件单独进 store，路径写进 env 文件，`compose.yaml` 用 `volumes: - ${CADDYFILE}:...:ro` 引用 |
+| 口令、token、外接盘路径             | sops 模板渲染成 env 文件，`docker compose --env-file` 取用                                       |
+| 含机密的配置（云端 kopia 仓库配置） | 不挂文件：WebDAV 地址与凭据走环境变量，`entrypoint.sh` 启动时生成                                |
+| 启动                                | HM 的 launchd agent（`gui` 域、`RunAtLoad` + 每 15 分钟），与人工入口共用                        |
 
 三处与旧 Compose 不同的约定：
 
-- `compose.yaml` 顶部写死 `name: homelab-compose`：命名卷带项目名前缀，项目名跟着目录名变成 store 路径名时会新建两个空卷
+- `compose.yaml` 顶部写死 `name: homelab-compose`：命名卷带项目名前缀，项目名跟着 compose 文件所在目录变（在 store 里就是 `store`）时会新建两个空卷
+- 配置文件用 `volumes:` 而不是 `configs:`：Compose 的服务 hash 不含 `configs:` 的路径与内容，改了文件 `up` 也不会重建；`volumes:` 的源路径在 hash 里，改哪个文件只重建用到它的服务
 - 外接盘路径走 sops，不进公开仓库；`sakamoto-compose up` 先逐个 `test -d`，盘没挂载直接退出，不让 Docker 以 root 新建空目录把备份写到本地盘
-- 只改 `configs/` 里挂载的文件内容（例如 Caddyfile）时容器不会自动重建：用 `sakamoto-compose recreate`
 
 ```bash
 sakamoto-compose up         # 等 OrbStack 与密钥就绪、检查数据目录，再 up -d
 sakamoto-compose status
 sakamoto-compose logs
-sakamoto-compose recreate
+sakamoto-compose recreate   # 无条件重建全部容器，排障用
 ```
 
 agent 日志在 `~/Library/Logs/sakamoto-compose.log`；切换与回退见 `hosts/sakamoto/apps/README.md`

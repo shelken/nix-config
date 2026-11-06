@@ -1,9 +1,12 @@
 # sakamoto 的业务容器，原先由 home-ops 的 compose/sakamoto 声明。
-# 运行时仍是 OrbStack + Compose：本文件与 configs/ 整目录进 Nix store，容器挂 store 路径；
-# 含机密的仓库配置由 sops 模板渲染，见同目录 default.nix，操作步骤见 README.md
+# 运行时仍是 OrbStack + Compose：配置文件在 Nix store，路径由 default.nix 渲染的 env 文件提供（${CADDYFILE} 等），
+# 操作步骤见 README.md
+#
+# 配置文件一律写成 volumes 而不是 configs:：Compose 的服务 hash 不含 configs 的路径与内容，
+# 改了配置 up 不会重建容器；volumes 的源路径在 hash 里，store 路径随文件内容变，只有用到它的服务会重建
 #
 # 项目名固定：命名卷带项目名前缀（homelab-compose_kopia_cache），
-# 不写它时项目名会跟着目录名变成 store 路径名，等于新建两个空卷并丢掉 kopia 的对账缓存
+# 不写它时项目名会跟着目录名变，等于新建两个空卷并丢掉 kopia 的对账缓存
 name: homelab-compose
 
 networks:
@@ -28,14 +31,12 @@ services:
       - homepage.widget.url=http://sakamoto.lan:2019
     network_mode: host
     restart: always
-    configs:
-      - source: caddy_config
-        target: /etc/caddy/Caddyfile
     environment:
       TZ: Asia/Shanghai
       MAIN_DOMAIN: ${MAIN_DOMAIN}
       CLOUDFLARE_API_TOKEN: ${CADDY_CLOUDFLARE_API_TOKEN}
     volumes:
+      - ${CADDYFILE}:/etc/caddy/Caddyfile:ro
       - "${DOCKER_DATA_DIR}/caddy/site:/srv"
       - "${DOCKER_DATA_DIR}/caddy/data:/data"
       - "${DOCKER_DATA_DIR}/caddy/config:/config"
@@ -133,10 +134,8 @@ services:
     environment:
       REGISTRY_LOG_LEVEL: debug
       REGISTRY_PROXY_REMOTEURL: https://ghcr.io
-    configs:
-      - source: mirror_config
-        target: /etc/distribution/config.yml
     volumes:
+      - ${MIRROR_CONFIG}:/etc/distribution/config.yml:ro
       - "/etc/localtime:/etc/localtime:ro"
       - "${MIRROR_DATA_DIR}/ghcr/data:/var/lib/registry"
     ports:
@@ -159,10 +158,8 @@ services:
     environment:
       REGISTRY_LOG_LEVEL: debug
       REGISTRY_PROXY_REMOTEURL: https://quay.io
-    configs:
-      - source: mirror_config
-        target: /etc/distribution/config.yml
     volumes:
+      - ${MIRROR_CONFIG}:/etc/distribution/config.yml:ro
       - "/etc/localtime:/etc/localtime:ro"
       - "${MIRROR_DATA_DIR}/quay/data:/var/lib/registry"
     ports:
@@ -185,10 +182,8 @@ services:
     environment:
       REGISTRY_LOG_LEVEL: debug
       REGISTRY_PROXY_REMOTEURL: https://mirror.gcr.io
-    configs:
-      - source: mirror_config
-        target: /etc/distribution/config.yml
     volumes:
+      - ${MIRROR_CONFIG}:/etc/distribution/config.yml:ro
       - "/etc/localtime:/etc/localtime:ro"
       - "${MIRROR_DATA_DIR}/mirror-gcr/data:/var/lib/registry"
     ports:
@@ -211,10 +206,8 @@ services:
     environment:
       REGISTRY_LOG_LEVEL: debug
       REGISTRY_PROXY_REMOTEURL: https://registry.k8s.io
-    configs:
-      - source: mirror_config
-        target: /etc/distribution/config.yml
     volumes:
+      - ${MIRROR_CONFIG}:/etc/distribution/config.yml:ro
       - "/etc/localtime:/etc/localtime:ro"
       - "${MIRROR_DATA_DIR}/k8s/data:/var/lib/registry"
     ports:
@@ -243,17 +236,16 @@ services:
       KOPIA_CACHE_DIRECTORY: /config/cache
       KOPIA_LOG_DIR: /config/logs
       KOPIA_PASSWORD: ${KOPIA_MAIN_PASSWORD}
+      # 云端仓库配置由 entrypoint.sh 按这三项在启动时生成
+      KOPIA_WEBDAV_URL: https://drive.${MAIN_DOMAIN}/dav/main
+      KOPIA_WEBDAV_USERNAME: ${OPENLIST_WEBDAV_USERNAME}
+      KOPIA_WEBDAV_PASSWORD: ${OPENLIST_WEBDAV_PASSWORD}
       KOPIA_WEBHOOK_URL: ${KOPIA_WEBHOOK_URL}
       # 仅在失败/警告时通知，成功时不通知 (可选值: report, warning, error)
       KOPIA_MIN_SEVERITY: warning
-    configs:
-      - source: kopia_main_repository_config
-        target: /config/repository.config
-      - source: kopia_policy
-        target: /config/policy.json
-      - source: kopia_entrypoint
-        target: /app/scripts/entrypoint.sh
     volumes:
+      - ${KOPIA_POLICY}:/config/policy.json:ro
+      - ${KOPIA_ENTRYPOINT}:/app/scripts/entrypoint.sh:ro
       - kopia_cache:/config/cache
       - ${DOCKER_DATA_DIR}/kopia/logs:/config/logs
       - ${MINIO_DATA_DIR}:/backup/minio:ro
@@ -293,14 +285,10 @@ services:
       KOPIA_PASSWORD: ${KOPIA_LOCAL_REPO_PASSWORD}
       KOPIA_WEBHOOK_URL: ${KOPIA_WEBHOOK_URL}
       KOPIA_MIN_SEVERITY: warning
-    configs:
-      - source: kopia_local_repository_config
-        target: /config/repository.config
-      - source: kopia_local_policy
-        target: /config/policy.json
-      - source: kopia_entrypoint
-        target: /app/scripts/entrypoint.sh
     volumes:
+      - ${KOPIA_LOCAL_REPOSITORY_CONFIG}:/config/repository.config:ro
+      - ${KOPIA_LOCAL_POLICY}:/config/policy.json:ro
+      - ${KOPIA_ENTRYPOINT}:/app/scripts/entrypoint.sh:ro
       - kopia_local_cache:/config/cache
       - ${DOCKER_DATA_DIR}/kopia-local/logs:/config/logs
       # 外接盘路径不落公开仓库，由 sops 渲染的 env 提供；盘没挂载时 sakamoto-compose 会拒绝启动
@@ -310,22 +298,3 @@ services:
       - "51516:51516"
     deploy:
       replicas: 1
-
-configs:
-  # 相对路径按本文件所在目录解析：整目录进 store，configs/ 与它同级
-  mirror_config:
-    file: ./configs/mirror-config.yaml
-  # 云端仓库配置含 WebDAV 凭据，只能由 sops 模板渲染后挂进来（路径见 default.nix）
-  kopia_main_repository_config:
-    file: ${KOPIA_MAIN_REPOSITORY_CONFIG}
-  kopia_policy:
-    file: ./configs/kopia/policy.json
-  kopia_entrypoint:
-    file: ./configs/kopia/entrypoint.sh
-  kopia_local_repository_config:
-    file: ./configs/kopia/local/repository.config
-  kopia_local_policy:
-    file: ./configs/kopia/local/policy.json
-
-  caddy_config:
-    file: ./configs/caddy/Caddyfile
