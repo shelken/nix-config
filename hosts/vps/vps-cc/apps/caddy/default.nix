@@ -60,7 +60,8 @@ in
       "${logDir}:/var/log/caddy"
     ];
     # 80/443 是公网入口，按旧 Compose 发布到所有地址；
-    # 2019 是管理接口，只给 tailnet 侧
+    # 2019 只是给 tailnet 侧的只读门面（/metrics、/reverse_proxy/upstreams），
+    # 管理面本身在容器内的 unix socket，见 Caddyfile
     ports = [
       "80:80/tcp"
       "443:443/tcp"

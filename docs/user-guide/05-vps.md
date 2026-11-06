@@ -4,11 +4,11 @@
 
 ## 三个工具
 
-| 工具           | 做什么                                                                  | 什么时候用             |
-| -------------- | ----------------------------------------------------------------------- | ---------------------- |
-| nixos-anywhere | 通过 SSH 把目标机 kexec 进内存里的安装环境，再分区、安装、重启          | 装机时一次             |
-| disko          | 用 Nix 声明分区与文件系统，nixos-anywhere 装机时按它抹盘                | 装机时，由上面那步调用 |
-| deploy-rs      | 在 Mac 上构建系统，推到 VPS 激活；新 SSH 连接 30 秒内确认不了就自动回滚 | 装好之后的每次更新     |
+| 工具           | 做什么                                                               | 什么时候用             |
+| -------------- | -------------------------------------------------------------------- | ---------------------- |
+| nixos-anywhere | 通过 SSH 把目标机 kexec 进内存里的安装环境，再分区、安装、重启       | 装机时一次             |
+| disko          | 用 Nix 声明分区与文件系统，nixos-anywhere 装机时按它抹盘             | 装机时，由上面那步调用 |
+| deploy-rs      | 按配置选择构建端，在 VPS 激活；新 SSH 连接 30 秒内确认不了就自动回滚 | 装好之后的每次更新     |
 
 ```mermaid
 flowchart LR
@@ -19,9 +19,9 @@ flowchart LR
   E --> F[日常 just deploy]
 ```
 
-x86_64 的系统在 Mac 上构建，靠 `linux-builder`，装机和部署前它必须在运行
+日常部署的构建位置由 `flake.nix` 的 `hosts.<主机>.deploy.remoteBuild` 决定。当前 VPS 设置为 `true`：Mac 求值配置，VPS 构建并获取二进制缓存，再激活系统，不需要本机 `linux-builder`
 
-它的启停与重置见 `modules/features/darwin/linux-builder/darwin.nix` 头部注释：`linux-builder status` 看状态，`linux-builder stop` 停机（原终端已关闭也能停），guest 磁盘是只涨不缩的稀疏文件，`just builder-reset` 会删掉它，下次启动是空 store（VM 必须在已停机状态下执行）
+使用下文 `--build-on local` 装机，或手动在本地构建 x86_64-linux 系统时，才需要启动本机 `linux-builder`。启停与重置见 [模块头部说明](../../modules/features/darwin/linux-builder/darwin.nix)：`linux-builder status` 看状态，`linux-builder stop` 停机；`just builder-reset` 会删除 guest 磁盘，下次启动为空 Nix store，执行前必须停机
 
 ## 一台 VPS 由哪些文件组成
 
@@ -150,6 +150,20 @@ just plan <主机> deploy             # 先看这次要编译、下载什么
 just deploy <主机>                  # 构建、推送、激活，30 秒内确认不了就回滚
 just deploy <主机> --dry-activate   # 只看激活会改什么
 ```
+
+查看生效的构建模式，返回 `true` 表示在目标机构建；执行日志中的 `on remote host` 可确认本次使用远程构建
+
+```bash
+nix eval --json .#deploy.nodes.<主机>.profiles.system.remoteBuild
+```
+
+临时在本地构建、不部署，先确认 `linux-builder` 正在运行，再执行：
+
+```bash
+nix build -L --no-link .#nixosConfigurations.<主机>.config.system.build.toplevel
+```
+
+这条命令不改变 deploy-rs 的构建模式。要让 `just deploy` 在本地构建后上传，临时将该主机的 `deploy.remoteBuild` 改为 `false`，部署后恢复
 
 - 防火墙、网络、sshd 的改动尤其依赖自动回滚，不要绕过 deploy-rs 直接 `nixos-rebuild`
 - 构建之后不要再改已跟踪文件，否则部署时会重建一串小派生（nix-config #181）

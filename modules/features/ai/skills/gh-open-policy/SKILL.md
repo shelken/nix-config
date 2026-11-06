@@ -7,9 +7,10 @@ description: 与他人 GitHub 仓库交互的规范：语气、发布前确认�
 
 - 与他人交流保持客观、公平、友善、平等；不夸奖、不道歉、不谩骂
 - 发布评论、创建 PR 或 Issue 前，向用户展示最终内容，确认后才发布
+- 回复禁止长篇大论, 不准报告式回复内容, 简短针对问题回复
 
 ## 署名与提交
 
 - 在 PR、Discussion、Issue 和评论的 body 末尾标注 AI 署名：`Co-Authored-By: {Model-Name}`
-- 模型名取值：Pi 中读环境变量 `PI_MODEL`；Oh My Pi（omp）中用当前 Model 值并去除 provider 前缀；其他环境标注为 `Agent`
+- 模型名取值：Pi 中读环境变量 `PI_MODEL`；Oh My Pi（omp）中用当前 Model 值并去除所有 provider 前缀仅保留最后一个`/`后的模型名；其他环境标注为 `Agent`
 - PR 的所有 commit message 必须使用英文

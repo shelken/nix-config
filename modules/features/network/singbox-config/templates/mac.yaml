@@ -1,0 +1,8 @@
+# Mac：底模用服务端内嵌的 template.json；私密值走 1Password 的 proxy 条目
+subs:
+  - "{{ op://Personal/proxy/subs-miaona }}"
+nodes:
+  - "{{ op://Personal/proxy/vps-hy2 }}"
+  - "{{ op://Personal/proxy/vps-hy2-v6 }}"
+  - "{{ op://Personal/proxy/vps-anytls }}"
+template_url: https://raw.githubusercontent.com/shelken/proxy/main/config/sing-box/template.json

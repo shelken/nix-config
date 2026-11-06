@@ -7,6 +7,7 @@
     "+codemode"
   ],
   "enabledModels": [
+    "mp/loomy/DeepSeek-V4.1-Flash:high",
     "mp/codex/gpt-5.6-sol:high",
     "mp/codex/gpt-6.1-sol:xhigh",
     "mp/workbuddy/deepseek-v4.1-flash:high",
@@ -29,7 +30,7 @@
   "extensions": [],
   "fullscreenScrollbar": "auto",
   "hideThinkingBlock": false,
-  "lastChangelogVersion": "1.3.0",
+  "lastChangelogVersion": "1.5.0",
   "npmCommand": [
     "bun"
   ],
@@ -42,9 +43,11 @@
       "thinking": "high"
     }
   },
-  "sandboxExclude": ["npm:@shelken/simple-plannotator@0.1.8"],
+  "sandboxExclude": [
+    "npm:@shelken/simple-plannotator@0.1.8"
+  ],
   "packages": [
-    "npm:pi-execution-time@0.2.0",
+    "npm:pi-execution-time@0.3.0",
     "npm:pi-powerline-footer@0.22.0",
     "npm:pi-token-speed@0.12.0",
     "npm:@tifan/pi-preferred-thinking@1.0.2",
@@ -121,6 +124,11 @@
   "theme": "catppuccin",
   "transport": "auto",
   "tuiMode": "fullscreen",
-  "defaultProvider": "cpa",
-  "defaultModel": "workbuddy/deepseek-v4.1-flash"
+  "defaultProvider": "mp",
+  "defaultModel": "loomy/DeepSeek-V4.1-Flash",
+  "extensionChangelogVersions": {
+    "{\"source\":\"npm:pi-powerline-footer@0.22.0\",\"scope\":\"user\"}": "0.22.0",
+    "{\"source\":\"git:github.com/shelken/pi-zed-provider\",\"scope\":\"user\"}": "1.1.0",
+    "{\"source\":\"git:github.com/Rahularya01/pi-antigravity\",\"scope\":\"user\"}": "0.11.0"
+  }
 }

@@ -1,6 +1,6 @@
 ---
 name: doc-user-guide
-description: 用户指南（默认 `docs/user-guide/`）的编写：新建或修改用户指南
+description: 编写或修改用户指南（默认 `docs/user-guide/`）时, 必须阅读
 ---
 
 # 用户指南

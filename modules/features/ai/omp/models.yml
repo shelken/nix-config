@@ -20,9 +20,15 @@ providers:
       timeoutMs: 3000
     # >>> mp-modelOverrides:auto-sync >>>
     modelOverrides:
-      zcode/GLM-5.3-Flash-Trial:
-        name: "GLM-5.3-Flash-Trial"
-        input: ["text", "image"]
+      loomy/spark-x2.6:
+        name: "Spark-X2.6 正式版(限时免费)"
+      loomy/auto:
+        name: "自动 · 均衡"
+        input: ["text"]
+      loomy/spark-x:
+        name: "Spark-X2.5（限时免费）"
+      loomy/qwen-3.8-max:
+        name: "Qwen 3.8 Max"
       qoder-cn/qfmodel:
         name: "Qwen3.8-Flash"
         input: ["text", "image"]
@@ -34,8 +40,6 @@ providers:
         input: ["text", "image"]
       qoder-cn/gfmodel:
         name: "GLM-5.3-Flash"
-        input: ["text", "image"]
-      workbuddy/hy4-preview:
         input: ["text", "image"]
       workbuddy/hy3:
         input: ["text", "image"]
@@ -49,7 +53,7 @@ providers:
       workbuddy-ai/hy3:
         input: ["text", "image"]
       workbuddy-ai/deepseek-v4.1-flash-sg:
-        name: "Deepseek-V4.1-Flash (SG)"
+        name: "Deepseek-V4.1-Flash"
         input: ["text", "image"]
       workbuddy-ai/glm-5.3-flash:
         input: ["text"]
@@ -82,15 +86,24 @@ providers:
         thinking:
           mode: effort
           efforts: [minimal, low, medium, high, xhigh]
-      loomy/spark-x2.6:
-        name: "Spark-X2.6 正式版(限时免费)"
-      loomy/qwen-3.8-max:
-        name: "Qwen 3.8 Max"
-      loomy/auto:
-        name: "自动 · 均衡"
-        input: ["text"]
-      loomy/spark-x:
-        name: "Spark-X2.5（限时免费）"
+      opencode-zen-free/pulse-alpha-free:
+        name: "Pulse Alpha Free"
+        input: ["text", "image"]
+      opencode-zen-free/crouton-alpha-free:
+        name: "Crouton Alpha Free"
+        input: ["text", "image"]
+        thinking:
+          mode: effort
+          efforts: [minimal, low, medium, high, xhigh, max]
+      qwenwork/flash:
+        name: "标准"
+        input: ["text", "image"]
+      qwenwork/pro:
+        name: "高级"
+        input: ["text", "image"]
+      qwenwork/qwen3.8-max-preview:
+        name: "Qwen3.8-Max"
+        input: ["text", "image"]
     # <<< mp-modelOverrides:auto-sync <<<
   cpa:
     # cpa 端点锚点(openai/cpa 两 provider 共用): 外出 localhost, 回家改回 https://cpa.int.ooooo.space/v1

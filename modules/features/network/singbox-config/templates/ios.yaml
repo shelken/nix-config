@@ -1,0 +1,8 @@
+# iOS：底模换 template-ios.json（含 Tailscale endpoint）
+subs:
+  - "{{ op://Personal/proxy/subs-miaona }}"
+nodes:
+  - "{{ op://Personal/proxy/vps-hy2 }}"
+  - "{{ op://Personal/proxy/vps-hy2-v6 }}"
+  - "{{ op://Personal/proxy/vps-anytls }}"
+template_url: https://raw.githubusercontent.com/shelken/proxy/main/config/sing-box/template-ios.json
