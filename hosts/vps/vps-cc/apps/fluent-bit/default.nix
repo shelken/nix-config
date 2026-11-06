@@ -28,7 +28,7 @@ in
 
   virtualisation.oci-containers.containers.fluent-bit = {
     # 固定版本：与集群 chart 的 appVersion 对齐
-    image = "ghcr.io/fluent/fluent-bit:5.1.3@sha256:c5542543523c9678398dd78d927c05e8425ec15b038f226b67b3b019b1a70845";
+    image = "ghcr.io/fluent/fluent-bit:5.1.5@sha256:2740f387f6e68fab66d28e4fa6a853387b9cab6ffb4cb78958f69bba4eb0e7b4";
     autoStart = true;
     cmd = [
       "-c"
