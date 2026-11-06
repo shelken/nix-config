@@ -6,8 +6,7 @@
   ...
 }:
 let
-  # 目录名保持 tinycast：HM 以源路径 basename 生成 store 链接名（hm_tinycast），迁移前后一致
-  scriptsDir = ./tinycast;
+  scriptsDir = ./scripts;
 
   # 自动扫描 tinycast 目录下的全部 .sh 脚本并构建为 CLI 包
   scriptFiles = lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".sh" name) (
@@ -109,6 +108,8 @@ let
       boundCustomCommandIDs = map (cmd: lib.toLower (mkUUID cmd.name)) hotkeyedCommands;
       customCommandsEnabled = true;
       customCommandsShowInLauncher = true;
+      # settings.json 镜像总开关：只有它为真，Tinycast 才会读写下面那份文件
+      settingsFileEnabled = true;
     };
   managedCommands = map (cmd: {
     id = mkUUID cmd.name;
@@ -152,6 +153,10 @@ in
 
   # 软链接脚本目录至 ~/.config/tinycast/scripts，便于调试
   xdg.configFile."tinycast/scripts" = mylib.mkConfigFile config scriptsDir;
+
+  # settings.json 由 Tinycast 自己回写，所以必须软链到仓库内的可写源文件：
+  # 非 liveEdit 主机会链到只读的 Store 路径，App 保存失败并报错
+  xdg.configFile."tinycast/settings.json" = mylib.mkConfigFile config ./settings.json;
 
   # 激活时同步到 Tinycast，使其在启动器中立即可被搜索调用
   # 先导入快捷键偏好，再合并命令列表，避免两个激活步骤的写入顺序不明确。

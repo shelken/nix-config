@@ -1,3 +1,5 @@
 flake.lock
 **/snippets/**
 **/ai/**
+# Tinycast 自己回写该文件，数组元素独占一行，prettier 会改回去
+modules/features/tools/tinycast/settings.json
