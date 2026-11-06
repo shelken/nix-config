@@ -81,8 +81,6 @@
 (internal-sites) {
   import internal-access rustfs-ui    http://127.0.0.1:9001       empty empty {args[0]}
   import internal-access rustfs       http://127.0.0.1:9000       empty empty {args[0]}
-  import internal-access minio-ui     http://127.0.0.1:9001       empty empty {args[0]}
-  import internal-access minio        http://127.0.0.1:9000       empty empty {args[0]}
   import internal-access nvidia-dls   https://127.0.0.1:5100      empty skip-tls-verify {args[0]}
   import internal-access pve-mine     https://192.168.6.213:8006  empty skip-tls-verify {args[0]}
 
