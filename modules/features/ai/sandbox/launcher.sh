@@ -89,5 +89,17 @@ else
   BWRAP_ARGS+=(--chdir "$PLAN_PROJECT_ROOT")
 fi
 
+# bwrap 的 PID 1 要等命名空间里所有进程退出才返回：工具留下的后台守护（如 pi-intercom 的 broker 在最后一个客户端离开后再等 5 秒）
+# 会拖住退出。主命令一退出就清场，先 TERM 让守护自己收尾，等到只剩 PID 1 与自己或超过 0.3 秒，再 KILL。
+# kill -1 只作用于本上下文的 PID 命名空间，不影响其他上下文。INT 要留给子进程：trap 的处理函数不会被继承，
+# 这样 Ctrl-C 杀掉子进程后 bash 仍会继续执行清场，而不是随信号退出
+# shellcheck disable=SC2016  # 脚本在沙箱内的 bash 里展开，这里不能展开
+CTX_SUPERVISOR='trap : INT
+"$@"; rc=$?
+kill -TERM -1 2>/dev/null
+for _ in 1 2 3 4 5 6; do set -- /proc/[0-9]*; (($# <= 2)) && break; sleep 0.05; done
+kill -KILL -1 2>/dev/null
+exit "$rc"'
+
 # 不使用 exec：保留 Bash 父进程等待子进程退出，EXIT cleanup trap 才会触发网络与资源释放
-ip netns exec "$SLOT_NETNS" bwrap "${BWRAP_ARGS[@]}" -- "$@"
+ip netns exec "$SLOT_NETNS" bwrap "${BWRAP_ARGS[@]}" -- bash -c "$CTX_SUPERVISOR" sb-ctx "$@"
