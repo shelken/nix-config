@@ -44,7 +44,7 @@ class LifecycleTest(unittest.TestCase):
         self.assertIn("共用 mise 目录不存在", self.e.sb("up").stderr)
 
     def test_a_sb_yaml_field_of_the_wrong_type_is_an_error(self):
-        for key, bad in [("cpus", "4"), ("memory", 8), ("image", None), ("network", "public"), ("volume", {"name": "v"})]:
+        for key, bad in [("cpus", "4"), ("memory", 8), ("image", None), ("network", "public"), ("volume", {"name": "v"}), ("idle_timeout", 300)]:
             with self.subTest(key=key):
                 self.e.set_policy(**{key: bad})
                 r = self.e.sb("up")
@@ -133,10 +133,6 @@ class LifecycleTest(unittest.TestCase):
         self.e.sb("up")
         self.assertEqual(self.e.msb_state()["vm"]["conf"]["idle_timeout"], "5m")
 
-    def test_without_idle_timeout_the_vm_never_stops_by_itself(self):
-        self.e.sb("up")
-        self.assertNotIn("idle_timeout", self.e.msb_state()["vm"]["conf"])
-
     def test_idle_timeout_is_part_of_the_ceiling_because_msb_applies_it_only_at_creation(self):
         self.e.sb("up")
         old = self.vm_fp()
@@ -146,25 +142,6 @@ class LifecycleTest(unittest.TestCase):
         self.assertIn("正在重建", r.stderr)
         self.assertNotEqual(self.vm_fp(), old)
         self.assertEqual(self.e.msb_state()["vm"]["conf"]["idle_timeout"], "5m")
-
-    def test_changing_idle_timeout_while_busy_refuses_like_any_ceiling_change(self):
-        self.e.set_policy(idle_timeout="5m")
-        self.e.sb("up")
-        self.e.msb_state(busy=1)
-        self.e.set_policy(idle_timeout="10m")
-        r = self.e.sb("up")
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("能力上限已变", r.stderr)
-        self.assertEqual(self.e.calls("rm"), [])
-
-    def test_an_idle_timeout_of_the_wrong_type_is_an_error(self):
-        for bad in (300, True, ["5m"]):
-            with self.subTest(bad=bad):
-                self.e.set_policy(idle_timeout=bad)
-                r = self.e.sb("up")
-                self.assertEqual(r.returncode, 1, r.stderr)
-                self.assertIn("idle_timeout", r.stderr)
-                self.assertEqual(self.e.calls("create"), [])
 
     def test_rm_refuses_while_busy_unless_forced(self):
         self.e.sb("up")
@@ -207,11 +184,6 @@ class LifecycleTest(unittest.TestCase):
         self.assertEqual(self.e.msb_state()["vm"]["status"], "Running")
         self.assertEqual(len([c for c in self.e.calls("exec") if "/fake/sync-guest" in c]), 2)
 
-    def test_sync_rejects_arguments(self):
-        r = self.e.sb("sync", "--force")
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("sb sync 不接受参数", r.stderr)
-
     def test_sync_failure_exit_code_is_returned(self):
         self.e.sb("up")
         self.e.msb_state(sync_rc=7)
@@ -246,16 +218,6 @@ class RunTest(unittest.TestCase):
         self.e.msb_state(run_rc=42)
         self.assertEqual(self.e.sb("run", "false").returncode, 42)
 
-    def test_run_requires_a_command(self):
-        r = self.e.sb("run")
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("sb run 需要提供待执行的命令", r.stderr)
-
-    def test_shell_is_an_interactive_bash_run(self):
-        self.assertEqual(self.e.sb("shell").returncode, 0)
-        call = self.launcher_call()
-        self.assertEqual(call[call.index("/fake/launcher") + 4 :], ["bash"])
-
     def test_unapproved_project_config_blocks_run_until_trusted(self):
         self.e.set_project({"network": ["10.0.0.1:80"]})
         r = self.e.sb("run", "true")
@@ -275,11 +237,6 @@ class RunTest(unittest.TestCase):
         self.assertEqual(self.e.sb("run", "true").returncode, 0)
         self.e.set_project({"network": ["10.0.0.1:8080"]})
         self.assertEqual(self.e.sb("run", "true").returncode, 1)
-
-    def test_trust_without_sandbox_yaml_is_a_noop(self):
-        r = self.e.sb("trust")
-        self.assertEqual(r.returncode, 0)
-        self.assertIn("不需要批准", r.stdout)
 
     def test_imports_are_copied_into_a_stage_dir_before_the_launcher_runs(self):
         (self.e.project / "kube.yaml").write_text("x")

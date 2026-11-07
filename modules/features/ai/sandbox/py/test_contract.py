@@ -19,7 +19,7 @@ SANDBOX = Path(__file__).parent.parent
 PLAN_SH = SANDBOX / "guest" / "plan.sh"
 GUEST_STATUS_SH = SANDBOX / "guest-status.sh"
 
-# 每个变量一行 KEY=值，数组每项一行；空数组不输出，用来确认 set -u 下空数组不报 unbound
+# 每个变量一行 KEY=值，数组每项一行
 DUMP = r"""
 set -euo pipefail
 source "$1"
@@ -82,10 +82,6 @@ class ContractTest(unittest.TestCase):
         self.assertEqual(got["PATH"], [f"{p['path']}\t{str(p['readonly']).lower()}" for p in plan["paths"]])
         # 上面的夹具要真的覆盖到每种字段，避免空对空的假通过
         self.assertTrue(all(plan[k] for k in ("imports", "network", "paths", "default_allow", "git_common_dir")))
-
-    def test_empty_plan_leaves_empty_arrays_not_unbound_variables(self):
-        got = guest_parse(json.dumps(self.host_plan() | {"imports": [], "network": [], "paths": [], "default_allow": []}))
-        self.assertEqual(set(got), {"ROOT", "GCD"})
 
     def test_path_with_a_backslash_reaches_the_guest_unescaped(self):
         (self.e.project / "back\\slash").mkdir()

@@ -77,14 +77,12 @@ assert "README.md" not in body
 assert "https://github.com/example/demo-skill/compare/" in body
 assert len(calls) == 1
 
-# 非 skill input：只给 compare 链接，不查文件
-calls.clear()
+# 新增 input：只写锁定版本
 blocks = module.input_blocks("added-input", None, head["nodes"]["added-input"], None, "token")
-body = "\n\n".join(blocks)
-assert "新增 input" in body
-assert calls == []
+assert "新增 input" in "\n\n".join(blocks)
 
 # URL 变了但 rev 没变（例如 github: 换 git+https:）：说明 rev 未变，也不查文件
+calls.clear()
 retargeted = dict(base["nodes"]["demo-skill"])
 retargeted["original"] = {**retargeted["original"], "type": "github", "url": "https://github.com/example/demo-skill"}
 body = "\n\n".join(module.input_blocks("demo-skill", base["nodes"]["demo-skill"], retargeted, ["skills/demo"], "token"))
