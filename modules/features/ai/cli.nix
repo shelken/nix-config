@@ -45,10 +45,11 @@
 
           # agent client
           # 需要保留的会定死版本
-          # codex = "latest";
           # "npm:droid" = "latest";
           antigravity-cli = "1.1.24";
-          # codex / claude-code 已迁入共享工具登记表（modules/features/ai/tools.nix）
+          # 只在宿主用：不进共享登记表，沙箱里不装（沙箱只跑 omp、pi，见 ADR 0003）
+          codex = "0.160.1";
+          claude-code = "2.1.304";
         };
       };
     };
