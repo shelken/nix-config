@@ -76,6 +76,16 @@ let
       command = lib.getExe scripts.pb-type;
       iconSymbol = "keyboard";
     }
+    {
+      name = "复制前台应用 Bundle ID";
+      command = lib.getExe scripts.get-app-bundleid;
+      iconSymbol = "doc.on.clipboard";
+    }
+    {
+      name = "在 Finder 当前目录打开 Kitty";
+      command = lib.getExe scripts.open-terminal-in-finder-path;
+      iconSymbol = "folder";
+    }
   ]
   ++ displayCommands;
 
