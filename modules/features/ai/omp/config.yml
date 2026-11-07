@@ -87,6 +87,7 @@ task:
     comment-sicko: "@reviewer-gpt"
     scout: "@scout"
   disabledAgents: []
+  completionProbe: false
 browser:
   headless: true
   enabled: false
@@ -150,8 +151,15 @@ retry:
       - google-antigravity/gemini-2.5-flash
       - web/ollama
 compaction:
-  enabled: false
+  experimentalContextManagement: true
+  methodOrder:
+    - shake
+    - soft
 grep:
   enabled: false
 glob:
   enabled: false
+todo:
+  reminders: false
+recap:
+  enabled: true
