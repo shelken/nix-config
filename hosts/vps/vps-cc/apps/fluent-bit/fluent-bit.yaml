@@ -23,7 +23,7 @@ pipeline:
       add_prefix: request.
     - name: grep
       match: caddy.*
-      regex: "msg upstream roundtrip"
+      regex: "msg handled request"
     - name: modify
       match: caddy.*
       Add:
