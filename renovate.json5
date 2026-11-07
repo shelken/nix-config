@@ -97,40 +97,15 @@
       // 仓库没有 PR 级构建，不等状态检查
       ignoreTests: true,
     },
-    // 同一插件在 pi 与 omp 两份清单里各钉一次，按插件名合成一个 PR
+    // 插件代码会在 agent 进程里执行，每次升级都要人看过再合并：pi 与 omp 两份清单的全部插件合成一个 PR
     {
-      description: "pi / omp 插件：两个宿主的同名插件同一个 PR",
+      description: "pi / omp 插件：全部合成一个 PR，手动合并",
       matchFileNames: [
         "modules/features/ai/pi/settings.json",
         "modules/features/ai/omp/plugins/package.json",
       ],
-      groupName: "pi plugin {{packageName}}",
-      commitMessageTopic: "{{packageName}}",
-    },
-    {
-      description: "第三方 pi / omp 插件：发布满 3 天后自动合并非 major",
-      matchFileNames: [
-        "modules/features/ai/pi/settings.json",
-        "modules/features/ai/omp/plugins/package.json",
-      ],
-      matchUpdateTypes: ["minor", "patch"],
-      minimumReleaseAge: "3 days",
-      automerge: true,
-      automergeType: "pr",
-      platformAutomerge: true,
-      // 仓库没有 PR 级 CI，不等状态检查
-      ignoreTests: true,
-    },
-    {
-      description: "自有插件 @shelken/*：发布即合并 patch / minor",
-      matchFileNames: [
-        "modules/features/ai/pi/settings.json",
-        "modules/features/ai/omp/plugins/package.json",
-      ],
-      matchPackageNames: ["@shelken/**"],
-      matchUpdateTypes: ["minor", "patch"],
-      minimumReleaseAge: null,
-      schedule: ["at any time"],
+      groupName: "pi / omp plugins",
+      automerge: false,
     },
     {
       // vps-cc（oci-containers）与 sakamoto（compose.yaml）的容器镜像永远一起升级：
