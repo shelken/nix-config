@@ -110,6 +110,7 @@
     "npm:@ff-labs/pi-fff@0.11.0",
     "npm:pi-intercom@0.18.1",
     "npm:@juicesharp/rpiv-web-tools@2.15.0",
+    "npm:@pify/shell-background@0.7.0",
     {
       "skills": [
         "-skills/ponytail-debt/SKILL.md",
