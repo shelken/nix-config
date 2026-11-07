@@ -1,7 +1,20 @@
-# herdr：任务编排器配置
+# herdr：任务编排器配置；darwin 桌面端额外装原生窗口 herdr-gpui
 { config, ... }:
 {
   flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.herdr ];
+
+  flake.modules.darwin.gui.imports = [ config.flake.modules.darwin.herdr-gpui ];
+
+  # 同名的 homeManager.herdr 会自动挂出 darwin.herdr，所以这里另取名字
+  flake.modules.darwin.herdr-gpui.homebrew = {
+    taps = [
+      {
+        name = "penso/tap";
+        trusted = true;
+      }
+    ];
+    casks = [ "penso/tap/herdr-gpui" ];
+  };
 
   flake.modules.homeManager.herdr =
     {
