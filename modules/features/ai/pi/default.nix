@@ -72,9 +72,16 @@
       # 沙箱专用 settings.json：顶层 sandboxExclude 列出沙箱里不要的 packages 条目。
       # 排除即不装，不是装后禁用；宿主读原文件，不受影响。
       # 名字写错在构建期失败，避免静默漏排除。对象形式的条目按 source 匹配，原样保留其余字段。
+      # 匹配忽略 npm 条目的 @版本：升级版本时不用同步改 sandboxExclude。
       piSettings = builtins.fromJSON (builtins.readFile ./settings.json);
-      sandboxExclude = piSettings.sandboxExclude or [ ];
-      entrySource = p: if builtins.isString p then p else p.source;
+      sandboxExclude = map unversioned (piSettings.sandboxExclude or [ ]);
+      unversioned =
+        s:
+        let
+          m = builtins.match "(npm:@?[^@]+)(@.*)?" s;
+        in
+        if m == null then s else builtins.head m;
+      entrySource = p: unversioned (if builtins.isString p then p else p.source);
       unknownExcludes = builtins.filter (
         n: !(builtins.any (p: entrySource p == n) piSettings.packages)
       ) sandboxExclude;
@@ -104,7 +111,6 @@
 
       # 插件读的环境变量写在登记表 env：宿主与沙箱同源（沙箱不继承宿主 shell 的环境）
       shelken.dev.tools.pi.env = {
-        POWERLINE_NERD_FONTS = "1";
         ANTIGRAVITY_NO_EXTRA_TOOLS = "1";
         # @pify/shell-background：前台命令超过该毫秒数自动转后台（插件默认 30000）。
         # 对标 omp 的 bash.autoBackground 阈值（60 秒）；也可写 ~/.pi/agent/shell-background.json，这里选环境变量。

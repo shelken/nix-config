@@ -1,7 +1,7 @@
 {
   "name": "omp-plugins",
   "private": true,
-  "sandboxExclude": ["@shelken/simple-plannotator"],
+  "sandboxExclude": ["@shelken/simple-plannotator", "@shelken/pi-sounds"],
   "dependencies": {
     "@ff-labs/pi-fff": "npm:@ff-labs/pi-fff@0.11.0",
     "@dietrichgebert/ponytail": "npm:@dietrichgebert/ponytail@5.3.3",

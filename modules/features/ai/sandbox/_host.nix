@@ -60,11 +60,14 @@ let
   };
 
   # 登记表条目声明 sandboxCommand，就得到 <名>-sb
+  # herdr 在宿主侧只看得到 sb 进程；pi 要用 HERDR_AGENT 告诉它按 pi 的屏幕规则识别状态。
+  # omp 没有屏幕规则，herdr 只认它自己上报的状态，这里设了也没用
   harnessSbs = lib.concatMap (
     tool:
     lib.optional (tool.sandboxCommand != null) (
       pkgs.writeShellScriptBin "${tool.sandboxCommand}-sb" ''
         set -euo pipefail
+        ${lib.optionalString (tool.sandboxCommand == "pi") "export HERDR_AGENT=pi"}
         exec ${sb}/bin/sb run ${tool.sandboxCommand} "$@"
       ''
     )
