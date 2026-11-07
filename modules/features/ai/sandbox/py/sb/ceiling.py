@@ -36,6 +36,7 @@ class Ceiling:
     default_grants: list[str]  # 所有上下文默认放行的私网 IP:端口
     default_allow: list[str]  # 所有上下文默认放行的宿主端口，形如 host:tcp:8317
     secrets: dict[str, Any]
+    idle_timeout: str | None  # msb 的 idle_timeout：没有活跃的 exec 会话超过该时长就停止主 VM；None 不启用
 
     @staticmethod
     def load(path: str, home: str) -> "Ceiling":
@@ -67,4 +68,5 @@ class Ceiling:
             default_grants=grants,
             default_allow=[a for a in allow if a.startswith("host:tcp:")],
             secrets=secrets,
+            idle_timeout=required(raw, "idle_timeout", str, "sb.yaml") if "idle_timeout" in raw else None,
         )

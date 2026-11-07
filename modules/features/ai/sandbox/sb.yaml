@@ -4,6 +4,10 @@ image: "ubuntu"
 cpus: 4
 memory: "8G"
 
+# 最后一个 omp-sb / sb run 退出后空闲多久，msb 自动停止主 VM，免得忘了 sb down；下次启动自动拉起。
+# 只有附着的 exec 会话算活跃；msb 只在创建时应用它，改了会让上限指纹变化（空闲时下次启动重建）。不写则不自动停止
+idle_timeout: "5m"
+
 # 命名数据卷（用于 /data，ext4 disk）
 volume:
   name: "sb-main-data"

@@ -69,7 +69,7 @@ flowchart LR
 
 ## 两层能力
 
-**能力上限**在主 VM 创建时固定：挂载根、VM 级网络策略、secret 都写进 msb 配置，运行中改不了。**能力授权**在每次启动上下文时由 launcher 授予：额外路径受挂载根约束；导入文件和私网目标没有上限，由用户用 `sb trust` 批准
+**能力上限**在主 VM 创建时固定：挂载根、VM 级网络策略、secret、空闲超时都写进 msb 配置，运行中改不了。**能力授权**在每次启动上下文时由 launcher 授予：额外路径受挂载根约束；导入文件和私网目标没有上限，由用户用 `sb trust` 批准
 
 ### 上限：`sb.yaml`
 
@@ -78,6 +78,7 @@ flowchart LR
 | `image` | `ubuntu` | VM 镜像 |
 | `cpus` / `memory` | `4` / `8G` | VM 规格 |
 | `volume.name` / `volume.size` | `sb-main-data` / `8G` | 挂到 `/data` 的 ext4 数据卷，不存在时自动创建 |
+| `idle_timeout` | 无 | `30s`、`5m`、`1h` 这样的时长。没有活跃的 `msb exec` 会话超过该时长，msb 自动停止主 VM，下次 `sb run`、`<名>-sb` 自动启动，不用记得 `sb down`。每个执行上下文就是一个附着会话，上下文里 `nohup` 的后台进程不算活跃，会随 VM 停掉；`sb status` 会执行一次 `msb exec`，重置计时。msb 只在创建时应用它，所以改它会改变上限指纹：空闲时下次启动重建，有上下文在运行时报错 |
 | `mount_roots` | 无 | 挂载根，支持 `~`、`${HOME}`；先解析符号链接，guest 内路径与宿主一致 |
 | `network.allow` | `public`、`dns` | VM 级网络策略（msb 规则语法）：`public`、`dns`、`private`、`host:tcp:<端口>`。`private` 整体放开私网，逐项限制由上下文内的 iptables 链完成；改它会改变上限指纹、触发重建 |
 | `network.default_grant` | 无 | 所有上下文默认放行的私网 `IP:端口`；不进 VM 配置，改了不触发重建 |

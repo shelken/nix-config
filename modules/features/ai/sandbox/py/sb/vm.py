@@ -89,6 +89,9 @@ def desired(cfg: Config) -> Desired:
     }
     if ceiling.secrets:
         conf["secrets"] = ceiling.secrets
+    # 空闲超时只在创建时生效（msb modify 不能改），与其他上限一样进 conf 从而进指纹：改它等于重建
+    if ceiling.idle_timeout:
+        conf["idle_timeout"] = ceiling.idle_timeout
     return Desired(conf, ceiling.volume_name, ceiling.volume_size, os.path.realpath(cfg.mise_host_dir))
 
 

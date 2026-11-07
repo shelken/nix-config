@@ -128,6 +128,44 @@ class LifecycleTest(unittest.TestCase):
                 self.assertEqual(r.returncode, 0, r.stderr)
                 self.assertNotEqual(self.vm_fp(), old)
 
+    def test_idle_timeout_reaches_msb_in_the_create_conf(self):
+        self.e.set_policy(idle_timeout="5m")
+        self.e.sb("up")
+        self.assertEqual(self.e.msb_state()["vm"]["conf"]["idle_timeout"], "5m")
+
+    def test_without_idle_timeout_the_vm_never_stops_by_itself(self):
+        self.e.sb("up")
+        self.assertNotIn("idle_timeout", self.e.msb_state()["vm"]["conf"])
+
+    def test_idle_timeout_is_part_of_the_ceiling_because_msb_applies_it_only_at_creation(self):
+        self.e.sb("up")
+        old = self.vm_fp()
+        self.e.set_policy(idle_timeout="5m")
+        r = self.e.sb("up")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("正在重建", r.stderr)
+        self.assertNotEqual(self.vm_fp(), old)
+        self.assertEqual(self.e.msb_state()["vm"]["conf"]["idle_timeout"], "5m")
+
+    def test_changing_idle_timeout_while_busy_refuses_like_any_ceiling_change(self):
+        self.e.set_policy(idle_timeout="5m")
+        self.e.sb("up")
+        self.e.msb_state(busy=1)
+        self.e.set_policy(idle_timeout="10m")
+        r = self.e.sb("up")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("能力上限已变", r.stderr)
+        self.assertEqual(self.e.calls("rm"), [])
+
+    def test_an_idle_timeout_of_the_wrong_type_is_an_error(self):
+        for bad in (300, True, ["5m"]):
+            with self.subTest(bad=bad):
+                self.e.set_policy(idle_timeout=bad)
+                r = self.e.sb("up")
+                self.assertEqual(r.returncode, 1, r.stderr)
+                self.assertIn("idle_timeout", r.stderr)
+                self.assertEqual(self.e.calls("create"), [])
+
     def test_rm_refuses_while_busy_unless_forced(self):
         self.e.sb("up")
         self.e.msb_state(busy=1)
