@@ -1,7 +1,8 @@
 {
   log {
     # format console
-    level DEBUG
+    # 访问日志（INFO）来自下面站点块的 log 指令；CrowdSec 的 caddy parser 与 fluent-bit 都只认它
+    level INFO
     output file /var/log/caddy/access.log {
      	roll_size 30MiB
      	roll_keep 10
@@ -153,6 +154,9 @@ http://:2019 {
 
 *.{$MAIN_DOMAIN} {
   import with-tls
+
+  # 没有这条指令 Caddy 不产生访问日志，不经反代的请求（被封禁、被 Caddy 直接应答）也就看不到
+  log
 
   # 机器对机器的 WebDAV（Basic 认证）不经 AppSec：PROPFIND 的 XML body 会命中 CRS 901340，out-of-band 事件累计后封出口 IP（#1705）
   @waf not {

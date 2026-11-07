@@ -25,7 +25,8 @@
   };
 
   virtualisation.oci-containers.containers.crowdsec-agent = {
-    image = "ghcr.io/crowdsecurity/crowdsec:v1.8.2@sha256:65b74942f7e7ed5c60fde4ac15fc4ba715904c398c8b16dd451f4907d90347d4";
+    # debian 变体：自带 journalctl，SSH 日志从宿主机 journald 读（alpine 变体没有）
+    image = "ghcr.io/crowdsecurity/crowdsec:v1.8.2-debian@sha256:a5642c72127ee93aaac830e9f66891573fa7851b2c721987d9fef13d7d05fdfe";
     autoStart = true;
     environment = {
       TZ = "Asia/Shanghai";
