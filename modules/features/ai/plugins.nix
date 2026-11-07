@@ -24,6 +24,9 @@
         };
       };
 
+      # pi-fff 在 pi 与 omp 里都装了：不扫描 $HOME，避免在家目录启动时索引整个目录
+      shelken.dev.tools.agent-common.env.FFF_ENABLE_HOME_SCAN = "0";
+
       shelken.dev.tools.pi.files = {
         # pi-fff 插件固定使用这个目录寻找持久化配置：PI_CODING_AGENT_DIR 未设置时，
         # pi 与 omp 的 piDataDir() 都解析到此处，两边共用同一份设置。

@@ -168,7 +168,8 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 | `mise` | mise 规格，版本字符串或属性集 |
 | `files` | 随工具进沙箱的声明配置，宿主照常作为 `home.file`。这是 Nix 配置进沙箱的唯一入口，宿主与沙箱都从它派生 |
 | `sandboxFiles` | 同一文件在沙箱里的替代内容，按目标路径覆盖 `files` 的同名条目 |
-| `sandboxEnv` | 沙箱内额外导出的环境变量，写进 `guest-env.sh`；值可引用 `SB_CONFIG_DIR` 等 guest 变量 |
+| `env` | 宿主与沙箱都要的环境变量：宿主合入 `home.sessionVariables`，沙箱写进 `guest-env.sh`。沙箱不继承宿主 shell 的环境，插件读的变量只写在宿主就进不了沙箱 |
+| `sandboxEnv` | 只有沙箱要的环境变量，写进 `guest-env.sh`；值可引用 `SB_CONFIG_DIR` 等 guest 变量 |
 | `sandboxDirs` | 沙箱内必须预先存在的目录（例如 OMP 只在 `$XDG_DATA_HOME/omp` 存在时才把插件放进 XDG 目录） |
 | `sandboxCommand` | harness 在沙箱内的可执行名（omp、pi、codex、claude）；宿主据此生成 `<可执行名>-sb`，不写则不生成 |
 | `postInstall` | 宿主激活时与 `sb sync` 时各运行一次 |
@@ -349,7 +350,7 @@ pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么当
 
 - 宿主只有一个共用目录，取真实物理路径；所有 VM 把它挂到 `/opt/sandbox-mise`。指纹只含 guest 侧声明 `/opt/sandbox-mise:rw`，宿主路径变化不触发重建
 - 共用的只有安装产物与下载缓存；`state`、`shims`、可写用户层配置归各 VM 数据盘
-- guest 的固定路径（发布目录、上下文注册目录、数据盘、XDG）与环境变量只有一个来源 `guest-env.sh`，`sb sync`、执行上下文、`guest-status.sh` 统一 source；`sb` 需要的两处路径经 `sb-config.json` 的 `guest` 段由同一份 Nix 定义给出。工具自己的环境变量与预建目录由登记表条目的 `sandboxEnv`、`sandboxDirs` 声明
+- guest 的固定路径（发布目录、上下文注册目录、数据盘、XDG）与环境变量只有一个来源 `guest-env.sh`，`sb sync`、执行上下文、`guest-status.sh` 统一 source；`sb` 需要的两处路径经 `sb-config.json` 的 `guest` 段由同一份 Nix 定义给出。工具自己的环境变量与预建目录由登记表条目的 `env`（宿主也要）、`sandboxEnv`（仅沙箱）、`sandboxDirs` 声明
 - `sb sync` 不清理下载缓存；主 VM 首次创建后自动 sync 一次，复用已有 VM 时不自动 sync
 - 上下文可写共用层，项目工具在上下文内 `mise install`，不经 `sb sync`。原先上下文只读，是为了让 sync 成为唯一写入方；但威胁模型只防误操作，Agent 本来就能下载并运行任意程序，只读挡不住什么，反而让项目 `mise.toml` 里的工具（kustomize、helm、flux 等）无法使用。上下文的安装不拿 `.sync.lock`，并发安装同一版本由 mise 自己串行
 - Home Manager 激活会重置 PATH：`postInstall` 先加登记表中的 Nix 工具，再加 mise shims，Nix 运行时不会被旧 mise shim 遮蔽

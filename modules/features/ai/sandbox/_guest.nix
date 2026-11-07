@@ -82,12 +82,11 @@ let
     )
   );
 
-  toolEnvExports = lib.concatMapStrings (
-    tool:
-    lib.concatMapStrings (name: "export ${name}=\"${tool.sandboxEnv.${name}}\"\n") (
-      builtins.attrNames tool.sandboxEnv
-    )
-  ) (builtins.attrValues toolsCfg);
+  exportsOf =
+    vars: lib.concatMapStrings (name: "export ${name}=\"${vars.${name}}\"\n") (builtins.attrNames vars);
+  toolEnvExports = lib.concatMapStrings (tool: exportsOf tool.env + exportsOf tool.sandboxEnv) (
+    builtins.attrValues toolsCfg
+  );
   guestDirs = lib.concatMapStringsSep " " (d: "\"${d}\"") (
     [
       "$SB_DATA_DIR/mise"

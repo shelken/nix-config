@@ -50,10 +50,8 @@
     in
     {
       config = {
-        programs.zsh.initContent = ''
-          # for mnemopi gemini embedding
-          export MNEMOPI_EMBEDDING_DIM=3072
-        '';
+        # mnemopi 的 gemini embedding 维度
+        shelken.dev.tools.omp.env.MNEMOPI_EMBEDDING_DIM = "3072";
         # 别名：支持与 pi 并存，使用 sec-run omp
         home.shellAliases = {
           omp = "sec-run omp";

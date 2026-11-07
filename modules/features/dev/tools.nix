@@ -50,6 +50,16 @@
                   description = "随工具进入沙箱的配置文件，宿主侧照常作为 home.file";
                 };
 
+                env = lib.mkOption {
+                  type = lib.types.attrsOf lib.types.str;
+                  default = { };
+                  description = ''
+                    宿主与沙箱都要的环境变量：宿主合入 home.sessionVariables，沙箱写进 guest-env.sh。
+                    沙箱不继承宿主 shell 的环境，工具或插件读的变量只写在宿主就进不了沙箱。
+                    两端都按 shell 双引号展开，值写纯字符串即可；只沙箱要的变量用 sandboxEnv。
+                  '';
+                };
+
                 sandboxFiles = lib.mkOption {
                   type = lib.types.attrsOf lib.types.anything;
                   default = { };
@@ -169,6 +179,8 @@
           );
 
           home.file = lib.mkMerge (lib.mapAttrsToList (_: tool: lib.mkIf (tool.files != { }) tool.files) cfg);
+
+          home.sessionVariables = lib.mkMerge (lib.mapAttrsToList (_: tool: tool.env) cfg);
         }
       ];
     };
