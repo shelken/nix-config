@@ -125,6 +125,9 @@
         # 沙箱用 Nix 渲染的变体（去掉 sandboxExclude 列出的包）；宿主仍是仓库文件的软链
         ".pi/agent/settings.json" = sandboxSettings;
         ".pi/agent/models.json" = sandboxModels;
+        # pi-caveman 在 XDG_CONFIG_HOME 有值时读 $XDG_CONFIG_HOME/pi/agent/caveman.json，不读 ~/.pi/agent；
+        # 沙箱导出了 XDG_CONFIG_HOME，只挂 ~/.pi/agent 会让它回落默认值（full、显示状态栏）。
+        ".config/pi/agent/caveman.json" = ./configs/caveman.json;
       };
 
       shelken.dev.tools.pi.files = {
