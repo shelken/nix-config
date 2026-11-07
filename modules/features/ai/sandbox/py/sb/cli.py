@@ -117,6 +117,10 @@ def run(cfg: Config, msb: Msb, args: list[str]) -> int:
     if p.imports:
         _stage_imports(cfg, msb, ctx_id, p)
 
+    # msb exec 只给 pty 设 TERM，不转发 COLORTERM；缺了它 pi/omp 会把主题降级成 256 色，与宿主出现色差
+    if terminal == ["-t"] and os.environ.get("COLORTERM"):
+        terminal += ["-e", f"COLORTERM={os.environ['COLORTERM']}"]
+
     # Ctrl-C 会发给整个前台进程组，让子进程自己处理并把退出码传回来，父进程只是不抛 KeyboardInterrupt。
     # 用空处理函数而不是 SIG_IGN：忽略的信号会被 exec 继承，子进程就再也停不下来
     old = signal.signal(signal.SIGINT, lambda *_: None)
