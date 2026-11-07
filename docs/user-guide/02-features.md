@@ -88,7 +88,7 @@ NixOS 主机用 `self.modules.nixos.<名>`
 | 选项                        | 写在          | 默认值           | 作用                                                                              |
 | --------------------------- | ------------- | ---------------- | --------------------------------------------------------------------------------- |
 | `secrets.enable`            | `default.nix` | `false`          | 主机持有 age 密钥；kopia 备份等需要密钥的功能依赖它，未开启时求值报错             |
-| `wm.manager`                | `default.nix` | `"aerospace"`    | 窗口管理器，可选 `"aerospace"`、`"omniwm"`（`gui` 及以上）                        |
+| `wm.manager`                | `default.nix` | `"omniwm"`       | 窗口管理器，目前只有 `"omniwm"`（`gui` 及以上）                                   |
 | `tools.autoinputswitch.app` | `default.nix` | `"typeswitch"`   | 自动切换输入法的软件，可选 `"typeswitch"`、`"inputsourcepro"`（`workstation`）    |
 | `dotfiles.liveEdit`         | `home.nix`    | `false`          | 配置文件软链到本地仓库，改完即时生效；远程部署机保持关闭                          |
 | `backup.backupPaths`        | `home.nix`    | `[ ]`            | kopia 额外备份的路径（`workstation`）                                             |

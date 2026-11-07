@@ -1,5 +1,5 @@
-# 窗口管理器：二选一（aerospace / omniwm）
-# 加入 gui 角色；mio 选 omniwm，其余桌面机用默认 aerospace
+# 窗口管理器：目前只有 omniwm；保留枚举，换实现时在这里加值
+# 加入 gui 角色
 { config, ... }:
 {
   flake.modules.darwin.gui.imports = [ config.flake.modules.darwin.wm ];
@@ -11,29 +11,21 @@
     in
     {
       options.shelken.wm.manager = lib.mkOption {
-        type = lib.types.enum [
-          "aerospace"
-          "omniwm"
-        ];
-        default = "aerospace";
+        type = lib.types.enum [ "omniwm" ];
+        default = "omniwm";
         description = "选择使用的平铺窗口管理器";
       };
 
-      config = lib.mkMerge [
-        (lib.mkIf (manager == "aerospace") {
-          homebrew.casks = [ "aerospace" ];
-        })
-        (lib.mkIf (manager == "omniwm") {
-          homebrew = {
-            taps = [
-              {
-                name = "BarutSRB/tap";
-                trusted = true;
-              }
-            ];
-            casks = [ "omniwm" ];
-          };
-        })
-      ];
+      config = lib.mkIf (manager == "omniwm") {
+        homebrew = {
+          taps = [
+            {
+              name = "BarutSRB/tap";
+              trusted = true;
+            }
+          ];
+          casks = [ "omniwm" ];
+        };
+      };
     };
 }
