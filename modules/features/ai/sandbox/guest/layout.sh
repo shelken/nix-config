@@ -9,12 +9,14 @@ declare -A AGENT_ROOTS=()
 LAYOUT_ARGS=()
 MOUNT_POINTS=()
 
+# 下面三个函数把结果写进全局变量（DST、BACKING、MOUNT_ROOT），不用 $(...) 取 stdout：
+# 每次命令替换都要 fork 子 shell，在 microVM 里约 170 个声明路径累计拖慢启动约 1.5 秒
 declared_dst() {
   local t="$1"
   if [[ "$t" == .config/* ]]; then
-    printf '%s/%s\n' "$XDG_CONFIG_HOME" "${t#.config/}"
+    DST="$XDG_CONFIG_HOME/${t#.config/}"
   else
-    printf '%s/%s\n' "$HOME" "$t"
+    DST="$HOME/$t"
   fi
 }
 
@@ -22,23 +24,23 @@ backing_of() {
   local path="$1" root
   for root in "${!AGENT_ROOTS[@]}"; do
     if [[ "$path" == "$root" || "$path" == "$root/"* ]]; then
-      printf '%s%s\n' "${AGENT_ROOTS[$root]}" "${path#"$root"}"
+      BACKING="${AGENT_ROOTS[$root]}${path#"$root"}"
       return 0
     fi
   done
-  printf '%s\n' "$path"
+  BACKING="$path"
 }
 
 mount_root_of() {
   local path="$1" root
   for root in "${!AGENT_ROOTS[@]}"; do
     if [[ "$path" == "$root" || "$path" == "$root/"* ]]; then
-      printf '%s\n' "$root"
+      MOUNT_ROOT="$root"
       return 0
     fi
   done
   if [[ "$path" == "$SB_DATA_DIR"/* ]]; then
-    printf '%s\n' "$SB_DATA_DIR"
+    MOUNT_ROOT="$SB_DATA_DIR"
     return 0
   fi
   return 1
@@ -112,10 +114,12 @@ prune_stale_placeholders() {
   fi
   while IFS= read -r t; do
     [[ -n "$t" ]] || continue
-    dst="$(declared_dst "$t")"
+    declared_dst "$t"
+    dst="$DST"
     # 不在当前可写根或 /data 下的落点映射不到数据盘，跳过，避免误删 guest 自己的文件
-    mount_root_of "$dst" >/dev/null || continue
-    a="$(backing_of "$dst")"
+    mount_root_of "$dst" || continue
+    backing_of "$dst"
+    a="$BACKING"
     if [[ -e "$a" ]] && is_empty_placeholder "$a"; then
       rm -rf "$a"
     fi
@@ -166,18 +170,23 @@ prepare_declared_layout() {
       echo "[-] 错误: 声明配置缺失：$src（发布目录不完整，重新发布后重试）" >&2
       exit 1
     fi
-    dst="$(declared_dst "$t")"
-    if ! root="$(mount_root_of "$dst")"; then
+    declared_dst "$t"
+    dst="$DST"
+    if ! mount_root_of "$dst"; then
       echo "[-] 错误: 声明配置 $t 不在任何可写根或 .config/ 下（发布清单不一致，重新发布配置后重试：just hm）" >&2
       exit 1
     fi
-    p="$(dirname "$dst")"
+    root="$MOUNT_ROOT"
+    p="${dst%/*}"
+    p="${p:-/}"
     while [[ "$p" != "$root" && "$p" != / ]]; do
       ancestors+=("$p")
-      p="$(dirname "$p")"
+      p="${p%/*}"
+      p="${p:-/}"
     done
     if [[ -d "$src" ]]; then want="目录"; else want="文件"; fi
-    a="$(backing_of "$dst")"
+    backing_of "$dst"
+    a="$BACKING"
     if [[ -e "$a" || -L "$a" ]]; then
       if [[ -L "$a" ]] || { [[ "$want" == "目录" ]] && [[ ! -d "$a" ]]; } || { [[ "$want" == "文件" ]] && [[ -d "$a" ]]; }; then
         resolve_conflict "$a" "$want" "$others"
@@ -188,7 +197,8 @@ prepare_declared_layout() {
 
   while IFS= read -r p; do
     [[ -n "$p" ]] || continue
-    a="$(backing_of "$p")"
+    backing_of "$p"
+    a="$BACKING"
     if [[ -L "$a" ]] || { [[ -e "$a" ]] && [[ ! -d "$a" ]]; }; then
       resolve_conflict "$a" "目录" "$others"
     fi
