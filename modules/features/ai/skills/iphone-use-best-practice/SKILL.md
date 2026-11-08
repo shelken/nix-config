@@ -50,7 +50,7 @@ iphone shot                           # JPEG，路径在输出里；用 Read 工
 ### 3. 执行动作
 
 ```bash
-iphone launch 设置                     # bundle id 或名称都行；iphone apps <关键词> 查名称，不带关键词会列出全部 App
+iphone launch 设置                     # bundle id 或名称都行；iphone apps <关键词> 查名称；不带关键词会拒绝，确实要全部再加 --all
 iphone tap-text 通用                   # 按文字点：精确优先，多个命中时列候选，用 --index N 选
 iphone tap 12                         # 按 ref 点；iphone tap X Y 点坐标
 iphone type --ref 7 "你好"             # 替换输入框内容；--append 保留原内容

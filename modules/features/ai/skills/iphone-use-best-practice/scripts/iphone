@@ -252,6 +252,8 @@ def cmd_launch(a):
 
 
 def cmd_apps(a):
+    if not a.query and not a.all:
+        raise Fail("不带关键词会列出手机上全部 App。用 iphone apps <关键词> 查。确实要全部列出再加 --all")
     return run("phone_apps", {"query": a.query})[0]
 
 
@@ -320,8 +322,9 @@ def main():
     sp.add_argument("app")
     sp = add("open", cmd_launch, "打开 URL，等同 launch <URL>", action=True)
     sp.add_argument("app", metavar="url")
-    sp = add("apps", cmd_apps, "列出已装 App（Pinky 允许范围内）")
+    sp = add("apps", cmd_apps, "按关键词查已装 App（Pinky 允许范围内）；不带关键词要加 --all")
     sp.add_argument("query", nargs="?")
+    sp.add_argument("--all", action="store_true", help="列出全部 App（会暴露手机上装了什么，慢用）")
     sp = add("handoff", cmd_handoff, "请用户接管（解锁、登录、输密码），等他交还")
     sp.add_argument("reason", nargs="+")
     sp.add_argument("--approval-id")

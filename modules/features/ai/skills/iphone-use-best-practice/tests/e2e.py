@@ -77,7 +77,11 @@ def main():
         check("key home 成功", rc == 0, out)
 
         rc, out = iphone("apps")
-        check("apps 列出 App", rc == 0 and "Dinely" in out, out)
+        check("apps 不带关键词被拒绝", rc == 1 and "--all" in out and "Dinely" not in out, out)
+        rc, out = iphone("apps", "dinely")
+        check("apps 带关键词只返回命中项", rc == 0 and "Dinely" in out and "Chatter" not in out, out)
+        rc, out = iphone("apps", "--all")
+        check("apps --all 列出全部", rc == 0 and "Dinely" in out and "Chatter" in out, out)
 
         rc, out = iphone("down", "--summary", "e2e done")
         check("down 释放手机并清掉会话", rc == 0 and not (tmp / "iphone" / "session").exists(), out)
