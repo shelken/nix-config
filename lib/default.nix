@@ -14,6 +14,7 @@ rec {
   nixosSystem = import ./nixosSystem.nix;
   mkTasksLib = import ./tasks.nix;
   mkHomeManagerModule = import ./homeManagerModule.nix;
+  mkHomeConfigurations = import ./homeConfigurations.nix { inherit lib myvars; };
   relativeToRoot = lib.path.append ../.;
 
   # pkgs -> path -> attrs；先用 yj 转成 json 再读入（构建期 IFD）
