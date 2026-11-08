@@ -61,13 +61,6 @@ gc-all:
     @nh clean all -a --keep-one
     @nix store gc
 
-# 暂存未提交文件合并
-[group('git')]
-git-temp:
-    @git stash save 'temp'
-    @git pull --rebase
-    @git stash pop
-
 # 显示历史配置列表
 [group('build')]
 [macos]
@@ -82,7 +75,9 @@ prefetch *args:
 # git pull
 [group('git')]
 pull:
+    @git stash save 'temp'
     @git pull --rebase
+    @git stash pop
 
 # nixos 重建
 [group('build')]
