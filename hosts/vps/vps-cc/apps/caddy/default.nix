@@ -44,7 +44,7 @@ in
   };
 
   virtualisation.oci-containers.containers.caddy = {
-    image = "ghcr.io/shelken/caddy:2.11.7@sha256:2866343d741867d6b40f59f0ca0103ec964ef394fc709167ce031048836789e9";
+    image = "ghcr.io/shelken/caddy:2.11.9@sha256:f555065510267ad5413a5b6b8ee34b1a2abbd4804c3e74a24e6a9c15f58a4dba";
     autoStart = true;
     environment = {
       TZ = "Asia/Shanghai";

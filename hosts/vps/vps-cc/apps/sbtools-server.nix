@@ -18,7 +18,7 @@
   };
 
   virtualisation.oci-containers.containers.sbtools-server = {
-    image = "ghcr.io/shelken/proxy/sbtools-server:v0.8.3@sha256:c0bc2267ea46912d1e3756e983538fa458e7fa9958b84ec24f70a096e90c4d2c";
+    image = "ghcr.io/shelken/proxy/sbtools-server:v0.8.4@sha256:15725539f015270a6ce75230b118fe4f0519be6fbeb6af0338fe3633d68a7ab2";
     autoStart = true;
     environment = {
       TZ = "Asia/Shanghai";
