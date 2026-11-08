@@ -4,12 +4,11 @@
   home-modules ? [ ],
   myvars,
   system,
-  genSpecialArgs,
+  specialArgs,
   ...
 }:
 let
   inherit (inputs) home-manager nix-darwin nixpkgs-darwin;
-  specialArgs = genSpecialArgs nixpkgs-darwin system;
 in
 nix-darwin.lib.darwinSystem {
   inherit system specialArgs;

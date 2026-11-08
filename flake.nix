@@ -22,44 +22,30 @@
   };
 
   outputs =
-    inputs@{
-      self,
-      secrets,
-      flake-parts,
-      ...
-    }:
+    inputs@{ self, ... }:
     let
       inherit (inputs.nixpkgs) lib;
       myvars = import ./vars { inherit lib; };
-      mylib = import ./lib { inherit lib secrets myvars; };
+      mylib = import ./lib {
+        inherit lib myvars;
+        inherit (inputs) secrets;
+      };
 
-      genSpecialArgs =
-        nixpkgsInput: system:
-        let
-          pkgs = import nixpkgsInput {
-            inherit system;
-            config.allowUnfree = true;
-          };
-        in
-        inputs
-        // {
-          # 所有模块统一用 `inputs.<name>` 取 flake 输入，包括 flake = false 的静态资源；
-          # 不把每个带连字符的 input 展平成裸参数，模块参数表保持稳定。
-          inherit inputs;
-
-          # 主输入即 unstable channel；HM 模块沿用 pkgs-unstable 变量名，与 pkgs 同源
-          pkgs-unstable = pkgs;
-
-          inherit mylib myvars system;
-          inherit (myvars) username userfullname useremail;
-        };
+      specialArgs = {
+        inherit
+          inputs
+          self
+          mylib
+          myvars
+          ;
+      };
       args = {
         inherit
           inputs
           lib
           mylib
           myvars
-          genSpecialArgs
+          specialArgs
           ;
       };
       mkHost = cfg: cfg // args;
@@ -183,11 +169,11 @@
         inherit (inputs) nixpkgs deploy-rs;
       };
     in
-    flake-parts.lib.mkFlake { inherit inputs; } {
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } {
       # 同名即同一功能：一个功能的 darwin / homeManager / nixos 部分写在同一文件或同一目录；
       # 路径含 /_ 的文件不自动导入，用于数据或私有片段
       imports = [
-        flake-parts.flakeModules.modules
+        inputs.flake-parts.flakeModules.modules
         (inputs.import-tree [
           ./modules/flake
           ./modules/features

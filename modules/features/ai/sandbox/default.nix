@@ -5,17 +5,17 @@
       lib,
       mylib,
       pkgs,
-      nixpkgs,
+      inputs,
       ...
     }:
     let
       manifest = import ./_manifest.nix { inherit config lib; };
 
       guest = import ./_guest.nix {
+        inherit (inputs) nixpkgs;
         inherit
           pkgs
           lib
-          nixpkgs
           manifest
           ;
       };

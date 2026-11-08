@@ -3,7 +3,7 @@
   config,
   lib,
   modulesPath,
-  secrets,
+  inputs,
   ...
 }:
 #############################################################
@@ -111,7 +111,7 @@
   systemd.tmpfiles.rules = [ "d /data/docker 0755 root root -" ];
 
   sops = {
-    defaultSopsFile = secrets + "/sops/secrets/hosts/vps-cc.yaml";
+    defaultSopsFile = inputs.secrets + "/sops/secrets/hosts/vps-cc.yaml";
     secrets = {
       shelken-password-hash.neededForUsers = true;
       root-password-hash.neededForUsers = true;

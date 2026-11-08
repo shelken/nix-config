@@ -1,6 +1,6 @@
 {
   lib,
-  nixpkgs-darwin,
+  inputs,
   ...
 }:
 {
@@ -61,11 +61,11 @@
         };
         to = {
           type = "path";
-          path = toString nixpkgs-darwin;
+          path = toString inputs.nixpkgs-darwin;
         }
         // lib.filterAttrs (
           n: _: n == "lastModified" || n == "rev" || n == "revCount" || n == "narHash"
-        ) nixpkgs-darwin;
+        ) inputs.nixpkgs-darwin;
         exact = true;
       }
     ];

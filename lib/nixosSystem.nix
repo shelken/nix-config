@@ -1,7 +1,7 @@
 {
   inputs,
   system,
-  genSpecialArgs,
+  specialArgs,
   nixos-modules,
   home-modules ? [ ],
   myvars,
@@ -9,7 +9,6 @@
 }:
 let
   inherit (inputs) nixpkgs home-manager;
-  specialArgs = genSpecialArgs nixpkgs system;
 in
 nixpkgs.lib.nixosSystem {
   inherit system specialArgs;
