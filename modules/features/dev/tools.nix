@@ -54,7 +54,7 @@
                   type = lib.types.attrsOf lib.types.str;
                   default = { };
                   description = ''
-                    宿主与沙箱都要的环境变量：宿主合入 home.sessionVariables，沙箱写进 guest-env.sh。
+                    宿主与沙箱都要的环境变量：宿主在每次交互式 zsh 启动时 export，沙箱写进 guest-env.sh。
                     沙箱不继承宿主 shell 的环境，工具或插件读的变量只写在宿主就进不了沙箱。
                     两端都按 shell 双引号展开，值写纯字符串即可；只沙箱要的变量用 sandboxEnv。
                   '';
@@ -180,7 +180,10 @@
 
           home.file = lib.mkMerge (lib.mapAttrsToList (_: tool: lib.mkIf (tool.files != { }) tool.files) cfg);
 
-          home.sessionVariables = lib.mkMerge (lib.mapAttrsToList (_: tool: tool.env) cfg);
+          # 每次启动交互式 shell 都导出，避免继承 HM 的已加载标记后跳过变量更新。
+          programs.zsh.initContent = lib.concatMapStrings (
+            tool: lib.concatStrings (lib.mapAttrsToList (name: value: "export ${name}=\"${value}\"\n") tool.env)
+          ) (builtins.attrValues cfg);
         }
       ];
     };
