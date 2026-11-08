@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# 下载并缓存 nixos-anywhere 的 kexec 安装环境；stdout 只输出缓存文件路径，
+# 供 KEXEC=$(just kexec-cache x86_64 nixos-26.05) 使用，其余信息走 stderr。
+# 用法: kexec-cache <arch> [release]；release 留空则取 nixos-anywhere 自带的默认版本
+set -euo pipefail
+arch="${1:?用法: kexec-cache <arch> [release]}"
+release="${2:-}"
+if [[ -z "$release" ]]; then
+    pkg=$(nix build --no-link --print-out-paths --inputs-from . nixpkgs#nixos-anywhere)
+    tmpl=$(grep -rhoa 'https://github.com/nix-community/nixos-images/releases/download/[^"]*' "$pkg" | sort -u | head -1 || true)
+    [[ -n "$tmpl" ]] || { echo "在 $pkg 里没找到默认 kexec 地址，请手动指定 release" >&2; exit 1; }
+    release=$(sed -E 's#.*/releases/download/([^/]+)/.*#\1#' <<<"$tmpl")
+fi
+url="https://github.com/nix-community/nixos-images/releases/download/${release}/nixos-kexec-installer-noninteractive-${arch}-linux.tar.gz"
+dir="${XDG_CACHE_HOME:-$HOME/.cache}/nixos-anywhere"
+file="$dir/${release}-${arch}-linux.tar.gz"
+mkdir -p "$dir"
+if [[ ! -s "$file" ]]; then
+    echo "下载 $url" >&2
+    curl -fL --retry 3 -o "$file.part" "$url"
+    mv "$file.part" "$file"
+fi
+if [[ ! -s "$file.version" ]]; then
+    { tar -tzf "$file" 2>/dev/null || true; } | grep -m1 -oE 'nixos-system-[^/]+' > "$file.version" || true
+fi
+echo "release: $release  安装环境: $(cat "$file.version")" >&2
+echo "$file"

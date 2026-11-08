@@ -83,30 +83,7 @@ lima-vps-port name="nixos-anywhere-vps":
 
 [group('lima')]
 kexec-cache arch="aarch64" release="":
-  #!/usr/bin/env bash
-  set -euo pipefail
-  arch="{{ arch }}"
-  release="{{ release }}"
-  if [[ -z "$release" ]]; then
-      pkg=$(nix build --no-link --print-out-paths --inputs-from . nixpkgs#nixos-anywhere)
-      tmpl=$(grep -rhoa 'https://github.com/nix-community/nixos-images/releases/download/[^"]*' "$pkg" | sort -u | head -1 || true)
-      [[ -n "$tmpl" ]] || { echo "在 $pkg 里没找到默认 kexec 地址，请手动指定 release" >&2; exit 1; }
-      release=$(sed -E 's#.*/releases/download/([^/]+)/.*#\1#' <<<"$tmpl")
-  fi
-  url="https://github.com/nix-community/nixos-images/releases/download/${release}/nixos-kexec-installer-noninteractive-${arch}-linux.tar.gz"
-  dir="${XDG_CACHE_HOME:-$HOME/.cache}/nixos-anywhere"
-  file="$dir/${release}-${arch}-linux.tar.gz"
-  mkdir -p "$dir"
-  if [[ ! -s "$file" ]]; then
-      echo "下载 $url" >&2
-      curl -fL --retry 3 -o "$file.part" "$url"
-      mv "$file.part" "$file"
-  fi
-  if [[ ! -s "$file.version" ]]; then
-      { tar -tzf "$file" 2>/dev/null || true; } | grep -m1 -oE 'nixos-system-[^/]+' > "$file.version" || true
-  fi
-  echo "release: $release  安装环境: $(cat "$file.version")" >&2
-  echo "$file"
+    @{{ justfile_directory() }}/utils/script/just/kexec-cache "$@"
 
 # 格式化
 [group('tools')]
@@ -119,22 +96,7 @@ fmt:
 [group('tools')]
 [macos]
 builder-reset:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    # 与 modules/features/darwin/linux-builder/darwin.nix 里的状态目录保持一致
-    dir="$HOME/.local/state/linux-builder"
-    disk="$dir/nixos.qcow2"
-    if [[ ! -e "$disk" ]]; then
-        echo "没有 $disk，已经是干净的" >&2
-        exit 0
-    fi
-    if pids="$(pgrep -f "$dir/vzvm.json")"; then
-        echo "linux-builder 正在运行（PID $pids）：运行 linux-builder stop 停机（原终端已关闭也能停），再重跑 just builder-reset" >&2
-        exit 1
-    fi
-    echo "当前磁盘实占：$(du -h "$disk" | cut -f1)" >&2
-    rm -f "$disk"
-    echo "已删除 $disk；下次运行 linux-builder 会重建空磁盘，Nix store 需重新填充" >&2
+    @{{ justfile_directory() }}/utils/script/just/builder-reset
 
 # 清理无用的包
 [group('gc')]
@@ -154,13 +116,7 @@ gc-all:
 [group('build')]
 [linux]
 gen-image host format:
-    #!/usr/bin/env bash
-    set -e
-    nom build .#nixosConfigurations.{{ host }}.config.system.build.images.{{ format }}
-    d=$(readlink -f result)
-    suffix="${d##*.}"
-    ls -hl $d
-    rsync -avPL --checksum result pve:/var/lib/vz/template/iso/{{ host }}-latest.$suffix
+    @{{ justfile_directory() }}/utils/script/just/gen-image "$@"
 
 # 暂存未提交文件合并
 [group('git')]
@@ -282,25 +238,7 @@ hm-dev *args:
 [group('build')]
 [macos]
 hm-timing *args:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    trace="$(mktemp)"
-    hook="$(mktemp)"
-    trap 'rm -f "$trace" "$hook"' EXIT
-    cat > "$hook" <<'BASH'
-    case "$0" in */activate)
-      unset BASH_ENV
-      trap 'case "$BASH_COMMAND" in
-        "_iNote \"Activating %s\" "*) printf "HM_TIMING %s %s\n" "$EPOCHREALTIME" "${BASH_COMMAND##* }" >&2 ;;
-        # shortcut: 末项结束依赖当前 HM 的 GC-root 尾声，升级 HM 后需核对。
-        run\ --silence\ nix-store\ --realise*currentGenGcPath*) printf "HM_TIMING %s END\n" "$EPOCHREALTIME" >&2 ;;
-      esac' DEBUG
-    esac
-    BASH
-    status=0
-    env BASH_ENV="$hook" just hm {{ args }} 2>&1 | tee "$trace" | awk '$1 != "HM_TIMING" { print; fflush() }' || status=$?
-    awk '$1 == "HM_TIMING" { if(p) printf "%8.1f ms  %s\n",($2-p)*1000,n; p=$2; n=$3; gsub(/"/,"",n) }' "$trace" | sort -k1 -rn
-    exit "$status"
+    @{{ justfile_directory() }}/utils/script/just/hm-timing "$@"
 
 # 更新整个输入
 [group('flake')]
