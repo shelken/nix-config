@@ -12,6 +12,12 @@
     ];
   };
 
+  flake.modules.homeManager.herdr-app =
+    { config, mylib, ... }:
+    {
+      xdg.configFile."herdr-app/settings.json" = mylib.mkConfigFile config ./herdr-app/settings.json;
+    };
+
   flake.modules.homeManager.herdr =
     {
       config,
