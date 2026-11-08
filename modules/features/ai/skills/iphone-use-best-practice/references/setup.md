@@ -1,224 +1,67 @@
 # 首次配置与排障
 
+`iphone` 依赖本机的 Pinky。下面的步骤都由用户本人完成；Agent 不代做 Apple ID 登录、密码、验证码。
+
 ## 首次配置
 
-`iphone up` 按本机条件自动选路，把官方 Runner 装上手机。用户不选路径，也没有参数可选（依据见 [设计 README](../README.md)）。先做公共前提，再看自己属于哪条路径。
+1. 安装 Pinky 并打开（macOS 12 及以上）。`iphone` 在 `PINKY_BIN`、PATH 里的 `pinkyctl`、`/Applications/Pinky.app`、`~/Applications/Pinky.app` 里按序找它
+2. iPhone 用 USB 连接、解锁、信任此电脑。Pinky 的 Add phone 页会检查开发者模式与开发者磁盘镜像，缺什么它会说
+3. 在 Pinky 的 设置 › 智能体 › 远程智能体（Settings › Agents › Remote agents）打开开关「允许智能体通过 HTTP 连接」，`iphone` 才能连上它的 HTTP 端点（默认 `http://127.0.0.1:7465/mcp`）
+4. `iphone status` 确认手机在列表里、HTTP 可达，再 `iphone up`。首次连接要用户在 Pinky 里批准这个远程 agent，并选范围
 
-### 公共前提
+### 限定可用的 App（推荐）
 
-- iPhone 用 USB 连接、解锁、信任此电脑，由用户本人完成
-- go-ios（命令 `ios`）在 PATH 里，由 nix 提供，声明在 `modules/features/ai/host-commands/iphone.nix`。`iphone` 不会自己装。Xcode 路径本身不调用它
-- 首次配置，只有 `--bundle` 必填（它无法探测）；手机的 UDID 不用写
+首次批准 `iphone (remote)` 时默认是「除已屏蔽应用外的所有应用」。想限制，在 Pinky 的 设置 › 智能体 里把它改成「仅限我选择的应用」并填白名单，改完对正在运行的会话立即生效。
 
-```bash
-iphone init --bundle <全局唯一的 bundle id，如 com.example.wda>
-```
+- 填 **bundle id**（如 `com.apple.Preferences`），不要填显示名：显示名随手机语言变化，英文界面的「设置」叫 `Settings`，对不上
+- 查 bundle id，不连手机：`curl -s "https://itunes.apple.com/search?term=关键词&entity=software&country=cn&limit=5"`，看结果里的 `bundleId`；只覆盖 App Store 上架的 App
+- 范围只限制**打开和操作**，不限制**读屏**：在主屏点图标仍能进入范围外的 App 并读到内容，之后 `tap`、`scroll` 才会被拒。要让某个 App 完全不可见，把它加进 Pinky 设置 › 安全 的屏蔽列表
 
-首次配置时只接一台手机就自动取它的 UDID，接了多台用 `--udid` 指定。**换手机不用重新运行 `init`**：直接 `iphone up`，配置里的手机不在 USB 上且 USB 上恰好一台时自动换过去，并清掉旧的签名产物；USB 上有多台时报错，用 `iphone up --udid <UDID>` 指定。只有换 bundle id 才需要再运行 `init`（先 `iphone down`）。
+### iOS 27 及以上
 
-### 我属于哪条路径
+手机上不用装任何东西。Pinky 用 CoreDevice 的屏幕流与触控。首次要 Xcode 在手机连着时打开一次，让开发者磁盘镜像挂上，之后它会一直在。
 
-```bash
-iphone status
-```
+### iOS 17.4 到 26
 
-看输出里的「Runner」一行。
+没有 helper 时只能读屏和开 App，`tap`、`type`、`scroll`、`key` 返回 `unsupported`。要装 WebDriverAgent helper，由用户在有 Xcode 的 Mac 上做一次：
 
-手机上已经装了 Runner 时，它说的是**已装 Runner 的来源**（按 bundle id 判断），不是重装会走哪条路，与本机有没有装 plumesign 等工具无关：
+1. `git clone https://github.com/appium/WebDriverAgent`
+2. 打开 `WebDriverAgent.xcodeproj`，在 WebDriverAgentRunner target 的 Signing & Capabilities 里选 Team（免费 Apple ID 可以）。若提示 bundle id 被占用，改前缀（`com.<你>.WebDriverAgentRunner`），名字里保留 `WebDriverAgentRunner`，Pinky 靠它找到 helper
+3. 选这台 iPhone 作目的地，Product › Test 跑一次；手机若提示信任开发者，到「设置 › 通用 › VPN 与设备管理」信任。Xcode 日志出现 `ServerURLHere` 后停止测试
 
-| `Runner:` 的值 | 含义 |
-|---|---|
-| `已装，plumesign 签名` | bundle id 以 `.runner` 结尾，证书剩余天数读本机的签名副本 |
-| `已装，Xcode 签名` | bundle id 以 `.xctrunner` 结尾 |
-| `已装，SideStore（未验证） 签名` | 带官方前缀的其他 id，证书由 SideStore 管理 |
+之后 Pinky 每次打开手机都会自己启动 helper。免费 Apple ID 的签名 7 天过期，过期后重复第 3 步。更多细节见 Pinky 仓库的 `docs/notes/ios.md`。
 
-没装 Runner 时，它说的是 `iphone up` **会走**哪条路。自上而下探测，前面的满足就不看后面的：
+iOS 17.3 及以下不支持。
 
-| `iphone up 会走:` 的值 | 含义 | 需要什么 |
-|---|---|---|
-| `Xcode` | 本机 Xcode 的 `devicectl` 认得这台手机，且已配置 Team | 见「Xcode 路径」 |
-| `plumesign` | Xcode 不行，plumesign 与 rcodesign 可用且 plumesign 已登录 | 见「plumesign 路径」 |
-| `SideStore（未验证）` | 前两条都不行，手机上有 SideStore | 见「SideStore 路径」 |
-| `没有可用的安装路径` | 三条都不满足 | 运行 `iphone up`，报错会列出每条路径缺什么 |
-
-手机没连上时显示 `路径: 接上 USB 才能探测`，接线并解锁。
-
-`iphone up` 开头也会打印「路径」一行，另有两个值：`已就绪`（WDA 已在运行）和 `已装 Runner`（手机上已有 Runner，直接启动）。这两种不需要再装。
-
-装好之后的**启动方式**由手机系统决定，用户不选：iOS 17 及以上用 `xcodebuild test-without-building`，旧系统用 go-ios `runwda`。iOS 17 及以上要先在本机有同一份签名产物（`artifacts/signed/`，`up` 会自己准备），旧系统直接启动手机上那份。
-
-### Xcode 路径
-
-适用：本机有完整 Xcode，它的 `devicectl` 认得这台手机，且已配置 Team。系统太旧的手机通常不认得。
-
-这条路径的前提沿用改造前的写法，改造后没有在真机重新验证（未验证）。
-
-用户本人完成：
-
-- 完整 Xcode，已同意许可：`sudo xcodebuild -license accept`、`sudo xcodebuild -runFirstLaunch`
-- Xcode → Settings → Accounts 已登录 Apple ID
-- iPhone 开启开发者模式
-
-```bash
-iphone init --team <TeamID> --bundle <全局唯一的 bundle id>
-iphone up
-```
-
-- `--team`：Xcode 账号里个人团队的 Team ID，取法：`security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject` 的 `OU=`。没配 Team 时 `iphone up` 不选这条路径
-- 首次 `up` 会拉取固定版本的 WDA 源码并用 `xcodebuild` 构建，约几分钟
-- 首次 `up` 后，手机上要到「设置 → 通用 → VPN 与设备管理 → 开发者 App」信任该证书，再重新 `iphone up`
-- Runner 的 bundle id 是 `<bundle id>.xctrunner`
-
-### plumesign 路径
-
-适用：Xcode 路径不可用，例如系统太旧、Xcode 不认这台手机、Xcode 没有登录 Apple ID。在 iOS 15.6.1 的 iPhone 6s 与 iOS 27.2 的 iPhone 14 上验证过。
-
-需要：
-
-- plumesign（mise 固定 2.7.2）与 rcodesign（nix），都声明在 `modules/features/ai/host-commands/iphone.nix`。缺失时 `iphone` 报错并说明安装方式，不会自己装
-- 一个不与其他侧载工具共用的 Apple ID
-- 手机在这个 Apple ID 的团队里注册过；`plumesign account devices` 能看到它。没注册时先 `plumesign account register-device --udid <UDID> --name <设备名>`，再 `iphone renew`
-- 手机上免费描述文件的名额有空位（同时最多 3 个 App）。满了 `up` 会报出该卸哪个，不会签完才发现装不上
-
-为什么要独立的 Apple ID：免费账号的开发证书有上限，实测观测到 2 个。plumesign 申请新证书超限时不询问，直接吊销现有证书，实测吊销过同账号 SideStore 的证书。不同签名工具共用一个账号会互相吊销对方的证书
-
-登录由用户本人在终端完成，Agent 不代做：
-
-```bash
-plumesign account login -u <邮箱>
-chmod -R go-rwx ~/.config/PlumeImpactor
-```
-
-- 不要加 `-p`，密码和验证码在终端里输入
-- plumesign 把账号令牌明文存在 `~/.config/PlumeImpactor`，所以登录后要收紧权限
-- 登录经第三方 anisette 服务器，范围与风险见 [设计 README](../README.md)「后果」
-
-然后：
-
-```bash
-iphone up
-```
-
-第一次约 2 分钟，依次做这些事：
-
-- 下载固定版本的官方 Runner 并校验 sha256，一次性
-- 查免费描述文件的名额，满额就停下来报出该卸哪个
-- 第一遍 plumesign 签主 app（不带设备），rcodesign 补签 `.xctest`，第二遍 plumesign 把整包封好。补签的原因见 [设计 README](../README.md)「后果」
-- 安装：`devicectl` 认得这台设备时用 `xcrun devicectl device install app`，认不得（旧系统）时第二遍签名带上 `--register-and-install` 由 plumesign 经 AFC 安装
-- 启动 Runner 并等 WDA 就绪：iOS 17 及以上用 `xcodebuild test-without-building`，旧系统用 go-ios `runwda`（先挂载开发者磁盘镜像，首次较慢）
-- 把自动锁定改为「永不」
-
-另外：
-
-- 两遍签名复用同一个证书，账号上的证书数不变（实测）
-- 最后一步：已装中转快捷指令时，iOS 15 经 Safari 运行它，约 15 秒；没装时 iOS 15 的界面点击用不了，只警告、不失败。都可用 `iphone up --no-keep-awake` 跳过，见「已知限制」
-- 之后 `up` 发现手机已装 Runner 且证书未过期，直接启动，只要几秒
-- 证书 7 天过期，`up` 自动重签；剩余天数看 `iphone status` 的「证书」一行
-- Runner 的 bundle id 是 `<bundle id>.runner`，与 Xcode 路径的后缀不同
-
-### SideStore 路径（未验证）
-
-适用：Xcode 与 plumesign 都不可用，手机上装了 SideStore。这条路径从未在设备上跑过。
-
-`iphone up` 会下载并校验官方 Runner，打成 IPA，推到手机上 SideStore 的 Documents，然后结束，不启动 WDA。
-
-用户需要手动做一步：在手机上打开 SideStore，添加这个 IPA 并安装。之后签名与刷新由 SideStore 管理，`iphone` 不记录过期时间。装好后运行 `iphone status` 确认 WDA 是否可用。
-
-风险：网上有报告称 SideStore 重签会移除导入 app 的 `.xctest`，若属实装出的 Runner 起不来。出处与现状见 [设计 README](../README.md)「后果」。
-
-### 中转快捷指令（每台手机装一次）
-
-WDA 直接打开 `prefs:` 会被系统拒绝，只有「快捷指令」里的「打开 URL」能打开。`iphone open <url>` 先直接打开，被拒（115）时转给中转快捷指令；`autolock`、`up`、`down` 靠它一步直达自动锁定页（约 6 秒）。**iOS 16.4 以下 WDA 的 `/url` 不可用**：它改用 Siri 语音识别说「Open {url}」，会唤醒 Siri，不会跳转，也不会运行快捷指令（iOS 15.6.1 实测，带 `bundleId` 的分支同样不支持）。CLI 读 `/status` 的系统版本，这时改在 Safari 地址栏输入链接，再点确认框「在“快捷指令”中打开此页面？」的放行按钮（做法来自 appium/appium#14996；iOS 15.6.1 实测能运行中转快捷指令，`autolock` 约 15 秒）。确认框的按钮名是本地化文字、没有语言无关的标识，所以按结构取：框里只有两个按钮，树顺序取消在前、放行在后，点最后一个。只在英文界面的 iOS 15.6.1 上验证过，从右到左的语言未验证。
-
-这是首次配置的一步，由用户做一次；之后 CLI **假定已装**，不逐次检查。没装或没跑通时 `autolock` 回退界面点击（约 20 秒，较不稳）并提示一次。`iphone init` 结束时会打印这两条命令：
-
-| 手机与 Mac | 命令 |
-|---|---|
-| 同一 iCloud | `iphone setup-shortcut`：Mac 导入，经 iCloud 同步到手机，并在手机上验证 |
-| 不同 iCloud | `iphone shortcut-link` 展示 iCloud 链接；用户在手机 Safari 打开并点「添加快捷指令」；再 `iphone setup-shortcut` 验证 |
-
-- `setup-shortcut` 在 Mac 上生成并签名只含「打开 URL」（输入取「快捷指令输入」）的快捷指令，后台导入并用 `computer-use` 点掉确认框，再在**当前手机**上用 `prefs:root=BATTERY_USAGE` 实测，通过后写入 `open_url_shortcut`。Mac 上已有同名快捷指令时不重复导入，只验证。需要 macOS 的 `shortcuts` 与 `computer-use`；WDA 未运行则只导入不实测。
-- `shortcut-link` 展示脚本常量 `RELAY_URL`（iCloud 分享链接，指向同一个只含一个「打开 URL」动作的快捷指令）。换了快捷指令要重新分享时，在 Mac「快捷指令」里点「共享 → 拷贝 iCloud 链接」，改这个常量。
-- 手机上首次运行可能弹授权提示。命令会把弹窗文字打印出来并最多等 60 秒，需要用户本人在手机上批准。
-
-## 运行时目录
-
-根目录是 `~/.local/share/iphone-use/`，`IPHONE_HOME` 可改。常量定义在 `scripts/iphone` 开头。
+## 运行时
 
 | 位置 | 内容 |
 |---|---|
-| `config.json` | 配置：UDID、bundle id、Team ID |
-| `cli/up.log` | 启动 WDA 的日志，启动失败先看它 |
-| `cli/wda.log` | go-ios `runwda` 的日志输出 |
-| `cli/tools.log` | plumesign、rcodesign、go-ios、devicectl 的完整输出，plumesign 路径每次安装前清空 |
-| `cli/build.log` | Xcode 路径的构建日志 |
-| `cli/` 其他 | `wda.pid`、`last.json`（最近一次快照）、`session`、`shots/`（截图） |
-| `artifacts/wda-<版本>/` | 校验后解包的官方 Runner，不原地签名 |
-| `artifacts/signed/` | plumesign 路径签好的 Runner 副本，也是 `xcodebuild` 启动的 `__TESTROOT__`：目录根有生成的 `WebDriverAgentRunner.xctestrun`，app 在它旁边的 `Debug-iphoneos/`。证书过期时间读它 |
-| `artifacts/images/` | go-ios 的开发者磁盘镜像 |
-| `artifacts/` 下的 `.ipa` | SideStore 路径推给手机的 IPA |
-| `xcode/` | 只有 Xcode 路径用：`derived_data/` 构建产物，`WebDriverAgent/` 固定版本源码 |
+| `~/.local/share/iphone-use/session` | MCP 会话 ID，`up` 创建、`down` 删除 |
+| `~/.local/share/iphone-use/shots/` | `iphone shot` 的最近 20 张截图 |
 
-plumesign 的账号令牌与私钥在 `~/.config/PlumeImpactor/`，不在上面的目录里。
+`IPHONE_HOME` 改根目录；`IPHONE_PINKY_URL` 改端点；`PINKY_BIN`、`PINKY_TOKEN` 分别指定 Pinky 可执行文件与 token。
 
 ## 常见报错
 
-表里写的是报错文案的开头部分，完整文案以命令输出为准。
-
 | 现象 | 原因与处理 |
 |---|---|
-| `尚未配置` | 先做首次配置的 `iphone init --bundle ...` |
-| `iPhone 没有通过 USB 连接`、`没有 USB 设备` | 接数据线、解锁、信任此电脑 |
-| `配置的手机不在 USB 上，而 USB 上有多台` | `iphone up --udid <UDID>` 指定其一，配置会随之更新 |
-| `WDA 还在运行。先 iphone down` | 只在 `iphone init` 时出现（换 bundle id）：先 `iphone down` 再 `iphone init`。换手机用 `iphone up`，不会出现 |
-| `没有可用的安装路径` | 三条路径都不满足。按报错里 Xcode、plumesign、SideStore 各一行补齐其一，见「首次配置」 |
-| `手机系统 ... 低于下限` | 官方 Runner 装不上，先升级手机系统 |
-| `缺 go-ios`、`缺 rcodesign`、`缺 plumesign`、`缺 xcodebuild` | 按报错里的安装方式装。go-ios、rcodesign 与 plumesign（mise 固定版本）声明在 `modules/features/ai/host-commands/iphone.nix`，Xcode 由用户自己装完整版，`iphone` 不会自己装 |
-| `plumesign 没登录` | 用户本人登录，命令见「plumesign 路径」 |
-| `手机上的免费描述文件 App 已满 3 个` | 免费描述文件在一台手机上同时最多装 3 个 App，跨团队计数。按报错里的卸载命令先卸掉一个，优先卸旧的 Runner，再 `iphone up`。`iphone status` 的 `Runner:` 一行能看出手机上那份 Runner 是哪条路径签的 |
-| `devicectl 装不上` | 报错里给出 iOS 的原始回复。若原文含 `maximum number of installed apps using a free developer profile` 就是名额满了，按上面一行处理；否则看报错末尾的注册提示与 `cli/tools.log` |
-| `设备没在 plumesign 的团队里注册时` | 你本人运行 `plumesign account register-device --udid <UDID> --name <设备名>`，再 `iphone renew` |
-| `同账号上其他侧载工具的证书已被吊销` | 证书数超过账号上限，plumesign 吊销了别的工具的证书。换一个不与其他侧载工具共用的 Apple ID，不要反复重试 |
-| `anisette 服务器不可用` | plumesign 经第三方服务器登录。检查网络，稍后重试 |
-| `plumesign 失败`、`rcodesign 失败`、`ios 失败` | 报错末尾给出 `cli/tools.log`，看完整输出。每次调用 plumesign 都可能向 Apple 申请证书，不要循环重试 |
-| `没能从主程序取到签名证书`、`找不到 plumesign 的私钥` | 第一遍 plumesign 没留下证书或私钥。看 `cli/tools.log` 里它的输出，不要反复重试 |
-| `下载 Runner 失败` | 检查网络后重试 |
-| `Runner 的 sha256 不符，已拒绝解包` | 下载内容与固定的哈希不符。检查网络与代理后重试，不要手动放行。哈希写在脚本开头的常量里 |
-| `手机锁屏，等待用户解锁`、`手机锁屏，等待用户解锁（xcodebuild 会继续等）`、`手机锁屏，请用户本人解锁`、`手机处于锁屏` | 用户本人解锁。前两条是启动时的提示，`xcodebuild` 与 `runwda` 都停在那里等，在 `--timeout`（默认 120 秒）内解锁就自己继续，不用重跑；其他命令解锁后重新运行 |
-| `Runner 启动后立刻退出，多半是 .xctest 没签好` | `iphone renew` 重新签名 |
-| `已装的 Runner 没起来`、`已装的 Runner 证书已过期，需要重新签名` | `up` 会继续往下探测，重新签名并安装，不用处理 |
-| `已装的 Runner（...）在本机没有对应的产物` | iOS 17 及以上要用本机的签名产物写 xctestrun。`up` 继续往下走一轮签名安装即可 |
-| `WDA 还没就绪。手机若锁屏请解锁` | 启动超过 20 秒仍未就绪时的提示。解锁手机，`up` 继续等 |
-| `120s 内 WDA 没就绪`（秒数随 `--timeout`） | 看 `cli/up.log` 与 `cli/wda.log` |
-| `WDA 未运行` | `iphone up` |
-| `WDA 在运行，但不是本 CLI 启动的` | 别的工具启动了它；先停掉那个工具 |
-| `快照已过期` | 前台 App 变了；重新 `iphone snapshot` |
-| `Xcode 路径需要 Team ID` | Xcode 路径：`iphone init --team <TeamID>` |
-| `手机没信任开发者证书` | Xcode 路径：用户在手机上信任，再 `iphone up` |
-| `Xcode 的 Apple ID 登录失效` | Xcode 路径：只能用户打开 Xcode → Settings → Accounts 重新登录一次；命令行无法登录 |
-| `签名证书或描述文件缺失` | Xcode 路径：`iphone renew`；仍失败看 `cli/build.log` |
-| `构建失败`、`xcodebuild 测试失败` | Xcode 路径：看 `cli/build.log`、`cli/up.log` |
+| `找不到 Pinky` | 安装 Pinky，或设 `PINKY_BIN` |
+| `连不上 Pinky 的 HTTP 端点` | 打开 Pinky，设置 › 智能体 › 远程智能体（Settings › Agents › Remote agents） 开启 |
+| `Pinky 拒绝了 token` | token 被重置；去掉过期的 `PINKY_TOKEN` 环境变量 |
+| `没有会话。先运行 iphone up` | 还没 `up`，或 `down` 之后 |
+| `会话已过期` | 1 小时没请求。`iphone up` |
+| `No phone is connected in this session` | 租约空闲 10 分钟已结束。`iphone up` |
+| `approval_pending` | 用户还在 Pinky 里决定。用 `--approval-id` 原样重发 |
+| `lease_held` | 别的 agent 在用这台手机，结果里写了是谁 |
+| `device_offline` | 手机没连上。重启后的 iPhone 要用户解锁一次；租约在断线 60 秒内保留 |
+| `device_locked` | `iphone handoff "请解锁手机"` |
+| `unsupported` 且提到 helper | iOS 27 以下没装 helper，见上 |
+| `blocked_by_policy` 的 `credentials` | 密码和验证码字段只能用户本人输入，用 `handoff` |
 
 ## 已知限制
 
-- 免费账号证书 7 天过期。过期后 `iphone up` 自动重签并重装（SideStore 路径除外，由 SideStore 管理）
-- 免费账号在一台手机上同时最多装 3 个开发 App，跨团队计数，按「团队 + bundle id」在设备上算。同一份 Runner 覆盖安装不占新名额；装新的 Runner 前先卸旧的，`up` 会在装之前查一次名额
-- 免费账号在团队里注册的设备有到期时间，`plumesign account devices` 能看到（实测注册当天显示 7 天后到期）；到期后要重新注册
-- plumesign 路径申请新证书超过账号上限时，不询问直接吊销现有证书；实测观测到的免费账号上限是 2。要用不与其他侧载工具共用的 Apple ID
-- plumesign 路径在 iOS 15.6.1 与 iOS 27.2 上验证。iOS 17 及以上的启动改用 `xcodebuild test-without-building`，go-ios 的 tunnel 没有采用，见 [设计 README](../README.md)；iOS 15 的旧设备仍走 plumesign 加 go-ios，这条路径在本次改动后没有回归验证
-- Xcode 路径在改造后没有在真机重新验证，SideStore 路径从未在设备上跑过
-- iOS 15.6.1 的设置页没有 `com.apple.settings.*` 标识，行的 `name` 是本地化文字（「3 minutes」「Never」），所以按标识找行的界面点击回退用不了；自动锁定页的选项行因此在名字对不上时按固定的 7 行顺序取（30 秒、1–5 分钟、永不）。装了中转快捷指令后 `autolock` 在 iOS 15.6.1 上实测可用（经 Safari，3 分钟与永不互相切换，各约 15 秒）；没装时报「这台手机的设置页没有稳定标识」，`up` 只警告不失败。WDA 直接打开 `prefs:` 在 iOS 15.6.1 上请求返回成功，但设置不会打开（实为 Siri 回退）。iOS 16.0–16.3 未验证。`iphone up --no-keep-awake` 可以跳过
-- iOS 16.4 以下经 Safari 运行中转快捷指令时（iOS 15.6.1 实测）：键盘输入偶尔多出字符（见过 `namUe`），封装输完会读回地址栏核对，不一致就清空并放慢重输；点地址栏中心会命中「隐私报告」弹层，所以点输入框右端；Safari 里残留的提示框或编辑态会让后面的输入落空，每次先清掉。键盘事件在没有输入框获得焦点时会让 WDA 卡死，只能 `iphone up --restart` 恢复，所以封装发键盘输入前一定先确认输入框已存在。设置 App 处于「后台挂起」时 `terminate` 会卡满 60 秒，这类旧系统上 `autolock` 不再终止它
-- `launch` 只认 bundle id。`xcrun devicectl device info apps` 实测只列出 5 个开发者签名的 App，不含 App Store 的 App，所以 CLI 不提供按名称启动。
-- 自绘界面、部分游戏的 AX 树为空，用 `shot` 加坐标点击。
-- WDA 直接打开 `prefs:` / `settings-navigation:` 会被系统拒绝（iOS 27.0.1，`LSApplicationWorkspaceErrorDomain 115`）；`App-prefs:` 带页面路径会落到「App」页。但快捷指令的「打开 URL」动作能打开 `prefs:root=DISPLAY&path=AUTOLOCK`，WDA 又能打开 `shortcuts://run-shortcut?name=…`，所以经快捷指令可一步直达任意设置页。
-- 手机界面文字随系统语言变化，所以 `find`、`wait` 的关键词要用当前语言（英文系统用 `General`，不是 `通用`）。CLI 内部（`autolock`、`setup-shortcut`）只按不随语言变化的 `name` 标识（如 `com.apple.settings.displayAndBrightness`、`AUTOLOCK`、秒数）匹配，唯一例外是选中对勾的 `label == "checkmark"`（SF Symbol 名）。`setup-shortcut` 里点掉 Mac 导入确认框的 `confirm_mac_import` 按 Mac 的中文界面文字（「快捷指令」「添加快捷指令」）匹配，Mac 系统换语言会失效，此时手动点「添加快捷指令」。
-- plumesign 的账号令牌明文存在 `~/.config/PlumeImpactor`，该目录要保持仅属主可访问
-
-## 界面点击路径的坑
-
-- 设置 App 重开会恢复上次的滚动位置，快照里的坐标是列表还在动时的；`_poll_node` 要求坐标连续两次一致才点。
-- 目标行贴着屏幕底边时，点击中心落进底部手势区，点击被吞（iPhone 14 上「显示与亮度」在 y=807/844 时必现）；`_find_scrolling` 要求节点完整落在视口 8%~90% 内才点。
-- 找不到时先向下滚，到头再掉头向上。
-- AX 树看不出遮挡：被浮层盖住的节点照样在树里。实测英文系统的设置根页底部有悬浮搜索栏，盖住最后一行「General」，`tap-text General` 点中心会点进搜索栏，页面进入搜索态（设置 App 重开还会恢复搜索态）。先 `scroll down` 把目标滚出遮挡区再点，或用 `tap-text close` 退出搜索态；动作后看差分，出现键盘或搜索结果就是点偏了。
-- `tap-text` 同样要求目标坐标连续两次一致才点，位置一直在变（页面还在滚动、动画）就报错，不会乱点。
+- iPhone 通过 Wi-Fi 连接时 Pinky 会关掉它（截图 3 到 5 秒，视频丢帧），必须 USB
+- iPhone 的屏幕流开着时，部分银行 App 会警告或拒绝运行；Pinky 在手机页打开、agent 工作时与之后 30 秒会开流。需要用这类 App 时在 Pinky 的 Settings › Phones 把该手机的连接改成 WebDriverAgent helper
+- 通过 helper 读一次主屏约 7 秒，点击 0.5 到 0.8 秒；iOS 27 的 CoreDevice 路径读屏不到 0.5 秒
+- 用 helper 时，iOS 偶尔会在手机上要密码来允许自动化，此时 Pinky 会提示用户在手机上输入

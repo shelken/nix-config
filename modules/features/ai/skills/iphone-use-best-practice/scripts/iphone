@@ -1,2497 +1,344 @@
 #!/usr/bin/env python3
-"""iphone: 通过 WebDriverAgent (WDA) 读取并操作 USB 连接的真实 iPhone。
+"""iphone: Pinky 的 MCP 薄封装，读取并操作 USB 连接的真实 iPhone。
 
-只依赖标准库。HTTP 直接走 usbmuxd，不需要端口转发进程。
-iphone up 按本机条件自动选路，把官方 Runner 装上手机并启动；用户不选路径（设计见 ../README.md）:
-  装法: 已就绪 / 已装 Runner 直接起 / Xcode / plumesign / SideStore（未验证）
-  启法: iOS 17 及以上用 xcodebuild test-without-building，旧系统用 go-ios runwda
-iphone 只下载固定版本并校验过的官方 Runner，不下载也不安装 go-ios、rcodesign、plumesign。
-子命令: iphone --help
+只依赖标准库。每条子命令对应一个 phone_* 工具，经 Pinky 的 Streamable HTTP 端点调用；
+MCP 会话 ID 存在 $IPHONE_HOME/session，所以租约跨进程保留。审批、屏蔽 App、凭据字段拦截都由 Pinky 网关执行。
+先决条件: Pinky 已安装，设置 › 智能体 › 远程智能体（Settings › Agents › Remote agents） 已打开（设计见 ../README.md）。
 """
 import argparse
-import hashlib
-import http.client
+import base64
 import json
 import os
-import plistlib
 import re
 import shutil
-import signal
 import socket
-import stat
-import struct
 import subprocess
 import sys
-import tempfile
 import time
+import urllib.error
+import urllib.parse
 import urllib.request
-import xml.etree.ElementTree as ET
-import zipfile
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-# ---------- 固定依赖：版本只在这里改 ----------
-WDA_RELEASE_TAG = "v16.15.3"
-WDA_RUNNER_URL = f"https://github.com/appium/WebDriverAgent/releases/download/{WDA_RELEASE_TAG}/WebDriverAgentRunner-Runner.zip"
-WDA_RUNNER_SHA256 = "2176793538d902f6b1e61291e9997f68d306541f222ea715d256a7c6ce9d4fc5"
-WDA_COMMIT = "02cb92f0e93c8b021443bcbb8eeb80932c113220"  # appium/WebDriverAgent 的 v16.15.3，Xcode 路径编译这一版
-WDA_REPO = "https://github.com/appium/WebDriverAgent.git"
-PLUMESIGN_MISE = "github:khcrysalis/Impactor"  # 仅用于缺失时的安装提示，iphone 不安装它
-PLUMESIGN_VERSION = "2.7.2"
-SIDESTORE_ID = "com.SideStore.SideStore"  # 手机上有该前缀的 App 即视为装了 SideStore
-RUNNER_APP = "WebDriverAgentRunner-Runner.app"
-XCTEST_CONFIG = "WebDriverAgentRunner.xctest"
-OFFICIAL_RUNNER_ID = "com.facebook.WebDriverAgentRunner.xctrunner"  # 官方 Runner 的原始 bundle id
-# iOS 17 及以上 go-ios 的 XCTest 会话需要 tunnel（本项目未采用），启动改用 xcodebuild test-without-building
-XCTESTRUN_MIN_OS = 17
-FREE_PROFILE_LIMIT = 3  # 免费描述文件在一台设备上同时最多 3 个 App，跨团队计数（iOS 硬限制）
-FREE_PROFILE_ERROR = "maximum number of installed apps using a free developer profile"  # 撞上限时 iOS 报错的开头
-PRODUCTS_DIR = "Debug-iphoneos"  # xcodebuild 按 xctestrun 找 app 的固定目录名
-XCTESTRUN_NAME = "WebDriverAgentRunner.xctestrun"
-
 HOME = Path(os.environ.get("IPHONE_HOME", "~/.local/share/iphone-use")).expanduser()
-CFG = HOME / "config.json"
-CLI = HOME / "cli"
-LAST = CLI / "last.json"
-PIDFILE = CLI / "wda.pid"
-UPLOG = CLI / "up.log"
-TOOLLOG = CLI / "tools.log"
-SHOTS = CLI / "shots"
-ARTIFACTS = HOME / "artifacts"
-OFFICIAL = ARTIFACTS / f"wda-{WDA_RELEASE_TAG}"  # 校验后原样解包的官方 Runner，不原地签名
-SIGNED = ARTIFACTS / "signed"  # plumesign 路径签好的副本；xcodebuild 按 xctestrun 启动时它也是 __TESTROOT__
-IMAGES = ARTIFACTS / "images"  # go-ios 的开发者磁盘镜像
-XCODE = HOME / "xcode"  # 仅 Xcode 路径
-DERIVED = XCODE / "derived_data"
-SOURCE = XCODE / "WebDriverAgent"
-RUNNER = DERIVED / "Build/Products/Debug-iphoneos" / RUNNER_APP  # Xcode 路径的产物
-PLUME_KEYS = Path("~/.config/PlumeImpactor/keys").expanduser()
-MAX_NODES = 200
-KEEP_EMPTY = {"Alert", "Sheet", "TextField", "SecureTextField", "TextView", "SearchField", "Switch"}
-CONTAINERS = {"Application", "Window", "CollectionView", "Table", "ScrollView", "NavigationBar"}  # 容器本身不可操作，子节点已单独列出
-GROUP = {"Button", "Cell", "Link", "Switch", "Tab"}  # 其内部重复标签的子节点会被折叠
-SESSION_CAPS = {"capabilities": {"alwaysMatch": {
-    "shouldWaitForQuiescence": False, "shouldTerminateApp": False,
-    "waitForIdleTimeout": 0, "maxTypingFrequency": 30}}}
+SESSION = HOME / "session"
+SHOTS = HOME / "shots"
+URL = os.environ.get("IPHONE_PINKY_URL", "http://127.0.0.1:7465/mcp")
+PINKY_APPS = ("/Applications/Pinky.app/Contents/MacOS/Pinky", "~/Applications/Pinky.app/Contents/MacOS/Pinky")
+PROTOCOL = "2025-06-18"
+KEYS = ["back", "home", "recents", "enter", "tab", "delete", "forward_delete", "escape",
+        "dpad_up", "dpad_down", "dpad_left", "dpad_right", "page_up", "page_down"]
+SWIPE = {"down": "up", "up": "down", "right": "left", "left": "right"}  # 手指方向与内容相反
+ELEMENT = re.compile(r'^\[(\d+)\]\s+\S+\s+"(.*?)"(?:\s+@(\d+),(\d+))?')
+OCR = re.compile(r'^ocr\s+"(.*?)"\s+@(\d+),(\d+)')
 
 
 class Fail(Exception):
     pass
 
 
-# ---------- 配置 ----------
+# ---------- Pinky 进程与 HTTP ----------
 
-def config():
+def pinky_bin():
+    for c in (os.environ.get("PINKY_BIN"), shutil.which("pinkyctl"), *PINKY_APPS):
+        if c and os.access(os.path.expanduser(c), os.X_OK):
+            return os.path.expanduser(c)
+    raise Fail("找不到 Pinky。安装 Pinky 并打开一次，或用 PINKY_BIN 指定它的可执行文件")
+
+
+def token():
+    if os.environ.get("PINKY_TOKEN"):
+        return os.environ["PINKY_TOKEN"]
+    r = subprocess.run([pinky_bin(), "token"], capture_output=True, text=True)
+    if r.returncode or not r.stdout.strip():
+        raise Fail(f"取不到 Pinky 的 agent token: {r.stderr.strip()}")
+    return r.stdout.strip()
+
+
+def rpc(body, sid=None, timeout=120):
+    """发一条 JSON-RPC；返回 (会话 ID, 结果)。响应是 SSE 或 JSON，按 id 取对应那条。"""
+    headers = {"Authorization": f"Bearer {token()}", "Content-Type": "application/json",
+               "Accept": "application/json, text/event-stream"}
+    if sid:
+        headers["Mcp-Session-Id"] = sid
+    req = urllib.request.Request(URL, json.dumps(body).encode(), headers)
     try:
-        return json.loads(CFG.read_text())
-    except FileNotFoundError:
-        raise Fail("尚未配置。先运行 iphone init --bundle <唯一bundleId>")
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            raw, new_sid = r.read().decode(), r.headers.get("Mcp-Session-Id")
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            raise Fail("Pinky 拒绝了 token。检查 PINKY_TOKEN，或 Pinky token 是否被重置")
+        if e.code == 404:
+            raise Fail("会话已失效")
+        raise Fail(f"Pinky HTTP {e.code}: {e.read().decode()[:200]}")
+    except (urllib.error.URLError, ConnectionError, socket.timeout) as e:
+        raise Fail(f"连不上 Pinky 的 HTTP 端点 {URL}（{e}）。打开 Pinky，在 设置 › 智能体 › 远程智能体（Settings › Agents › Remote agents） 开启它")
+    if not raw.strip():
+        return new_sid, None
+    for chunk in re.findall(r"^data:\s*(.*)$", raw, re.M) or [raw]:
+        msg = json.loads(chunk)
+        if msg.get("id") == body.get("id"):
+            if "error" in msg:
+                raise Fail(f"MCP 错误: {msg['error'].get('message')}")
+            return new_sid, msg["result"]
+    raise Fail("Pinky 没有返回对应的响应")
 
 
-# ---------- usbmux 传输 ----------
-
-def _mux(message):
-    s = socket.socket(socket.AF_UNIX)
-    s.settimeout(10)
-    try:
-        s.connect("/var/run/usbmuxd")
-    except OSError as e:
-        raise Fail(f"连不上 usbmuxd: {e}")
-    body = plistlib.dumps({"ClientVersionString": "iphone-cli", "ProgName": "iphone", **message})
-    s.sendall(struct.pack("<IIII", 16 + len(body), 1, 8, 1) + body)
-    head = _recv(s, 16)
-    return s, plistlib.loads(_recv(s, struct.unpack("<I", head[:4])[0] - 16))
-
-
-def _recv(s, n):
-    buf = b""
-    while len(buf) < n:
-        chunk = s.recv(n - len(buf))
-        if not chunk:
-            raise Fail("usbmuxd 连接中断")
-        buf += chunk
-    return buf
-
-
-def usb_devices():
-    s, reply = _mux({"MessageType": "ListDevices"})
-    s.close()
-    return [(d["DeviceID"], d["Properties"]["SerialNumber"]) for d in reply.get("DeviceList", [])
-            if d["Properties"].get("ConnectionType") == "USB"]
-
-
-def usb_device(udid):
-    return next((d for d in usb_devices() if udid is None or d[1] == udid), None)
-
-
-class _Conn(http.client.HTTPConnection):
-    def __init__(self, device_id, port, timeout):
-        super().__init__("wda", timeout=timeout)
-        self.device_id, self.port = device_id, port
-
-    def connect(self):
-        s, reply = _mux({"MessageType": "Connect", "DeviceID": self.device_id, "PortNumber": socket.htons(self.port)})
-        if reply.get("Number") != 0:
-            s.close()
-            raise ConnectionRefusedError("WDA 端口无响应")
-        s.settimeout(self.timeout)
-        self.sock = s
-
-
-def raw(method, path, body=None, timeout=30):
-    cfg = config()
-    dev = usb_device(cfg["udid"])
-    if not dev:
-        raise Fail("iPhone 没有通过 USB 连接。接上数据线并解锁。")
-    conn = _Conn(dev[0], cfg.get("device_port", 8100), timeout)
-    try:
-        conn.request(method, path, json.dumps(body) if body is not None else None, {"Content-Type": "application/json"})
-        resp = conn.getresponse()
-        data = resp.read()
-    except socket.timeout:
-        raise Fail(f"WDA {timeout}s 内没有响应（WDA 仍在运行，多半是在读已被挂起的 App 的界面；稍等后重试）")
-    except (ConnectionError, OSError) as e:
-        raise Fail(f"WDA 未运行 ({e})。先运行 iphone up")
-    finally:
-        conn.close()
-    try:
-        doc = json.loads(data)
-    except ValueError:
-        raise Fail(f"WDA 返回了非 JSON 内容: {data[:120]!r}")
-    if resp.status >= 400:
-        v = doc.get("value") or {}
-        raise Fail(f"WDA {resp.status}: {v.get('error', '')} {v.get('message', '')}".strip(), )
-    return doc
-
-
-def wda(method, path, body=None, timeout=30):
-    return raw(method, path, body, timeout).get("value")
-
-
-def _new_session():
-    doc = raw("POST", "/session", SESSION_CAPS)
-    sid = doc.get("sessionId") or (doc.get("value") or {}).get("sessionId")
-    if not sid:
-        raise Fail("WDA 没有返回 session")
+def new_session():
+    sid, _ = rpc({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+        "protocolVersion": PROTOCOL, "capabilities": {}, "clientInfo": {"name": "iphone", "version": "1"}}})
+    rpc({"jsonrpc": "2.0", "method": "notifications/initialized"}, sid)
+    HOME.mkdir(parents=True, exist_ok=True)
+    SESSION.write_text(sid)
     return sid
 
 
-def sess(method, path, body=None, timeout=30):
-    """需要 session 的接口；session 失效时重建一次。"""
-    CLI.mkdir(parents=True, exist_ok=True)
-    f = CLI / "session"
+def call(tool, args, create=False):
+    """调用一个工具，返回 (文本, 图片块列表)。create: 没有会话时新建（只有 up 这样做）。"""
+    sid = SESSION.read_text().strip() if SESSION.exists() else None
+    body = {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": tool, "arguments": args}}
     for attempt in (0, 1):
-        sid = f.read_text().strip() if f.exists() and attempt == 0 else None
         if not sid:
-            sid = _new_session()
-            f.write_text(sid)
+            if not create:
+                raise Fail("没有会话。先运行 iphone up")
+            sid = new_session()
         try:
-            return wda(method, f"/session/{sid}{path}", body, timeout)
+            _, result = rpc(body, sid)
+            break
         except Fail as e:
-            if attempt == 0 and "invalid session" in str(e):
-                continue
-            raise
-
-
-# ---------- 界面树 ----------
-
-def parse_tree(xml_text):
-    """返回 (app, viewport, nodes)。nodes 已折叠重复标签、裁掉视口外。"""
-    root = ET.fromstring(xml_text)
-    app = root.get("bundleId") or "?"
-    vw, vh = float(root.get("width", 0)), float(root.get("height", 0))
-    nodes = []
-
-    def walk(el, groups):
-        a = el.attrib
-        kind = (a.get("type") or "").removeprefix("XCUIElementType")
-        label, name, value = a.get("label") or "", a.get("name") or "", a.get("value") or ""
-        text = label or name or value
-        try:
-            x, y, w, h = (round(float(a.get(k, 0))) for k in ("x", "y", "width", "height"))
-        except ValueError:
-            x = y = w = h = 0
-        inside = w > 0 and h > 0 and x < vw and y < vh and x + w > 0 and y + h > 0
-        folded = (kind == "StaticText" and text in groups) or (kind == "Image" and groups)  # 按钮内的图标是装饰
-        if (text or kind in KEEP_EMPTY) and inside and not folded and kind not in CONTAINERS:
-            n = {"type": kind, "rect": [x, y, w, h]}
-            if label:
-                n["label"] = label
-            if name and name != label:
-                n["name"] = name
-            if value and value != label and value != name:
-                n["value"] = value
-            if a.get("enabled") == "false":
-                n["disabled"] = True
-            nodes.append(n)
-        sub = groups | {t for t in (label, name) if t} if kind in GROUP else groups
-        for child in el:
-            walk(child, sub)
-
-    walk(root, frozenset())
-    for i, n in enumerate(nodes, 1):
-        n["t"] = f"t{i}"
-    return app, {"width": round(vw), "height": round(vh)}, nodes
-
-
-def text_of(n):
-    return n.get("label") or n.get("name") or n.get("value") or ""
-
-
-def fmt(n, width=60):
-    s = f'{n["t"]} {n["type"]} "{text_of(n)[:width]}"'
-    if n.get("name") and n.get("label") and n["name"] != n["label"]:
-        s += f' name={n["name"]}'
-    if n.get("value") and (n.get("label") or n.get("name")):
-        s += f' value="{n["value"][:40 if width else None]}"'
-    if n.get("disabled"):
-        s += " disabled"
-    return s + " [{},{},{},{}]".format(*n["rect"])
-
-
-def snapshot_now():
-    xml_text = wda("GET", "/source?format=xml&excluded_attributes=visible,accessible", timeout=60)
-    if not isinstance(xml_text, str):
-        raise Fail("WDA /source 没有返回 XML")
-    app, viewport, nodes = parse_tree(xml_text)
-    CLI.mkdir(parents=True, exist_ok=True)
-    LAST.write_text(json.dumps({"app": app, "viewport": viewport, "nodes": nodes}, ensure_ascii=False))
-    return {"app": app, "viewport": viewport, "nodes": nodes}
-
-
-def sig(n):
-    return (n["type"], text_of(n), n.get("value", ""))
-
-
-def diff(old, new, limit=20):
-    """动作前后的树差分；新节点带新 token（旧 token 已失效）。"""
-    pool = {}
-    for n in old["nodes"]:
-        pool[sig(n)] = pool.get(sig(n), 0) + 1
-    added = []
-    for n in new["nodes"]:
-        k = sig(n)
-        if pool.get(k, 0) > 0:
-            pool[k] -= 1
-        else:
-            added.append(n)
-    seen = {}
-    for n in new["nodes"]:
-        seen[sig(n)] = seen.get(sig(n), 0) + 1
-    removed = []
-    for n in old["nodes"]:
-        k = sig(n)
-        if seen.get(k, 0) > 0:
-            seen[k] -= 1
-        else:
-            removed.append(n)
-    lines = []
-    if old["app"] != new["app"]:
-        lines.append(f'app: {old["app"]} → {new["app"]}')
-    shown_added, shown_removed = added[:limit], removed[:limit // 2]
-    lines += ["+ " + fmt(n) for n in shown_added] + ["- " + fmt(n).split(" ", 1)[1] for n in shown_removed]
-    extra = len(added) + len(removed) - len(shown_added) - len(shown_removed)
-    if not lines:
-        return ["observe: 树无变化（可能没生效，或界面变化不在 AX 树里；用 iphone shot 目视确认）"]
-    if extra > 0:
-        lines.append(f"... 另有变化未显示，用 iphone snapshot 查看")
-    return ["observe: tokens 已刷新"] + lines
-
-
-def load_last():
-    try:
-        return json.loads(LAST.read_text())
-    except FileNotFoundError:
-        raise Fail("没有快照。先运行 iphone snapshot")
-
-
-def require_unlocked():
-    if wda("GET", "/wda/locked") is not False:
-        raise Fail("手机处于锁屏。请用户本人解锁（密码、Face ID 由用户完成）。")
-
-
-APP_STATES = {0: "未知", 1: "未运行", 2: "后台挂起", 3: "后台运行", 4: "前台"}
-HOME_SETTLE_MS = 2500  # 不知道旧 App 是谁时的兜底等待
-
-
-def app_state(bundle):
-    return sess("POST", "/wda/apps/state", {"bundleId": bundle}, timeout=5)
-
-
-def wait_left_foreground(bundle, timeout=10):
-    """回主屏后太早取树，WDA 会去读刚被系统挂起的旧 App，卡满约 60s 才返回。
-    等旧 App 离开前台再取树（约 0.9s，实测 8/8 不卡）。信号不能用 activeAppInfo：它在这个窗口里会卡住（实测 2/8）。"""
-    end = time.time() + timeout
-    while time.time() < end and app_state(bundle) == 4:
-        time.sleep(0.1)
-
-
-def act(args, do, leaves_app=False):
-    """执行动作并输出前后差分。leaves_app: 动作会把前台 App 切走（回主屏）。"""
-    require_unlocked()
-    old = load_last() if LAST.exists() else {"app": "?", "nodes": []}
-    # 只有动作前确认旧 App 确实在前台，才能用「离开前台」当信号；快照可能是过期的
-    leaving = old["app"] if leaves_app and old["app"] not in ("?", "com.apple.springboard") and app_state(old["app"]) == 4 else None
-    do()
-    if getattr(args, "no_observe", False):
-        print("ok")
-        return
-    if args.wait is not None:
-        time.sleep(args.wait / 1000)
-    elif leaving:
-        wait_left_foreground(leaving)
-    else:
-        time.sleep((HOME_SETTLE_MS if leaves_app else 500) / 1000)
-    print("\n".join(diff(old, snapshot_now())))
-
-
-def resolve_point(target):
-    """tN → 中心点（并确认前台 App 与快照一致）；否则 x y。"""
-    last = load_last()
-    node = next((n for n in last["nodes"] if n["t"] == target), None)
-    if not node:
-        raise Fail(f"没有元素 {target}。先运行 iphone snapshot")
-    app = (wda("GET", "/wda/activeAppInfo") or {}).get("bundleId")
-    if app != last["app"]:
-        raise Fail(f"快照已过期：快照时前台是 {last['app']}，现在是 {app}。重新 iphone snapshot")
-    x, y, w, h = node["rect"]
-    return x + w / 2, y + h / 2, node
-
-
-# ---------- 证书与进程 ----------
-
-def _decode_profile(f):
-    out = subprocess.run(["security", "cms", "-D", "-i", str(f)], capture_output=True)
-    return None if out.returncode else out.stdout
-
-
-def profile_expiry(app=None):
-    """读 App 里 embedded.mobileprovision 的到期时间；Xcode 路径看 RUNNER，plumesign 路径看 signed_app()。"""
-    f = (app or RUNNER) / "embedded.mobileprovision"
-    if not f.exists():
-        return None
-    data = _decode_profile(f)
-    if data is None:
-        return None
-    return plistlib.loads(data)["ExpirationDate"].replace(tzinfo=timezone.utc)
-
-
-def days_left(app=None):
-    exp = profile_expiry(app)
-    return None if exp is None else (exp - datetime.now(timezone.utc)).total_seconds() / 86400
-
-
-def signed_app():
-    return SIGNED / RUNNER_APP
-
-
-
-def xcode_cmd(cfg, action):
-    return ["xcodebuild", "-project", str(SOURCE / "WebDriverAgent.xcodeproj"),
-            "-scheme", "WebDriverAgentRunner", "-configuration", "Debug", "-destination", "id=" + cfg["udid"],
-            "-derivedDataPath", str(DERIVED), "-allowProvisioningUpdates",
-            "DEVELOPMENT_TEAM=" + cfg["team_id"], "CODE_SIGN_STYLE=Automatic",
-            "CODE_SIGN_IDENTITY=Apple Development", "PRODUCT_BUNDLE_IDENTIFIER=" + cfg["bundle_id"],
-            "USE_PORT=" + str(cfg.get("device_port", 8100)), action]
-
-
-def runner_id(cfg):
-    """plumesign 路径的 Runner bundle id；Xcode 路径是 <bundle_id>.xctrunner，两条路径不共用同名 App ID。"""
-    return cfg["bundle_id"] + ".runner"
-
-
-def find_runner(apps, cfg):
-    """手机上已装 Runner 的 bundle id，没有则 None。候选按序: plumesign 路径、Xcode 路径、官方 id 前缀。
-    前缀对应 SideStore 路径：SideStore 重签后是否给 id 加后缀未验证。"""
-    ids = [a.get("CFBundleIdentifier") for a in apps]
-    for cand in (runner_id(cfg), cfg["bundle_id"] + ".xctrunner"):
-        if cand in ids:
-            return cand
-    return next((i for i in ids if isinstance(i, str) and i.startswith(OFFICIAL_RUNNER_ID)), None)
-
-
-def runwda_cmd(cfg, rid):
-    cmd = ["ios", "runwda", f"--bundleid={rid}", f"--testrunnerbundleid={rid}", f"--xctestconfig={XCTEST_CONFIG}",
-           f"--udid={cfg['udid']}", f"--log-output={CLI / 'wda.log'}"]
-    if cfg.get("device_port", 8100) != 8100:
-        cmd.append(f"--env=USE_PORT={cfg['device_port']}")
-    return cmd
-
-
-def ready():
-    try:
-        return (wda("GET", "/status", timeout=3) or {}).get("ready") is True
-    except Fail:
-        return False
-
-
-def pid_alive():
-    """pidfile 里是 xcodebuild 或 ios runwda 进程（都由 up 以独立会话启动），两者同样处理。"""
-    try:
-        pid = int(PIDFILE.read_text())
-    except (FileNotFoundError, ValueError):
-        return None
-    try:
-        # up 自己启动的进程退出后是僵尸，kill(pid, 0) 仍成功、再发信号还会 EPERM；先回收
-        if os.waitpid(pid, os.WNOHANG)[0] == pid:
-            return None
-    except ChildProcessError:
-        pass  # 不是本进程的子进程（上一次 up 留下的），交给 kill 判断
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return None
-    return pid
-
-
-LOG_HINTS = [  # 只用于 xcodebuild 的日志：Xcode 路径的构建与测试、按 xctestrun 启动
-    (r"Unlock .* to Continue", "手机锁屏，等待用户解锁（xcodebuild 会继续等）", False),
-    (r"Developer App Certificate is not trusted",
-     "手机没信任开发者证书：设置 → 通用 → VPN 与设备管理 → 开发者 App → 信任，然后重新 iphone up", True),
-    (r"login details .* were rejected|Unable to log in with account",
-     "Xcode 的 Apple ID 登录失效：打开 Xcode → Settings → Accounts 重新登录一次，然后重新 iphone up", True),
-    (r"No signing certificate|No profiles for", "签名证书或描述文件缺失，见 iphone renew", True),
-    (r"Testing failed", "xcodebuild 测试失败，见 " + str(UPLOG), True),
-]
-
-RUNWDA_HINTS = [  # ios runwda 日志
-    (r"(?i)PasswordProtected|device is locked", "手机锁屏，请用户本人解锁", False),
-    (r"(?i)broken pipe", "Runner 启动后立刻退出，多半是 .xctest 没签好。运行 iphone renew 重新签名", True),
-]
-STALL_HINT = "WDA 还没就绪。手机若锁屏请解锁，WDA 要解锁后才就绪"  # 两种启法共用：启动超过 20 秒仍未就绪时的提示
-
-# ---------- 外部工具与错误翻译 ----------
-
-TOOL_HELP = {
-    "ios": "缺 go-ios（命令 ios）。用 nix 装，iphone 不会自己装",
-    "rcodesign": "缺 rcodesign。用 nix 装，iphone 不会自己装",
-    "plumesign": f"缺 plumesign。用 mise 装 {PLUMESIGN_MISE} {PLUMESIGN_VERSION}，iphone 不会自己装",
-    "xcodebuild": "缺 xcodebuild。装完整的 Xcode（只装命令行工具不够），iphone 不会自己装",
-}
-LOGIN_HELP = ("plumesign 没登录。你本人在终端运行 plumesign account login -u <邮箱>（密码与验证码自己输入）；"
-              "登录后运行 chmod -R go-rwx ~/.config/PlumeImpactor，让令牌只有你能读")
-REVOKED_HELP = ("同账号上其他侧载工具的证书已被吊销，这是证书上限导致的（免费账号最多 2 个开发证书）。"
-                "plumesign 路径要用不与其他侧载工具共享的 Apple ID。不要反复重试")
-FREE_PROFILE_HELP = (f"手机上的免费描述文件 App 已满 {FREE_PROFILE_LIMIT} 个（跨团队计数，iOS 硬限制）。"
-                     "先卸掉一个再重试，优先卸旧的 Runner")
-REGISTER_HELP = ("设备没在 plumesign 的团队里注册时，取到的描述文件不含它，装不上去。"
-                 "你本人运行 plumesign account register-device --udid <UDID> --name <设备名> 注册，再 iphone renew")
-TOOL_ERRORS = [
-    (r"Revoked certificate", REVOKED_HELP),
-    (FREE_PROFILE_ERROR, FREE_PROFILE_HELP),
-    (r"(?i)anisette.*(fail|error|unreach|time.?out|refused|unavailable|connect)"
-     r"|(fail|error|unreach|time.?out|refused|unavailable|connect).*anisette",
-     "anisette 服务器不可用（plumesign 经第三方服务器登录）。检查网络，稍后重试"),
-    (r"(?i)device is locked|PasswordProtected", "手机锁屏，请用户本人解锁后重试"),
-]
-
-
-def need_tool(name):
-    if not shutil.which(name):
-        raise Fail(TOOL_HELP[name])
-
-
-def tool_hint(out):
-    return next((msg for pattern, msg in TOOL_ERRORS if re.search(pattern, out)), "")
-
-
-def run_tool(cmd, check=True):
-    """完整输出落 cli/tools.log，屏幕上只给翻译后的短提示。"""
-    if cmd[0] in TOOL_HELP:
-        need_tool(cmd[0])
-    CLI.mkdir(parents=True, exist_ok=True)
-    try:
-        r = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True, errors="replace", timeout=900)
-    except FileNotFoundError:
-        raise Fail(f"找不到命令 {cmd[0]}")
-    except subprocess.TimeoutExpired:
-        raise Fail(f"{cmd[0]} 超过 15 分钟没结束，已放弃")
-    out = r.stdout + r.stderr
-    with open(TOOLLOG, "a") as f:
-        f.write(f"$ {' '.join(cmd)}\n{out}\n")
-    if r.returncode == 0 and "Revoked certificate" in out:
-        print("注意: " + REVOKED_HELP, file=sys.stderr)  # plumesign 超限时直接吊销现有证书，成功了也要说
-    if r.returncode and check:
-        last = " | ".join([l.strip() for l in out.splitlines() if l.strip()][-3:])
-        raise Fail(f"{cmd[0]} 失败: {tool_hint(out) or last}\n完整输出: {TOOLLOG}")
-    return out
-
-
-def ios_values(text):
-    """go-ios 的 stdout 混有 JSON 日志行和 WARN。只取能解析的 JSON 行（以 [ { \" 开头），丢掉带 level 与 msg 的日志行。"""
-    vals = []
-    for line in text.splitlines():
-        line = line.strip()
-        if not line or line[0] not in '[{"':
-            continue
-        try:
-            v = json.loads(line)
-        except ValueError:
-            continue
-        if isinstance(v, dict) and "level" in v and "msg" in v:
-            continue
-        vals.append(v)
-    return vals
-
-
-def image_mounted(text):
-    """ios image list 把结果写成日志：没挂载时 msg 是 none，挂载了则每个镜像一行 signature。"""
-    for line in text.splitlines():
-        msg = line.strip()
-        try:
-            v = json.loads(msg)
-            if isinstance(v, dict) and "msg" in v:
-                msg = str(v["msg"])
-        except ValueError:
-            pass
-        if "signature" in msg.lower() or re.fullmatch(r"[0-9a-f]{16,}", msg):
-            return True
-    return False
-
-
-def vtuple(v):
-    return tuple(int(x) for x in re.findall(r"\d+", v))
-
-
-def need_usb(cfg):
-    dev = usb_device(cfg["udid"])
-    if not dev:
-        raise Fail("iPhone 没有通过 USB 连接。接上数据线并解锁。")
-    return dev
-
-
-def require_team(cfg):
-    if not cfg.get("team_id"):
-        raise Fail("Xcode 路径需要 Team ID：iphone init --team <TeamID>")
-
-
-# ---------- 官方 Runner：下载、校验、解包 ----------
-
-def download_file(url, dest):
-    req = urllib.request.Request(url, headers={"User-Agent": "iphone-cli"})
-    try:
-        with urllib.request.urlopen(req, timeout=60) as r, open(dest, "wb") as f:
-            shutil.copyfileobj(r, f)
-    except OSError as e:
-        dest.unlink(missing_ok=True)
-        raise Fail(f"下载 Runner 失败: {e}。检查网络后重试")
-
-
-def unpack_runner(zpath, sha256, dest):
-    """sha256 通过才打开 zip；拒绝越界路径与符号链接（zip-slip）。解到 .part 再改名，失败不留半成品。"""
-    h = hashlib.sha256()
-    with open(zpath, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    if h.hexdigest() != sha256:
-        raise Fail(f"Runner 的 sha256 不符，已拒绝解包。\n  期望 {sha256}\n  实际 {h.hexdigest()}")
-    part = dest.with_name(dest.name + ".part")
-    shutil.rmtree(part, ignore_errors=True)
-    part.mkdir(parents=True)
-    root = part.resolve()
-    try:
-        with zipfile.ZipFile(zpath) as z:
-            for info in z.infolist():
-                target = (part / info.filename).resolve()
-                if target != root and root not in target.parents:
-                    raise Fail(f"zip 里有越界路径 {info.filename!r}，已拒绝")
-                mode = info.external_attr >> 16
-                if stat.S_ISLNK(mode):
-                    raise Fail(f"zip 里有符号链接 {info.filename!r}，已拒绝")
-                if info.is_dir():
-                    target.mkdir(parents=True, exist_ok=True)
-                    continue
-                target.parent.mkdir(parents=True, exist_ok=True)
-                with z.open(info) as src, open(target, "wb") as out:
-                    shutil.copyfileobj(src, out)
-                if mode:
-                    os.chmod(target, mode & 0o777)
-        if not (part / RUNNER_APP).is_dir():
-            raise Fail(f"zip 里没有 {RUNNER_APP}")
-    except BaseException:
-        shutil.rmtree(part, ignore_errors=True)
-        raise
-    shutil.rmtree(dest, ignore_errors=True)
-    part.rename(dest)
-
-
-def fetch_runner():
-    app = OFFICIAL / RUNNER_APP
-    if app.is_dir():
-        return app
-    ARTIFACTS.mkdir(parents=True, exist_ok=True)
-    zpath = ARTIFACTS / f"wda-{WDA_RELEASE_TAG}.zip"
-    print(f"下载官方 Runner {WDA_RELEASE_TAG}（一次性）...", flush=True)
-    download_file(WDA_RUNNER_URL, zpath)
-    try:
-        unpack_runner(zpath, WDA_RUNNER_SHA256, OFFICIAL)
-    finally:
-        zpath.unlink(missing_ok=True)
-    return app
-
-
-def runner_min_os(app):
-    """设备系统下限：Runner 与 .xctest 两个 Info.plist 的 MinimumOSVersion 取最大值。"""
-    plists = [app / "Info.plist", *sorted(app.glob("PlugIns/*.xctest/Info.plist"))]
-    if len(plists) < 2:
-        raise Fail("Runner 包里没有 PlugIns 下的 .xctest")
-    found = []
-    for f in plists:
-        try:
-            found.append(str(plistlib.loads(f.read_bytes())["MinimumOSVersion"]))
-        except (OSError, KeyError, ValueError):
-            raise Fail(f"读不到 {f.relative_to(app)} 的 MinimumOSVersion")
-    return max(found, key=vtuple)
-
-
-def build_ipa(app, ipa):
-    ipa.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(ipa, "w", zipfile.ZIP_DEFLATED) as z:
-        for p in sorted(app.rglob("*")):
-            if p.is_file():
-                z.write(p, f"Payload/{app.name}/{p.relative_to(app).as_posix()}")
-
-
-# ---------- 路径探测（顺序与理由见 ../README.md） ----------
-
-ROUTE_NAMES = {"ready": "已就绪", "installed": "已装 Runner", "xcode": "Xcode", "plumesign": "plumesign",
-               "sidestore": "SideStore（未验证）"}
-
-
-def devicectl_serves(doc, udid):
-    """devicectl 列出的物理设备里有这个 UDID。不比较版本号：旧系统的设备通常不在里面。"""
-    devs = (doc.get("result") or {}).get("devices") or []
-    return any((d.get("hardwareProperties") or {}).get("reality") == "physical"
-               and (d.get("hardwareProperties") or {}).get("udid") == udid for d in devs)
-
-
-def devicectl_devices():
-    """xcrun devicectl list devices 的原始输出；没有完整 Xcode 或命令失败时 None。"""
-    with tempfile.TemporaryDirectory() as d:
-        out = Path(d) / "devices.json"
-        try:
-            r = subprocess.run(["xcrun", "devicectl", "list", "devices", "--json-output", str(out)],
-                               capture_output=True, timeout=60)
-            return json.loads(out.read_text()) if r.returncode == 0 else None
-        except (OSError, subprocess.TimeoutExpired, ValueError):
-            return None
-
-
-def devicectl_json(args):
-    """xcrun devicectl 的 --json-output 结果；命令失败或输出不是 JSON 时 None。"""
-    with tempfile.TemporaryDirectory() as d:
-        out = Path(d) / "out.json"
-        try:
-            r = subprocess.run(["xcrun", "devicectl", *args, "--json-output", str(out)],
-                               capture_output=True, timeout=120)
-            return json.loads(out.read_text()) if r.returncode == 0 else None
-        except (OSError, subprocess.TimeoutExpired, ValueError):
-            return None
-
-
-def devicectl(args, timeout=300):
-    """跑 xcrun devicectl，完整输出落 tools.log，返回 (退出码, 输出)。"""
-    need_tool("xcodebuild")  # devicectl 与 xcodebuild 同属完整 Xcode
-    CLI.mkdir(parents=True, exist_ok=True)
-    try:
-        r = subprocess.run(["xcrun", "devicectl", *args], stdin=subprocess.DEVNULL, capture_output=True,
-                           text=True, errors="replace", timeout=timeout)
-    except FileNotFoundError:
-        raise Fail("找不到 xcrun。装完整的 Xcode")
-    except subprocess.TimeoutExpired:
-        raise Fail(f"devicectl 超过 {timeout // 60} 分钟没结束，已放弃")
-    out = r.stdout + r.stderr
-    with open(TOOLLOG, "a") as f:
-        f.write(f"$ xcrun devicectl {' '.join(args)}\n{out}\n")
-    return r.returncode, out
-
-
-def free_profile_apps(cfg):
-    """手机上用免费描述文件安装的 App（跨团队计数，上限 3 个）。devicectl 只列开发者签名的 App，
-    实测与安装被拒时 iOS 报出的名单一致。查不到（没有完整 Xcode、CoreDevice 认不得这台设备）时 None。"""
-    doc = devicectl_json(["device", "info", "apps", "--device", cfg["udid"]])
-    apps = ((doc or {}).get("result") or {}).get("apps") or []
-    return [a["bundleIdentifier"] for a in apps if a.get("builtByDeveloper") and a.get("bundleIdentifier")]
-
-
-def free_limit_text(cfg, ids):
-    """免费描述文件的 3 个名额满了：报出占名额的 App 与卸载命令，Runner 排在前面（那是旧的 Runner，卸了不心疼）。
-    报错里的 app id 带团队前缀（<TeamID>.<bundle id>），卸载命令要用去掉前缀的 bundle id。"""
-    clean = list(dict.fromkeys(re.sub(r"^[A-Z0-9]{10}\.", "", i) for i in ids))
-    runners = [i for i in clean if runner_kind(i, cfg)]
-    return (f"{FREE_PROFILE_HELP}。手机上占着名额的 App:\n" + "".join(f"  {i}\n" for i in clean)
-            + "先卸掉一个再 iphone up:\n"
-            + "".join(f"  xcrun devicectl device uninstall app --device {cfg['udid']} {i}\n"
-                     for i in runners + [i for i in clean if i not in runners]))
-
-
-def check_free_slots(cfg, rid):
-    """装之前查免费描述文件的名额，不签完一遍才发现装不上。rid 已在名单里时不占新名额（覆盖安装）。
-    查不到设备上装了哪些 App 时跳过，交由安装报错兜底。"""
-    apps = free_profile_apps(cfg)
-    if not apps or rid in apps or len(apps) < FREE_PROFILE_LIMIT:
-        return
-    raise Fail(free_limit_text(cfg, apps))
-
-
-def account_listed(text):
-    return "Saved accounts:" in text and "No accounts found" not in text
-
-
-def sidestore_id(apps):
-    return next((a["CFBundleIdentifier"] for a in apps if str(a.get("CFBundleIdentifier", "")).startswith(SIDESTORE_ID)), None)
-
-
-class Probes:
-    """路径表用到的探测。每个方法对应一个条件；selftest 用假数据的对象替换它。"""
-
-    def __init__(self, timeout=120, fetch=True):
-        self.timeout, self.fetch, self._apps, self._ver, self._dev_read = timeout, fetch, None, None, None
-
-    def ready(self):
-        return ready()
-
-    def apps(self, cfg):
-        if self._apps is None:
-            self._apps = []
-            if shutil.which("ios"):
-                try:
-                    for v in ios_values(run_tool(["ios", "apps", "--all", f"--udid={cfg['udid']}"])):
-                        if isinstance(v, list):
-                            self._apps = [x for x in v if isinstance(x, dict)]
-                except Fail:
-                    pass
-        return self._apps
-
-    def runner_installed(self, cfg):
-        return find_runner(self.apps(cfg), cfg)
-
-    def start(self, cfg, rid):
-        """启动手机上已装的 Runner。iOS 17 及以上要本机有同一份签名/构建产物（xcodebuild 按它写 xctestrun 启动）；
-        旧系统的 go-ios runwda 直接启动手机上那份，不要求本机副本。证书过期时返回 False，交给下面重新签名。"""
-        if rid == runner_id(cfg):
-            d = days_left(signed_app())
-            if d is not None and d <= 0:
-                print("已装的 Runner 证书已过期，需要重新签名", flush=True)
-                return False
-        app = installed_app(cfg, rid)
-        if app is None and launch_channel(cfg, self) == "xctestrun":
-            print(f"已装的 Runner（{rid}）在本机没有对应的产物，没法用 xcodebuild 启动，继续往下探测", flush=True)
-            return False
-        try:
-            launch_runner(cfg, self, app, rid, self.timeout)
-        except Fail as e:
-            print(f"已装的 Runner 没起来: {e}", flush=True)
-            return False
-        return True
-
-    def device_version(self, cfg):
-        """没有 go-ios 或读不到时返回 None，跳过系统检查（Xcode 路径不依赖 go-ios）。"""
-        if self._ver is not None:
-            return self._ver or None
-        v = None
-        if shutil.which("ios"):
-            try:
-                out = run_tool(["ios", "lockdown", "get", "ProductVersion", f"--udid={cfg['udid']}"])
-            except Fail:
-                out = ""
-            v = next((v for v in ios_values(out) if isinstance(v, str) and re.fullmatch(r"\d+(\.\d+)*", v)), None)
-            if v is None:
-                print("没读到手机系统版本，跳过系统检查", file=sys.stderr)
-        self._ver = v or ""
-        return v
-
-    def min_os(self):
-        if not self.fetch and not (OFFICIAL / RUNNER_APP).is_dir():
-            return None  # status 不下载；还没解包就不知道下限
-        return runner_min_os(fetch_runner())
-
-    def _devices(self):
-        if self._dev_read is None:
-            self._dev_read = devicectl_devices()
-        return self._dev_read
-
-    def devicectl_knows(self, cfg):
-        """xcrun devicectl 认得这台设备。旧系统的设备通常不认得，装法与启法都要看它。"""
-        doc = self._devices()
-        return bool(doc) and devicectl_serves(doc, cfg["udid"])
-
-    def xcode_serves(self, cfg):
-        """Xcode 可服务该设备：devicectl 认得它，且已配 Team。没有 Team 时 Xcode 路径签不了名，不能选它。"""
-        return bool(cfg.get("team_id")) and self.devicectl_knows(cfg)
-
-    def plumesign_state(self):
-        """空串表示 plumesign 路径可用；否则是不可用的原因（含怎么补）。"""
-        missing = [TOOL_HELP[t] for t in ("plumesign", "rcodesign") if not shutil.which(t)]
-        if missing:
-            return "；".join(missing)
-        try:
-            r = subprocess.run(["plumesign", "account", "list"], stdin=subprocess.DEVNULL, capture_output=True,
-                               text=True, errors="replace", timeout=30)
-        except (OSError, subprocess.TimeoutExpired):
-            return LOGIN_HELP
-        return "" if account_listed(r.stdout + r.stderr) else LOGIN_HELP
-
-    def sidestore(self, cfg):
-        return sidestore_id(self.apps(cfg)) is not None
-
-
-def no_route_text(plume_why):
-    return ("没有可用的安装路径。任选其一:\n"
-            "  Xcode: 本机装完整 Xcode，devicectl 认得这台手机（系统太旧的手机通常不行），且已 iphone init --team <TeamID>\n"
-            f"  plumesign: {plume_why}\n"
-            "  SideStore: 在手机上装 SideStore（未验证）")
-
-
-def install_route(cfg, p):
-    """已就绪、已装 Runner 之后的探测：该用哪条路把 Runner 装上手机。renew 与 status 也用它。
-    系统版本只用来卡 Runner 的下限，选路本身看本机条件，不看 iOS 版本。"""
-    have, floor = p.device_version(cfg), p.min_os()
-    if have and floor and vtuple(have) < vtuple(floor):
-        raise Fail(f"手机系统 {have} 低于下限 {floor}，官方 Runner 装不上。先升级手机系统")
-    if p.xcode_serves(cfg):
-        return "xcode"
-    why = p.plumesign_state()
-    if not why:
-        return "plumesign"
-    if p.sidestore(cfg):
-        return "sidestore"
-    raise Fail(no_route_text(why))
-
-
-def choose_route(cfg, p):
-    """路径表自上而下探测，开头打印一行「路径: 名称」。已装 Runner 这一档会真的去启动。"""
-    if p.ready():
-        print(f"路径: {ROUTE_NAMES['ready']}")
-        return "ready"
-    rid = p.runner_installed(cfg)
-    if rid:
-        print(f"路径: {ROUTE_NAMES['installed']}", flush=True)
-        if p.start(cfg, rid):
-            return "installed"
-        print("继续往下探测", flush=True)
-    route = install_route(cfg, p)
-    print(f"路径: {ROUTE_NAMES[route]}", flush=True)
-    return route
-
-
-# ---------- 启动与签名 ----------
-
-def wait_ready(proc, what, timeout, hints, stall=None):
-    """轮询 ready()；日志里命中 hints 就提示或中止；进程提前退出或超时则报错。"""
-    told, start = set(), time.time()
-    while time.time() - start < timeout:
-        if ready():
-            return
-        text = UPLOG.read_text(errors="replace")
-        for pattern, msg, fatal in hints:
-            if re.search(pattern, text):
-                if fatal:
-                    stop_wda()
-                    raise Fail(msg)
-                if msg not in told:
-                    print(msg, flush=True)
-                    told.add(msg)
-        if proc.poll() is not None:
-            raise Fail(f"{what} 已退出，见 {UPLOG}")
-        if stall and stall not in told and time.time() - start > 20:
-            print(stall, flush=True)
-            told.add(stall)
-        time.sleep(2)
-    stop_wda()
-    raise Fail(f"{timeout}s 内 WDA 没就绪，见 {UPLOG}")
-
-
-def launch_channel(cfg, p):
-    """启法由手机系统决定：iOS 17 及以上用 xcodebuild test-without-building（go-ios 在这类系统上要建 tunnel，
-    本项目未采用，xcodebuild 自己走 CoreDevice 建连），旧系统沿用 go-ios runwda。
-    读不到版本时按 runwda（旧行为），此时 go-ios 缺失会由 need_tool 报缺。"""
-    v = p.device_version(cfg)
-    return "xctestrun" if v and vtuple(v) >= (XCTESTRUN_MIN_OS,) else "runwda"
-
-
-def installed_app(cfg, rid):
-    """手机上已装的那个 Runner 在本机对应的产物：plumesign 路径看签名副本，Xcode 路径看构建产物；
-    本机没有副本时返回 None（SideStore 重签的包本机不保存）。"""
-    kind = runner_kind(rid, cfg)
-    app = {"plumesign": signed_app(), "xcode": RUNNER}.get(kind)
-    return app if app is not None and app.is_dir() else None
-
-
-def launch_runner(cfg, p, app, rid, timeout):
-    """启动手机上已装的 Runner。app 是本机对应产物，runwda 不需要它（直接启动手机上那份）。"""
-    if launch_channel(cfg, p) == "xctestrun":
-        return launch_xctestrun(cfg, app, timeout)
-    return launch_runwda(cfg, timeout, rid)
-
-
-def launch_runwda(cfg, timeout, rid):
-    """ios runwda 是前台常驻进程：独立会话启动、写 pidfile、轮询就绪。DDI 在这里准备。"""
-    need_tool("ios")
-    ensure_ddi(cfg)
-    CLI.mkdir(parents=True, exist_ok=True)
-    with open(UPLOG, "w") as log:
-        proc = subprocess.Popen(runwda_cmd(cfg, rid), stdout=log, stderr=subprocess.STDOUT,
-                                stdin=subprocess.DEVNULL, start_new_session=True)
-    PIDFILE.write_text(str(proc.pid))
-    wait_ready(proc, "ios runwda", timeout, RUNWDA_HINTS, STALL_HINT)
-
-
-def app_bundle_id(app):
-    return plistlib.loads((app / "Info.plist").read_bytes())["CFBundleIdentifier"]
-
-
-def write_xctestrun(cfg, app):
-    """生成 xcodebuild 启动要的 xctestrun，并把 app 放进它要求的 Debug-iphoneos/ 布局。
-    __TESTROOT__ 就是 xctestrun 所在目录。xcodebuild 只按它启动手机上已装的那份，不负责安装。"""
-    rid = app_bundle_id(app)
-    products = SIGNED / PRODUCTS_DIR
-    shutil.rmtree(products, ignore_errors=True)
-    products.mkdir(parents=True)
-    shutil.copytree(app, products / RUNNER_APP, symlinks=True)
-    host = f"__TESTROOT__/{PRODUCTS_DIR}/{RUNNER_APP}"
-    doc = {"WebDriverAgentRunner": {
-        "BlueprintName": "WebDriverAgentRunner",
-        "ProductModuleName": "WebDriverAgentRunner",
-        "RunOrder": 0,
-        "TestHostPath": host,
-        "TestBundlePath": f"__TESTHOST__/PlugIns/{XCTEST_CONFIG}",
-        "TestHostBundleIdentifier": rid,
-        "BundleIdentifiersForCrashReportEmphasis": [rid],
-        "DependentProductPaths": [host, f"{host}/PlugIns/{XCTEST_CONFIG}"],
-        "EnvironmentVariables": {"USE_PORT": str(cfg.get("device_port", 8100)),
-                                 "WDA_PRODUCT_BUNDLE_IDENTIFIER": rid},
-        "TestingEnvironmentVariables": {"XCODE_SCHEME_NAME": "WebDriverAgentRunner"},
-        "IsXCTRunnerHostedTestBundle": True,
-        "IsUITestBundle": True,
-        "TestTimeoutsEnabled": False,
-        "UseUITargetAppProvidedByTests": True,
-        "ProcessNamesForCrashReportCollection": ["WebDriverAgentRunner-Runner"],
-    }, "__xctestrun_metadata__": {"FormatVersion": 1,
-                                  "ContainerInfo": {"ContainerName": "WebDriverAgent",
-                                                    "SchemeName": "WebDriverAgentRunner"}}}
-    out = SIGNED / XCTESTRUN_NAME
-    with open(out, "wb") as f:
-        plistlib.dump(doc, f)
-    return out
-
-
-def launch_xctestrun(cfg, app, timeout):
-    """xcodebuild test-without-building 按 xctestrun 启动：不需要 Apple ID，不需要
-    -allowProvisioningUpdates，也不需要 tunnel。它是前台常驻进程，手机锁屏时会一直等用户解锁。"""
-    need_tool("xcodebuild")
-    CLI.mkdir(parents=True, exist_ok=True)
-    x = write_xctestrun(cfg, app)
-    with open(UPLOG, "w") as log:
-        proc = subprocess.Popen(["xcodebuild", "test-without-building", "-xctestrun", str(x),
-                                 "-destination", "id=" + cfg["udid"]],
-                                stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                                cwd=HOME, start_new_session=True)
-    PIDFILE.write_text(str(proc.pid))
-    wait_ready(proc, "xcodebuild", timeout, LOG_HINTS, STALL_HINT)
-
-
-def ensure_ddi(cfg):
-    out = run_tool(["ios", "image", "list", f"--udid={cfg['udid']}"], check=False)
-    if image_mounted(out):
-        return
-    print("挂载开发者磁盘镜像（go-ios 会下载，首次较慢）...", flush=True)
-    IMAGES.mkdir(parents=True, exist_ok=True)
-    run_tool(["ios", "image", "auto", f"--basedir={IMAGES}", f"--udid={cfg['udid']}"])
-
-
-def extract_signing_pems(app, tmp, run):
-    """不读 accounts.json（含令牌）：证书取自已签名的主程序，私钥按证书 OU（TeamID）定位。"""
-    exe = app / plistlib.loads((app / "Info.plist").read_bytes())["CFBundleExecutable"]
-    run(["codesign", "-d", f"--extract-certificates={tmp / 'cert'}", str(exe)])
-    der = tmp / "cert0"
-    if not der.exists():
-        raise Fail("没能从主程序取到签名证书，第一遍 plumesign 可能没生效")
-    pem = tmp / "cert.pem"
-    run(["openssl", "x509", "-inform", "der", "-in", str(der), "-out", str(pem)])
-    m = re.search(r"\bOU\s*=\s*([A-Za-z0-9]+)", run(["openssl", "x509", "-in", str(pem), "-noout", "-subject"]))
-    if not m:
-        raise Fail("签名证书里没有 OU（TeamID），定位不到私钥")
-    key = PLUME_KEYS / m.group(1) / "key.pem"
-    if not key.exists():
-        raise Fail("找不到 plumesign 的私钥 ~/.config/PlumeImpactor/keys/<TeamID>/key.pem")
-    return pem, key
-
-
-def sign_runner(cfg, install=None, run=None):
-    """官方 Runner 复制一份到临时位置签名，成品留在 artifacts/signed/。签名与安装分开：
-    顺序不能变，plumesign 不签 .xctest，必须先让 plumesign 建好证书并签主 app，
-    再用 rcodesign 补签 .xctest，最后第二遍 plumesign 把 .xctest 一并封进主 app。
-    install 是 usbmuxd 的数字 DeviceID：给出时让 plumesign 顺手经 AFC 安装（旧系统的设备 devicectl 看不到），
-    不给就只签名，由调用方用 devicectl 安装。plumesign 的 --udid 比较的是 DeviceID，不是 UDID。
-    每次调用 plumesign 都可能向 Apple 申请证书（超限会吊销别的证书），所以不循环、不重试。"""
-    run = run or run_tool
-    rid = runner_id(cfg)
-    official = fetch_runner()
-    with tempfile.TemporaryDirectory(prefix="iphone-sign-") as tmp:
-        tmp = Path(tmp)
-        app = tmp / RUNNER_APP
-        shutil.copytree(official, app, symlinks=True)
-        xctests = sorted(app.glob("PlugIns/*.xctest"))
-        if not xctests:
-            raise Fail("Runner 包里没有 PlugIns 下的 .xctest")
-        print("签名 Runner：第一遍，主 app（不带设备）...", flush=True)
-        run(["plumesign", "sign", "--apple-id", "--custom-identifier", rid, "--package", str(app)])
-        pem, key = extract_signing_pems(app, tmp, run)
-        print("补签 .xctest...", flush=True)
-        for x in xctests:
-            run(["rcodesign", "sign", "--pem-file", str(pem), "--pem-file", str(key), str(x)])
-        print("签名 Runner：第二遍，密封整包" + ("并安装" if install is not None else "") + "...", flush=True)
-        seal = ["plumesign", "sign", "--apple-id"]
-        if install is not None:
-            seal += ["--register-and-install", "--udid", str(install)]
-        run(seal + ["--custom-identifier", rid, "--package", str(app)])
-        shutil.rmtree(SIGNED, ignore_errors=True)
-        SIGNED.mkdir(parents=True)
-        shutil.copytree(app, signed_app(), symlinks=True)
-    return signed_app()
-
-
-def install_app(cfg, app):
-    """用 devicectl 安装签名后的 Runner。撞上免费描述文件的 3 个名额时 iOS 会拒装，
-    这时要把它的原始报错和该卸哪个一起给出来。"""
-    rc, out = devicectl(["device", "install", "app", "--device", cfg["udid"], str(app)])
-    if rc == 0:
-        return
-    if FREE_PROFILE_ERROR in out:
-        ids = list(dict.fromkeys(re.findall(r'^\s*"([^"]+)"', out, re.M)))
-        raise Fail("devicectl 装不上:\n" + "\n".join(f"  {l}" for l in out.splitlines() if l.strip())
-                   + "\n" + free_limit_text(cfg, ids))
-    raise Fail(f"devicectl 装不上: {tool_hint(out) or ' | '.join([l.strip() for l in out.splitlines() if l.strip()][-3:])}\n"
-               f"{REGISTER_HELP}\n完整输出: {TOOLLOG}")
-
-
-def install_plumesign(cfg, device_id, p):
-    """签名并安装。装之前先查免费描述文件的名额：签名要一两分钟，还可能动账号上的 App ID，
-    撞上限时不该白签一遍。iOS 17 及以上用 devicectl 安装，旧系统（devicectl 看不到设备）让 plumesign 经 AFC 装。"""
-    check_free_slots(cfg, runner_id(cfg))
-    TOOLLOG.unlink(missing_ok=True)
-    app = sign_runner(cfg, install=None if p.devicectl_knows(cfg) else device_id)
-    if p.devicectl_knows(cfg):
-        install_app(cfg, app)
-    d = days_left(app)
-    print(f"已签名并安装，证书剩余 {d:.1f} 天" if d is not None
-          else "已签名并安装（没读到 embedded.mobileprovision，过期时间未知）")
-
-
-def up_plumesign(cfg, a, p):
-    for t in ("ios", "plumesign", "rcodesign"):
-        need_tool(t)
-    install_plumesign(cfg, need_usb(cfg)[0], p)  # 进到这条路径就是要签名并安装；失败直接报错，不重试
-    launch_runner(cfg, p, signed_app(), runner_id(cfg), a.timeout)
-
-
-def up_sidestore(cfg, p):
-    """未验证：IPA 推到 SideStore 的 Documents，之后由用户在 SideStore 里安装并自行管理。"""
-    need_tool("ios")
-    sid = sidestore_id(p.apps(cfg))
-    ipa = ARTIFACTS / f"WebDriverAgentRunner-{WDA_RELEASE_TAG}.ipa"
-    build_ipa(fetch_runner(), ipa)
-    run_tool(["ios", "fsync", f"--app={sid}", "push", f"--srcPath={ipa}", f"--dstPath=Documents/{ipa.name}",
-              f"--udid={cfg['udid']}"])
-    print(f"SideStore 路径（未验证）：已把 {ipa.name} 推到 SideStore 的 Documents。\n"
-          "手机上接着做:\n"
-          "  1. 打开 SideStore，添加这个 IPA 并安装\n"
-          "  2. 之后签名与刷新由 SideStore 管理\n"
-          f"装好后运行 iphone status 确认 WDA 是否可用。iphone up 会把 bundle id 以 {OFFICIAL_RUNNER_ID} 开头的 App 当作已装的 Runner 直接启动"
-          "（SideStore 是否给 id 加后缀未验证）。\n"
-          "风险: 有报告称 SideStore 重签会移除 .xctest，若属实 Runner 起不来。")
-
-
-# ---------- Xcode 路径 ----------
-
-def ensure_source():
-    """WDA 源码只有 Xcode 路径需要，所以延后到这里才拉。"""
-    if (SOURCE / "WebDriverAgent.xcodeproj").exists():
-        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=SOURCE, capture_output=True, text=True).stdout.strip()
-        if head == WDA_COMMIT:
-            return
-    if not shutil.which("git"):
-        raise Fail("Xcode 路径要用 git 拉 WDA 源码，没找到 git")
-    print("拉取 WDA 源码（固定版本）...", flush=True)
-    SOURCE.mkdir(parents=True, exist_ok=True)
-    if not (SOURCE / ".git").exists():
-        subprocess.run(["git", "init", "-q"], cwd=SOURCE, check=True)
-        subprocess.run(["git", "remote", "add", "origin", WDA_REPO], cwd=SOURCE, check=True)
-    for c in (["git", "fetch", "-q", "--depth", "1", "origin", WDA_COMMIT], ["git", "checkout", "-q", "--detach", "FETCH_HEAD"]):
-        subprocess.run(c, cwd=SOURCE, check=True)
-
-
-def xcode_build(cfg):
-    require_team(cfg)
-    ensure_source()
-    CLI.mkdir(parents=True, exist_ok=True)
-    print("构建并签名 WDA（首次约几分钟）...", flush=True)
-    with open(CLI / "build.log", "w") as log:
-        rc = subprocess.run(xcode_cmd(cfg, "build-for-testing"), stdout=log, stderr=subprocess.STDOUT, cwd=SOURCE).returncode
-    text = (CLI / "build.log").read_text()
-    if rc:
-        errs = [l for l in text.splitlines() if "error:" in l][-5:]
-        hint = next((m for p, m, fatal in LOG_HINTS if fatal and re.search(p, text)), "")
-        raise Fail("构建失败:\n" + "\n".join(errs) + (f"\n{hint}" if hint else ""))
-    d = days_left()
-    print(f"构建成功，证书剩余 {d:.1f} 天" if d is not None else "构建成功")
-
-
-def up_xcode(cfg, a):
-    require_team(cfg)
-    d = days_left()
-    if d is None or d <= 0:
-        print("没有可用构建或证书已过期，先构建并签名", flush=True)
-        xcode_build(cfg)
-    ensure_source()
-    CLI.mkdir(parents=True, exist_ok=True)
-    with open(UPLOG, "w") as log:
-        proc = subprocess.Popen(xcode_cmd(cfg, "test-without-building"), stdout=log, stderr=subprocess.STDOUT,
-                                stdin=subprocess.DEVNULL, cwd=SOURCE, start_new_session=True)
-    PIDFILE.write_text(str(proc.pid))
-    wait_ready(proc, "xcodebuild", a.timeout, LOG_HINTS)
+            if str(e) != "会话已失效" or attempt:
+                raise
+            SESSION.unlink(missing_ok=True)
+            sid = None
+            if not create:
+                raise Fail("会话已过期。先运行 iphone up")
+    blocks = result.get("content", [])
+    return "\n".join(b["text"] for b in blocks if b["type"] == "text"), [b for b in blocks if b["type"] == "image"]
+
+
+def run(tool, args, create=False):
+    """调用并打印；首行状态是 settled 才算成功。返回 (退出码, 文本)。"""
+    text, _ = call(tool, {k: v for k, v in args.items() if v is not None and v is not False}, create)
+    print(text)
+    if "phone_connect first" in text:
+        print("hint: 租约已结束或没连手机。运行 iphone up", file=sys.stderr)
+    return (0 if text.startswith("settled") else 1), text
+
+
+def common(a):
+    """动作工具共有的参数。"""
+    return {"intent": a.intent, "approval_id": a.approval_id}
 
 
 # ---------- 子命令 ----------
 
-def save_config(old, udid, bundle, team):
-    if udid != old.get("udid") or bundle != old.get("bundle_id"):
-        # 旧的签名只含旧设备或旧 bundle id；删掉后 up 会自动重新签名
-        shutil.rmtree(RUNNER, ignore_errors=True)
-        shutil.rmtree(SIGNED, ignore_errors=True)
-        (CLI / "session").unlink(missing_ok=True)
-    cfg = {"device_port": 8100, **old, "udid": udid, "bundle_id": bundle}
-    for k in ("local_port", "source_dir"):
-        cfg.pop(k, None)  # 都已不再使用
-    if team:
-        cfg["team_id"] = team
-    CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
-    return cfg
-
-
-def pick_device(cfg, want=None):
-    """up 用哪台手机。--udid 指定的优先；否则配置里的在 USB 上就用它；不在，USB 上恰好一台就换到它，没有或多台就报错。
-    换设备会写回配置并清掉旧签名，不用再单独运行 init。"""
-    if want is None and usb_device(cfg["udid"]):
-        return cfg
-    if want is None:
-        devs = usb_devices()
-        if not devs:
-            raise Fail("iPhone 没有通过 USB 连接。接上数据线并解锁。")
-        if len(devs) > 1:
-            raise Fail("配置的手机不在 USB 上，而 USB 上有多台: " + ", ".join(d[1] for d in devs) + "。用 iphone up --udid <其一> 指定")
-        want = devs[0][1]
-    if want == cfg["udid"]:
-        return cfg
-    print(f"换设备: {cfg['udid']} → {want}", flush=True)
-    stop_wda()  # 旧手机的 Runner 进程留着没用，也会挡住新设备
-    return save_config(cfg, want, cfg["bundle_id"], None)
-
-
-def cmd_init(a):
-    """首次配置，或换 bundle id：沿用已有配置里的 team 和其他键。只有 --bundle 必填，--team 只有走 Xcode 路径才要。换手机不用它，up 会自动换。"""
-    HOME.mkdir(parents=True, exist_ok=True)
-    old = json.loads(CFG.read_text()) if CFG.exists() else {}
-    if pid_alive():
-        raise Fail("WDA 还在运行。先 iphone down（会把旧手机的自动锁定恢复为 3 分钟），再换设备")
-    bundle = a.bundle or old.get("bundle_id")
-    if not bundle:
-        raise Fail("首次配置需要 --bundle <全局唯一的 bundle id，如 com.example.wda>")
-    team = a.team or old.get("team_id")
-    udid = a.udid
-    if not udid:
-        devs = usb_devices()
-        if not devs:
-            raise Fail("没有 USB 设备。接上并解锁 iPhone，或用 --udid 指定")
-        if len(devs) > 1:
-            raise Fail("有多台 USB 设备，用 --udid 指定其一: " + ", ".join(d[1] for d in devs))
-        udid = devs[0][1]
-    save_config(old, udid, bundle, team)
-    print(f"已写入 {CFG}（设备 {udid}）\n下一步: iphone up（自动选路）")
-    if not team:
-        print("只有走 Xcode 路径才需要 Team ID；到时 iphone init --team <TeamID> 补上")
-    print(relay_notice())
-
-
-def cmd_renew(a):
-    """对当前路径强制重新签名并安装。"""
-    cfg = config()
-    dev = need_usb(cfg)
-    p = Probes()
-    route = install_route(cfg, p)
-    print(f"路径: {ROUTE_NAMES[route]}", flush=True)
-    if route == "xcode":
-        xcode_build(cfg)
-    elif route == "plumesign":
-        for t in ("ios", "plumesign", "rcodesign"):
-            need_tool(t)
-        install_plumesign(cfg, dev[0], p)
-    else:
-        up_sidestore(cfg, p)
-
-
-def finish_up(a):
-    print("WDA 已就绪")
-    if not a.no_keep_awake:
-        try:
-            set_autolock(AUTOLOCK_NEVER)
-        except Fail as e:  # 常亮只是附加功能，不能让 WDA 已就绪的 up 失败
-            print(f"警告: 没能把自动锁定改为永不（{e}）。可手动改，或 iphone autolock never", file=sys.stderr)
-
-
 def cmd_up(a):
-    cfg = pick_device(config(), a.udid)
-    need_usb(cfg)
-    if a.restart:
-        stop_wda()
-    p = Probes(a.timeout)
-    route = choose_route(cfg, p)
-    if route == "ready":
-        return
-    if route == "sidestore":
-        return up_sidestore(cfg, p)
-    if route == "xcode":
-        up_xcode(cfg, a)
-    elif route == "plumesign":
-        up_plumesign(cfg, a, p)
-    finish_up(a)  # "installed" 已在探测时启动
+    apps = [x.strip() for x in a.apps.split(",")] if a.apps else None
+    return run("phone_connect", {"task": a.task, "device": a.device, "apps": apps, "read_only": a.read_only,
+                                 "approval_id": a.approval_id}, create=True)[0]
 
 
 def cmd_down(a):
-    if not a.no_keep_awake and pid_alive() and ready():
-        try:
-            set_autolock(AUTOLOCK_DEFAULT)
-        except Fail as e:
-            print(f"警告: 没能把自动锁定恢复为 3 分钟（{e}）。请手动设置，或 iphone autolock 180", file=sys.stderr)
-    stop_wda()
-
-
-def stop_wda():
-    pid = pid_alive()
-    if pid:
-        try:
-            os.killpg(pid, signal.SIGTERM)
-        except ProcessLookupError:
-            pass
-        for _ in range(20):
-            if not pid_alive():
-                break
-            time.sleep(0.5)
-        else:
-            os.killpg(pid, signal.SIGKILL)
-    PIDFILE.unlink(missing_ok=True)
-    (CLI / "session").unlink(missing_ok=True)
-    if pid is None and ready():
-        raise Fail("WDA 在运行，但不是本 CLI 启动的；没有动它")
-    print("WDA 已停止")
-
-
-def runner_kind(rid, cfg):
-    """手机上已装 Runner 的来源，由 bundle id 判断：<bundle>.runner 是 plumesign，<bundle>.xctrunner 是 Xcode，
-    带官方前缀的是 SideStore 重签（后缀未验证）。不是 Runner 返回 None。"""
-    if rid == runner_id(cfg):
-        return "plumesign"
-    if rid == cfg["bundle_id"] + ".xctrunner":
-        return "xcode"
-    return "sidestore" if rid and rid.startswith(OFFICIAL_RUNNER_ID) else None
-
-
-def cert_line(route):
-    if route == "sidestore":
-        return "证书: 由 SideStore 管理"
-    app, miss = (signed_app(), "无签名副本，iphone up 会自动签名并安装") if route == "plumesign" \
-        else (RUNNER, "无构建，iphone up 会自动构建并签名")
-    d = days_left(app)
-    if d is None:
-        return "证书: " + miss
-    return f"证书: 剩余 {d:.1f} 天（免费账号 7 天，过期后 iphone up 会自动重签）" if d > 0 else "证书: 已过期，iphone up 会自动重签"
+    rc = run("phone_release", {"outcome": a.outcome, "summary": a.summary})[0]
+    SESSION.unlink(missing_ok=True)
+    return rc
 
 
 def cmd_status(a):
-    cfg = config()
-    dev = usb_device(cfg["udid"])
-    print(f"设备: {'USB 已连接' if dev else '未通过 USB 连接'} ({cfg['udid']})")
-    ok = bool(dev) and ready()
-    print(f"WDA: {'就绪' if ok else '未运行'}" + (f" (pid {pid_alive()})" if pid_alive() else ""))
-    if ok:
-        print(f"锁屏: {'是' if wda('GET', '/wda/locked') else '否'}")
-        print(f"前台: {(wda('GET', '/wda/activeAppInfo') or {}).get('bundleId')}")
-    if not dev:
-        print("路径: 接上 USB 才能探测")
-        return 1
-    p = Probes(fetch=False)
-    rid = p.runner_installed(cfg)
-    kind = runner_kind(rid, cfg)
-    if kind:
-        print(f"Runner: 已装，{ROUTE_NAMES[kind]} 签名（{rid}）")
-        print(cert_line(kind))
-        return 0 if ok else 1
+    r = subprocess.run([pinky_bin(), "devices"], capture_output=True, text=True)
+    print(r.stdout.strip() or r.stderr.strip())
+    host = urllib.parse.urlparse(URL)
     try:
-        route = install_route(cfg, p)
-    except Fail:
-        print("Runner: 未装；没有可用的安装路径（iphone up 会报错并列出方案）")
-    else:
-        print(f"Runner: 未装；iphone up 会走: {ROUTE_NAMES[route]}")
-    return 0 if ok else 1
+        socket.create_connection((host.hostname, host.port), timeout=2).close()
+        print(f"HTTP: 可达 ({URL})")
+    except OSError:
+        print(f"HTTP: 不可达 ({URL})。在 Pinky 的 设置 › 智能体 › 远程智能体（Settings › Agents › Remote agents） 开启")
+    print("会话: " + ("有（租约是否还在要看 iphone snapshot）" if SESSION.exists() else "无，先 iphone up"))
+    return 0
 
 
 def cmd_snapshot(a):
-    require_unlocked()
-    s = snapshot_now()
-    shown = s["nodes"][:a.max]
-    print(f'app={s["app"]} viewport={s["viewport"]["width"]}x{s["viewport"]["height"]} shown={len(shown)} total={len(s["nodes"])}')
-    print("\n".join(fmt(n, None if a.full else 60) for n in shown))
-    if len(s["nodes"]) > a.max:
-        print(f"... 还有 {len(s['nodes']) - a.max} 个，用 iphone find <文字> 定位")
+    return run("phone_observe", {"wait_ms": a.wait_ms})[0]
 
 
-def matching(nodes, q):
-    return [n for n in nodes if q in " ".join((n.get("label", ""), n.get("name", ""), n.get("value", ""))).lower()]
+def cmd_shot(a):
+    text, images = call("phone_observe", {"screenshot": True})
+    if not images:
+        print(text)
+        raise Fail("没有截图（手机锁屏，或前台是被屏蔽的 App）")
+    SHOTS.mkdir(parents=True, exist_ok=True)
+    for old in sorted(SHOTS.glob("*"))[:-20]:
+        old.unlink()
+    out = SHOTS / (time.strftime("%Y%m%d-%H%M%S") + ".jpg")
+    out.write_bytes(base64.b64decode(images[0]["data"]))
+    print(f"{out}\n坐标单位是截图像素，与 snapshot 的 @x,y 一致")
+    return 0
+
+
+def screen_lines():
+    text, _ = call("phone_observe", {})
+    return text.splitlines()
 
 
 def cmd_find(a):
-    require_unlocked()
-    s = snapshot_now()
     q = " ".join(a.text).lower()
-    hits = matching(s["nodes"], q)
-    print(f'app={s["app"]} matches={len(hits)}')
-    print("\n".join(fmt(n, None if a.full else 60) for n in hits[:a.max]))
+    lines = screen_lines()
+    hits = [l for l in lines if (ELEMENT.match(l) or OCR.match(l)) and q in l.lower()]
+    print("\n".join(lines[:1] + hits))
     return 0 if hits else 1
 
 
 def cmd_wait(a):
-    q = " ".join(a.text).lower()
-    end = time.time() + a.timeout
-    while time.time() < end:
-        s = snapshot_now()
-        hits = matching(s["nodes"], q)
-        if hits:
-            print("\n".join(fmt(n) for n in hits[:5]))
-            return 0
-        time.sleep(1)
-    print(f"{a.timeout}s 内没出现: {q}")
-    return 1
+    rc, text = run("phone_wait_for", {"text": " ".join(a.text), "gone": a.gone, "timeout_ms": a.timeout * 1000})
+    return 1 if "matched: false" in text else rc
 
 
-def cmd_shot(a):
-    require_unlocked()
-    png = __import__("base64").b64decode(wda("GET", "/screenshot", timeout=60))
-    SHOTS.mkdir(parents=True, exist_ok=True)
-    for old in sorted(SHOTS.glob("*"))[:-20]:
-        old.unlink()
-    base = SHOTS / time.strftime("%Y%m%d-%H%M%S")
-    src = base.with_suffix(".png")
-    src.write_bytes(png)
-    out = base.with_suffix(".jpg")
-    subprocess.run(["sips", "-Z", str(a.size), "-s", "format", "jpeg", str(src), "--out", str(out)], capture_output=True, check=True)
-    src.unlink()
-    w, h = struct.unpack(">II", png[16:24])
-    vp = load_last()["viewport"] if LAST.exists() else {"width": 402}
-    print(f"{out} native={w}x{h} points_per_native_pixel={vp['width'] / w:.4f}")
+def tap(a, **kw):
+    return run("phone_tap", {**common(a), "long_press": a.long, **kw})[0]
 
 
 def cmd_tap(a):
     if len(a.target) == 1:
-        x, y, node = resolve_point(a.target[0])
-        if node.get("disabled"):
-            print(f"注意: {a.target[0]} 是 disabled")
-    elif len(a.target) == 2:
-        x, y = float(a.target[0]), float(a.target[1])
-        vp = load_last()["viewport"] if LAST.exists() else {"width": 402, "height": 874}
-        if not (0 <= x < vp["width"] and 0 <= y < vp["height"]):
-            raise Fail(f"坐标 ({x:g},{y:g}) 在视口 {vp['width']}x{vp['height']} 之外。单位是点，不是截图像素")
-    else:
-        raise Fail("用法: iphone tap tN | iphone tap X Y（单位是点，不是截图像素）")
-    act(a, lambda: sess("POST", "/wda/tap", {"x": x, "y": y}))
-
-
-def _pick_by_text(q, index):
-    s = snapshot_now()
-    vp = s["viewport"]
-    pool, seen = [], set()
-    for n in matching(s["nodes"], q):
-        x, y, w, h = n["rect"]
-        if 0 <= x + w / 2 < vp["width"] and 0 <= y + h / 2 < vp["height"] and tuple(n["rect"]) not in seen:
-            seen.add(tuple(n["rect"]))
-            pool.append(n)
-    pool = [n for n in pool if text_of(n).lower() == q] or pool
-    if not pool:
-        raise Fail(f"屏幕内没有包含「{q}」的元素；先 iphone find {q} 或 iphone shot 看看")
-    if index is None and len(pool) > 1:
-        raise Fail(f"{len(pool)} 个元素命中，用 --index N 选一个（从 0 起）:\n" + "\n".join(f"  [{i}] {fmt(n)}" for i, n in enumerate(pool)))
-    if not 0 <= (index or 0) < len(pool):
-        raise Fail(f"--index 超出范围，共 {len(pool)} 个命中")
-    return pool[index or 0]
+        return tap(a, ref=int(a.target[0]))
+    if len(a.target) == 2:
+        return tap(a, x=int(a.target[0]), y=int(a.target[1]))
+    raise Fail("用法: iphone tap REF | iphone tap X Y（X Y 是截图像素）")
 
 
 def cmd_tap_text(a):
-    """现取快照，点屏幕内文字命中的元素：一次调用代替 find + 取 token + tap，token 不会过期。
-    精确等于优先于包含；同一位置的重复节点算一个；仍有多个就列出来，不猜。
-    坐标连续两次一致才点：刚启动或翻页后列表还在滚动，现取的坐标点下去会落在别处。"""
-    require_unlocked()
     q = " ".join(a.text).lower()
-    n = _pick_by_text(q, a.index)
-    for _ in range(8):
-        time.sleep(0.3)
-        again = _pick_by_text(q, a.index)
-        if again["rect"] == n["rect"]:
-            break
-        n = again
-    else:
-        raise Fail(f"「{q}」的位置一直在变（页面还在滚动或动画），稍后再试")
-    x, y, w, h = n["rect"]
-    act(a, lambda: sess("POST", "/wda/tap", {"x": x + w / 2, "y": y + h / 2}))
+    found = []  # (标签, tap 参数)
+    for l in screen_lines():
+        m, o = ELEMENT.match(l), OCR.match(l)
+        label = (m or o).group(2) if (m or o) else ""
+        if q in label.lower():
+            found.append((label, {"ref": int(m.group(1))} if m else {"x": int(o.group(2)), "y": int(o.group(3))}, l))
+    exact = [f for f in found if f[0].lower() == q]
+    pool = exact or found
+    if not pool:
+        raise Fail(f"屏幕上没有包含「{q}」的元素；先 iphone find {q} 或 iphone shot 看看")
+    if a.index is None and len(pool) > 1:
+        raise Fail(f"{len(pool)} 个元素命中，用 --index N 选一个（从 0 起）:\n" + "\n".join(f"  [{i}] {f[2]}" for i, f in enumerate(pool)))
+    if not 0 <= (a.index or 0) < len(pool):
+        raise Fail(f"--index 超出范围，共 {len(pool)} 个命中")
+    return tap(a, **pool[a.index or 0][1])
 
 
 def cmd_type(a):
-    if a.clear and not a.target:
-        raise Fail("--clear 需要 --target tN，才知道清哪个输入框")
-    if not a.clear and not a.text:
-        raise Fail("没有要输入的文字；只清空请加 --clear")
-
-    def do():
-        if a.target:
-            x, y, node = resolve_point(a.target)
-            if a.clear:
-                # 点输入框右端把光标落在文字末尾，再按当前内容长度逐个删除；过长而滚出框外的文字清不干净
-                sess("POST", "/wda/tap", {"x": node["rect"][0] + node["rect"][2] - 3, "y": y})
-            else:
-                sess("POST", "/wda/tap", {"x": x, "y": y})
-            time.sleep(0.4)
-            if a.clear:
-                sess("POST", "/wda/keys", {"value": ["\u0008" * (len(node.get("value", "") or text_of(node)) + 5)]}, timeout=30)
-        for i in range(0, len(a.text), 200):
-            sess("POST", "/wda/keys", {"value": [a.text[i:i + 200]], "frequency": 30}, timeout=60)
-    act(a, do)
+    if not a.text and not a.submit:
+        raise Fail("没有要输入的文字。清空输入框：点它旁边的清除按钮（如 iphone tap-text 清除文本），或直接输入新内容替换")
+    return run("phone_type", {**common(a), "text": a.text, "ref": a.ref, "append": a.append, "submit": a.submit})[0]
 
 
 def cmd_key(a):
-    keys = {"return": "\n", "delete": "\u0008"}
-    if a.name == "home":
-        return act(a, lambda: wda("POST", "/wda/homescreen", {}), leaves_app=True)
-    act(a, lambda: sess("POST", "/wda/keys", {"value": [keys[a.name]]}))
+    return run("phone_key", {**common(a), "key": "enter" if a.name == "return" else a.name})[0]
 
 
 def cmd_home(a):
-    act(a, lambda: wda("POST", "/wda/homescreen", {}), leaves_app=True)
-
-
-def cmd_app(a):
-    if a.bundle:
-        st = app_state(a.bundle)
-        print(f"{a.bundle}: {APP_STATES.get(st, st)}")
-        return
-    info = wda("GET", "/wda/activeAppInfo", timeout=5) or {}
-    print(f"前台: {info.get('bundleId')} (pid {info.get('pid')})")
+    return run("phone_key", {**common(a), "key": "home"})[0]
 
 
 def cmd_scroll(a):
-    vp = load_last()["viewport"] if LAST.exists() else {"width": 402, "height": 874}
-    if a.target:
-        cx, cy, node = resolve_point(a.target)
-        w, h = node["rect"][2], node["rect"][3]
-    else:
-        cx, cy, w, h = vp["width"] / 2, vp["height"] / 2, vp["width"], vp["height"]
-    dx, dy = {"down": (0, -1), "up": (0, 1), "right": (-1, 0), "left": (1, 0)}[a.direction]  # 手指方向与内容相反
-    x1, y1 = cx - dx * w * 0.3, cy - dy * h * 0.3
-    x2, y2 = cx + dx * w * 0.3, cy + dy * h * 0.3
-    act(a, lambda: sess("POST", "/wda/dragfromtoforduration", {"fromX": x1, "fromY": y1, "toX": x2, "toY": y2, "duration": 0.2}))
+    return run("phone_swipe", {**common(a), "direction": SWIPE[a.direction], "ref": a.ref})[0]
 
 
 def cmd_drag(a):
-    act(a, lambda: sess("POST", "/wda/dragfromtoforduration", {"fromX": a.x1, "fromY": a.y1, "toX": a.x2, "toY": a.y2, "duration": a.duration}))
+    return run("phone_swipe", {**common(a), "from": {"x": a.x1, "y": a.y1}, "to": {"x": a.x2, "y": a.y2},
+                               "duration_ms": a.duration})[0]
 
 
 def cmd_launch(a):
-    if not re.fullmatch(r"[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)+", a.bundle):
-        raise Fail("需要 bundle id（如 com.apple.mobilesafari）。不知道时: iphone home → iphone find 名称 → iphone tap tN")
-    act(a, lambda: sess("POST", "/wda/apps/activate", {"bundleId": a.bundle}, timeout=45))
+    return run("phone_launch", {**common(a), "app": a.app})[0]
 
 
-def cmd_stop(a):
-    act(a, lambda: sess("POST", "/wda/apps/terminate", {"bundleId": a.bundle}))
+def cmd_apps(a):
+    if not a.query and not a.all:
+        raise Fail("不带关键词会列出手机上全部 App。用 iphone apps <关键词> 查。确实要全部列出再加 --all")
+    return run("phone_apps", {"query": a.query})[0]
 
 
-SETTINGS = "com.apple.Preferences"
-AUTOLOCK_NEVER, AUTOLOCK_DEFAULT = -1, 180  # Settings 里选项 cell 的 name 就是秒数，永不是 -1
-AUTOLOCK_CHOICES = {"never": -1, "30": 30, "60": 60, "120": 120, "180": 180, "240": 240, "300": 300}
+def cmd_handoff(a):
+    return run("phone_handoff", {"reason": " ".join(a.reason), "approval_id": a.approval_id})[0]
 
 
-def _tap_node(n):
-    x, y, w, h = n["rect"]
-    sess("POST", "/wda/tap", {"x": x + w / 2, "y": y + h / 2})
-
-
-def _poll_node(kind, name, wait):
-    """等 (type, name) 出现，并且坐标连续两次一致才返回：设置 App 重开时会恢复上次的滚动位置，
-    列表还在动时拿到的坐标点下去会落在别处。页面刚切换时 /source 可能 404，也在这里吞掉。"""
-    end, s, n, last = time.time() + wait, None, None, None
-    while True:
-        try:
-            s = snapshot_now()
-            n = next((n for n in s["nodes"] if n["type"] == kind and n.get("name") == name), None)
-        except Fail:
-            n = None
-        if n:
-            if last == n["rect"] or time.time() >= end + 3:
-                return s, n
-            last = n["rect"]
-            time.sleep(0.3)
-            continue
-        last = None
-        if time.time() >= end:
-            return s, None
-        time.sleep(0.4)
-
-
-def _drag_list(vp, step):
-    a, b = (0.7, 0.3) if step > 0 else (0.3, 0.7)
-    sess("POST", "/wda/dragfromtoforduration", {"fromX": vp["width"] / 2, "fromY": vp["height"] * a,
-                                                "toX": vp["width"] / 2, "toY": vp["height"] * b, "duration": 0.2})
-    time.sleep(0.4)
-
-
-def _find_scrolling(kind, name, scrolls):
-    """按 (type, name) 找节点；找不到就滚动，滚到头再掉头。name 是不随语言变化的标识。
-    首次多等一会儿，页面刚切换时节点还没出现，先滚会把还没换掉的上一页滚走（慢设备上必现）。
-    节点必须完整落在视口 8%~90% 内才返回：贴着底边的行点击中心会落进底部手势区，点击被系统吞掉（iPhone 14 上必现）。
-    scrolls=0 表示不滚动，直接返回。"""
-    step, flipped, prev, edge = 1, False, None, None
-    for i in range(scrolls * 2 + 1):
-        s, n = _poll_node(kind, name, 4 if i == 0 else 0.6)
-        if n:
-            vp, (_, y, _, h) = s["viewport"], n["rect"]
-            if not scrolls or n["rect"] == edge or (vp["height"] * 0.08 <= y and y + h <= vp["height"] * 0.9):
-                return s, n  # edge：滚过一次位置没变，列表到头，只能就这样点
-            edge = n["rect"]
-            _drag_list(vp, 1 if y + h > vp["height"] * 0.9 else -1)
-            continue
-        if not s:
-            continue
-        if i == scrolls * 2:
-            break
-        here = [(x["type"], text_of(x), tuple(x["rect"])) for x in s["nodes"]]
-        if here == prev:  # 滚不动了，到头
-            if flipped:
-                break
-            step, flipped, prev = -step, True, None
-        else:
-            prev = here
-        _drag_list(s["viewport"], step)
-    raise Fail(f"设置里没找到 {kind} {name}（iOS 版本或语言变了？）")
-
-
-AUTOLOCK_URL = "prefs:root=DISPLAY&path=AUTOLOCK"
-
-
-WDA_URL_MIN_IOS = (16, 4)
-SAFARI = "com.apple.mobilesafari"
-
-
-def wda_url_ok_in(version):
-    """WDA 的 /url 在 iOS 16.4 以下改用 Siri 语音识别说「Open {url}」：会唤醒 Siri，不会跳转，也不会运行快捷指令（iOS 15.6.1 实测）。
-    带 bundleId 的分支同样不支持。版本读不出来时按支持处理。"""
-    nums = [int(x) for x in re.findall(r"\d+", version)[:2]]
-    return not nums or tuple(nums + [0] * (2 - len(nums))) >= WDA_URL_MIN_IOS
-
-
-def wda_url_ok():
-    v = str(((wda("GET", "/status", timeout=5) or {}).get("os") or {}).get("version", ""))
-    return wda_url_ok_in(v)
-
-
-def _wait_any(pick, timeout, what):
-    """反复取树，pick(nodes) 返回节点就结束。页面切换瞬间 /source 可能报错，吞掉重试。"""
-    end, last = time.time() + timeout, None
-    while time.time() < end:
-        try:
-            n = pick(snapshot_now()["nodes"])
-        except Fail as e:
-            last, n = e, None
-        if n:
-            return n
-        time.sleep(0.5)
-    raise Fail(f"{timeout}s 内没出现{what}" + (f"（最后错误: {last}）" if last else ""))
-
-
-def _safari_dialog_buttons(nodes):
-    d = next((n for n in nodes if n.get("name") == "SFDialogView"), None)
-    if not d:
-        return None
-    dx, dy, dw, dh = d["rect"]
-    return [n for n in nodes if n["type"] == "Button" and dx <= n["rect"][0] <= dx + dw and dy <= n["rect"][1] <= dy + dh]
-
-
-def _reset_safari_bar():
-    """上一次中断会在 Safari 里留下提示框（如「地址无效」）或地址栏编辑态，后面的输入就全落空。
-    有对话框就点第一个按钮（单按钮提示是确定，确认框是取消），地址栏在编辑态就点取消。"""
-    for _ in range(3):
-        nodes = snapshot_now()["nodes"]
-        buttons = _safari_dialog_buttons(nodes)
-        cancel = next((n for n in nodes if n.get("name") == "CancelBarItemButton"), None)
-        if buttons:
-            _tap_node(buttons[0])
-        elif cancel:
-            _tap_node(cancel)
-        else:
-            return
-        time.sleep(0.8)
-
-
-def open_url_via_safari(url):
-    """WDA /url 不可用的系统（16.4 以下）改在 Safari 地址栏输入：非 http 的 scheme 会弹「在“X”中打开此页面？」，点放行按钮。
-    这是 Appium 维护者给的做法（appium/appium#14996），iOS 15.6.1 实测能运行快捷指令。"""
-    sess("POST", "/wda/apps/activate", {"bundleId": SAFARI}, timeout=45)
-    _reset_safari_bar()
-    url_field = lambda nodes: next((n for n in nodes if n["type"] == "TextField" and n.get("name") == "URL"), None)
-    for attempt in range(4):  # 进不了输入态就再点（最多点 3 次）；不能直接发键盘输入，没有焦点时 WDA 会卡死，只能重启
-        nodes = _wait_any(lambda ns: ns, 8, "Safari 界面")
-        if url_field(nodes):
-            break
-        if attempt == 3:
-            raise Fail("点了 Safari 地址栏，但没有进入输入状态；用 iphone shot 确认")
-        bar = next((n for n in nodes if n["type"] == "TextField" and n.get("name") == "TabBarItemTitle"), None)
-        if bar:  # 点右端：点中心会命中隐私报告等弹层（iOS 15.6.1 实测），同 type --clear 的约定
-            x, y, w, h = bar["rect"]
-            sess("POST", "/wda/tap", {"x": x + w - 3, "y": y + h / 2})
-        time.sleep(1.2)
-    for rate in (30, 10, 5):  # 键盘合成偶尔多出字符（iOS 15.6.1 实测 namUe），输完读回核对，不一致就清空，放慢再输
-        clear = next((n for n in snapshot_now()["nodes"] if n.get("name") == "ClearTextButton"), None)
-        if clear:  # 输入框里有内容才有这个按钮；AX 报出的值不一定是全文，按长度退格会留下残余
-            _tap_node(clear)
-            time.sleep(0.3)
-        for i in range(0, len(url), 200):
-            sess("POST", "/wda/keys", {"value": [url[i:i + 200]], "frequency": rate}, timeout=60)
-        typed = url_field(snapshot_now()["nodes"])
-        if typed and typed.get("value") == url:
-            break
-    else:
-        raise Fail("Safari 地址栏里的内容和要输入的链接一直对不上；用 iphone shot 确认")
-    sess("POST", "/wda/keys", {"value": ["\n"]})
-
-    def open_button(nodes):
-        """确认框的按钮名是本地化文字，没有语言无关的标识；结构固定：两个按钮，树顺序「取消」在前、「打开」在后（iOS 15.6.1 实测）。"""
-        buttons = _safari_dialog_buttons(nodes)
-        return buttons[-1] if buttons and len(buttons) == 2 else None
-    _tap_node(_wait_any(open_button, 8, "Safari 的「在 App 中打开」确认框"))
-
-
-def relay_name():
-    return config().get("open_url_shortcut", RELAY_NAME)  # 假定每台手机首次配置时已装好，不逐次验证
-
-
-def relay_notice():
-    return ("中转快捷指令让自动锁定与 prefs: 稳定直达，没有它只能界面点击，慢且不稳。每台手机装一次，二选一，装完跑 iphone setup-shortcut 验证：\n"
-            "  与 Mac 同一 iCloud:   iphone setup-shortcut（Mac 导入，经 iCloud 同步到手机）\n"
-            "  与 Mac 不同 iCloud:   iphone shortcut-link 取 iCloud 链接，在手机 Safari 里打开并点「添加快捷指令」，再 iphone setup-shortcut")
-
-
-def cmd_shortcut_link(a):
-    print(RELAY_URL)
-
-
-def _settings_ids(nodes):
-    """设置页有没有 com.apple.settings.* 标识：True 有；False 页面已加载却没有（iOS 15.6.1 实测，行的 name 只是本地化文字）；
-    None 页面还没加载好。按标识找行在 False 时必然落空，不必再滚动搜索。"""
-    if any((n.get("name") or "").startswith("com.apple.settings.") for n in nodes):
-        return True
-    return False if sum(n["type"] == "Cell" for n in nodes) >= 3 else None
-
-
-def _autolock_via_ui():
-    sess("POST", "/wda/apps/activate", {"bundleId": SETTINGS}, timeout=45)
-    time.sleep(0.8)
-    end = time.time() + 8
-    while time.time() < end:
-        try:
-            state = _settings_ids(snapshot_now()["nodes"])
-        except Fail:
-            state = None
-        if state is False:
-            raise Fail("这台手机的设置页没有稳定标识（iOS 15 实测），界面点击回退用不了；装中转快捷指令后可直达：iphone shortcut-link")
-        if state:
-            break
-        time.sleep(0.5)
-    for kind, name, scrolls in (("Button", "com.apple.settings.displayAndBrightness", 8), ("Cell", "AUTOLOCK", 3)):
-        _tap_node(_find_scrolling(kind, name, scrolls)[1])
-        time.sleep(0.7)
-
-
-AUTOLOCK_ORDER = [30, 60, 120, 180, 240, 300, -1]  # 页面上从上到下的选项
-
-
-def _autolock_row(nodes, seconds):
-    """iOS 16+ 选项行的 name 就是秒数；iOS 15 是本地化文字（「3 minutes」「Never」），这时按固定的 7 行顺序取。"""
-    row = next((n for n in nodes if n["type"] == "Cell" and n.get("name") == str(seconds)), None)
-    if row:
-        return row
-    cells = [n for n in nodes if n["type"] == "Cell"]
-    return cells[AUTOLOCK_ORDER.index(seconds)] if len(cells) == len(AUTOLOCK_ORDER) else None
-
-
-def _close_settings():
-    """结束设置 App。没在运行就不用终止。「后台挂起」时 WDA 的 terminate 会卡满 60s（日志 Failed to terminate … state is still
-    Running Background Suspended），WDA 单线程，后面的请求全排在它后面，客户端超时也没用（iOS 15.6.1 实测），
-    所以在 WDA /url 不可用的旧系统上不终止；更新的系统没有这个证据，保持原来的终止行为。"""
-    state = app_state(SETTINGS)
-    if state == 1 or (state == 2 and not wda_url_ok()):
-        return
-    try:
-        sess("POST", "/wda/apps/terminate", {"bundleId": SETTINGS})
-    except Fail:
-        pass
-
-
-def set_autolock(seconds):
-    """WDA 直接开 prefs: 会被拒（iOS 27，错误 115），所以假定手机已装中转快捷指令（iphone setup-shortcut），
-    经它一步直达自动锁定页；没跑通才回退 UI：设置 → 显示与亮度 → 自动锁定。16.4 以下 open_url 改经 Safari 地址栏。"""
-    require_unlocked()
-    _close_settings()
-    wda("POST", "/wda/homescreen", {})
-    time.sleep(0.8)
-    try:
-        try:
-            open_url(AUTOLOCK_URL, direct=False)
-            _wait_any(lambda nodes: _autolock_row(nodes, seconds), 10, "自动锁定选项")
-        except Fail as e:
-            print(f"中转快捷指令没跑通（{e}），改走界面点击（每台手机要先装一次，见 iphone shortcut-link）", file=sys.stderr)
-            _autolock_via_ui()
-        time.sleep(0.3)  # 等列表停稳再取坐标
-        _tap_node(_wait_any(lambda nodes: _autolock_row(nodes, seconds), 10, "自动锁定选项"))
-        time.sleep(0.7)
-        nodes = snapshot_now()["nodes"]
-        row = _autolock_row(nodes, seconds)
-        check = next((n for n in nodes if n["type"] == "Button" and n.get("label") == "checkmark"), None)
-        if not (row and check and row["rect"][1] <= check["rect"][1] < row["rect"][1] + row["rect"][3]):
-            raise Fail("点了选项，但没有在该行看到对勾；用 iphone shot 确认")
-        print(f"自动锁定已设为 {text_of(row)}")
-    finally:
-        try:
-            _close_settings()
-            wda("POST", "/wda/homescreen", {})
-        except Fail:
-            pass
-
-
-def cmd_autolock(a):
-    set_autolock(AUTOLOCK_CHOICES[a.value])
-
-
-def open_url(url, direct=True, relay=None):
-    """直接让 WDA 打开；prefs: 之类被系统拒绝（115）时，经接收输入的快捷指令（open_url_shortcut）转一手。"""
-    from urllib.parse import quote
-    if direct:
-        try:
-            sess("POST", "/url", {"url": url}, timeout=30)
-            return
-        except Fail as e:
-            if "115" not in str(e):
-                raise
-    name = relay or relay_name()
-    link = f"shortcuts://run-shortcut?name={quote(name)}&input=text&text={quote(url)}"
-    if wda_url_ok():
-        sess("POST", "/url", {"url": link}, timeout=30)
-    else:
-        open_url_via_safari(link)
-
-
-def cmd_open(a):
-    act(a, lambda: open_url(a.url))
-
-
-RELAY_NAME = "iphone-open-url"
-RELAY_URL = "https://www.icloud.com/shortcuts/425895ce7d254e9cba00198ce8e7aa42"  # 同一个只含「打开 URL」的快捷指令，供不同 iCloud 的手机直接添加
-
-
-def relay_shortcut_bytes():
-    """只含「打开 URL」、输入取快捷指令输入的工作流。"""
-    token = {"Value": {"string": "\ufffc", "attachmentsByRange": {"{0, 1}": {"Type": "ExtensionInput"}}},
-             "WFSerializationType": "WFTextTokenString"}
-    return plistlib.dumps({
-        "WFWorkflowClientVersion": "2900", "WFWorkflowMinimumClientVersion": 900, "WFWorkflowMinimumClientRelease": 900,
-        "WFWorkflowIcon": {"WFWorkflowIconStartColor": 431817727, "WFWorkflowIconGlyphNumber": 59511},
-        "WFWorkflowImportQuestions": [], "WFWorkflowTypes": [],
-        "WFWorkflowInputContentItemClasses": ["WFStringContentItem", "WFURLContentItem"],
-        "WFWorkflowActions": [{"WFWorkflowActionIdentifier": "is.workflow.actions.openurl",
-                               "WFWorkflowActionParameters": {"WFInput": token}}],
-    }, fmt=plistlib.FMT_BINARY)
-
-
-def mac_shortcuts():
-    out = subprocess.run(["shortcuts", "list"], capture_output=True, text=True, check=True).stdout
-    return out.splitlines()
-
-
-def confirm_mac_import():
-    """导入确认框是「快捷指令」的一个窗口，里面有「添加快捷指令」按钮；用 computer-use 在后台点掉。"""
-    def cu(*args):
-        return subprocess.run(["computer-use", *args], capture_output=True, text=True, timeout=60).stdout
-    for line in cu("windows").splitlines():
-        cols = line.split("\t")
-        if len(cols) > 2 and cols[2] == "快捷指令":
-            for hit in cu("find", cols[0], "添加快捷指令").splitlines():
-                m = re.match(r"(t\d+)\tButton\t添加快捷指令", hit)
-                if m:
-                    cu("click", cols[0], m.group(1))
-                    return True
-    return False
-
-
-def cmd_setup_shortcut(a):
-    """在 Mac 上生成并签名中转快捷指令，后台导入，经 iCloud 同步到手机，再用 prefs: 实测。"""
-    import tempfile
-    if a.name in mac_shortcuts():
-        print(f"Mac 的快捷指令里已有「{a.name}」，跳过导入，只在当前手机上验证", flush=True)
-    else:
-        with tempfile.TemporaryDirectory() as d:
-            raw_f, signed = Path(d) / "raw.shortcut", Path(d) / f"{a.name}.shortcut"
-            raw_f.write_bytes(relay_shortcut_bytes())
-            subprocess.run(["shortcuts", "sign", "-m", "anyone", "-i", str(raw_f), "-o", str(signed)], check=True, capture_output=True)
-            subprocess.run(["open", "-g", "-a", "Shortcuts", str(signed)], check=True)
-            for _ in range(30):
-                if a.name in mac_shortcuts():
-                    break
-                confirm_mac_import()
-                time.sleep(2)
-            else:
-                raise Fail("60s 内 Mac 的快捷指令里没出现该条目；手动打开快捷指令 App 点「添加快捷指令」，需要 computer-use 命令可用")
-        print(f"已导入「{a.name}」，等待 iCloud 同步到手机...", flush=True)
-    if not ready():
-        print("WDA 未运行，跳过实测。iphone up 之后用 iphone open prefs:root=BATTERY_USAGE 验证")
-        return
-    require_unlocked()
-    for _ in range(12):
-        sess("POST", "/wda/apps/activate", {"bundleId": "com.apple.shortcuts"}, timeout=45)
-        time.sleep(2)
-        if any(n["type"] == "Cell" and text_of(n).startswith(a.name) for n in snapshot_now()["nodes"]):
-            break
-        time.sleep(3)
-    else:
-        raise Fail("60s 内手机上没出现该快捷指令。\n" + relay_notice())
-    wda("POST", "/wda/homescreen", {})
-    open_url("prefs:root=BATTERY_USAGE", direct=False, relay=a.name)
-    # 快捷指令首次运行可能在手机上弹授权提示；批准属于用户，这里只把内容报出来并等待
-    told, app, seen = False, None, []
-    for _ in range(30):
-        time.sleep(2)
-        app = (wda("GET", "/wda/activeAppInfo") or {}).get("bundleId")
-        if app == SETTINGS:
-            break
-        try:
-            seen = [text_of(n) for n in snapshot_now()["nodes"] if n["type"] in ("Alert", "Sheet", "Button", "StaticText")][:8]
-        except Fail:
-            seen = []
-        if seen and not told:
-            print("手机上可能出现了授权提示，请你本人处理（最多等 60 秒）: " + " | ".join(seen), flush=True)
-            told = True
-    wda("POST", "/wda/homescreen", {})
-    if app != SETTINGS:
-        raise Fail(f"实测失败：前台是 {app}，不是设置；屏幕上: {' | '.join(seen) or '无'}。手机上打开该快捷指令，确认含「打开 URL」且输入是「快捷指令输入」")
-    cfg = config()
-    cfg["open_url_shortcut"] = a.name
-    CFG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
-    print("实测通过：prefs: 经中转快捷指令打开了设置")
-
-
-# ---------- 自检 ----------
-
-def selftest():
-    xml = ('<XCUIElementTypeApplication type="XCUIElementTypeApplication" bundleId="com.test" x="0" y="0" width="400" height="800">'
-           '<XCUIElementTypeButton type="XCUIElementTypeButton" label="通用" name="BackButton" x="16" y="60" width="44" height="44">'
-           '<XCUIElementTypeStaticText type="XCUIElementTypeStaticText" label="通用" x="20" y="64" width="30" height="20"/></XCUIElementTypeButton>'
-           '<XCUIElementTypeStaticText type="XCUIElementTypeStaticText" label="屏外" x="0" y="900" width="30" height="20"/>'
-           '<XCUIElementTypeTextField type="XCUIElementTypeTextField" x="10" y="100" width="200" height="30"/>'
-           '<XCUIElementTypeOther type="XCUIElementTypeOther" x="0" y="0" width="400" height="800"/>'
-           '</XCUIElementTypeApplication>')
-    app, vp, nodes = parse_tree(xml)
-    assert app == "com.test" and vp == {"width": 400, "height": 800}
-    assert [n["type"] for n in nodes] == ["Button", "TextField"], nodes  # 折叠重复文字、裁掉屏外和空容器
-    assert nodes[0]["name"] == "BackButton" and nodes[0]["t"] == "t1"
-    old = {"app": "a", "nodes": nodes}
-    new = {"app": "a", "nodes": [dict(nodes[0], t="t1"), {"t": "t2", "type": "Switch", "label": "Wi-Fi", "rect": [0, 0, 1, 1]}]}
-    d = diff(old, new)
-    assert "+ t2 Switch \"Wi-Fi\" [0,0,1,1]" in d and any(l.startswith("- TextField") for l in d), d
-    assert diff(old, old)[0].startswith("observe: 树无变化")
-    # iOS 15 的设置页没有 com.apple.settings.* 标识，只有本地化文字；页面已加载却没有标识就该立刻放弃，不能滚动搜索
-    assert _settings_ids([{"type": "Cell", "label": t, "rect": [0, 0, 1, 1]} for t in "abc"]) is False
-    assert _settings_ids([]) is None
-    assert _settings_ids([{"type": "Button", "name": "com.apple.settings.displayAndBrightness", "rect": [0, 0, 1, 1]}]) is True
-    # 16.4 以下 WDA 的 /url 走 Siri；边界是 16.4
-    assert [wda_url_ok_in(v) for v in ("15.6.1", "16.3.1", "16.4", "17.0", "16", "")] == [False, False, True, True, False, True]
-    # status 要说的是手机上已装 Runner 的来源，不是「现在重装会走哪条路」：来源由 bundle id 判断
-    demo = {"bundle_id": "com.x.wda"}
-    assert runner_kind("com.x.wda.runner", demo) == "plumesign" and runner_kind("com.x.wda.xctrunner", demo) == "xcode"
-    assert runner_kind(OFFICIAL_RUNNER_ID + ".ABC123", demo) == "sidestore" and runner_kind(None, demo) is None
-    # 本进程启动的子进程被终止后是僵尸；pid_alive 必须把它当作已退出，stop_wda 不能抛 EPERM
-    import tempfile
-    g, saved = globals(), (PIDFILE, CLI)
-    with tempfile.TemporaryDirectory() as tmp:
-        g["CLI"], g["PIDFILE"] = Path(tmp), Path(tmp) / "wda.pid"
-        child = subprocess.Popen(["sleep", "60"], start_new_session=True)
-        PIDFILE.write_text(str(child.pid))
-        stop_wda()
-        assert pid_alive() is None and not PIDFILE.exists()
-    g["PIDFILE"], g["CLI"] = saved[0], saved[1]
-    # 贴着底边的行（中心落进底部手势区）要先滚进安全区再返回；列表滚不动时照样返回，不能白耗循环
-    vp, drags = {"width": 390, "height": 844}, []
-
-    def fake_list(y, movable):
-        pos = [y]
-
-        def poll(kind, name, wait):
-            return {"viewport": vp, "nodes": [{"type": "Button", "name": "row", "rect": [16, pos[0], 358, 53]}]}, \
-                {"type": "Button", "name": "row", "rect": [16, pos[0], 358, 53]}
-
-        def drag(method, path, body=None, **kw):
-            drags.append(body)
-            if movable:
-                pos[0] -= 250
-        return poll, drag
-
-    saved = (g["_poll_node"], g["sess"], g["time"])
-    class NoSleep:
-        sleep = staticmethod(lambda s: None)
-        time = staticmethod(time.time)
-    try:
-        g["time"] = NoSleep
-        g["_poll_node"], g["sess"] = fake_list(807, True)
-        _, n = _find_scrolling("Button", "row", 3)
-        assert n["rect"][1] == 557 and len(drags) == 1, (n, drags)
-        drags.clear()
-        g["_poll_node"], g["sess"] = fake_list(807, False)
-        _, n = _find_scrolling("Button", "row", 3)
-        assert n["rect"][1] == 807 and len(drags) == 1, (n, drags)
-    finally:
-        g["_poll_node"], g["sess"], g["time"] = saved
-    # tap-text：精确优先、同位置重复节点算一个、屏外不算、多个命中不猜
-    def node(t, kind, label, rect):
-        return {"t": t, "type": kind, "label": label, "rect": rect}
-
-    screen = {"app": "a", "viewport": {"width": 390, "height": 844}, "nodes": [
-        node("t1", "Button", "Home", [0, 766, 78, 44]), node("t2", "StaticText", "Home", [0, 766, 78, 44]),
-        node("t3", "StaticText", "Homework", [100, 100, 80, 20]),
-        node("t4", "Button", "Done", [10, 200, 50, 20]), node("t5", "Button", "Done", [10, 300, 50, 20]),
-        node("t6", "Button", "Offscreen", [10, 900, 50, 20])]}
-    taps = []
-    saved = tuple(g[k] for k in ("snapshot_now", "sess", "act", "require_unlocked", "time"))
-    g["snapshot_now"], g["require_unlocked"], g["time"] = lambda: screen, lambda: None, NoSleep
-    g["sess"] = lambda method, path, body=None, **kw: taps.append(body)
-    g["act"] = lambda args, do: do()
-
-    def tap_text(*words, index=None):
-        taps.clear()
-        cmd_tap_text(argparse.Namespace(text=list(words), index=index))
-
-    try:
-        tap_text("home")
-        assert taps == [{"x": 39, "y": 788}], taps  # 精确的 Home 压过 Homework，Button 与 StaticText 同位置只点一次
-        for bad in ("done", "offscreen", "nope"):
-            try:
-                tap_text(bad)
-            except Fail:
-                continue
-            raise AssertionError(f"{bad} 应该报错")
-        tap_text("done", index=1)
-        assert taps == [{"x": 35, "y": 310}], taps
-        calls = [0]
-
-        def drifting():  # 列表一直在滚：目标位置每次都不同，不能点
-            calls[0] += 1
-            return {**screen, "nodes": [node("t1", "Button", "Moving", [10, 100 + calls[0], 50, 20])]}
-
-        g["snapshot_now"] = drifting
-        try:
-            tap_text("moving")
-        except Fail:
-            assert not taps
-        else:
-            raise AssertionError("位置一直在变时不该点击")
-    finally:
-        g["snapshot_now"], g["sess"], g["act"], g["require_unlocked"], g["time"] = saved
-    # ---------- 安装路径：下载校验、系统下限、路径表、plumesign 流程、过期、init ----------
-    import contextlib
-    import io
-
-    @contextlib.contextmanager
-    def patched(**kw):
-        before = {k: g[k] for k in kw}
-        g.update(kw)
-        try:
-            yield
-        finally:
-            g.update(before)
-
-    def expect_fail(fn, *words):
-        try:
-            fn()
-        except Fail as e:
-            assert all(w in str(e) for w in words), (words, str(e))
-            return
-        raise AssertionError(f"应该报错并含 {words}")
-
-    def quiet(fn, *args, **kw):
-        with contextlib.redirect_stdout(io.StringIO()) as buf:
-            r = fn(*args, **kw)
-        return r, buf.getvalue()
-
-    def make_zip(path, members):
-        with zipfile.ZipFile(path, "w") as z:
-            for name, data, mode in members:
-                zi = zipfile.ZipInfo(name)
-                zi.external_attr = (0o100000 | mode) << 16
-                z.writestr(zi, data)
-
-    def fake_app(root, main_min, xctest_min, rid=OFFICIAL_RUNNER_ID):
-        fa = root / RUNNER_APP
-        (fa / "PlugIns/WebDriverAgentRunner.xctest").mkdir(parents=True)
-        (fa / "Info.plist").write_bytes(plistlib.dumps({"CFBundleExecutable": "WebDriverAgentRunner-Runner",
-                                                        "CFBundleIdentifier": rid, "MinimumOSVersion": main_min}))
-        (fa / "PlugIns/WebDriverAgentRunner.xctest/Info.plist").write_bytes(plistlib.dumps({"MinimumOSVersion": xctest_min}))
-        (fa / "WebDriverAgentRunner-Runner").write_bytes(b"bin")
-        (fa / "WebDriverAgentRunner-Runner").chmod(0o755)
-        return fa
-
-    # 文本解析与错误翻译
-    assert ios_values('{"level":"info","msg":"x"}\nWARN y\n["a"]\n"15.6.1"\n[{"CFBundleIdentifier":"b.runner"}]\n') == \
-        [["a"], "15.6.1", [{"CFBundleIdentifier": "b.runner"}]]  # 日志行与 WARN 被丢掉，只留结果
-    assert not image_mounted('{"level":"info","msg":"none"}') and image_mounted('{"level":"info","msg":"image signature","signature":"ab"}')
-    assert "吊销" in tool_hint("x Revoked certificate y") and "anisette" in tool_hint("anisette server error: connection refused")
-    assert "锁屏" in tool_hint("failed: PasswordProtected") and tool_hint("fine") == ""
-    doc = {"result": {"devices": [{"hardwareProperties": {"reality": "physical", "udid": "U1"}},
-                                  {"hardwareProperties": {"reality": "virtual", "udid": "U3"}},
-                                  {"hardwareProperties": {"reality": "physical", "ecid": 1}}]}}
-    assert devicectl_serves(doc, "U1") and not devicectl_serves(doc, "U2") and not devicectl_serves(doc, "U3")
-    assert account_listed("Saved accounts:\n x") and not account_listed("No accounts found")
-    assert sidestore_id([{"CFBundleIdentifier": SIDESTORE_ID + ".ABC"}]) and sidestore_id([{"CFBundleIdentifier": "x"}]) is None
-
-    with tempfile.TemporaryDirectory() as t:
-        t = Path(t)
-        # sha256 不符：拒绝，且不解包（连 zip 都不打开）
-        good, evil = t / "good.zip", t / "evil.zip"
-        make_zip(good, [(f"{RUNNER_APP}/Info.plist", b"x", 0o644), (f"{RUNNER_APP}/run", b"bin", 0o755)])
-        make_zip(evil, [("../evil", b"x", 0o644), (f"{RUNNER_APP}/Info.plist", b"x", 0o644)])
-
-        class NoZip:
-            class ZipFile:
-                def __init__(self, *a, **k):
-                    raise AssertionError("sha256 不符后不该解包")
-
-        with patched(zipfile=NoZip):
-            expect_fail(lambda: unpack_runner(good, "0" * 64, t / "bad"), "sha256")
-        assert not (t / "bad").exists() and not (t / "bad.part").exists()
-        unpack_runner(good, hashlib.sha256(good.read_bytes()).hexdigest(), t / "ok")
-        assert (t / "ok" / RUNNER_APP / "run").stat().st_mode & 0o111 and not (t / "ok.part").exists()  # 可执行位保留
-        expect_fail(lambda: unpack_runner(evil, hashlib.sha256(evil.read_bytes()).hexdigest(), t / "slip"), "越界")  # zip-slip
-        assert not (t / "evil").exists() and not (t / "slip").exists() and not (t / "slip.part").exists()
-        with patched(ARTIFACTS=t / "art", OFFICIAL=t / "art" / "official",
-                     download_file=lambda url, dest: dest.write_bytes(b"not the runner")):
-            expect_fail(lambda: quiet(fetch_runner), "sha256")  # 下载到的内容与固定的哈希不符
-        assert not (t / "art" / "official").exists() and not list((t / "art").glob("*.zip"))
-
-        # 设备系统下限 = 两个组件 MinimumOSVersion 的最大值（按数字比较）
-        assert runner_min_os(fake_app(t / "a1", "13.0", "15.0")) == "15.0"
-        assert runner_min_os(fake_app(t / "a2", "16.4", "15.0")) == "16.4"
-        assert runner_min_os(fake_app(t / "a3", "9.3", "10.0")) == "10.0"
-        (t / "a4" / RUNNER_APP).mkdir(parents=True)
-        (t / "a4" / RUNNER_APP / "Info.plist").write_bytes(plistlib.dumps({"MinimumOSVersion": "13.0"}))
-        expect_fail(lambda: runner_min_os(t / "a4" / RUNNER_APP), "xctest")
-
-        # IPA：Payload/<app>/...，权限保留
-        build_ipa(t / "a1" / RUNNER_APP, t / "r.ipa")
-        with zipfile.ZipFile(t / "r.ipa") as z:
-            ent = {i.filename: i for i in z.infolist()}
-        run_ent = ent[f"Payload/{RUNNER_APP}/WebDriverAgentRunner-Runner"]
-        assert f"Payload/{RUNNER_APP}/Info.plist" in ent and (run_ent.external_attr >> 16) & 0o111
-
-        # plumesign 流程：签名与安装分开；补签在第二遍之前；原样解包的目录不被改动；成品留在 signed/
-        official = fake_app(t / "off", "13.0", "15.0", rid="com.example.wda.runner")
-        (t / "keys" / "TEAM123").mkdir(parents=True)
-        (t / "keys" / "TEAM123" / "key.pem").write_text("KEY")
-        c1 = {"udid": "00008030-ABCDEF", "bundle_id": "com.example.wda"}
-        cmds, seals = [], []
-
-        def fake_run(cmd, check=True):
-            cmds.append(list(cmd))
-            if cmd[0] == "codesign":
-                Path(cmd[2].split("=", 1)[1] + "0").write_bytes(b"der")
-            elif cmd[0] == "openssl" and "-out" in cmd:
-                Path(cmd[cmd.index("-out") + 1]).write_text("PEM")
-            elif cmd[0] == "openssl":
-                return "subject=UID=u, CN=Apple Development: a (b), OU=TEAM123, O=n, C=US"
-            elif cmd[0] == "plumesign":
-                seals.append(list(cmd))
-                if len(seals) == 2:  # 第二遍密封时才把描述文件封进整包
-                    (Path(cmd[cmd.index("--package") + 1]) / "embedded.mobileprovision").write_bytes(b"p")
-            return ""
-
-        with patched(SIGNED=t / "signed", PLUME_KEYS=t / "keys", fetch_runner=lambda: official):
-            kept, _ = quiet(sign_runner, c1, run=fake_run)
-        assert [c[0] for c in cmds] == ["plumesign", "codesign", "openssl", "openssl", "rcodesign", "plumesign"], cmds
-        first, rc, second = cmds[0], cmds[4], cmds[5]
-        assert "--register-and-install" not in " ".join(first + second) and "--udid" not in " ".join(first + second)
-        assert seals == [first, second]  # 两遍 plumesign，没有再被别的命令插进来
-        assert second[second.index("--custom-identifier") + 1] == "com.example.wda.runner"
-        pkg = second[second.index("--package") + 1]
-        assert pkg == first[first.index("--package") + 1] and Path(pkg) != official  # 都签同一份临时副本
-        assert rc.count("--pem-file") == 2 and str(t / "keys" / "TEAM123" / "key.pem") in rc  # 按证书 OU 找到私钥
-        assert rc[-1].startswith(pkg) and rc[-1].endswith(".xctest") and str(official) not in " ".join(rc)  # 补签的是副本里的 xctest
-        assert not list(official.rglob("embedded.mobileprovision"))  # 官方解包目录原样
-        assert kept == t / "signed" / RUNNER_APP and (kept / "embedded.mobileprovision").exists()
-
-        # 旧系统的设备 devicectl 看不到，安装交回 plumesign：第二遍带 --register-and-install，--udid 是 DeviceID
-        cmds.clear(), seals.clear()
-        with patched(SIGNED=t / "signed", PLUME_KEYS=t / "keys", fetch_runner=lambda: official):
-            quiet(sign_runner, c1, install=7, run=fake_run)
-        last = cmds[-1]
-        assert "--register-and-install" in last and last[last.index("--udid") + 1] == "7", last
-        assert "00008030-ABCDEF" not in " ".join(last)  # DeviceID，不是 UDID
-
-        # xctestrun：由脚本生成，app 放进 Debug-iphoneos/ 布局；bundle id 取自 app 自己，不靠调用方传
-        with patched(SIGNED=t / "signed"):
-            x = write_xctestrun({"udid": "U", "bundle_id": "com.x.wda", "device_port": 8100}, kept)
-            doc = plistlib.loads(x.read_bytes())["WebDriverAgentRunner"]
-            assert x == t / "signed" / XCTESTRUN_NAME and doc["TestHostBundleIdentifier"] == "com.example.wda.runner"
-            assert doc["TestHostPath"] == f"__TESTROOT__/{PRODUCTS_DIR}/{RUNNER_APP}", doc
-            assert doc["TestBundlePath"] == f"__TESTHOST__/PlugIns/{XCTEST_CONFIG}" and doc["DependentProductPaths"] == \
-                [doc["TestHostPath"], f"{doc['TestHostPath']}/PlugIns/{XCTEST_CONFIG}"]
-            assert doc["EnvironmentVariables"]["USE_PORT"] == "8100" and doc["IsXCTRunnerHostedTestBundle"] and doc["IsUITestBundle"]
-            assert (t / "signed" / PRODUCTS_DIR / RUNNER_APP / "embedded.mobileprovision").exists()  # 布局里是同一份签名产物
-            assert plistlib.loads(x.read_bytes())["__xctestrun_metadata__"]["FormatVersion"] == 1
-            write_xctestrun({"udid": "U", "bundle_id": "com.x.wda", "device_port": 9100}, kept)  # 重来一遍不留旧布局
-            assert len(list((t / "signed" / PRODUCTS_DIR).iterdir())) == 1
-            assert plistlib.loads(x.read_bytes())["WebDriverAgentRunner"]["EnvironmentVariables"]["USE_PORT"] == "9100"
-
-        # 过期读取：profile 里的 ExpirationDate；没有文件或解不开都是 None
-        def profile(days):
-            exp = (datetime.now(timezone.utc) + timedelta(days=days)).replace(tzinfo=None)
-            return lambda f: plistlib.dumps({"ExpirationDate": exp})
-
-        with patched(_decode_profile=profile(3)):
-            assert 2.9 < days_left(kept) < 3.1
-        with patched(_decode_profile=profile(-1)):
-            assert days_left(kept) < 0
-        with patched(_decode_profile=lambda f: None):
-            assert days_left(kept) is None
-        assert days_left(t / "nothing") is None
-
-        # 免费描述文件的 3 个名额：满了就不再签名，报出该卸哪个，Runner 排最前
-        c5 = {"udid": "U1", "bundle_id": "com.x.y"}
-        three = ["com.a.one", "com.SideStore.SideStore.ZZZ", "com.x.y.xctrunner"]
-        with patched(free_profile_apps=lambda cfg: three):
-            try:
-                check_free_slots(c5, "com.x.y.runner")
-            except Fail as e:
-                msg = str(e)
-            else:
-                raise AssertionError("满额时应该报错")
-            assert "--device U1" in msg and "uninstall" in msg, msg
-            # 卸载命令里 Runner 排最前（旧的 Runner 优先卸），名单本身按设备上的原顺序
-            assert msg.index("uninstall app --device U1 com.x.y.xctrunner") < msg.index("uninstall app --device U1 com.a.one"), msg
-            check_free_slots(c5, "com.SideStore.SideStore.ZZZ")  # 已在名单里：覆盖安装，不占新名额
-        with patched(free_profile_apps=lambda cfg: three[:2]):
-            check_free_slots(c5, "com.x.y.runner")  # 还有空位
-        with patched(free_profile_apps=lambda cfg: None):
-            check_free_slots(c5, "com.x.y.runner")  # 查不到设备上装了哪些：跳过，交给安装报错兜底
-
-        # devicectl 安装：成功即返回；撞上限时回显 iOS 的原始报错并给出卸载命令；其他失败带注册提示
-        raw = ('Error: Idevice error: Application verification failed: This device has reached the maximum number '
-               'of installed apps using a free developer profile: {(\n'
-               '    "TEAM000001.com.x.y.xctrunner",\n'
-               '    "TEAM000002.com.SideStore.SideStore.ZZZ"\n'
-               ')}\n')
-        seen = []
-        with patched(devicectl=lambda args, timeout=300: (seen.append(args), (1, raw))[1]):
-            # 原始报错原文照抄（含团队前缀的那三行），再给出去掉前缀的卸载命令
-            expect_fail(lambda: install_app(c5, t / "app"), "TEAM000001.com.x.y.xctrunner", "uninstall", "--device U1")
-            expect_fail(lambda: install_app(c5, t / "app"), "installed apps using a free developer profile")
-        assert seen[0][:4] == ["device", "install", "app", "--device"] and seen[0][-1] == str(t / "app"), seen
-        with patched(devicectl=lambda args, timeout=300: (0, "App installed: bundleID com.x.y.runner\n")):
-            install_app(c5, t / "app")  # 成功不抛
-        with patched(devicectl=lambda args, timeout=300: (1, "ERROR: Device not found\n")):
-            expect_fail(lambda: install_app(c5, t / "app"), "register-device", "Device not found")
-
-    # devicectl 的输出解析：认得设备才算认得；命令失败或没有完整 Xcode 时按「不认得」
-    dev_doc = json.dumps({"result": {"devices": [{"hardwareProperties": {"reality": "physical", "udid": "U1"}}]}})
-
-    class FakeDevicectlRun:
-        def __init__(self, rc, body):
-            self.rc, self.body = rc, body
-
-        def __call__(self, cmd, **kw):
-            Path(cmd[cmd.index("--json-output") + 1]).write_text(self.body)
-            return type("R", (), {"returncode": self.rc})()
-
-    def fake_subprocess(rc=0, body="{}"):
-        return type("S", (), {"run": FakeDevicectlRun(rc, body)})()
-
-    with patched(subprocess=fake_subprocess(0, dev_doc)):
-        assert devicectl_devices() and Probes().xcode_serves({"udid": "U1", "team_id": "T"})
-        assert Probes().devicectl_knows({"udid": "U1"}) and not Probes().devicectl_knows({"udid": "U9"})
-        assert not Probes().xcode_serves({"udid": "U1"})  # 认得设备但没配 Team：Xcode 路径签不了名，不能选它
-    with patched(subprocess=fake_subprocess(1, dev_doc)):
-        assert devicectl_devices() is None and not Probes().devicectl_knows({"udid": "U1"})  # 没有完整 Xcode
-    apps_doc = json.dumps({"result": {"apps": [{"bundleIdentifier": "com.a", "builtByDeveloper": True},
-                                               {"bundleIdentifier": "com.b", "builtByDeveloper": False}]}})
-    with patched(subprocess=fake_subprocess(0, apps_doc)):
-        assert free_profile_apps({"udid": "U"}) == ["com.a"]  # 只数开发者签名的 App
-
-    # 已装 Runner 在本机的对应产物：plumesign 看签名副本，Xcode 看构建产物，SideStore 重签的包本机不保存
-    c7 = {"udid": "U", "bundle_id": "com.x.y"}
-    with tempfile.TemporaryDirectory() as t:
-        t = Path(t)
-        with patched(SIGNED=t / "signed", RUNNER=t / "built" / RUNNER_APP):
-            assert installed_app(c7, "com.x.y.runner") is None
-            (t / "signed" / RUNNER_APP).mkdir(parents=True)
-            assert installed_app(c7, "com.x.y.runner") == t / "signed" / RUNNER_APP
-            assert installed_app(c7, OFFICIAL_RUNNER_ID + ".A") is None
-            (t / "built" / RUNNER_APP).mkdir(parents=True)
-            assert installed_app(c7, "com.x.y.xctrunner") == t / "built" / RUNNER_APP
-
-    # 路径表：每一档都用注入的假探测走一遍
-    class FakeP:
-        def __init__(self, **kw):
-            self.v = {"ready": False, "installed": None, "start": True, "version": "15.6.1", "floor": "15.0",
-                      "xcode": False, "plume": "", "side": False, **kw}
-            self.calls, self.started = [], []
-
-        def _a(self, name):
-            self.calls.append(name)
-            return self.v[name]
-
-        def ready(self):
-            return self._a("ready")
-
-        def runner_installed(self, cfg):
-            return self._a("installed")
-
-        def start(self, cfg, rid):
-            self.started.append(rid)
-            return self._a("start")
-
-        def device_version(self, cfg):
-            return self._a("version")
-
-        def min_os(self):
-            return self._a("floor")
-
-        def xcode_serves(self, cfg):
-            return self._a("xcode")
-
-        def devicectl_knows(self, cfg):
-            return self.v["xcode"]
-
-        def plumesign_state(self):
-            return self._a("plume")
-
-        def sidestore(self, cfg):
-            return self._a("side")
-
-    c3 = {"udid": "U", "bundle_id": "b"}
-
-    def route(**kw):
-        p = FakeP(**kw)
-        r, buf = quiet(choose_route, c3, p)
-        return r, buf.splitlines(), p.calls
-
-    r, lines, calls = route(ready=True, installed="b.runner", xcode=True)  # 已就绪：后面的探测都不跑
-    assert r == "ready" and lines == ["路径: 已就绪"] and calls == ["ready"], (r, lines, calls)
-    r, lines, calls = route(installed="b.runner")  # 已装 Runner 且能起，不看系统版本
-    assert r == "installed" and lines == ["路径: 已装 Runner"] and calls == ["ready", "installed", "start"], (r, lines, calls)
-    r, lines, calls = route(version="27.2", installed="b.runner")  # iOS 17 及以上同样先试已装的 Runner
-    assert r == "installed" and "xcode" not in calls, (r, lines, calls)
-    r, lines, calls = route(installed="b.runner", start=False, xcode=True)  # 已装但起不来：继续往下
-    assert r == "xcode" and lines[0] == "路径: 已装 Runner" and lines[-1] == "路径: Xcode", lines
-    expect_fail(lambda: route(version="14.8", xcode=True, plume="", side=True), "14.8", "15.0")  # 系统低于下限，Xcode 也不行
-    assert route(version=None, xcode=True)[0] == "xcode"  # 读不到版本：跳过下限
-    r, lines, calls = route(xcode=True, plume="", side=True)  # Xcode 优先于后面
-    assert r == "xcode" and "plume" not in calls and lines == ["路径: Xcode"], (r, lines, calls)
-    r, lines, calls = route(plume="", side=True)  # plumesign
-    assert r == "plumesign" and "side" not in calls and lines == ["路径: plumesign"], (r, lines, calls)
-    r, lines, calls = route(plume="缺 plumesign", side=True)  # SideStore
-    assert r == "sidestore" and "未验证" in lines[-1], (r, lines)
-    expect_fail(lambda: route(plume="缺 plumesign"), "Xcode", "plumesign", "SideStore")  # 都不满足：列出方案
-
-    # iOS 17 及以上不再被排除：plumesign 与 SideStore 照常可选（go-ios 的 tunnel 只管启动，不管安装）
-    assert route(version="27.2", plume="", side=True)[0] == "plumesign"
-    assert route(version="27.2", xcode=True)[0] == "xcode"
-    r, lines, calls = route(version="27.2", installed="b.runner", start=False, plume="", side=True)
-    assert r == "plumesign" and calls == ["ready", "installed", "start", "version", "floor", "xcode", "plume"], calls
-    assert route(version="16.7", installed="b.runner")[0] == "installed"
-    expect_fail(lambda: route(version="27.2", plume="缺 plumesign"), "没有可用的安装路径", "plumesign")
-
-    # 启法：iOS 17 及以上用 xcodebuild 按 xctestrun 启动，旧系统沿用 go-ios runwda；读不到版本按旧系统
-    for version, want in (("15.6.1", "runwda"), ("16.7", "runwda"), ("17", "xctestrun"), ("27.2", "xctestrun"), (None, "runwda")):
-        assert launch_channel(c7, FakeP(version=version)) == want, version
-    called = []
-    with patched(launch_channel=lambda cfg, p: "xctestrun", launch_xctestrun=lambda cfg, app, timeout: called.append(("xctestrun", app))):
-        launch_runner(c7, FakeP(version="27.2"), "APP", "rid", 5)
-    with patched(launch_channel=lambda cfg, p: "runwda", launch_runwda=lambda cfg, timeout, rid: called.append(("runwda", rid))):
-        launch_runner(c7, FakeP(version="15.6.1"), None, "rid", 5)
-    assert called == [("xctestrun", "APP"), ("runwda", "rid")], called
-
-    # 已装 Runner 的识别：三种候选各自命中，前缀对应 SideStore 路径（id 后缀未验证）；runwda 用匹配到的 id
-    c4 = {"udid": "U", "bundle_id": "com.x.y"}
-
-    def apps_of(*ids):
-        return [{"CFBundleIdentifier": i} for i in ids]
-
-    sidestore_rid = OFFICIAL_RUNNER_ID + ".ABC123"
-    assert find_runner(apps_of("a", "com.x.y.runner"), c4) == "com.x.y.runner"
-    assert find_runner(apps_of("com.x.y.xctrunner"), c4) == "com.x.y.xctrunner"
-    assert find_runner(apps_of("a", sidestore_rid), c4) == sidestore_rid
-    assert find_runner(apps_of(sidestore_rid, "com.x.y.xctrunner", "com.x.y.runner"), c4) == "com.x.y.runner"
-    assert find_runner(apps_of(sidestore_rid, "com.x.y.xctrunner"), c4) == "com.x.y.xctrunner"
-    assert find_runner(apps_of("com.other"), c4) is None and find_runner([], c4) is None
-    probes = Probes()
-    probes._apps = apps_of(sidestore_rid)
-    assert probes.runner_installed(c4) == sidestore_rid
-    for rid in ("com.x.y.runner", "com.x.y.xctrunner", sidestore_rid):
-        cmd = runwda_cmd(c4, rid)
-        assert cmd[:2] == ["ios", "runwda"] and f"--bundleid={rid}" in cmd and f"--testrunnerbundleid={rid}" in cmd, cmd
-
-    # 已装 Runner 起不来（比如账号证书被吊销，本地副本却没到期）：up 仍要走一轮签名安装，且只有一轮
-    order, pf = [], FakeP(installed="com.x.y.runner", start=False, plume="")
-    with patched(config=lambda: c4, usb_device=lambda u: (7, "U"), need_usb=lambda c: (7, "U"), need_tool=lambda n: None, Probes=lambda timeout: pf,
-                 install_plumesign=lambda c, d, p: order.append(("install", d)), finish_up=lambda a: None,
-                 launch_runner=lambda c, p, app, rid, timeout: order.append(("launch", rid, app))):
-        quiet(cmd_up, argparse.Namespace(restart=False, timeout=5, udid=None))
-    assert pf.started == ["com.x.y.runner"], pf.started
-    assert order == [("install", 7), ("launch", "com.x.y.runner", SIGNED / RUNNER_APP)], order  # 先装后启，只一轮
-
-    # DDI 在启动 runwda 之前准备：准备失败时不会启动进程
-    with tempfile.TemporaryDirectory() as t:
-        def no_ddi(c):
-            raise Fail("ddi")
-
-        with patched(CLI=Path(t), PIDFILE=Path(t) / "wda.pid", UPLOG=Path(t) / "up.log", need_tool=lambda n: None, ensure_ddi=no_ddi):
-            expect_fail(lambda: launch_runwda(c4, 5, "com.x.y.runner"), "ddi")
-        assert not (Path(t) / "wda.pid").exists()
-
-    # init：只必填 --bundle；--udid 缺失按设备数报错；--team 只在走 Xcode 路径时要
-    with tempfile.TemporaryDirectory() as t:
-        t = Path(t)
-
-        def ns(**kw):
-            return argparse.Namespace(**{"team": None, "bundle": None, "udid": None, **kw})
-
-        with patched(HOME=t, CFG=t / "config.json", CLI=t / "cli", PIDFILE=t / "cli" / "wda.pid",
-                     RUNNER=t / "r", SIGNED=t / "s", usb_devices=lambda: []):
-            expect_fail(lambda: cmd_init(ns(udid="U1")), "--bundle")
-            expect_fail(lambda: cmd_init(ns(bundle="com.x.y")), "--udid")
-            with patched(usb_devices=lambda: [(1, "A"), (2, "B")]):
-                expect_fail(lambda: cmd_init(ns(bundle="com.x.y")), "--udid", "A", "B")
-            quiet(cmd_init, ns(bundle="com.x.y", udid="U1"))
-            c2 = json.loads(CFG.read_text())
-            assert c2["udid"] == "U1" and c2["bundle_id"] == "com.x.y" and "team_id" not in c2
-            assert "source_dir" not in c2 and "local_port" not in c2
-            expect_fail(lambda: require_team(c2), "--team")
-            with patched(usb_devices=lambda: [(1, "U1")]):
-                quiet(cmd_init, ns(team="TEAM1"))  # 沿用已有 bundle；udid 取唯一一台
-            c2 = json.loads(CFG.read_text())
-            assert c2["team_id"] == "TEAM1" and c2["bundle_id"] == "com.x.y"
-            require_team(c2)
-
-            # up 选设备：配置里的在 USB 上就用它；不在则换到唯一一台；多台或没有就报错；--udid 优先
-            cur, saved, stopped = c2, [], []
-            old = {**cur, "udid": "OLD"}
-            fake = {"save_config": lambda o, u, b, tm: saved.append(u) or {**o, "udid": u}, "stop_wda": lambda: stopped.append(1)}
-            with patched(usb_device=lambda u: (1, u) if u == "U1" else None, **fake):
-                assert pick_device(cur) is cur and not saved
-                with patched(usb_devices=lambda: [(2, "U1")]):
-                    assert pick_device(old)["udid"] == "U1" and saved == ["U1"] and stopped == [1]
-                with patched(usb_devices=lambda: [(2, "U1"), (3, "U9")]):
-                    expect_fail(lambda: pick_device(old), "U1", "U9", "--udid")
-                with patched(usb_devices=lambda: []):
-                    expect_fail(lambda: pick_device(old), "USB")
-                assert pick_device(cur, "U9")["udid"] == "U9" and saved == ["U1", "U9"]
-    print("selftest ok")
+def cmd_ask(a):
+    return run("phone_request_approval", {"summary": " ".join(a.summary), "details": a.details, "approval_id": a.approval_id})[0]
 
 
 def main():
     p = argparse.ArgumentParser(prog="iphone", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    def add(name, fn, help, observe=False):
+    def add(name, fn, help, action=False):
         sp = sub.add_parser(name, help=help)
         sp.set_defaults(fn=fn)
-        if observe:
-            sp.add_argument("--no-observe", action="store_true", help="动作后不输出树差分")
-            sp.add_argument("--wait", type=int, default=None, help="动作后等待界面稳定的毫秒数，默认 500；home 默认等旧 App 离开前台")
+        if action:
+            sp.add_argument("--intent", help="一句话说明为什么做，显示在审批面板上；可能需要审批的动作都要给")
+            sp.add_argument("--approval-id", help="上次返回 approval_pending 时的 id；用相同参数重发同一条命令")
         return sp
 
-    sp = add("init", cmd_init, "首次配置；只必填 --bundle。换手机不用它，iphone up 会自动换")
-    sp.add_argument("--bundle", help="全局唯一的 bundle id，如 com.example.wda；首次必填，已有配置时可省略")
-    sp.add_argument("--team", help="Apple Team ID；只有走 Xcode 路径才需要")
-    sp.add_argument("--udid", help="手机 UDID；省略时用唯一一台 USB 设备")
-    add("renew", cmd_renew, "对当前路径强制重新签名并安装（免费证书 7 天过期后用）")
-    sp = add("up", cmd_up, "按本机条件自动选路，把 Runner 装上手机并启动，等待就绪；证书过期时自动重签")
-    sp.add_argument("--restart", action="store_true")
-    sp.add_argument("--udid", help="用这台手机（换设备时用；省略时配置里的不在 USB 上则自动换到唯一一台）")
-    sp.add_argument("--timeout", type=int, default=120)
-    sp.add_argument("--no-keep-awake", action="store_true", help="不把自动锁定改为永不")
-    sp = add("down", cmd_down, "停止由本 CLI 启动的 WDA，并把自动锁定恢复为 3 分钟")
-    sp.add_argument("--no-keep-awake", action="store_true", help="不恢复自动锁定")
-    sp = add("autolock", cmd_autolock, "设置自动锁定时间（走设置 App 的 UI）")
-    sp.add_argument("value", choices=list(AUTOLOCK_CHOICES), help="never 或秒数 30/60/120/180/240/300")
-    add("status", cmd_status, "设备、WDA、安装路径、锁屏、前台 App、证书剩余天数")
-    sp = add("snapshot", cmd_snapshot, "读界面树（带 tN 元素 token）")
-    sp.add_argument("--max", type=int, default=MAX_NODES)
-    sp.add_argument("--full", action="store_true", help="标签不截断（读长帖、长消息）")
+    sp = add("up", cmd_up, "租用手机并开始任务，返回首屏。首次连接要用户在 Pinky 里批准")
+    sp.add_argument("--task", default="iPhone 操作", help="任务名，用户在 Pinky 里能看到，写清楚")
+    sp.add_argument("--device", help="手机 id 或名称；只有一台在线时可省略")
+    sp.add_argument("--apps", help="本次任务只允许的 App，逗号分隔（名称或 id）")
+    sp.add_argument("--read-only", action="store_true", help="只读任务：凡是会请示用户的动作一律拒绝")
+    sp.add_argument("--approval-id", help="首次连接返回 approval_pending 时的 id")
+    sp = add("down", cmd_down, "结束任务并释放手机")
+    sp.add_argument("--outcome", choices=["done", "failed", "partial", "cancelled"], default="done")
+    sp.add_argument("--summary", help="给用户历史记录的一句话")
+    add("status", cmd_status, "Pinky 看到的手机、HTTP 端点与会话")
+    sp = add("snapshot", cmd_snapshot, "读整屏：每行 [ref] role \"label\" @x,y")
+    sp.add_argument("--wait-ms", type=int, help="等界面变化后再读，最多 30000")
+    add("shot", cmd_shot, "截图存为 JPEG，输出路径")
     sp = add("find", cmd_find, "按文字查找元素；无命中退出码 1")
     sp.add_argument("text", nargs="+")
-    sp.add_argument("--max", type=int, default=MAX_NODES)
-    sp.add_argument("--full", action="store_true", help="标签不截断（读长帖、长消息）")
-    sp = add("wait", cmd_wait, "等待文字出现；超时退出码 1")
+    sp = add("wait", cmd_wait, "等文字出现；超时退出码 1")
     sp.add_argument("text", nargs="+")
-    sp.add_argument("--timeout", type=int, default=10)
-    sp = add("shot", cmd_shot, "截图存为缩小的 JPEG，输出路径")
-    sp.add_argument("--size", type=int, default=1000, help="长边像素，默认 1000")
-    sp = add("tap", cmd_tap, "点击 tN 或点坐标 X Y", observe=True)
+    sp.add_argument("--timeout", type=int, default=10, help="秒，最多 45")
+    sp.add_argument("--gone", action="store_true", help="等它消失")
+    sp = add("tap", cmd_tap, "点击 REF，或点截图像素坐标 X Y", action=True)
     sp.add_argument("target", nargs="+")
-    sp = add("tap-text", cmd_tap_text, "按文字点击屏幕上的元素（先精确后包含）；多个命中时报出候选，用 --index 选", observe=True)
+    sp.add_argument("--long", action="store_true", help="长按")
+    sp = add("tap-text", cmd_tap_text, "按文字点击（精确优先）；多个命中时列候选，用 --index 选", action=True)
     sp.add_argument("text", nargs="+")
-    sp.add_argument("--index", type=int, help="多个命中时选第几个（从 0 起）")
-    sp = add("type", cmd_type, "输入文字；给 tN 则先点它聚焦，--clear 先清空。不会提交", observe=True)
-    sp.add_argument("--target", metavar="tN")
-    sp.add_argument("--clear", action="store_true", help="先清空 --target 输入框再输入；text 可省略")
+    sp.add_argument("--index", type=int)
+    sp.add_argument("--long", action="store_true", help="长按")
+    sp = add("type", cmd_type, "输入文字，默认替换输入框原有内容；不提交，除非加 --submit", action=True)
+    sp.add_argument("--ref", type=int, help="目标输入框；省略则输入到当前焦点")
+    sp.add_argument("--append", action="store_true", help="保留原有内容")
+    sp.add_argument("--submit", action="store_true", help="输入后按回车")
     sp.add_argument("text", nargs="?", default="")
-    sp = add("key", cmd_key, "按键", observe=True)
-    sp.add_argument("name", choices=["return", "delete", "home"])
-    add("home", cmd_home, "回主屏幕", observe=True)
-    sp = add("app", cmd_app, "前台 App；给 bundle id 则查该 App 的运行状态（未运行/后台挂起/后台运行/前台）")
-    sp.add_argument("bundle", nargs="?")
-    sp = add("scroll", cmd_scroll, "滚动：down 表示看后面的内容", observe=True)
-    sp.add_argument("direction", choices=["down", "up", "left", "right"])
-    sp.add_argument("target", nargs="?", metavar="tN")
-    sp = add("drag", cmd_drag, "手指从 (x1,y1) 拖到 (x2,y2)，单位是点", observe=True)
+    sp = add("key", cmd_key, "按键", action=True)
+    sp.add_argument("name", choices=["return", *KEYS])
+    add("home", cmd_home, "回主屏幕", action=True)
+    sp = add("scroll", cmd_scroll, "滚动：down 表示看后面的内容", action=True)
+    sp.add_argument("direction", choices=list(SWIPE))
+    sp.add_argument("ref", nargs="?", type=int, help="在这个元素内滚动")
+    sp = add("drag", cmd_drag, "手指从 (x1,y1) 拖到 (x2,y2)，单位是截图像素", action=True)
     for k in ("x1", "y1", "x2", "y2"):
-        sp.add_argument(k, type=float)
-    sp.add_argument("--duration", type=float, default=0.3)
-    sp = add("launch", cmd_launch, "按 bundle id 启动 App", observe=True)
-    sp.add_argument("bundle")
-    sp = add("stop", cmd_stop, "结束某个 App", observe=True)
-    sp.add_argument("bundle")
-    sp = add("open", cmd_open, "打开 URL 或 scheme（https:、prefs:root=BATTERY_USAGE 等）", observe=True)
-    sp.add_argument("url")
-    sp.set_defaults(wait=2500)  # 跨 App 跳转比应用内点击慢
-    sp = add("setup-shortcut", cmd_setup_shortcut, "在 Mac 安装中转快捷指令（同一 iCloud 的手机自动同步），并在当前手机上验证")
-    sp.add_argument("--name", default=RELAY_NAME)
-    sub.add_parser("shortcut-link", help="展示中转快捷指令的 iCloud 链接（给与 Mac 不同 iCloud 的手机用）").set_defaults(fn=cmd_shortcut_link)
-    sub.add_parser("selftest", help="离线自检").set_defaults(fn=lambda a: selftest())
+        sp.add_argument(k, type=int)
+    sp.add_argument("--duration", type=int, default=300, help="毫秒，80 到 1200")
+    sp = add("launch", cmd_launch, "启动 App：bundle id 或名称；传 URL 即打开链接", action=True)
+    sp.add_argument("app")
+    sp = add("open", cmd_launch, "打开 URL，等同 launch <URL>", action=True)
+    sp.add_argument("app", metavar="url")
+    sp = add("apps", cmd_apps, "按关键词查已装 App（Pinky 允许范围内）；不带关键词要加 --all")
+    sp.add_argument("query", nargs="?")
+    sp.add_argument("--all", action="store_true", help="列出全部 App（会暴露手机上装了什么，慢用）")
+    sp = add("handoff", cmd_handoff, "请用户接管（解锁、登录、输密码），等他交还")
+    sp.add_argument("reason", nargs="+")
+    sp.add_argument("--approval-id")
+    sp = add("ask", cmd_ask, "向用户提问并等回答；它不授予任何权限")
+    sp.add_argument("summary", nargs="+")
+    sp.add_argument("--details")
+    sp.add_argument("--approval-id")
 
     a = p.parse_args()
-    t = time.time()
     try:
-        rc = a.fn(a) or 0
+        return a.fn(a) or 0
     except Fail as e:
         print(f"error: {e}", file=sys.stderr)
-        rc = 1
-    except subprocess.CalledProcessError as e:
-        print(f"error: 命令失败 {e.cmd[:3]} rc={e.returncode}", file=sys.stderr)
-        rc = 1
-    print(f"duration_ms={int((time.time() - t) * 1000)}")
-    return rc
+        return 1
 
 
 if __name__ == "__main__":
