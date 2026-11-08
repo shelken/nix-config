@@ -3,3 +3,5 @@ flake.lock
 **/ai/**
 # Tinycast 自己回写该文件，数组元素独占一行，prettier 会改回去
 modules/features/tools/tinycast/settings.json
+# sops 加密的 binary 密文，形如 JSON 但扩展名为 .js（为了编辑时高亮），prettier 无法解析
+modules/features/network/dnscontrol/dnsconfig.sops.js

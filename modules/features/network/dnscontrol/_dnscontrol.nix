@@ -24,7 +24,7 @@ in
     sops.secrets = {
       # 整份配置加密进本仓库：公开仓库里只有密文，看不到记录表
       dnscontrol-config = {
-        sopsFile = ./dnsconfig.js.enc;
+        sopsFile = ./dnsconfig.sops.js;
         format = "binary";
         path = "${configDir}/dnsconfig.js";
         mode = "0400";
