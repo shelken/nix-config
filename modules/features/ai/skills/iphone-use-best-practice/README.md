@@ -53,6 +53,9 @@
 5. **WDA 路径没有遮挡过滤（未验证）**。Pinky 的 iOS 27 路径有 `unoccluded`，WDA 路径的 `wdaScreenElements` 没有。旧脚本实测：AX 树看不出遮挡，被悬浮搜索栏盖住的最后一行仍在树里，点它的中心会点进搜索栏；元素贴着屏幕底边（视口下方约 10%）时点击落进手势区被吞（iPhone 14 上必现）
 6. **手机会自动锁屏**。Pinky 靠「用户用 Touch ID 从电脑解锁」应对，但任务中途锁屏仍会打断。旧脚本把自动锁定设为永不：WDA 直接打开 `prefs:` 会被系统拒绝（错误 115），只有「快捷指令」的「打开 URL」动作能打开 `prefs:root=DISPLAY&path=AUTOLOCK`
 7. **session 能力项（未验证价值）**。旧脚本创建 session 时带 `shouldTerminateApp: false`、`waitForIdleTimeout: 0`、`maxTypingFrequency: 30`；Pinky 只传 `shouldWaitForQuiescence: false`，其余靠 appium settings
+8. **应用范围只限制「打开和操作」，不限制「看」（已实测，iPhone 14）**。范围外的 App 用 `launch` 被拒，但在主屏点它的图标能打开，进去后 `tap`、`scroll` 被拒、读屏不被拒。原因是主屏属于系统界面，`policy.Evaluate` 对它一律放行，而读屏不经过策略。可行的改法：前台是范围外 App 时，`agentView`（`internal/gateway/pipeline.go`）像对待被屏蔽的 App 那样返回 `blocked app`
+9. **任务白名单（`phone_connect` 的 `apps`）不过滤 `phone_apps`（已实测）**。只有 agent 范围会过滤，见 `internal/gateway/agent.go` 的 `phone_apps` 实现
+10. **范围按显示名或 bundle id 完全匹配，显示名随手机语言变化（已实测）**。范围里写「设置」，英文界面的手机上它叫 `Settings`，匹配不上，`launch` 被拒。界面应提示优先填 bundle id
 
 Pinky 做得比旧脚本好的地方：helper 启动时设 `USE_IP=127.0.0.1`，让 WDA 只监听手机回环，不暴露在 Wi-Fi 上；旧脚本的 xctestrun 没设它，WDA 监听所有接口。免费描述文件的「设备信任」与自动化授权口令提示（`enabling automation mode`）的检测也更完整
 

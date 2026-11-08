@@ -9,6 +9,14 @@
 3. 在 Pinky 的 设置 › 智能体 › 远程智能体（Settings › Agents › Remote agents）打开开关「允许智能体通过 HTTP 连接」，`iphone` 才能连上它的 HTTP 端点（默认 `http://127.0.0.1:7465/mcp`）
 4. `iphone status` 确认手机在列表里、HTTP 可达，再 `iphone up`。首次连接要用户在 Pinky 里批准这个远程 agent，并选范围
 
+### 限定可用的 App（推荐）
+
+首次批准 `iphone (remote)` 时默认是「除已屏蔽应用外的所有应用」。想限制，在 Pinky 的 设置 › 智能体 里把它改成「仅限我选择的应用」并填白名单，改完对正在运行的会话立即生效。
+
+- 填 **bundle id**（如 `com.apple.Preferences`），不要填显示名：显示名随手机语言变化，英文界面的「设置」叫 `Settings`，对不上
+- 查 bundle id，不连手机：`curl -s "https://itunes.apple.com/search?term=关键词&entity=software&country=cn&limit=5"`，看结果里的 `bundleId`；只覆盖 App Store 上架的 App
+- 范围只限制**打开和操作**，不限制**读屏**：在主屏点图标仍能进入范围外的 App 并读到内容，之后 `tap`、`scroll` 才会被拒。要让某个 App 完全不可见，把它加进 Pinky 设置 › 安全 的屏蔽列表
+
 ### iOS 27 及以上
 
 手机上不用装任何东西。Pinky 用 CoreDevice 的屏幕流与触控。首次要 Xcode 在手机连着时打开一次，让开发者磁盘镜像挂上，之后它会一直在。

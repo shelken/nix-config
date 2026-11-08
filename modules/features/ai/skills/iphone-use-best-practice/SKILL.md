@@ -100,4 +100,5 @@ iphone down --summary "已查看电池健康"   # 释放手机，写入用户的
 
 - iOS 17.4 及以上。iOS 27 以下要先在手机上装一次 WebDriverAgent helper，否则只能读屏和开 App，见 [references/setup.md](references/setup.md)
 - 没有 `autolock`、结束 App、查询 App 运行状态；手机锁屏用 `handoff`，用户可在 Pinky 里用 Touch ID 解锁
+- 用户在 Pinky 里设的应用范围只限制打开和操作，不限制读屏；范围外的 App 在前台时仍能读到它的内容，不要主动去读。`launch` 被拒后不要改走主屏点图标
 - 手机界面文字随系统语言变化，`find`、`wait`、`tap-text` 的关键词要用当前语言
