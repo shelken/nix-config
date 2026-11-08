@@ -36,6 +36,7 @@ deploy host mach:
 # 默认 --skip-checks: deploy-rs 的 check 阶段会对整个 flake 跑 nix flake check,
 # 求值所有主机（含 linux 的 IFD/assertion 问题），与目标节点无关也会失败。
 # schema 校验单独跑: nix build .#checks.aarch64-darwin.deploy-schema
+[doc('远程部署 darwin 主机，用法: just deploy <主机> [--dry-activate ...]')]
 [group('build')]
 [macos]
 deploy host *args:
@@ -72,12 +73,10 @@ ls-gen:
 prefetch *args:
     @{{ justfile_directory() }}/utils/script/just/prefetch {{ args }}
 
-# git pull
+# 拉取并变基，有本地改动时自动暂存再恢复
 [group('git')]
 pull:
-    @git stash save 'temp'
-    @git pull --rebase
-    @git stash pop
+    @git pull --rebase --autostash
 
 # nixos 重建
 [group('build')]
@@ -105,8 +104,15 @@ rebuild-debug *args:
 
 # 交互式源码查看
 [group('flake')]
+[macos]
 repl host=profile:
     @nix repl .#darwinConfigurations.{{ host }}
+
+# 交互式源码查看
+[group('flake')]
+[linux]
+repl host=profile:
+    @nix repl .#nixosConfigurations.{{ host }}
 
 # 回滚配置
 [group('build')]

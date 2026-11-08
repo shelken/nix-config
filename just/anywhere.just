@@ -19,6 +19,7 @@ lima-target-rm name="nixos-anywhere-test":
 
 # qemu 软件模拟，较慢；qemu 由 nix 临时提供，不装进系统
 # x86_64 BIOS 演练机：按 hosts/vm/vps-test/nixos-anywhere-vps.yaml 起一台对齐 VPS 规格的 Ubuntu
+[doc('起一台对齐 VPS 规格的 x86_64 BIOS 演练机，qemu 软件模拟较慢')]
 lima-vps-up name="nixos-anywhere-vps":
     nix shell nixpkgs#qemu -c limactl start --name={{ name }} --tty=false --timeout=30m hosts/vm/vps-test/nixos-anywhere-vps.yaml
     @echo "SSH 端口: $(just anywhere lima-vps-port {{ name }})"
@@ -27,5 +28,6 @@ lima-vps-up name="nixos-anywhere-vps":
 lima-vps-port name="nixos-anywhere-vps":
     @limactl list {{ name }} --format '{{ "{{.SSHLocalPort}}" }}'
 
+[doc('下载并缓存 nixos-anywhere 的 kexec 安装环境，stdout 只输出缓存文件路径')]
 kexec-cache arch="aarch64" release="":
     @{{ justfile_directory() }}/utils/script/just/kexec-cache "$@"
