@@ -96,6 +96,11 @@
           }
         );
 
+      # settings.json 声明的 npm 包名（去 npm: 前缀与 @版本）。`-npm:` 之类的禁用条目不计入
+      npmDeclared = map (s: lib.removePrefix "npm:" s) (
+        builtins.filter (lib.hasPrefix "npm:") (map entrySource piSettings.packages)
+      );
+
       # 沙箱内 loopback 指向 VM 自身，模型地址统一改为宿主网关
       sandboxModels = jsonFormat.generate "pi-sandbox-models.json" (
         mylib.rewriteLoopbackBaseUrls "host.microsandbox.internal" {
@@ -119,6 +124,22 @@
       home.shellAliases.pi = "sec-run pi";
 
       shelken.dev.sandbox.writableRoots = [ ".pi/agent" ];
+
+      # pi 只在 `pi install` / `pi remove` 时改 npm/package.json，启动时只补装缺失的包、从不清理；
+      # settings.json 由本仓库声明，删掉一行 pi 并不知情，旧包会一直留在安装目录。
+      # 这里按声明对账：多出来的包一次 `bun remove` 卸掉（与 pi remove 同一条命令，无需联网）。
+      # 没有多余包时只花一次 jq；清理失败不阻断激活，下次再试。
+      home.activation.piPruneNpm = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        npm_dir="${config.home.homeDirectory}/.pi/agent/npm"
+        if [ -f "$npm_dir/package.json" ]; then
+          stale=$(${pkgs.jq}/bin/jq -r --argjson keep '${builtins.toJSON npmDeclared}' \
+            '(.dependencies // {}) | keys - $keep | .[]' "$npm_dir/package.json")
+          if [ -n "$stale" ]; then
+            run ${pkgs.bun}/bin/bun remove --cwd "$npm_dir" $stale \
+              || warnEcho "pi npm 残留清理失败，下次激活重试"
+          fi
+        fi
+      '';
 
       # pi 安装已迁入共享工具登记表（modules/features/ai/tools.nix 的 pi 条目）
       shelken.dev.tools.pi.sandboxFiles = {
