@@ -7,7 +7,6 @@ set dotenv-filename := ".host-profile"
 profile := "$PROFILE"
 local_secrets_dir := env_var_or_default("LOCAL_SECRETS_DIR", home_dir() + "/code/MyRepo/nix/secrets.nix")
 
-
 alias b := rebuild
 alias bd := rebuild-debug
 alias sw := switch
@@ -124,11 +123,6 @@ git-temp:
     @git stash save 'temp'
     @git pull --rebase
     @git stash pop
-
-# kitty clean
-[group('tools')]
-kitty-clean:
-    @rm -f $HOME/.config/kitty/kitty.conf
 
 # 显示历史配置列表
 [group('build')]
@@ -254,13 +248,6 @@ upp input:
 [group('flake')]
 view:
     @nix-melt
-
-# 调试wez
-[group('tools')]
-wez-test:
-    @rm -f $HOME/.config/wezterm/wezterm.lua
-    @ln -s {{ justfile_directory() }}/modules/features/terminal/wezterm/wezterm.lua $HOME/.config/wezterm/wezterm.lua
-
 
 # AI 工具链同步（just ai mp-sync / just ai pi-compaction）
 [group('ai')]
