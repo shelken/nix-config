@@ -10,7 +10,7 @@ just --list --list-submodules
 ## 布局
 
 - 根 `justfile`：全局设置与高频配方，包括构建、flake、gc、git
-- `just/*.just`：低频配方按主题拆成模块，由根 `justfile` 的 `mod` 引入，调用方式是 `just <模块> <配方>`
+- `just/*.just`：低频配方按主题拆成模块，由根 `justfile` 的 `mod` 引入，调用方式统一写 `just <模块>::<配方>`，文档、注释与脚本里都不用空格形式 `just <模块> <配方>`
 - `utils/script/just/`：只给 justfile 用的脚本。配方体超过几行就放这里，配方只留一行调用
 - 平台专属的模块在 `mod` 上加 `[macos]` 或 `[linux]`，另一个平台上整块隐藏
 
@@ -20,7 +20,7 @@ just --list --list-submodules
 - 配方里用到 `"$@"` 时，模块自己写 `set positional-arguments := true`，设置不会从根继承
 - 不能引用根 `justfile` 的变量（如 `profile`），否则整个 just 启动失败。需要主机名时用环境变量 `$PROFILE`，它来自 `.host-profile`，环境变量会继承
 - 脚本路径写 `{{ justfile_directory() }}/utils/script/just/<脚本>`，在模块里它仍指向仓库根
-- 模块内部互相调用写全名，如 `just anywhere lima-target-ip`
+- 模块内部互相调用写全名，如 `just anywhere::lima-target-ip`
 - 配方说明用 `[doc('一句话')]`。`just --list` 只取紧挨着配方的最后一行注释，多行注释会被截断
 
 ## 新增或改名

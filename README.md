@@ -190,9 +190,9 @@ just deploy vps-cc
 
 ```bash
 # 构建镜像并上传到 pve 的 iso 目录
-just linux gen-image <host> <variant>
-just linux gen-image work-test iso
-just linux gen-image work-test qemu
+just linux::gen-image <host> <variant>
+just linux::gen-image work-test iso
+just linux::gen-image work-test qemu
 ```
 
 # 引用

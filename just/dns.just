@@ -1,4 +1,4 @@
-# DNS 配置（dnscontrol）的维护任务，由根 justfile 以 `mod dns` 引入：just dns <配方>
+# DNS 配置（dnscontrol）的维护任务，由根 justfile 以 `mod dns` 引入：just dns::<配方>
 
 # 模块配方默认在本文件所在目录执行，这里统一回到仓库根目录，相对路径才与根 justfile 一致
 set working-directory := '..'

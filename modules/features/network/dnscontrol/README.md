@@ -17,13 +17,13 @@ dnscontrol-ctl <preview|push|check|print-ir>
 | `check`    | 只校验语法，不访问 Cloudflare  |
 | `print-ir` | 打印展开后的中间表示，用于调试 |
 
-`dnscontrol-ctl` 没有 `just` 别名，也不接 CI 和系统激活：`push` 改线上 DNS，必须先看 `preview`。`just dns` 只用来编辑密文，不碰线上
+`dnscontrol-ctl` 没有 `just` 别名，也不接 CI 和系统激活：`push` 改线上 DNS，必须先看 `preview`。`just dns::edit` 只用来编辑密文，不碰线上
 
 ## 改记录
 
 1. 编辑密文，保存时 sops 自动重新加密
    ```bash
-   just dns edit
+   just dns::edit
    ```
 2. `just hm`，让 sops-nix 把新配置解密到 `~/.config/dnscontrol/dnsconfig.js`
 3. `dnscontrol-ctl preview`，确认差异符合预期
