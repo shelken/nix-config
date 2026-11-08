@@ -5,20 +5,29 @@
   "compaction": {
     "reserveTokens": 22000,
     "modelOverrides": {
-      "mp/codex/gpt-6.1-sol": {
-        "reserveTokens": 100000
-      },
-      "zed/anthropic/claude-sonnet-5-5": {
-        "reserveTokens": 472000
-      },
       "anthropic/claude-sonnet-5-5": {
         "reserveTokens": 600000
+      },
+      "mp/loomy/DeepSeek-V4.1-Flash": {
+        "reserveTokens": 648576
+      },
+      "mp/codex/gpt-5.6-sol": {
+        "reserveTokens": 22000
+      },
+      "mp/codex/gpt-6.1-sol": {
+        "reserveTokens": 100000
       },
       "mp/workbuddy/deepseek-v4.1-flash": {
         "reserveTokens": 600000
       },
       "mp/workbuddy-ai/deepseek-v4.1-flash-sg": {
         "reserveTokens": 600000
+      },
+      "cpa/gpt-5.6-luna": {
+        "reserveTokens": 650000
+      },
+      "cpa/gpt-6-luna": {
+        "reserveTokens": 650000
       },
       "cpa/qwenworkcn/pro": {
         "reserveTokens": 600000
@@ -32,14 +41,20 @@
       "cpa/workbuddy/glm-5.3-flash": {
         "reserveTokens": 600000
       },
+      "antigravity/gemini-3.8-flash": {
+        "reserveTokens": 648576
+      },
+      "openai/gpt-6-astra": {
+        "reserveTokens": 22000
+      },
+      "openai/gpt-6.1-sol": {
+        "reserveTokens": 22000
+      },
       "trae/glm-5.3": {
         "reserveTokens": 600000
       },
-      "mp/loomy/DeepSeek-V4.1-Flash": {
-        "reserveTokens": 648576
-      },
-      "antigravity/gemini-3.8-flash": {
-        "reserveTokens": 648576
+      "zed/anthropic/claude-sonnet-5-5": {
+        "reserveTokens": 472000
       }
     }
   },

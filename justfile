@@ -312,6 +312,11 @@ wez-test:
 # 同步 magpie 模型能力差集到 omp models.yml
 mp-sync:
     @{{ justfile_directory() }}/utils/script/sync-mp-models.sh
+
+# 按模型上下文窗口回填 pi settings.json 的 reserveTokens（节点见脚本开头）
+pi-compaction:
+    @{{ justfile_directory() }}/utils/script/sync_pi_compaction.py
+
 # 清除历史；默认`3d`; 三天前
 [linux]
 wipe duration="3d":
