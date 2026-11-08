@@ -12,7 +12,7 @@
       config = {
         programs.mise.globalConfig.tools = {
           # renovate: datasource=github-releases depName=max-sixty/worktrunk
-          worktrunk = "0.79";
+          worktrunk = "v0.81.0";
         };
         home.file = {
           ".config/worktrunk/config.toml".source = tomlFormat.generate "worktrunk-config.toml" {
