@@ -6,6 +6,7 @@
   ...
 }:
 let
+  keyCombo = import ./_key-combo.nix { inherit lib; };
   scriptsDir = ./scripts;
 
   scriptFiles = lib.filterAttrs (name: type: type == "regular" && lib.hasSuffix ".sh" name) (
@@ -114,7 +115,7 @@ let
   // builtins.listToAttrs (
     map (cmd: {
       name = "hotkey.customCommand.${commandID cmd.name}";
-      value = mylib.darwinKeyCombo cmd.hotkey;
+      value = keyCombo cmd.hotkey;
     }) hotkeyedCommands
   );
 in

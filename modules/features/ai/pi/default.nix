@@ -11,10 +11,10 @@
       linkPi = rel: mylib.mkConfigFile config (./. + "/${rel}");
       linkPiConfig = rel: mylib.mkConfigFile config (./configs + "/${rel}");
       jsonFormat = pkgs.formats.json { };
-      readYaml = mylib.readYaml pkgs;
+      aiLib = import ../_lib.nix { inherit lib pkgs; };
 
-      sharedModels = readYaml ../omp/models.yml;
-      piModels = readYaml ./models.yml;
+      sharedModels = aiLib.readYaml ../omp/models.yml;
+      piModels = aiLib.readYaml ./models.yml;
       mergedModels = lib.recursiveUpdate sharedModels piModels;
 
       # omp thinking -> pi thinkingLevelMap 键位对齐 (pi 1.3.0 wire 序列化):
@@ -101,9 +101,8 @@
         builtins.filter (lib.hasPrefix "npm:") (map entrySource piSettings.packages)
       );
 
-      # 沙箱内 loopback 指向 VM 自身，模型地址统一改为宿主网关
       sandboxModels = jsonFormat.generate "pi-sandbox-models.json" (
-        mylib.rewriteLoopbackBaseUrls "host.microsandbox.internal" {
+        aiLib.rewriteLoopbackBaseUrls "host.microsandbox.internal" {
           providers = lib.mapAttrs (_: adaptProvider) mergedModels.providers;
         }
       );

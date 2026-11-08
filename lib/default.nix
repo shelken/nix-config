@@ -17,74 +17,12 @@ rec {
   mkHomeConfigurations = import ./homeConfigurations.nix { inherit lib myvars; };
   relativeToRoot = lib.path.append ../.;
 
-  # pkgs -> path -> attrs；先用 yj 转成 json 再读入（构建期 IFD）
-  readYaml =
-    pkgs: file:
-    builtins.fromJSON (
-      builtins.readFile (
-        pkgs.runCommand "converted.json" { } ''
-          ${pkgs.yj}/bin/yj < ${file} > $out
-        ''
-      )
-    );
-  # 沙箱内 loopback 指向 VM 自身，模型的 baseUrl 要改成宿主网关。
-  # 在 Nix 层改写，YAML 与 JSON 两种模型配置共用同一份逻辑，不依赖 yq/jq。
-  rewriteLoopbackBaseUrls =
-    gateway: attrs:
-    let
-      # Nix 正则不支持字符类转义与可选量词作用于转义字符，IPv6 只匹配 ::1 本体
-      isLoopback = url: builtins.match "https?://(127[.]0[.]0[.]1|localhost|::1)(.*)" url != null;
-      rewrite =
-        url:
-        let
-          m = builtins.match "(https?://)(127[.]0[.]0[.]1|localhost|::1)(.*)" url;
-        in
-        if isLoopback url then builtins.elemAt m 0 + gateway + builtins.elemAt m 2 else url;
-      walk =
-        value:
-        if builtins.isAttrs value then
-          lib.mapAttrs (k: v: if k == "baseUrl" && builtins.isString v then rewrite v else walk v) value
-        else if builtins.isList value then
-          map walk value
-        else
-          value;
-    in
-    walk attrs;
-
-  # 扫入当前目录所有除default.nix的以nix结尾的文件，以及第一层目录
-  # 返回一个目录list
-  scanPaths =
-    path:
-    builtins.map (f: (path + "/${f}")) (
-      builtins.attrNames (
-        lib.attrsets.filterAttrs (
-          path: _type:
-          (_type == "directory") # include directories
-          || (
-            (path != "default.nix") # ignore default.nix
-            && (lib.strings.hasSuffix ".nix" path) # include .nix files
-          )
-        ) (builtins.readDir path)
-      )
-    );
-
   mkBoolOpt =
     default: description:
     mkOption {
       inherit default description;
       type = types.bool;
     };
-
-  mkLoginItemString =
-    { app_name }:
-    let
-      appPath = "/Applications/${app_name}.app";
-      hiddenAppleScript = "false"; # 默认设置为不隐藏
-    in
-    ''
-      echo >&2 'Add LoginItem for ${app_name}'
-      /usr/bin/osascript -e 'tell application "System Events" to make login item at end with properties {path:"${appPath}", hidden:${hiddenAppleScript}}'
-    '';
 
   mkLaunchCommand =
     {
@@ -197,111 +135,6 @@ rec {
         value = mkDefaultSecret { };
       }) secretsList
     );
-  # 解析 "alt-f"、"alt-shift-enter" 等人类可读快捷键为 macOS Carbon 规范 JSON 字符串
-  # 用于 Tinycast 等基于 Carbon 键码与修饰键掩码的应用热键配置
-  darwinKeyCombo =
-    str:
-    let
-      keyMap = {
-        a = 0;
-        s = 1;
-        d = 2;
-        f = 3;
-        h = 4;
-        g = 5;
-        z = 6;
-        x = 7;
-        c = 8;
-        v = 9;
-        b = 11;
-        q = 12;
-        w = 13;
-        e = 14;
-        r = 15;
-        y = 16;
-        t = 17;
-        "1" = 18;
-        "2" = 19;
-        "3" = 20;
-        "4" = 21;
-        "6" = 22;
-        "5" = 23;
-        "=" = 24;
-        "9" = 25;
-        "7" = 26;
-        "-" = 27;
-        "8" = 28;
-        "0" = 29;
-        "]" = 30;
-        o = 31;
-        u = 32;
-        "[" = 33;
-        i = 34;
-        p = 35;
-        l = 37;
-        j = 38;
-        "'" = 39;
-        k = 40;
-        ";" = 41;
-        "\\" = 42;
-        "," = 43;
-        "/" = 44;
-        n = 45;
-        m = 46;
-        "." = 47;
-        "`" = 50;
-        return = 36;
-        enter = 36;
-        tab = 48;
-        space = 49;
-        delete = 51;
-        backspace = 51;
-        escape = 53;
-        esc = 53;
-        left = 123;
-        right = 124;
-        down = 125;
-        up = 126;
-        f1 = 122;
-        f2 = 120;
-        f3 = 99;
-        f4 = 118;
-        f5 = 96;
-        f6 = 97;
-        f7 = 98;
-        f8 = 100;
-        f9 = 101;
-        f10 = 109;
-        f11 = 103;
-        f12 = 111;
-      };
-      modMap = {
-        cmd = 256;
-        command = 256;
-        shift = 512;
-        alt = 2048;
-        opt = 2048;
-        option = 2048;
-        ctrl = 4096;
-        control = 4096;
-      };
-      normalized = builtins.replaceStrings [ "+" " " ] [ "-" "" ] (lib.toLower str);
-      tokens = builtins.filter (x: builtins.isString x && x != "") (builtins.split "-" normalized);
-      len = builtins.length tokens;
-      key = builtins.elemAt tokens (len - 1);
-      mods = builtins.genList (i: builtins.elemAt tokens i) (len - 1);
-      keyCode = keyMap.${key} or (throw "darwinKeyCombo: 未知按键名 '${key}' (位于快捷键 '${str}')");
-      modifiers = builtins.foldl' (
-        acc: m: acc + (modMap.${m} or (throw "darwinKeyCombo: 未知修饰键 '${m}' (位于快捷键 '${str}')"))
-      ) 0 mods;
-    in
-    builtins.toJSON {
-      combo._0 = {
-        carbonKeyCode = keyCode;
-        carbonModifiers = modifiers;
-      };
-    };
-
   # 根据 config.shelken.dotfiles.liveEdit 开关决定配置来源：
   # - liveEdit = true（本机开发环境）：使用 mkOutOfStoreSymlink 软链至本地 ~/nix-config/<相对路径>，支持免 rebuild 热加载
   # - liveEdit = false（远程部署节点/默认）：解析为仓库根下的纯 Nix store 路径，保证闭包自包含与原子回滚

@@ -3,7 +3,6 @@
     {
       lib,
       pkgs,
-      mylib,
       ...
     }:
     let
@@ -128,9 +127,9 @@
 
       # ---------- 模型角色解析（omp 与 pi 共用）----------
 
-      readYaml = mylib.readYaml pkgs;
+      aiLib = import ../_lib.nix { inherit lib pkgs; };
 
-      ompConfig = readYaml ../omp/config.yml;
+      ompConfig = aiLib.readYaml ../omp/config.yml;
       roles = ompConfig.modelRoles;
       agentModelOverrides = ompConfig.task.agentModelOverrides or { };
 
