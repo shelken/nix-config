@@ -52,143 +52,38 @@
 
       darwinHosts = lib.filterAttrs (_: v: v.type == "darwin") hosts;
       nixosHosts = lib.filterAttrs (_: v: v.type == "nixos") hosts;
-
-      deployHosts = lib.filterAttrs (_: v: v ? deploy) hosts;
-
-      systems = [
-        "x86_64-linux"
-        "aarch64-linux"
-        "aarch64-darwin"
-      ];
-
-      deployLib = mylib.deployRsLib {
-        inherit lib systems;
-        inherit (inputs) nixpkgs deploy-rs;
-      };
     in
-    inputs.flake-parts.lib.mkFlake { inherit inputs; } {
-      # 同名即同一功能：一个功能的 darwin / homeManager / nixos 部分写在同一文件或同一目录；
-      # 路径含 /_ 的文件不自动导入，用于数据或私有片段
-      imports = [
-        inputs.flake-parts.flakeModules.modules
-        (inputs.import-tree [
-          ./modules/flake
-          ./modules/features
-          ./modules/profiles
-        ])
-      ];
+    inputs.flake-parts.lib.mkFlake
+      {
+        inherit inputs;
+        specialArgs = { inherit mylib hosts; };
+      }
+      {
+        # 同名即同一功能：一个功能的 darwin / homeManager / nixos 部分写在同一文件或同一目录；
+        # 路径含 /_ 的文件不自动导入，用于数据或私有片段
+        imports = [
+          inputs.flake-parts.flakeModules.modules
+          (inputs.import-tree [
+            ./modules/flake
+            ./modules/features
+            ./modules/profiles
+          ])
+        ];
 
-      inherit systems;
+        systems = [
+          "x86_64-linux"
+          "aarch64-linux"
+          "aarch64-darwin"
+        ];
 
-      flake = {
-        nixosConfigurations = lib.mapAttrs (_: v: mylib.nixosSystem (v // args)) nixosHosts;
-        darwinConfigurations = lib.mapAttrs (_: v: mylib.macosSystem (v // args)) darwinHosts;
-        homeConfigurations = mylib.mkHomeConfigurations (
-          self.darwinConfigurations // self.nixosConfigurations
-        );
-
-        deploy = {
-          nodes = lib.mapAttrs (
-            name: v:
-            mylib.deployNode {
-              inherit deployLib;
-              inherit name;
-              configuration =
-                if v.type == "darwin" then self.darwinConfigurations.${name} else self.nixosConfigurations.${name};
-              inherit (v) type system;
-              extra = v.deploy;
-            }
-          ) deployHosts;
+        flake = {
+          nixosConfigurations = lib.mapAttrs (_: v: mylib.nixosSystem (v // args)) nixosHosts;
+          darwinConfigurations = lib.mapAttrs (_: v: mylib.macosSystem (v // args)) darwinHosts;
+          homeConfigurations = mylib.mkHomeConfigurations (
+            self.darwinConfigurations // self.nixosConfigurations
+          );
         };
       };
-
-      perSystem =
-        {
-          config,
-          pkgs,
-          system,
-          ...
-        }:
-        {
-          checks = {
-            #ref: https://devenv.sh/?q=git-hooks.hooks
-            pre-commit-check = inputs.git-hooks.lib.${system}.run {
-              src = ./.;
-              hooks = {
-                #NOTE 目前不支持配置垂直对其
-                nixfmt = {
-                  enable = true;
-                  settings.width = 100;
-                };
-                typos = {
-                  enable = true;
-                  settings = {
-                    write = true; # Automatically fix typos
-                    configPath = "./.typos.toml"; # relative to the flake root
-                  };
-                }; # Source code spell checker
-                prettier = {
-                  enable = true;
-                  settings = {
-                    write = true; # Automatically format files
-                    configPath = "./.prettierrc.yaml"; # relative to the flake root
-                  };
-                }; # 主要用于文档检查
-                # 被平台属性禁用的 mod（如 macOS 上的 linux 模块）不会被 just 解析，错误要到另一个平台才暴露，
-                # 所以对每个模块文件单独解析。模块引用根变量也会在这里报错
-                just-modules = {
-                  enable = true;
-                  name = "just-modules";
-                  description = "justfile 与 just/*.just 逐个解析";
-                  files = "^(justfile|just/.*\\.just)$";
-                  pass_filenames = false;
-                  entry = "${pkgs.writeShellScript "check-just-modules" ''
-                    set -eu
-                    for f in justfile just/*.just; do
-                      ${pkgs.just}/bin/just --justfile "$f" --summary > /dev/null
-                    done
-                  ''}";
-                };
-                # deadnix.enable = true; # detect unused variable bindings in `*.nix`
-                # statix.enable = true; # lints and suggestions for Nix code(auto suggestions)
-              };
-            };
-            # deploy-rs 部署配置校验（schema/激活脚本检查）；
-            # 只在原生系统启用，跨系统会让 nix flake check 尝试交叉构建
-          }
-          // lib.optionalAttrs (system == "aarch64-darwin") (deployLib.${system}.deployChecks self.deploy);
-
-          # Development Shells
-          devShells.default = pkgs.mkShellNoCC {
-            packages = with pkgs; [
-              # fix https://discourse.nixos.org/t/non-interactive-bash-errors-from-flake-nix-mkshell/33310
-              bashInteractive
-              # deploy
-              deploy-rs
-              # Nix-related
-              nixfmt
-              deadnix
-              statix
-              # spell checker
-              typos
-              # code formatter
-              prettier
-              nixos-anywhere
-              actionlint
-              # nh # 不要引入，会把nix放进来
-              # nix-prefetch-github # 已由 utils/script/just/prefetch 替代
-              # nix-prefetch-git # 已由 utils/script/just/prefetch 替代
-            ];
-            name = "dots";
-            shellHook = ''
-              ${config.checks.pre-commit-check.shellHook}
-            '';
-          };
-
-          # nixfmt-tree: treefmt 包装,支持目录参数;裸 nixfmt 传目录已被 Nix 标记 deprecated
-          formatter = pkgs.nixfmt-tree;
-        };
-    };
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
