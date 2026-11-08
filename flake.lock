@@ -635,10 +635,10 @@
     "secrets": {
       "flake": false,
       "locked": {
-        "lastModified": 1793952672,
-        "narHash": "sha256-nWgMVyidLH/Nqa4iEC/Txt47wm1fKt2cafRAVBatZL8=",
+        "lastModified": 1794143414,
+        "narHash": "sha256-/lEicF2oz8N8oq8ReApqWJHLM0ySnz3rAISk2K8IbkE=",
         "ref": "refs/heads/main",
-        "rev": "e5995bb5181626f0f333ab809f64d0e26d16aae8",
+        "rev": "b01f0da4f68d8d9aa23ce95ba015f7cfd6009320",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/shelken/secrets.nix.git"
