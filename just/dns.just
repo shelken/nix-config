@@ -13,7 +13,7 @@ token_file := home_directory() / '.config/dnscontrol/cloudflare-api-token'
 edit:
     @sops {{ config }} || test $? -eq 200
 
-[doc('对比线上记录与配置，只显示差异（输出为空即已同步）')]
+[doc('对比线上记录与配置，显示待变更的差异（末尾 Done. 0 corrections. 即已同步）')]
 preview: (_run 'preview')
 
 [doc('把差异推到线上 DNS，会改线上记录；务必先 just dns::preview')]
