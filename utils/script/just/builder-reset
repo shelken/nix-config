@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 删掉 linux-builder 的 guest 磁盘（见 just builder-reset 的说明）；运行中拒绝执行
+# 删掉 linux-builder 的 guest 磁盘（见 just mac builder-reset 的说明）；运行中拒绝执行
 set -euo pipefail
 # 与 modules/features/darwin/linux-builder/darwin.nix 里的状态目录保持一致
 dir="$HOME/.local/state/linux-builder"
@@ -9,7 +9,7 @@ if [[ ! -e "$disk" ]]; then
     exit 0
 fi
 if pids="$(pgrep -f "$dir/vzvm.json")"; then
-    echo "linux-builder 正在运行（PID $pids）：运行 linux-builder stop 停机（原终端已关闭也能停），再重跑 just builder-reset" >&2
+    echo "linux-builder 正在运行（PID $pids）：运行 linux-builder stop 停机（原终端已关闭也能停），再重跑 just mac builder-reset" >&2
     exit 1
 fi
 echo "当前磁盘实占：$(du -h "$disk" | cut -f1)" >&2

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 下载并缓存 nixos-anywhere 的 kexec 安装环境；stdout 只输出缓存文件路径，
-# 供 KEXEC=$(just kexec-cache x86_64 nixos-26.05) 使用，其余信息走 stderr。
+# 供 KEXEC=$(just anywhere kexec-cache x86_64 nixos-26.05) 使用，其余信息走 stderr。
 # 用法: kexec-cache <arch> [release]；release 留空则取 nixos-anywhere 自带的默认版本
 set -euo pipefail
 arch="${1:?用法: kexec-cache <arch> [release]}"

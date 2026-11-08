@@ -21,7 +21,7 @@ flowchart LR
 
 日常部署的构建位置由 `flake.nix` 的 `hosts.<主机>.deploy.remoteBuild` 决定。当前 VPS 设置为 `true`：Mac 求值配置，VPS 构建并获取二进制缓存，再激活系统，不需要本机 `linux-builder`
 
-使用下文 `--build-on local` 装机，或手动在本地构建 x86_64-linux 系统时，才需要启动本机 `linux-builder`。启停与重置见 [模块头部说明](../../modules/features/darwin/linux-builder/darwin.nix)：`linux-builder status` 看状态，`linux-builder stop` 停机；`just builder-reset` 会删除 guest 磁盘，下次启动为空 Nix store，执行前必须停机
+使用下文 `--build-on local` 装机，或手动在本地构建 x86_64-linux 系统时，才需要启动本机 `linux-builder`。启停与重置见 [模块头部说明](../../modules/features/darwin/linux-builder/darwin.nix)：`linux-builder status` 看状态，`linux-builder stop` 停机；`just mac builder-reset` 会删除 guest 磁盘，下次启动为空 Nix store，执行前必须停机
 
 ## 一台 VPS 由哪些文件组成
 
@@ -115,7 +115,7 @@ nix build .#nixosConfigurations.<主机>.config.system.build.toplevel
 ### 两阶段安装
 
 ```bash
-KEXEC=$(just kexec-cache x86_64 nixos-26.05)
+KEXEC=$(just anywhere kexec-cache x86_64 nixos-26.05)
 
 # 阶段一：kexec 进内存里的安装环境，磁盘不动；之后安装环境的 sshd 在 22 端口
 # 旧系统拒绝加载未签名内核时，再加 --kexec-extra-flags '-c'，见下表
@@ -187,5 +187,6 @@ lib/deployNode.nix                     # deploy-rs 节点：hostname 即主机�
 lib/deployRsLib.nix                    # deploy-rs 的 lib，激活器换成 nixpkgs 的缓存包
 hosts/vps/common.nix                   # VPS 共有配置
 hosts/vps/vps-cc/README.md             # vps-cc 切换实录、演练、核对清单
-justfile                               # deploy、kexec-cache、lima-vps-up
+justfile                               # deploy
+utils/just/anywhere.just               # kexec-cache、lima-vps-up 等装机演练配方
 ```

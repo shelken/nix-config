@@ -21,12 +21,6 @@ default:
 add:
     @git add .
 
-# 列出不在 nix 管理内的 brew 包（只列出，不删除）
-[group('tools')]
-[macos]
-brew-diff:
-    @brew bundle cleanup --file=$(nix path-info /run/current-system --recursive 2>/dev/null | grep Brewfile | head -1)
-
 # 构建前摘要：要真编译什么、要下载多少；kind 为 system（默认）、home、deploy
 [group('build')]
 plan host=profile kind="system":
@@ -47,55 +41,11 @@ deploy host mach:
 deploy host *args:
     @deploy --skip-checks .#{{ host }} {{ args }}
 
-# Lima 演练机：按 hosts/vm/lima-test/nixos-anywhere-test.yaml 起一台 Ubuntu 当「待接管的 Linux」
-[group('lima')]
-[macos]
-lima-target-up name="nixos-anywhere-test":
-    limactl start --name={{ name }} --tty=false hosts/vm/lima-test/nixos-anywhere-test.yaml
-    @echo "目标 IP: $(just lima-target-ip {{ name }})"
-
-# 演练机在 vzNAT 网卡（lima0）上的 IP，Mac 可直连
-[group('lima')]
-[macos]
-lima-target-ip name="nixos-anywhere-test":
-    @limactl shell {{ name }} ip -4 -o addr show dev lima0 | awk '{print $4}' | cut -d/ -f1
-
-# 删掉演练机，从头再来
-[group('lima')]
-[macos]
-lima-target-rm name="nixos-anywhere-test":
-    limactl delete --force {{ name }}
-
-# qemu 软件模拟，较慢；qemu 由 nix 临时提供，不装进系统
-# x86_64 BIOS 演练机：按 hosts/vm/vps-test/nixos-anywhere-vps.yaml 起一台对齐 VPS 规格的 Ubuntu
-[group('lima')]
-[macos]
-lima-vps-up name="nixos-anywhere-vps":
-    nix shell nixpkgs#qemu -c limactl start --name={{ name }} --tty=false --timeout=30m hosts/vm/vps-test/nixos-anywhere-vps.yaml
-    @echo "SSH 端口: $(just lima-vps-port {{ name }})"
-
-# 演练机映射到 Mac 本机的 SSH 端口（qemu 用户态网络，没有可直连的 IP）
-[group('lima')]
-[macos]
-lima-vps-port name="nixos-anywhere-vps":
-    @limactl list {{ name }} --format '{{ "{{.SSHLocalPort}}" }}'
-
-[group('lima')]
-kexec-cache arch="aarch64" release="":
-    @{{ justfile_directory() }}/utils/script/just/kexec-cache "$@"
-
 # 格式化
-[group('tools')]
+[group('flake')]
 fmt:
     @deadnix -e
     @nix fmt .
-
-# 清空 linux-builder VM 的 guest 磁盘，下次启动得到空 Nix store
-# 磁盘是稀疏文件，只会涨不会缩；只有在肯重新下载/重编译时才值得重置
-[group('tools')]
-[macos]
-builder-reset:
-    @{{ justfile_directory() }}/utils/script/just/builder-reset
 
 # 清理无用的包
 [group('gc')]
@@ -110,12 +60,6 @@ gc duration="1d":
 gc-all:
     @nh clean all -a --keep-one
     @nix store gc
-
-# 生成镜像（变体由 nixpkgs 提供：iso / iso-installer / qemu / proxmox / sd-card …）
-[group('build')]
-[linux]
-gen-image host format:
-    @{{ justfile_directory() }}/utils/script/just/gen-image "$@"
 
 # 暂存未提交文件合并
 [group('git')]
@@ -139,12 +83,6 @@ prefetch *args:
 [group('git')]
 pull:
     @git pull --rebase
-
-# 查看包文件树
-[group('tools')]
-[linux]
-qip:
-    @nix-store --gc --print-roots | rg -v '/proc/' | rg -Po '(?<= -> ).*' | xargs -o nix-tree
 
 # nixos 重建
 [group('build')]
@@ -185,12 +123,6 @@ rollback:
 [group('flake')]
 search pkg num='10':
     @nh search -l {{ num }} -c nixos-unstable {{ pkg }}
-
-# mac更新前调整nix到代理
-[group('tools')]
-[macos]
-set-proxy:
-    @sudo python3 utils/script/just/darwin_set_proxy.py
 
 # nixos 重建
 [group('build')]
@@ -249,12 +181,20 @@ upp input:
 view:
     @nix-melt
 
-# AI 工具链同步（just ai mp-sync / just ai pi-compaction）
-[group('ai')]
-mod ai 'utils/just/ai.just'
+# 装机与演练：kexec-cache、Lima 演练机（just anywhere <配方>）
+[group('modules')]
+mod anywhere 'utils/just/anywhere.just'
 
-# 清除历史；默认`3d`; 三天前
-[group('gc')]
+# macOS 专用：brew-diff、builder-reset、set-proxy（just mac <配方>）
+[group('modules')]
+[macos]
+mod mac 'utils/just/mac.just'
+
+# Linux 专用：gen-image、qip、wipe（just linux <配方>）
+[group('modules')]
 [linux]
-wipe duration="3d":
-    @sudo nix profile wipe-history --older-than {{ duration }} --profile /nix/var/nix/profiles/system
+mod linux 'utils/just/linux.just'
+
+# AI 工具链同步（just ai mp-sync / just ai pi-compaction）
+[group('modules')]
+mod ai 'utils/just/ai.just'

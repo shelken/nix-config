@@ -15,7 +15,7 @@
 #   启动：linux-builder          （首次会要一次 sudo 密码，用来安装连接密钥；前台运行，Ctrl-C 优雅停机；已在运行时拒绝）
 #   状态：linux-builder status   （运行中打印 PID 与启动时间）
 #   停止：linux-builder stop     （向 vzvm 发 SIGINT，等 guest 优雅关机；原终端已关闭也能停）
-#   重置：just builder-reset     （删掉 guest 磁盘，下次启动是空 store；运行中拒绝执行，先 stop）
+#   重置：just mac builder-reset     （删掉 guest 磁盘，下次启动是空 store；运行中拒绝执行，先 stop）
 # VM 没启动时，Linux 构建会因连不上 linux-builder 而失败。
 #
 # 可选功能：要用的主机在 imports 里加 self.modules.darwin.linux-builder

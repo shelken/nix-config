@@ -7,7 +7,7 @@
 - `default.nix`：主机配置，角色 `tui`，导入可选功能 `disko`（`modules/features/nixos/disko.nix`）
 - `facter.json`：nixos-facter 硬件报告，安装时生成并提交；不存在时 `default.nix` 用 virtio 兜底内核模块
 - `nixos-anywhere-test.yaml`：Lima 模板，声明目标机（Ubuntu 26.04、vz、plain 模式、vzNAT 网卡、root 授权 Lima 密钥）
-- `justfile` 里的 `lima-target-up` / `lima-target-ip` / `lima-target-rm`
+- `utils/just/anywhere.just` 里的 `lima-target-up` / `lima-target-ip` / `lima-target-rm`（`just anywhere <配方>`）
 
 ## 安装步骤
 
@@ -15,8 +15,8 @@
 
 ```bash
 # 1. 按模板起目标机（等价于 limactl start hosts/vm/lima-test/nixos-anywhere-test.yaml）
-just lima-target-up
-IP=$(just lima-target-ip)
+just anywhere lima-target-up
+IP=$(just anywhere lima-target-ip)
 KEY=~/.lima/_config/user          # Lima 自己的密钥，模板的 provision 已授权给 root
 
 # 2. 看清楚要抹的是哪块盘：vda 是系统盘，vdb 是 cloud-init 的 cidata，别选错
@@ -44,7 +44,7 @@ ssh root@$IP 'nixos-version; findmnt -t btrfs; swapon'
 ## 预期现象
 
 - 重启后 `limactl shell` 不再可用：NixOS 只授权了你自己的密钥，Lima 的密钥登不进去。这是预期的，虚拟机照常运行，用 `ssh root@$IP` 访问，`limactl stop -f nixos-anywhere-test` 可停
-- 要重来：`just lima-target-rm && just lima-target-up`，`facter.json` 可保留复用
+- 要重来：`just anywhere lima-target-rm && just anywhere lima-target-up`，`facter.json` 可保留复用
 
 ## 排障
 
