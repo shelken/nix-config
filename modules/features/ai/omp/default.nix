@@ -11,10 +11,12 @@
       # 软链仓库内文件，仓库中直接编辑即生效
       linkOmp = rel: mylib.mkConfigFile config (./. + "/${rel}");
 
-      aiLib = import ../_lib.nix { inherit lib pkgs; };
-
+      models = mylib.readYaml pkgs ./models.yml;
       sandboxModels = (pkgs.formats.yaml { }).generate "omp-sandbox-models.yml" (
-        aiLib.rewriteLoopbackBaseUrls "host.microsandbox.internal" (aiLib.readYaml ./models.yml)
+        models
+        // {
+          providers = mylib.rewriteLoopbackBaseUrls "host.microsandbox.internal" models.providers;
+        }
       );
 
       # 沙箱专用插件清单：顶层 sandboxExclude 列出沙箱里不装的依赖。
