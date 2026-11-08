@@ -8,7 +8,7 @@
 - `ceil-idle` 上限变了且空闲：下次启动自动重建，数据卷保留
 - `rm-busy` 有上下文时 `sb rm` 拒绝
 - `rm-force` `sb rm --force` 强制删除并打断上下文
-- `host-stubs` 上下文内 `sb`、`just`、`spawn-subagent`、`computer-use` 被拒绝并说明原因
+- `host-stubs` 上下文内 `sb`、`just`、`spawn-subagent`、`cua-driver` 被拒绝并说明原因
 - `trust-required` `.sandbox.yaml` 未批准或批准后内容变了：启动直接报错并提示 `sb trust`，改注释或格式不失效
 - `trust-network` 批准后项目声明的私网目标可达，未声明的同机其他端口仍拦截
 - `grant-default` `sb.yaml` 的 `default_grant` 对所有上下文生效，同机其他端口仍拦截
@@ -33,7 +33,7 @@ Preconditions:
 - **空闲重建。** 运行 `$V run ceil-idle -- $V sb run true` 与 `$V sb status`。stderr 含「正在重建 (保留数据盘 …)」，status 显示 `cpus=$((CPUS - 1))`、`consistent`；`$V msb exec sb-main -- ls /data/xdg/data/omp/agent.db` 仍存在。结束后把 `cpus` 改回 `$CPUS`
 - **rm 忙时。** 后台运行 `$V sb run sleep 40 > "$EVIDENCE/bg.out" 2>&1 &`，`wait_busy` 返回后再运行 `$V run rm-busy -- $V sb rm`。`rc` 为 `1`，提示用 `--force`，VM 仍为 Running
 - **rm 强制。** 同样后台启动一个上下文并记下 `pid=$!`，`wait_busy` 返回后运行 `$V run rm-force -- $V sb rm --force`。`rc` 为 `0`，`wait $pid` 返回非零，status 为 `Not created`；下一步前先 `$V sb up`
-- **宿主命令桩。** 运行 `$V run stubs -- $V sb run bash -c 'for c in sb just spawn-subagent computer-use; do $c status; echo "$c rc=$?"; done'`。`stubs.out` 里四个命令都是 `rc=1`，原因（「沙箱内…」之类）也写在 stdout，因为桩脚本用 `echo` 输出；`stubs.err` 除 `[sb]` 行外为空
+- **宿主命令桩。** 运行 `$V run stubs -- $V sb run bash -c 'for c in sb just spawn-subagent cua-driver; do $c status; echo "$c rc=$?"; done'`。`stubs.out` 里四个命令都是 `rc=1`，原因（「沙箱内…」之类）也写在 stdout，因为桩脚本用 `echo` 输出；`stubs.err` 除 `[sb]` 行外为空
 - **默认放行。** 测试项目无 `.sandbox.yaml` 时运行 `$V run grant -- $V sb run bash -c "curl -s -o /dev/null -m 5 -w '%{http_code}\n' $GATEWAY_URL/models; curl -s -o /dev/null -m 5 -w '%{http_code}\n' http://$IP:80"`。第一行是 HTTP 状态码（默认放行的 `$GATEWAY_ADDR`），第二行 `000`（同一台机器的其他端口被拦截，宿主上它有响应）
 - **批准流程。** 在测试项目写 `network: ["$IP:80"]` 到 `.sandbox.yaml`。运行 `$V run trust-none -- $V sb run true`：`rc` 为 `1`，stderr 含「未批准」；`$V sb plan` 最后一行含「未批准」。运行 `$V sb trust`，再运行 `$V run trust-net -- $V sb run bash -c "curl -s -o /dev/null -m 5 -w '%{http_code}\n' http://$IP:80; curl -s -o /dev/null -m 5 -w '%{http_code}\n' http://$IP:8080"`：第一行是 HTTP 状态码，第二行 `000`。在文件里只加一行注释，`$V run trust-comment -- $V sb run true` 仍然 `rc` 为 `0`；把端口改成 `8080`，`$V run trust-changed -- $V sb run true` 又变成 `rc` 为 `1`。结束后删除该文件；批准记录在隔离的 `$WORK/msb/approvals`，随 `cleanup` 删除
 - **导入到目标路径。** 运行 `echo fake-kubeconfig > ~/.kube/sb-verify.yaml; shasum ~/.kube/sb-verify.yaml`，在测试项目写 `.sandbox.yaml`：`imports: [{src: ~/.kube/sb-verify.yaml, target: ~/.kube/sb-verify.yaml}]`，运行 `$V sb trust`。再运行 `$V run import-target -- $V sb run bash -c 'cat ~/.kube/sb-verify.yaml; ls ~/.kube; stat -c "%a" ~/.kube/sb-verify.yaml; mv ~/.kube/sb-verify.yaml ~/.kube/t && mv ~/.kube/t ~/.kube/sb-verify.yaml && echo RENAME_OK; echo changed >> ~/.kube/sb-verify.yaml'`。输出依次为 `fake-kubeconfig`、只有 `sb-verify.yaml` 一项（目标目录被暂存目录遮住，宿主 `~/.kube` 里其他文件在上下文内不可见）、`600`、`RENAME_OK`，`rc` 为 `0`；宿主文件的 `shasum` 不变；`$V msb exec sb-main -- ls -A /run/sandbox/contexts` 只有 `.slot.lock`。结束后删除 `~/.kube/sb-verify.yaml` 与 `.sandbox.yaml`
