@@ -13,9 +13,21 @@
   };
 
   flake.modules.homeManager.herdr-app =
-    { config, mylib, ... }:
+    {
+      config,
+      lib,
+      mylib,
+      ...
+    }:
     {
       xdg.configFile."herdr-app/settings.json" = mylib.mkConfigFile config ./herdr-app/settings.json;
+
+      # App 的 worktree 根目录写死在内置模块；目录链接使它与 CLI 使用同一个根。
+      home.file.".herdr/worktrees".source =
+        config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/Code/worktrees";
+      home.activation.herdrWorktrees = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        run mkdir -p "$HOME/Code/worktrees"
+      '';
     };
 
   flake.modules.homeManager.herdr =
