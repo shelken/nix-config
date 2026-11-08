@@ -55,7 +55,7 @@ composer:
   shape: band
 theme:
   dark: dark-catppuccin
-setupVersion: 2
+setupVersion: 3
 statusLine:
   showHookStatus: false
   compactThinkingLevel: false
@@ -163,3 +163,5 @@ todo:
   reminders: false
 recap:
   enabled: true
+update:
+  auto: false

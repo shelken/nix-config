@@ -7,6 +7,7 @@
 {
   flake.modules.homeManager.ai.shelken.dev.tools = {
     # 1.3.13 无 BUN_CONFIG_HTTP_IDLE_TIMEOUT，安装会在半开连接上永久挂起
+    # renovate: datasource=github-releases depName=oven-sh/bun extractVersion=^bun-v(?<version>.+)$
     bun.mise = "1.4.2";
     omp = {
       sandboxCommand = "omp";

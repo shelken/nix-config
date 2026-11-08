@@ -15,6 +15,7 @@
     uv = { };
 
     # mise 共享工具：项目 git hook 运行器（各项目不再在 mise.toml 里声明本体）
+    # renovate: datasource=github-releases depName=j178/prek
     prek.mise = "0.5.9";
   };
 }

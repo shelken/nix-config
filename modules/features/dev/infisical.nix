@@ -14,6 +14,7 @@
     in
     {
       # CLI 由 mise 托管(latest, 0.43.x), nix 侧只负责声明配置
+      # renovate: datasource=github-releases depName=Infisical/cli
       programs.mise.globalConfig.tools.infisical = "0.43";
 
       # 项目解析顺序(v0.43.88+): --projectId > INFISICAL_PROJECT_ID > .infisical.json

@@ -78,15 +78,20 @@ providers:
         thinking:
           mode: effort
           efforts: [minimal, low, medium, high, xhigh]
-      opencode-zen-free/pulse-alpha-free:
-        name: "Pulse Alpha Free"
-        input: ["text", "image"]
       opencode-zen-free/crouton-alpha-free:
         name: "Crouton Alpha Free"
         input: ["text", "image"]
         thinking:
           mode: effort
           efforts: [minimal, low, medium, high, xhigh, max]
+      opencode-zen-free/iceman-free:
+        name: "Iceman Free"
+      opencode-zen-free/inkling-2-small-free:
+        name: "Inkling 2 Small Free"
+        input: ["text", "image"]
+        thinking:
+          mode: effort
+          efforts: [minimal, low, medium, high, max]
       qwenwork/flash:
         name: "标准"
         input: ["text", "image"]

@@ -104,7 +104,7 @@
   ],
   "packages": [
     "npm:pi-posthorse@0.10.10",
-    "npm:pi-execution-time@0.3.0",
+    "npm:@shelken/pi-execution-time@0.1.0",
     "npm:@shelken/pi-status-bar@0.1.0",
     "npm:pi-token-speed@0.12.0",
     "npm:@tifan/pi-preferred-thinking@1.0.2",

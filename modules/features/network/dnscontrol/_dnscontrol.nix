@@ -14,6 +14,7 @@
     };
 
     # 用 mise 而不是 nixpkgs：nixpkgs 的 dnscontrol 落后一个大版本（4.x）
+    # renovate: datasource=github-releases depName=DNSControl/dnscontrol
     programs.mise.globalConfig.tools."github:DNSControl/dnscontrol" = "5.2.0";
   };
 }

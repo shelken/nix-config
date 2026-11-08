@@ -23,7 +23,9 @@
         settings.activate_shims = false;
         # bun 由共享工具登记表提供（shelken.dev.tools，ADR 0003），此处不再声明
         tools = {
+          # renovate: datasource=github-releases depName=yt-dlp/yt-dlp
           yt-dlp = "2026.08";
+          # renovate: datasource=crate depName=mbx
           "cargo:mbx" = "1.18"; # for cargo build, save storage
         };
       };

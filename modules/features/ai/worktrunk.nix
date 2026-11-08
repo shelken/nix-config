@@ -11,6 +11,7 @@
     {
       config = {
         programs.mise.globalConfig.tools = {
+          # renovate: datasource=github-releases depName=max-sixty/worktrunk
           worktrunk = "0.79";
         };
         home.file = {
