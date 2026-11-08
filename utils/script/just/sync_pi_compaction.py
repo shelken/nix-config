@@ -22,7 +22,7 @@ MIN_RESERVE = 16_384
 RPC_TIMEOUT = 60
 # ------------------------------------------------------------------------------
 
-SETTINGS = Path(__file__).resolve().parents[2] / "modules/features/ai/pi/settings.json"
+SETTINGS = Path(__file__).resolve().parents[3] / "modules/features/ai/pi/settings.json"
 
 
 def reserve_for(window, nodes, floor):

@@ -31,7 +31,7 @@ brew-diff:
 # 构建前摘要：要真编译什么、要下载多少；kind 为 system（默认）、home、deploy
 [group('build')]
 plan host=profile kind="system":
-    @utils/script/nix-plan {{ host }} {{ kind }}
+    @utils/script/just/nix-plan {{ host }} {{ kind }}
 
 # nixos deploy
 [group('build')]
@@ -136,10 +136,10 @@ kitty-clean:
 ls-gen:
     @sudo darwin-rebuild --list-generations
 
-# hash 计算统一入口（见 utils/script/prefetch --help）
+# hash 计算统一入口（见 utils/script/just/prefetch --help）
 [group('flake')]
 prefetch *args:
-    @{{ justfile_directory() }}/utils/script/prefetch {{ args }}
+    @{{ justfile_directory() }}/utils/script/just/prefetch {{ args }}
 
 # git pull
 [group('git')]
@@ -196,7 +196,7 @@ search pkg num='10':
 [group('tools')]
 [macos]
 set-proxy:
-    @sudo python3 utils/script/darwin_set_proxy.py
+    @sudo python3 utils/script/just/darwin_set_proxy.py
 
 # nixos 重建
 [group('build')]
@@ -265,12 +265,12 @@ wez-test:
 # 同步 magpie 模型能力差集到 omp models.yml
 [group('ai')]
 mp-sync:
-    @{{ justfile_directory() }}/utils/script/sync-mp-models.sh
+    @{{ justfile_directory() }}/utils/script/just/sync-mp-models.sh
 
 # 按模型上下文窗口回填 pi settings.json 的 reserveTokens（节点见脚本开头）
 [group('ai')]
 pi-compaction:
-    @{{ justfile_directory() }}/utils/script/sync_pi_compaction.py
+    @{{ justfile_directory() }}/utils/script/just/sync_pi_compaction.py
 
 # 清除历史；默认`3d`; 三天前
 [group('gc')]

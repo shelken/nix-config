@@ -307,8 +307,8 @@
               nixos-anywhere
               actionlint
               # nh # 不要引入，会把nix放进来
-              # nix-prefetch-github # 已由 utils/script/prefetch 替代
-              # nix-prefetch-git # 已由 utils/script/prefetch 替代
+              # nix-prefetch-github # 已由 utils/script/just/prefetch 替代
+              # nix-prefetch-git # 已由 utils/script/just/prefetch 替代
             ];
             name = "dots";
             shellHook = ''

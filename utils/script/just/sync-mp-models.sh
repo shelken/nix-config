@@ -3,7 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 MODELS_FILE="${REPO_ROOT}/modules/features/ai/omp/models.yml"
 
 # 是否在生成的 override 里输出 reasoning: true（1=输出，0=不输出）
