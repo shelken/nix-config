@@ -239,7 +239,7 @@ function prepareEnv(exclude: string[]) {
     if (typeof p !== "string" || !p) return null;
     const s = p.replace(/^-/, "");
     const bare = s.includes(":") && !s.startsWith("/") ? s.split(":").slice(1).join(":") : s;
-    return bare.split("/").filter(Boolean).at(-1) ?? null;
+    return bare.split("/").filter(Boolean).at(-1)?.split("@")[0] ?? null;
   };
   const settings = JSON.parse(readFileSync(join(main, "settings.json"), "utf8"));
   settings.packages = settings.packages.map((p: any) => {
