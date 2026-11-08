@@ -26,7 +26,7 @@
           # renovate: datasource=github-releases depName=yt-dlp/yt-dlp
           yt-dlp = "2026.08";
           # renovate: datasource=crate depName=mbx
-          "cargo:mbx" = "1.18"; # for cargo build, save storage
+          "cargo:mbx" = "1.29"; # for cargo build, save storage
         };
       };
     };
