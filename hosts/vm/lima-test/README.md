@@ -54,4 +54,4 @@ ssh root@$IP 'nixos-version; findmnt -t btrfs; swapon'
 
 ## 日常更新
 
-安装完成后它就是普通的 NixOS 主机，和其他机器一样远程部署：在 `vars/networking.nix` 加一个 `lima-test` 的 ssh 别名，flake 主机表里设 `deploy = { remoteBuild = true; };`，之后 `just deploy lima-test`
+安装完成后它就是普通的 NixOS 主机，和其他机器一样远程部署：在 `vars/networking.nix` 加一个 `lima-test` 的 ssh 别名，`hosts/default.nix` 的主机表里设 `deploy = { remoteBuild = true; };`，之后 `just deploy lima-test`

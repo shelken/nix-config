@@ -71,7 +71,7 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 # 3. clone repo
 git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-config
 
-# 4. 选择 flake.nix 中定义的机器配置
+# 4. 选择 hosts/default.nix 中登记的机器配置
 # Darwin: mio / sakamoto / yuuko / ling
 # NixOS: vps-cc / hk1box / lima-test / work-test
 PROFILE=mio

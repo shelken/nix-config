@@ -48,115 +48,12 @@
           specialArgs
           ;
       };
-      mkHost = cfg: cfg // args;
-      hosts = {
-        # Ubuntu → NixOS 接管后的美国 VPS；放在 hosts/vps/ 下，所有 VPS 统一归这里
-        vps-cc = mkHost {
-          type = "nixos";
-          system = "x86_64-linux";
-          # root + 密钥部署：激活不需要口令，也不必给 shelken 配免密 sudo
-          deploy = {
-            sshUser = "root";
-            interactiveSudo = false;
-            # 在目标机构建：评估仍在本机，VPS 只实现派生并直接从 cache.nixos.org 下载，省掉本机 linux-builder 与跨境上传
-            remoteBuild = true;
-          };
-          nixos-modules = map mylib.relativeToRoot [
-            "hosts/vps/vps-cc"
-          ];
-        };
-        # HK1 Box（S905X3 电视盒子）：家里的单臂旁路由，只跑 sing-box；原先刷 ImmortalWrt
-        # 本机经 linux-builder 原生构建 aarch64，再用 root 推送
-        hk1box = mkHost {
-          type = "nixos";
-          system = "aarch64-linux";
-          deploy = {
-            sshUser = "root";
-            interactiveSudo = false;
-            remoteBuild = true;
-          };
-          nixos-modules = map mylib.relativeToRoot [
-            "hosts/hk1box"
-          ];
-        };
-        # vps-cc 的 x86_64 BIOS 演练机（Lima + qemu）
-        vps-test = mkHost {
-          type = "nixos";
-          system = "x86_64-linux";
-          # 演练 deploy-rs 的推送与自动回滚；真正的地址用 --hostname、--ssh-opts 指定
-          deploy = {
-            sshUser = "root";
-            interactiveSudo = false;
-          };
-          nixos-modules = map mylib.relativeToRoot [
-            "hosts/vm/vps-test"
-          ];
-        };
-        # Lima 里的 Ubuntu → NixOS 接管演练机（nixos-anywhere + disko + facter）
-        # 放在 hosts/vm/ 下不新增 hosts/ 顶层目录，不影响 calcUniformSchedule 的备份时段
-        lima-test = mkHost {
-          type = "nixos";
-          system = "aarch64-linux";
-          nixos-modules = map mylib.relativeToRoot [
-            "hosts/vm/lima-test"
-          ];
-        };
-        work-test = mkHost {
-          type = "nixos";
-          system = "x86_64-linux";
-          # 无硬件配置的求值测试机，不建 hosts 目录：calcUniformSchedule 按 hosts/ 目录数排定备份时段
-          nixos-modules = [ self.modules.nixos.tui ];
-        };
-        yuuko = mkHost {
-          type = "darwin";
-          system = "aarch64-darwin";
-          deploy = true;
-          darwin-modules = map mylib.relativeToRoot [
-            "hosts/yuuko"
-          ];
-          home-modules = map mylib.relativeToRoot [
-            "hosts/yuuko/home.nix"
-          ];
-        };
-        sakamoto = mkHost {
-          type = "darwin";
-          system = "aarch64-darwin";
-          deploy = true;
-          darwin-modules = map mylib.relativeToRoot [
-            "hosts/sakamoto"
-          ];
-          home-modules = map mylib.relativeToRoot [
-            "hosts/sakamoto/home.nix"
-          ];
-        };
-        mio = mkHost {
-          type = "darwin";
-          system = "aarch64-darwin";
-          darwin-modules = map mylib.relativeToRoot [
-            "hosts/mio"
-          ];
-          home-modules = map mylib.relativeToRoot [
-            "hosts/mio/home.nix"
-          ];
-        };
-        ling = mkHost {
-          type = "darwin";
-          system = "aarch64-darwin";
-          deploy = true;
-          darwin-modules = map mylib.relativeToRoot [
-            "hosts/ling"
-          ];
-          home-modules = map mylib.relativeToRoot [
-            "hosts/ling/home.nix"
-          ];
-        };
-      };
+      hosts = import ./hosts { inherit self; };
 
       darwinHosts = lib.filterAttrs (_: v: v.type == "darwin") hosts;
       nixosHosts = lib.filterAttrs (_: v: v.type == "nixos") hosts;
 
-      # deploy 为 true 或带参数的属性集都算部署目标
-      deployHosts = lib.filterAttrs (_: v: (v.deploy or false) != false) hosts;
+      deployHosts = lib.filterAttrs (_: v: v ? deploy) hosts;
 
       systems = [
         "x86_64-linux"
@@ -184,8 +81,8 @@
       inherit systems;
 
       flake = {
-        nixosConfigurations = lib.mapAttrs (_: v: mylib.nixosSystem v) nixosHosts;
-        darwinConfigurations = lib.mapAttrs (_: v: mylib.macosSystem v) darwinHosts;
+        nixosConfigurations = lib.mapAttrs (_: v: mylib.nixosSystem (v // args)) nixosHosts;
+        darwinConfigurations = lib.mapAttrs (_: v: mylib.macosSystem (v // args)) darwinHosts;
         # Home 不是第二套配置，只导出系统结果中已经求值的 Home 子配置：
         # config 指向它，activationPackage 指向同一个 derivation，
         # 供 `nh home build/switch -c <host>` 读取（nh 走 config.home.activationPackage）。
@@ -218,7 +115,6 @@
           }
         ) hosts;
 
-        # deploy-rs 远程部署：hosts 中标记 `deploy = true`（或 attrset 透传参数）的主机自动生成节点
         deploy = {
           nodes = lib.mapAttrs (
             name: v:
@@ -228,7 +124,7 @@
               configuration =
                 if v.type == "darwin" then self.darwinConfigurations.${name} else self.nixosConfigurations.${name};
               inherit (v) type system;
-              extra = if builtins.isAttrs v.deploy then v.deploy else { };
+              extra = v.deploy;
             }
           ) deployHosts;
         };
