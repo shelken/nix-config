@@ -318,10 +318,8 @@ def main():
     for k in ("x1", "y1", "x2", "y2"):
         sp.add_argument(k, type=int)
     sp.add_argument("--duration", type=int, default=300, help="毫秒，80 到 1200")
-    sp = add("launch", cmd_launch, "启动 App：bundle id 或名称；传 URL 即打开链接", action=True)
+    sp = add("launch", cmd_launch, "启动 App：bundle id 或名称，不收 URL", action=True)
     sp.add_argument("app")
-    sp = add("open", cmd_launch, "打开 URL，等同 launch <URL>", action=True)
-    sp.add_argument("app", metavar="url")
     sp = add("apps", cmd_apps, "按关键词查已装 App（Pinky 允许范围内）；不带关键词要加 --all")
     sp.add_argument("query", nargs="?")
     sp.add_argument("--all", action="store_true", help="列出全部 App（会暴露手机上装了什么，慢用）")

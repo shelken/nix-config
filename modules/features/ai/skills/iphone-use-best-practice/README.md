@@ -66,7 +66,7 @@ Pinky 做得比旧脚本好的地方：helper 启动时设 `USE_IP=127.0.0.1`，
 
 ## Pinky 与 Swipt 的对比
 
-日期: 2026-11-08。Swipt 是另一个控制 iPhone 的工具，`iphone` 不使用它。以下全部在同一台 iPhone 17（iOS 27.0.1）上实测，手机走 WiFi，Mac 没有 USB 连接的 iPhone，Swipt 为 0.1.0 (59)
+日期: 2026-11-08。Swipt 是另一个控制 iPhone 的工具，`iphone` 不使用它。以下全部在同一台 iPhone 17（iOS 27.0.1）上实测，Swipt 为 0.1.0 (59)。除「没有 USB 时可用」一行外，测试时手机插着 USB，Swipt 的 Mac 到手机链路始终是局域网 HTTP。判断是否插线用 `xcrun devicectl list devices --json-output <文件>` 里的 `transportType`（`wired` 或 `localNetwork`），不要靠 `iphone status` 的 CONNECTION 列，它始终写 usb
 
 图例
 
@@ -80,8 +80,8 @@ Pinky 做得比旧脚本好的地方：helper 启动时设 `USE_IP=127.0.0.1`，
 
 | 项目 | Pinky | Swipt | 备注 |
 |---|---|---|---|
-| 没有 USB 时可用 | ✅ | ✅ | `iphone up` 与 `swipt repl run` 都在无 USB 下成功，`iphone status` 仍把连接标成 usb |
-| 两者同时连着互不影响 | ✅ | ✅ | Pinky 租约保持，两边交替截图、读树、回主屏、点击，3 轮共 24 次调用全部成功，没有复现上文第 11 条 |
+| 没有 USB 时可用 | ❌ | ✅ | 拔线后 `transportType` 变为 `localNetwork`：Pinky 显示 Offline，`iphone up` 返回 `device_offline`，与 setup.md 的「必须 USB」一致；Swipt 的读树、回主屏照常成功 |
+| 两者同时连着互不影响（插着 USB） | ✅ | ✅ | Pinky 租约保持，两边交替截图、读树、回主屏、点击，3 轮共 24 次调用全部成功，没有复现上文第 11 条 |
 | 需要在手机上侧载 App | ➖ | ✅ | Swipt 要侧载并续期。Pinky 在 iOS 27 上是否需要 helper 未单独验证 |
 
 ### 读界面
@@ -119,7 +119,7 @@ Pinky 做得比旧脚本好的地方：helper 启动时设 `USE_IP=127.0.0.1`，
 |---|---|---|---|
 | 按 bundle id 启动 | ✅ | ✅ | |
 | 按显示名启动 | ❓ | ➖ | Pinky 文档支持，本轮只用了 bundle id |
-| 用 URL 打开链接 | ❌ | ✅ | Pinky 的 `launch` 与 `open` 传 URL 都返回 `not_found`；Swipt 用 `launchApplication(id, {url})` |
+| 用 URL 打开链接 | ❌ | ✅ | Pinky 的 `phone_launch` 只收名称、包名、bundle id，传 URL 返回 `not_found`，`iphone` 不再提供 `open`；Swipt 用 `launchApplication(id, {url})` |
 | 强制重启式启动 | ➖ | ✅ | `restart: true` |
 | 列出已装 App | ✅ | ✅ | Swipt 返回 310 个，带版本 |
 | App 前后台事件 | ➖ | ✅ | `device.applicationEvents` |
