@@ -199,3 +199,7 @@ mod linux 'just/linux.just'
 # AI 工具链同步（just ai mp-sync / just ai pi-compaction）
 [group('modules')]
 mod ai 'just/ai.just'
+
+# DNS 配置：编辑加密的 dnsconfig（just dns edit）
+[group('modules')]
+mod dns 'just/dns.just'
