@@ -35,15 +35,15 @@
 在 Lima 的 qemu 里跑一台对齐 VPS 的机器（x86_64、BIOS、2 核、2GiB），用同一份 `common.nix`。软件模拟很慢，一次完整流程约 20 分钟
 
 ```bash
-just anywhere lima-vps-up                                  # qemu 由 nix 临时提供
-P=$(just anywhere lima-vps-port); KEY=~/.lima/_config/user
+just anywhere::lima-vps-up                                  # qemu 由 nix 临时提供
+P=$(just anywhere::lima-vps-port); KEY=~/.lima/_config/user
 
 # 安装时放进新系统的文件：age 私钥（与真机同一把，顺带演练交付方式）
 EXTRA=$(mktemp -d)
 install -d -m 700 "$EXTRA/var/lib/sops-nix"
 install -m 600 <vps-cc 的 age 私钥文件> "$EXTRA/var/lib/sops-nix/key.txt"
 
-KEXEC=$(just anywhere kexec-cache x86_64 nixos-26.05)      # 必须 26.05，见下表
+KEXEC=$(just anywhere::kexec-cache x86_64 nixos-26.05)      # 必须 26.05，见下表
 # --build-on local：在 Mac 上经 linux-builder 构建 x86_64 系统；真机只有 2GiB 内存，不要在安装环境里构建
 # 阶段一：kexec。完成后 nixos-anywhere 会去连 Mac 自己的 22 端口，卡住，超时即可（Lima 只转发了 $P）
 timeout 200 nixos-anywhere -f .#vps-test --target-host root@127.0.0.1 --build-on local --ssh-port $P -i $KEY \
@@ -75,14 +75,14 @@ limactl delete --force nixos-anywhere-vps
 
 ### 演练里遇到的问题
 
-| 现象                                                                      | 原因                                                                                                                                     | 处理                                                                                                                                                                                                                  |
-| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| kexec 报 `PEFILE: Unsigned PE binary`                                     | Ubuntu 内核拒绝 `kexec_file_load` 加载未签名内核                                                                                         | `--kexec-extra-flags '-c'` 走旧的 `kexec_load`                                                                                                                                                                        |
-| disko 报 `/dev/disk/by-partlabel/disk-main-root does not exist`，每次必现 | disko 脚本用 nixpkgs 的 systemd 262 的 `udevadm settle`，而默认 kexec 安装环境是 25.05（systemd 257），settle 提前返回，符号链接还没出现 | 用 `nixos-26.05` 的 kexec 安装环境：`just anywhere kexec-cache x86_64 nixos-26.05`。选版本前用 `nix eval --raw .#nixosConfigurations.<主机>.config.systemd.package.version` 查 flake 的 systemd，安装环境取同一发布线 |
-| 装好后 `/etc/resolv.conf` 只有 `127.0.0.1`，整机解析不了域名              | openresolv 默认只写本机解析器；而 127.0.0.1 要等 docker 里的 dnsmasq 起来才有人应答，首次拉镜像就死锁                                    | `networking.resolvconf.extraConfig = "resolv_conf_local_only=NO"`（已在 `common.nix`）                                                                                                                                |
-| 第一次 `deploy` 后配置变坏，自动回滚报 `No such file or directory`        | nixos-anywhere 装的那一代没有 deploy-rs 的激活器，回滚找不到目标                                                                         | 装好后先用**不改任何配置**的 `just deploy vps-cc` 部署一次，再做真实改动                                                                                                                                              |
-| `deploy` 时「Connection reset by peer」                                   | 防火墙规则重载的瞬间，慢速模拟让 SSH 等待连接被拒；真机上这个窗口只有毫秒                                                                | 仅演练环境的现象；真机若遇到，重跑一次                                                                                                                                                                                |
-| kexec 之后 nixos-anywhere 重连默认的 22 端口                              | 安装环境的 sshd 在 22，旧系统在 60223                                                                                                    | 真机上正好；演练里 Lima 只转发了一个端口，所以卡住                                                                                                                                                                    |
+| 现象                                                                      | 原因                                                                                                                                     | 处理                                                                                                                                                                                                                   |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| kexec 报 `PEFILE: Unsigned PE binary`                                     | Ubuntu 内核拒绝 `kexec_file_load` 加载未签名内核                                                                                         | `--kexec-extra-flags '-c'` 走旧的 `kexec_load`                                                                                                                                                                         |
+| disko 报 `/dev/disk/by-partlabel/disk-main-root does not exist`，每次必现 | disko 脚本用 nixpkgs 的 systemd 262 的 `udevadm settle`，而默认 kexec 安装环境是 25.05（systemd 257），settle 提前返回，符号链接还没出现 | 用 `nixos-26.05` 的 kexec 安装环境：`just anywhere::kexec-cache x86_64 nixos-26.05`。选版本前用 `nix eval --raw .#nixosConfigurations.<主机>.config.systemd.package.version` 查 flake 的 systemd，安装环境取同一发布线 |
+| 装好后 `/etc/resolv.conf` 只有 `127.0.0.1`，整机解析不了域名              | openresolv 默认只写本机解析器；而 127.0.0.1 要等 docker 里的 dnsmasq 起来才有人应答，首次拉镜像就死锁                                    | `networking.resolvconf.extraConfig = "resolv_conf_local_only=NO"`（已在 `common.nix`）                                                                                                                                 |
+| 第一次 `deploy` 后配置变坏，自动回滚报 `No such file or directory`        | nixos-anywhere 装的那一代没有 deploy-rs 的激活器，回滚找不到目标                                                                         | 装好后先用**不改任何配置**的 `just deploy vps-cc` 部署一次，再做真实改动                                                                                                                                               |
+| `deploy` 时「Connection reset by peer」                                   | 防火墙规则重载的瞬间，慢速模拟让 SSH 等待连接被拒；真机上这个窗口只有毫秒                                                                | 仅演练环境的现象；真机若遇到，重跑一次                                                                                                                                                                                 |
+| kexec 之后 nixos-anywhere 重连默认的 22 端口                              | 安装环境的 sshd 在 22，旧系统在 60223                                                                                                    | 真机上正好；演练里 Lima 只转发了一个端口，所以卡住                                                                                                                                                                     |
 
 ## 切换（真机）
 
@@ -122,7 +122,7 @@ chmod 600 "$EXTRA"/var/lib/tailscale/* "$EXTRA"/etc/ssh/*_key
 ### 1. kexec（磁盘不动，可随时回头）
 
 ```bash
-KEXEC=$(just anywhere kexec-cache x86_64 nixos-26.05)
+KEXEC=$(just anywhere::kexec-cache x86_64 nixos-26.05)
 nixos-anywhere -f .#vps-cc --target-host root@vps-cc --build-on local --ssh-port 60223 \
   --kexec "$KEXEC" --kexec-extra-flags '-c' --phases kexec
 ```

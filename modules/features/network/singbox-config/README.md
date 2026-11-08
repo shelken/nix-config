@@ -27,7 +27,7 @@ singbox-config <mac|ios|router>
 | `route.rules` 的放行解析器规则  | 发往清单内解析器的查询不进本机 DNS，由内核直接放行；该解析器对内网域的负向应答不再被本机改写                                                                                                                                                                                                                                                                        |
 | 白名单                          | 名单外设备的连接在 `auto_redirect` 预匹配阶段被旁路，由内核直接转发，不进 sing-box                                                                                                                                                                                                                                                                                  |
 
-部署域 `int.ooooo.space` 不再需要固定应答：它已登记在 proxy 仓库的 `config/rules/custom/MyDirect.yaml`（覆盖 `ooooo.space` 全部子域），随底模的 `MyDirect-dns → dns-lan` 交给主路由 dnsmasq 应答，与主路由上的固定租约天然一致。已在局域网内实测前提成立：`dig @192.168.6.1 cpa.int.ooooo.space A` → `192.168.69.46`，`dig @192.168.6.1 int.ooooo.space` → 无应答（与底模那两条规则的效果一致）；不成立时按 proxy 仓库 ADR-0014 的回退，把 `fragments/base/dns-deployment.json` 加进 `roles.router`
+部署域 `int.<域名>` 不再需要固定应答：它已登记在 proxy 仓库的 `config/rules/custom/MyDirect.yaml`（覆盖主域名的全部子域），随底模的 `MyDirect-dns → dns-lan` 交给主路由 dnsmasq 应答，与主路由上的固定租约天然一致。已在局域网内实测前提成立：`dig @<主路由> cpa.int.<域名> A` → 固定租约地址，`dig @<主路由> int.<域名>` → 无应答（与底模那两条规则的效果一致）；不成立时按 proxy 仓库 ADR-0014 的回退，把 `fragments/base/dns-deployment.json` 加进 `roles.router`
 
 `route.rules` 的三条顺序固定为「放行解析器 → 53 劫持 → 白名单 `bypass`」：第一条要给设备显式指定的解析器留出口，白名单那条匹配的是「不在名单里」的整台设备，换序会把名单外设备的 DNS 一起放走。
 

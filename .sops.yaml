@@ -1,0 +1,11 @@
+keys:
+  - &admin_yuuko age1fy9fa5xrufx54mjgrwnsvzq3fgg8xkypl5ak5vuxf0s6lv87aahqdq60hp
+  - &admin_mio age1kmr8epyg0et773rg4x2hquu3ylua72xyzcu7lw2hf9g5l7nrzuyslexq35
+  - &admin_sakamoto age1h6qthsy0e5xgd5rgd0sua5dc4jdvje3m048gq7y6pfz0j249lp4qehfc4l
+creation_rules:
+  - path_regex: modules/features/network/dnscontrol/dnsconfig\.sops\.js$
+    key_groups:
+      - age:
+          - *admin_yuuko
+          - *admin_mio
+          - *admin_sakamoto

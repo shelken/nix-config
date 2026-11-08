@@ -182,20 +182,24 @@ upp input:
 view:
     @nix-melt
 
-# 装机与演练：kexec-cache、Lima 演练机（just anywhere <配方>）
+# 装机与演练：kexec-cache、Lima 演练机（just anywhere::<配方>）
 [group('modules')]
 mod anywhere 'just/anywhere.just'
 
-# macOS 专用：brew-diff、builder-reset（just mac <配方>）
+# macOS 专用：brew-diff、builder-reset（just mac::<配方>）
 [group('modules')]
 [macos]
 mod mac 'just/mac.just'
 
-# Linux 专用：gen-image、qip、wipe（just linux <配方>）
+# Linux 专用：gen-image、qip、wipe（just linux::<配方>）
 [group('modules')]
 [linux]
 mod linux 'just/linux.just'
 
-# AI 工具链同步（just ai mp-sync / just ai pi-compaction）
+# AI 工具链同步（just ai::mp-sync / just ai::pi-compaction）
 [group('modules')]
 mod ai 'just/ai.just'
+
+# DNS 配置：编辑加密的 dnsconfig（just dns::edit）
+[group('modules')]
+mod dns 'just/dns.just'
