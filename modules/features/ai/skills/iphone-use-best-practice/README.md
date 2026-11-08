@@ -56,8 +56,117 @@
 8. **应用范围只限制「打开和操作」，不限制「看」（已实测，iPhone 14）**。范围外的 App 用 `launch` 被拒，但在主屏点它的图标能打开，进去后 `tap`、`scroll` 被拒、读屏不被拒。原因是主屏属于系统界面，`policy.Evaluate` 对它一律放行，而读屏不经过策略。可行的改法：前台是范围外 App 时，`agentView`（`internal/gateway/pipeline.go`）像对待被屏蔽的 App 那样返回 `blocked app`
 9. **任务白名单（`phone_connect` 的 `apps`）不过滤 `phone_apps`（已实测）**。只有 agent 范围会过滤，见 `internal/gateway/agent.go` 的 `phone_apps` 实现
 10. **范围按显示名或 bundle id 完全匹配，显示名随手机语言变化（已实测）**。范围里写「设置」，英文界面的手机上它叫 `Settings`，匹配不上，`launch` 被拒。界面应提示优先填 bundle id
+11. **iOS 27.0.1 上 displayservice 通道断开后，读屏正常、输入全部失败，Pinky 没有回退（已实测，iPhone 17）**。现象：`iphone snapshot` 成功，`tap`、`tap-text`、`home` 都返回 `uncertain`，错误为 `connect com.apple.coredevice.displayservice: ConnectToXpcServiceTunnelIface: failed to connect to http2: NewHttpConnection: could not read frame. EOF`。与前台 App 无关，重建租约无效，重新插拔 USB 后恢复。读屏走 accessibility，输入走 displayservice 加 HID，所以两者会一个正常、一个失效。同一台手机在旧 WDA 路径下输入一直正常，因此故障在 CoreDevice 通道，不在手机或线缆。根因未查明：故障出现在手机刚装好另一个使用 CoreDevice 的 App 并完成配对之后，相关性未证实。后续要处理：
+    - displayservice 连续失败时，自动重建隧道，或回退到 WDA helper
+    - 把「读屏成功、输入失败」报成专门状态。`uncertain` 让 agent 以为动作可能已发生，实际一次都没有执行
+    - 临时绕过（未验证）：Pinky 的 Settings › Phones 里把该手机的连接改成 WebDriverAgent helper，见 [references/setup.md](./references/setup.md) 的「已知限制」
+    - 复现：先确认 `iphone snapshot` 成功，再执行 `iphone home`，看首行状态
 
 Pinky 做得比旧脚本好的地方：helper 启动时设 `USE_IP=127.0.0.1`，让 WDA 只监听手机回环，不暴露在 Wi-Fi 上；旧脚本的 xctestrun 没设它，WDA 监听所有接口。免费描述文件的「设备信任」与自动化授权口令提示（`enabling automation mode`）的检测也更完整
+
+## Pinky 与 Swipt 的对比
+
+日期: 2026-11-08。Swipt 是另一个控制 iPhone 的工具，`iphone` 不使用它。以下全部在同一台 iPhone 17（iOS 27.0.1）上实测，手机走 WiFi，Mac 没有 USB 连接的 iPhone，Swipt 为 0.1.0 (59)
+
+图例
+
+- ✅ 已实测可用
+- ❌ 已实测不可用，或实测没有这层保护
+- ⚠️ 可用但有限制，见备注
+- ➖ 没有这个功能，读文档或代码得出
+- ❓ 没测，原因在备注
+
+### 连接
+
+| 项目 | Pinky | Swipt | 备注 |
+|---|---|---|---|
+| 没有 USB 时可用 | ✅ | ✅ | `iphone up` 与 `swipt repl run` 都在无 USB 下成功，`iphone status` 仍把连接标成 usb |
+| 两者同时连着互不影响 | ✅ | ✅ | Pinky 租约保持，两边交替截图、读树、回主屏、点击，3 轮共 24 次调用全部成功，没有复现上文第 11 条 |
+| 需要在手机上侧载 App | ➖ | ✅ | Swipt 要侧载并续期。Pinky 在 iOS 27 上是否需要 helper 未单独验证 |
+
+### 读界面
+
+| 项目 | Pinky | Swipt | 备注 |
+|---|---|---|---|
+| 读原生 App 界面 | ✅ | ✅ | 主屏、设置、Safari 外壳都能读 |
+| 读网页里的输入框 | ❌ | ✅ | Pinky 只给 OCR 行，没有 ref；Swipt 给出 `textField`、`webContent` 和 `secure` 标记 |
+| 屏幕文字识别 | ✅ | ✅ | Pinky 是 `ocr` 行；Swipt 用 `screen.find`，中文不要传 `languages`，传了找不到 |
+| 按文字查找 | ✅ | ⚠️ | Swipt 的 `accessibility.find` 在 Safari 页面上找不到元素，改用 `snapshot().find` 才命中 |
+| 截图 | ✅ | ✅ | Pinky 存 JPEG；Swipt 存 PNG，能写到手机文件再拉回 Mac |
+| 等待文字出现 | ✅ | ➖ | Swipt 只有等画面稳定、等变化，没有按文字等待 |
+| 等待画面稳定 | ❓ | ✅ | Pinky 每个动作自带稳定检测，没有单独命令 |
+
+### 操作
+
+| 项目 | Pinky | Swipt | 备注 |
+|---|---|---|---|
+| 点元素 | ✅ | ✅ | |
+| 点坐标 | ✅ | ✅ | Pinky 用截图像素，Swipt 用点 |
+| 按文字点击 | ✅ | ➖ | Swipt 要自己组合 `find` 与 `tap` |
+| 输入文字到原生输入框 | ✅ | ✅ | |
+| 输入文字到网页输入框 | ✅ | ✅ | Pinky 要先点坐标再不带 `--ref` 输入 |
+| 滑动或滚动 | ✅ | ✅ | |
+| 拖拽 | ✅ | ❓ | Swipt 只测了 `swipe` 与 `touch` |
+| 多指手势 | ➖ | ✅ | `input.pinch`、`input.touch` |
+| 回车键 | ✅ | ✅ | |
+| 回主屏 | ✅ | ✅ | |
+| 打开应用切换器 | ❓ | ✅ | |
+| 电源键、音量键 | ❓ | ❓ | 会锁屏或改音量，没测 |
+
+### App
+
+| 项目 | Pinky | Swipt | 备注 |
+|---|---|---|---|
+| 按 bundle id 启动 | ✅ | ✅ | |
+| 按显示名启动 | ❓ | ➖ | Pinky 文档支持，本轮只用了 bundle id |
+| 用 URL 打开链接 | ❌ | ✅ | Pinky 的 `launch` 与 `open` 传 URL 都返回 `not_found`；Swipt 用 `launchApplication(id, {url})` |
+| 强制重启式启动 | ➖ | ✅ | `restart: true` |
+| 列出已装 App | ✅ | ✅ | Swipt 返回 310 个，带版本 |
+| App 前后台事件 | ➖ | ✅ | `device.applicationEvents` |
+
+### 手机侧能力
+
+| 项目 | Pinky | Swipt | 备注 |
+|---|---|---|---|
+| 手机发起 HTTP 请求 | ➖ | ✅ | `fetch`，出口是手机的网络 |
+| 手机本地文件读写 | ➖ | ✅ | |
+| 手机文件拉到 Mac，Mac 文件推到手机 | ➖ | ✅ | `swipt repl data read`、`write` |
+| SQLite | ➖ | ✅ | |
+| 录屏 | ❓ | ✅ | Swipt 录 2 秒，返回时长与帧事件；Pinky 文档称有录像，未测 |
+| 常驻自动化（Swiplet） | ➖ | ✅ | 只验证了 `swiplet list`，当前没有安装 |
+| 读剪贴板 | ❓ | ❌ | 系统拒绝：条目含受保护内容 |
+| 写剪贴板 | ❓ | ❓ | 会覆盖你的剪贴板，没测 |
+| 自动解锁 | ❓ | ❓ | 要先在 Swipt 保存锁屏密码，没测 |
+
+### 安全与管控
+
+| 项目 | Pinky | Swipt | 备注 |
+|---|---|---|---|
+| 敏感动作需要用户批准 | ❓ | ❌ | Swipt 全程无任何请示；Pinky 没找到安全的触发场景 |
+| 限定可用 App | ✅ | ❌ | Pinky 对范围外 App 返回 `scope_denied`；Swipt 能启动任意 App |
+| 只读模式 | ⚠️ | ❌ | Pinky 只读下点击、启动、回主屏仍然通过，只拦会请示的动作 |
+| 拦截网页密码框输入 | ❌ | ❌ | 两者都把假数据写进了网页密码框，Swipt 能看到 `secure` 标记但不拦 |
+| 拦截原生密码框输入 | ❓ | ❓ | 没找到安全的测试页面 |
+| 请用户接管、提问 | ❓ | ❓ | 要用户在手机或 Pinky 上操作，没测 |
+
+### 结论
+
+- 界面操作两者都能完成，差别在管控：只有 Pinky 有范围限制与请示，且两者都没拦网页密码框
+- Pinky 的两个缺口：不能用 URL 打开链接，读不到网页里的输入框。这两项 Swipt 都能做
+- Swipt 的独有能力集中在手机侧：HTTP、文件、SQLite、前后台事件、录屏、Swiplet
+- `iphone` 继续走 Pinky，凡要范围限制或请示的操作必须走它
+- 只有 Swipt 提供的能力走 `swipt`，不要用它绕开 Pinky 的范围限制
+- 同时连着没有冲突，但同一块屏幕仍建议一次只由一边驱动
+
+### 复现
+
+```bash
+iphone up --task "对比测试" && iphone snapshot && iphone down --summary "完成"
+swipt device list
+swipt repl api                                  # Swipt 可用的全部 JS 接口
+swipt repl run 'await device.info()'
+swipt repl run 'return (await accessibility.snapshot({full:true})).findAll({secure:true}).length'
+```
 
 ## 运行时目录
 
