@@ -262,15 +262,9 @@ wez-test:
     @ln -s {{ justfile_directory() }}/modules/features/terminal/wezterm/wezterm.lua $HOME/.config/wezterm/wezterm.lua
 
 
-# 同步 magpie 模型能力差集到 omp models.yml
+# AI 工具链同步（just ai mp-sync / just ai pi-compaction）
 [group('ai')]
-mp-sync:
-    @{{ justfile_directory() }}/utils/script/just/sync-mp-models.sh
-
-# 按模型上下文窗口回填 pi settings.json 的 reserveTokens（节点见脚本开头）
-[group('ai')]
-pi-compaction:
-    @{{ justfile_directory() }}/utils/script/just/sync_pi_compaction.py
+mod ai 'utils/just/ai.just'
 
 # 清除历史；默认`3d`; 三天前
 [group('gc')]
