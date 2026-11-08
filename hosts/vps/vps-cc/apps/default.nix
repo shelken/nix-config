@@ -26,7 +26,6 @@
     ./homepage-labels.nix
     ./fluent-bit
     ./mosdns.nix
-    ./sub-converter.nix
     ./sbtools-server.nix
     ./derp.nix
     ./hysteria2

@@ -168,7 +168,6 @@ http://:2019 {
     crowdsec
     appsec @waf
 
-    import service_docker sub       sub-converter 25500 robots_ban
     import service_docker subs      sbtools-server 8080  robots_ban
     import service2       derp      to_host       8666  empty
     import service_docker dhp       dhp           5000 robots_ban
