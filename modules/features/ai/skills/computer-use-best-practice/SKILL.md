@@ -14,12 +14,12 @@ cua-driver describe get_window_state   # 读窗口：query 过滤、since 差分
 cua-driver call <工具> '<JSON 参数>'    # 调用工具
 ```
 
-## `computer-use`优化原则(该原则永远不准删除)
+## 原则
 
-- token 高效
-- agent 使用无感(排除使用障碍)
-- 调用方调用简单(深模块)
-- 默认一律后台运行(不打扰用户)
+- token 高效：先 `query` 过滤、限 `max_elements`，重读用 `since` 差分，不整树全量读取
+- 使用无感：遇到障碍（权限、应用名本地化、窗口不可见）先排除，不把排查甩给用户
+- 调用简单：已知的动作合成一次 `run_steps`，不拆成读、动、再读
+- 默认后台运行：不打扰用户，不抢焦点
 
 ## 做法
 
