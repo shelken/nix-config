@@ -128,9 +128,7 @@
 
       # ---------- 模型角色解析（omp 与 pi 共用）----------
 
-      readYaml = mylib.readYaml pkgs;
-
-      ompConfig = readYaml ../omp/config.yml;
+      ompConfig = mylib.readYaml pkgs ../omp/config.yml;
       roles = ompConfig.modelRoles;
       agentModelOverrides = ompConfig.task.agentModelOverrides or { };
 

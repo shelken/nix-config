@@ -101,12 +101,11 @@
         builtins.filter (lib.hasPrefix "npm:") (map entrySource piSettings.packages)
       );
 
-      # 沙箱内 loopback 指向 VM 自身，模型地址统一改为宿主网关
-      sandboxModels = jsonFormat.generate "pi-sandbox-models.json" (
-        mylib.rewriteLoopbackBaseUrls "host.microsandbox.internal" {
-          providers = lib.mapAttrs (_: adaptProvider) mergedModels.providers;
-        }
-      );
+      sandboxModels = jsonFormat.generate "pi-sandbox-models.json" {
+        providers = mylib.rewriteLoopbackBaseUrls "host.microsandbox.internal" (
+          lib.mapAttrs (_: adaptProvider) mergedModels.providers
+        );
+      };
 
     in
     {

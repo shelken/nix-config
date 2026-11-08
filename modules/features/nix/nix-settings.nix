@@ -32,9 +32,6 @@
           "flakes"
         ];
 
-        # given the users in this list the right to specify additional substituters via:
-        #    1. `nixConfig.substituers` in `flake.nix`
-        #    2. command line args `--options substituers http://xxx`
         trusted-users = [ myvars.username ];
 
         # substituers that will be considered before the official ones(https://cache.nixos.org)

@@ -1,7 +1,7 @@
 {
   self,
   myvars,
-  secrets,
+  inputs,
   ...
 }:
 #############################################################
@@ -83,7 +83,7 @@ in
   };
 
   # 本机的系统密钥（目前只有 sing-box 的订阅 URL），只有管理员与这台的 age 密钥能解
-  sops.defaultSopsFile = secrets + "/sops/secrets/hosts/hk1box.yaml";
+  sops.defaultSopsFile = inputs.secrets + "/sops/secrets/hosts/hk1box.yaml";
 
   system.stateVersion = "26.05";
 }

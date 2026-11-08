@@ -11,9 +11,12 @@
       # 软链仓库内文件，仓库中直接编辑即生效
       linkOmp = rel: mylib.mkConfigFile config (./. + "/${rel}");
 
-      # 沙箱内 loopback 指向 VM 自身，模型地址统一改为宿主网关
+      models = mylib.readYaml pkgs ./models.yml;
       sandboxModels = (pkgs.formats.yaml { }).generate "omp-sandbox-models.yml" (
-        mylib.rewriteLoopbackBaseUrls "host.microsandbox.internal" (mylib.readYaml pkgs ./models.yml)
+        models
+        // {
+          providers = mylib.rewriteLoopbackBaseUrls "host.microsandbox.internal" models.providers;
+        }
       );
 
       # 沙箱专用插件清单：顶层 sandboxExclude 列出沙箱里不装的依赖。

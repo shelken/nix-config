@@ -6,7 +6,7 @@
 
   flake.modules.homeManager.anyrun =
     {
-      anyrun,
+      inputs,
       config,
       lib,
       myvars,
@@ -14,7 +14,7 @@
       ...
     }:
     let
-      anyrunPackages = anyrun.packages.${pkgs.stdenv.hostPlatform.system};
+      anyrunPackages = inputs.anyrun.packages.${pkgs.stdenv.hostPlatform.system};
       palette =
         (lib.importJSON "${config.catppuccin.sources.palette}/palette.json")
         .${myvars.catppuccin.flavor}.colors;
@@ -29,7 +29,7 @@
             disabledModules = [ "${modulesPath}/programs/anyrun.nix" ];
           }
         )
-        anyrun.homeManagerModules.default
+        inputs.anyrun.homeManagerModules.default
       ];
 
       programs.anyrun = {

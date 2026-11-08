@@ -1,4 +1,4 @@
-{ secrets, ... }:
+{ inputs, ... }:
 #############################################################
 #
 #  vps-cc：美国 KVM VPS，原先是 Ubuntu，由 nixos-anywhere 接管
@@ -9,7 +9,7 @@
 #
 #############################################################
 let
-  net = import (secrets + "/hosts/vps-cc/network.nix");
+  net = import (inputs.secrets + "/hosts/vps-cc/network.nix");
 in
 {
   imports = [

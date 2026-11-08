@@ -33,7 +33,7 @@
       config,
       lib,
       pkgs,
-      sops-nix,
+      inputs,
       osConfig,
       ...
     }:
@@ -216,7 +216,7 @@
     in
     {
       imports = [
-        sops-nix.homeManagerModules.sops
+        inputs.sops-nix.homeManagerModules.sops
       ];
       options.shelken.secrets = {
         # 主机属性：只在 hosts/<host>/default.nix 声明，HM 侧只读

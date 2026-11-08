@@ -4,11 +4,7 @@
   flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.tui-cli ];
 
   flake.modules.homeManager.tui-cli =
-    {
-      pkgs,
-      pkgs-unstable,
-      ...
-    }:
+    { pkgs, ... }:
     {
       home.packages = with pkgs; [
         age
@@ -16,11 +12,11 @@
         ssh-to-age
 
         #-- rust
-        pkgs-unstable.cargo
-        pkgs-unstable.rustc
-        pkgs-unstable.rust-analyzer
-        pkgs-unstable.rustfmt
-        pkgs-unstable.clippy
+        cargo
+        rustc
+        rust-analyzer
+        rustfmt
+        clippy
 
         #-- deploy
         ansible

@@ -64,7 +64,10 @@ let
       name = "Helium (Debug)";
       command = ''open -a "Helium" --args "--remote-debugging-port=9333"'';
       iconSymbol = "globe";
-      hotkey = "alt-b";
+      hotkey = {
+        keyCode = 11; # b
+        modifiers = 2048; # alt
+      };
     }
     {
       name = "New Kitty Window";
@@ -114,7 +117,12 @@ let
   // builtins.listToAttrs (
     map (cmd: {
       name = "hotkey.customCommand.${commandID cmd.name}";
-      value = mylib.darwinKeyCombo cmd.hotkey;
+      value = builtins.toJSON {
+        combo._0 = {
+          carbonKeyCode = cmd.hotkey.keyCode;
+          carbonModifiers = cmd.hotkey.modifiers;
+        };
+      };
     }) hotkeyedCommands
   );
 in

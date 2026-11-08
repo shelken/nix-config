@@ -19,7 +19,7 @@ flowchart LR
   E --> F[日常 just deploy]
 ```
 
-日常部署的构建位置由 `flake.nix` 的 `hosts.<主机>.deploy.remoteBuild` 决定。当前 VPS 设置为 `true`：Mac 求值配置，VPS 构建并获取二进制缓存，再激活系统，不需要本机 `linux-builder`
+日常部署的构建位置由 `hosts/default.nix` 的 `<主机>.deploy.remoteBuild` 决定。当前 VPS 设置为 `true`：Mac 求值配置，VPS 构建并获取二进制缓存，再激活系统，不需要本机 `linux-builder`
 
 使用下文 `--build-on local` 装机，或手动在本地构建 x86_64-linux 系统时，才需要启动本机 `linux-builder`。启停与重置见 [模块头部说明](../../modules/features/darwin/linux-builder/darwin.nix)：`linux-builder status` 看状态，`linux-builder stop` 停机；`just mac builder-reset` 会删除 guest 磁盘，下次启动为空 Nix store，执行前必须停机
 
@@ -29,7 +29,7 @@ flowchart LR
 | ----------------------------------------------- | --------------------------------------------------------------------------------- |
 | `hosts/vps/common.nix`                          | VPS 共有：`server` 角色、磁盘、sshd 端口、防火墙、tailscale、docker、口令哈希     |
 | `hosts/vps/<主机>/default.nix`                  | 主机自己的：主机名、静态网络、网卡级 sysctl                                       |
-| `flake.nix` 的 `hosts.<主机>`                   | 注册主机，`deploy` 写成属性集即成为部署目标                                       |
+| `hosts/default.nix` 的 `<主机>`                 | 注册主机，`deploy` 写成属性集即成为部署目标                                       |
 | `secrets` 仓库 `hosts/<主机>/network.nix`       | 服务商分配的地址，明文，求值时读取                                                |
 | `secrets` 仓库 `sops/secrets/hosts/<主机>.yaml` | 口令哈希，只加密给管理员与这台主机的 age 公钥                                     |
 | `~/.ssh/specific`                               | 与主机同名的 SSH 别名（地址、端口），deploy-rs 按主机名连接，公网地址不进公开仓库 |
@@ -85,7 +85,7 @@ ip link show <网卡>         # MTU
 
 ### 4. 注册并构建
 
-`flake.nix` 的 `hosts` 里照抄 `vps-cc` 一条，改名字和目录。`deploy` 用 root 推送，激活不需要输口令
+`hosts/default.nix` 里照抄 `vps-cc` 一条，改名字和目录。`deploy` 用 root 推送，激活不需要输口令
 
 ```bash
 git add hosts/vps/<主机>

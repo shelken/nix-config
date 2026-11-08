@@ -5,14 +5,14 @@
 
   flake.modules.homeManager.catppuccin-theme =
     {
-      catppuccin,
+      inputs,
       myvars,
       pkgs,
       ...
     }:
     {
       imports = [
-        catppuccin.homeModules.catppuccin
+        inputs.catppuccin.homeModules.catppuccin
       ];
 
       catppuccin = {
@@ -20,7 +20,7 @@
         enable = true;
         cache.enable = false;
         # issue: https://github.com/catppuccin/nix/issues/927#issuecomment-4456677608
-        sources = catppuccin.packages.${pkgs.stdenv.hostPlatform.system}.overrideScope (
+        sources = inputs.catppuccin.packages.${pkgs.stdenv.hostPlatform.system}.overrideScope (
           _final: _prev: {
             whiskers = pkgs.catppuccin-whiskers;
           }
