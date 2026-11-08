@@ -32,6 +32,17 @@
       datasourceTemplate: "npm",
     },
     {
+      // mise 工具的版本写在 Nix 里，内置 mise manager 只认 mise.toml。
+      // 每个固定版本的工具在上一行写 `# renovate: datasource=… depName=…[ extractVersion=…]`；
+      // 没有这行的工具不会被升级。`latest` 不是固定版本，不需要标注
+      customType: "regex",
+      description: "Nix 里 programs.mise.globalConfig.tools 与登记表 mise 条目的版本",
+      managerFilePatterns: ["/^modules/.+\\.nix$/"],
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>\\S+)(?: extractVersion=(?<extractVersion>\\S+))?[ \\t]*\\n[^\\n=]+=[ \\t]*"(?<currentValue>[^"\\n]+)"',
+      ],
+    },
+    {
       // oci-containers 的 `image = "仓库:标签@sha256:..."` 没有内置 manager 认识。
       // VPS 容器原先由 home-ops 的 compose 声明，镜像升级靠那边的 docker-compose manager，
       // 迁移后升级源在这里，不认这块就等于镜像从此不再升级
