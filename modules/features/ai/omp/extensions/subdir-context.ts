@@ -1,9 +1,11 @@
 /**
- * subdir-context — 读取子目录文件时，自动注入该文件路径链上的 AGENTS.md 上下文。
+ * subdir-context — 首次触碰某个子目录时（read/grep/find/ls/glob 的 `path`），
+ * 自动注入该目录路径链上的 AGENTS.md 上下文。pi 与 omp 共用同一份文件。
  *
  * 移植自 npm:pi-subdir-context v1.1.7（MIT, Anton Kuzmenko），作为 omp 对
  * 「cwd 之下子目录 AGENTS.md 只提示指针、不自动注入」行为的补强；宿主已加载
  * 的 cwd 层文件与上游一样跳过。整个会话内每个文件只注入一次。
+ * bash 不处理：命令里的目录无法可靠推断。
  */
 
 import fs from "node:fs";
@@ -37,6 +39,28 @@ interface ExtensionAPI {
 
 // AGENTS.override.md 视为同目录下的 AGENTS.md，同目录同时存在时优先生效
 const AGENTS_FILENAMES = ["AGENTS.override.md", "AGENTS.md", "CLAUDE.md"];
+
+// 这些工具的入参都是可选的 `path`（缺省即 cwd）。pi 有 ls，omp 有 glob，工具名不存在时无害；
+// ffgrep/fffind 是 fff 搜索扩展的工具名
+const PATH_TOOLS = new Set(["read", "grep", "find", "ls", "glob", "ffgrep", "fffind"]);
+const GLOB_CHARS = /[*?[{]/;
+const SELECTOR_SUFFIX = /(?::(?:\d[\d+\-,]*|raw|img|conflicts))+$/i;
+
+// omp 的 grep/glob 把 path 当作 glob，取第一个含通配符的段之前的静态前缀
+function globStaticPrefix(entry: string): string {
+	const segments = entry.split("/");
+	const index = segments.findIndex((s) => GLOB_CHARS.test(s));
+	if (index < 0) return entry;
+	return segments.slice(0, index).join("/");
+}
+
+function isDirectory(target: string): boolean {
+	try {
+		return fs.statSync(target).isDirectory();
+	} catch {
+		return false;
+	}
+}
 
 export default function subdirContext(pi: ExtensionAPI): void {
 	const loadedAgents = new Set<string>();
@@ -96,11 +120,11 @@ export default function subdirContext(pi: ExtensionAPI): void {
 		loadedAgents.clear();
 	}
 
-	function findAgentsFiles(filePath: string, rootDir: string): string[] {
+	function findAgentsFiles(startDir: string, rootDir: string): string[] {
 		if (!rootDir) return [];
 
 		const agentsFiles: string[] = [];
-		let dir = path.dirname(filePath);
+		let dir = startDir;
 
 		while (isInsideRoot(rootDir, dir)) {
 			const candidate = getAgentsFileFromDir(dir);
@@ -135,7 +159,7 @@ export default function subdirContext(pi: ExtensionAPI): void {
 
 	pi.on("tool_result", async (event, ctx): Promise<ToolResultPatch | undefined> => {
 		const result = event as ToolResultEvent;
-		if (result.toolName !== "read" || result.isError) return undefined;
+		if (!PATH_TOOLS.has(result.toolName) || result.isError) return undefined;
 
 		const pathInput = result.input?.path;
 		if (typeof pathInput !== "string" || pathInput === "") return undefined;
@@ -143,43 +167,56 @@ export default function subdirContext(pi: ExtensionAPI): void {
 		// /move、/wt 会在同一会话内就地改 cwd 且不触发会话事件，必须每次比对
 		if (sessionCwd !== ctx.cwd) resetSession(ctx.cwd);
 
-		// 剥离行选择器（:50-100、:raw 等）后再做目录链分析；容器/选择器读取
-		// （archive.zip:entry、big.ts:120-200）与上游一致仍能注入所在目录的上下文
-		const rawPath = resolvePath(pathInput, currentCwd);
-		const rawBase = path.basename(rawPath);
-		const cleanBase = rawBase.replace(/(?::(?:\d[\d+\-,]*|raw|img|conflicts))+$/i, "");
-		const absolutePath = cleanBase === rawBase ? rawPath : path.join(path.dirname(rawPath), cleanBase);
-
-		if (AGENTS_FILENAMES.includes(path.basename(absolutePath))) {
-			loadedAgents.add(path.normalize(absolutePath));
-			return undefined;
-		}
-
-		const searchRoot = isInsideRoot(currentCwd, absolutePath)
-			? currentCwd
-			: isInsideRoot(homeDir, absolutePath)
-				? homeDir
-				: "";
-		if (!searchRoot) return undefined;
+		const isRead = result.toolName === "read";
+		// omp 的 grep/glob 允许一个 path 里写多个条目（逗号/分号/空白分隔）；整串本身是真实路径时
+		// 不拆，避免带空格的目录名被切碎。read 的文件名可含 [id] 之类字符，不做通配符处理
+		const entries =
+			isRead || fs.existsSync(resolvePath(pathInput, currentCwd))
+				? [pathInput]
+				: pathInput.split(/[,;\s]+/).filter(Boolean);
 
 		const additions: TextBlock[] = [];
 
-		for (const agentsPath of findAgentsFiles(absolutePath, searchRoot)) {
-			const normalizedAgentsPath = path.normalize(agentsPath);
-			if (loadedAgents.has(normalizedAgentsPath)) continue;
+		for (const entry of entries) {
+			// 剥离行选择器（:50-100、:raw 等）后再做目录链分析；容器/选择器读取
+			// （archive.zip:entry、big.ts:120-200）与上游一致仍能注入所在目录的上下文
+			const rawPath = resolvePath(isRead ? entry : globStaticPrefix(entry), currentCwd);
+			const rawBase = path.basename(rawPath);
+			const cleanBase = rawBase.replace(SELECTOR_SUFFIX, "");
+			const absolutePath = cleanBase === rawBase ? rawPath : path.join(path.dirname(rawPath), cleanBase);
 
-			// 先占位再读：并发 tool_result 在 await 处交错，读后再占位会重复注入；
-			// 读取失败时回滚占位，保留下次重读的机会
-			loadedAgents.add(normalizedAgentsPath);
-			try {
-				const content = await fs.promises.readFile(agentsPath, "utf-8");
-				additions.push({
-					type: "text",
-					text: `Loaded subdirectory context from ${agentsPath}\n\n${content}`,
-				});
-			} catch (error) {
-				loadedAgents.delete(normalizedAgentsPath);
-				if (ctx.hasUI) ctx.ui?.notify?.(`Failed to load ${agentsPath}: ${String(error)}`, "warning");
+			if (isRead && AGENTS_FILENAMES.includes(path.basename(absolutePath))) {
+				loadedAgents.add(path.normalize(absolutePath));
+				continue;
+			}
+
+			const searchRoot = isInsideRoot(currentCwd, absolutePath)
+				? currentCwd
+				: isInsideRoot(homeDir, absolutePath)
+					? homeDir
+					: "";
+			if (!searchRoot) continue;
+
+			// 搜索类工具的 path 常是目录本身，该目录的 AGENTS.md 也要算进去
+			const startDir = isDirectory(absolutePath) ? absolutePath : path.dirname(absolutePath);
+
+			for (const agentsPath of findAgentsFiles(startDir, searchRoot)) {
+				const normalizedAgentsPath = path.normalize(agentsPath);
+				if (loadedAgents.has(normalizedAgentsPath)) continue;
+
+				// 先占位再读：并发 tool_result 在 await 处交错，读后再占位会重复注入；
+				// 读取失败时回滚占位，保留下次重读的机会
+				loadedAgents.add(normalizedAgentsPath);
+				try {
+					const content = await fs.promises.readFile(agentsPath, "utf-8");
+					additions.push({
+						type: "text",
+						text: `Loaded subdirectory context from ${agentsPath}\n\n${content}`,
+					});
+				} catch (error) {
+					loadedAgents.delete(normalizedAgentsPath);
+					if (ctx.hasUI) ctx.ui?.notify?.(`Failed to load ${agentsPath}: ${String(error)}`, "warning");
+				}
 			}
 		}
 

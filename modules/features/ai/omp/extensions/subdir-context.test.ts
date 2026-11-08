@@ -21,7 +21,7 @@ interface ExtensionUnderTest {
 type ToolResultEvent = {
 	toolName: string;
 	isError: boolean;
-	input: { path: string };
+	input: Record<string, string>;
 	content: unknown[];
 	details: unknown;
 };
@@ -57,15 +57,16 @@ function fireSession(handlers: Map<string, Handler[]>, cwd: string): void {
 	}
 }
 
-async function runRead(
+async function runTool(
 	handlers: Map<string, Handler[]>,
-	inputPath: string,
+	toolName: string,
+	input: Record<string, string>,
 	cwd: string,
 ): Promise<ToolResultPatch | undefined> {
 	const event: ToolResultEvent = {
-		toolName: "read",
+		toolName,
 		isError: false,
-		input: { path: inputPath },
+		input,
 		content: [{ type: "text", text: "file body" }],
 		details: { bytes: 9 },
 	};
@@ -74,6 +75,10 @@ async function runRead(
 		result = await handler(event, { cwd, hasUI: false });
 	}
 	return isToolResultPatch(result) ? result : undefined;
+}
+
+function runRead(handlers: Map<string, Handler[]>, inputPath: string, cwd: string) {
+	return runTool(handlers, "read", { path: inputPath }, cwd);
 }
 
 function injectedTexts(result: ToolResultPatch | undefined): string[] {
@@ -194,6 +199,73 @@ test("cwd 与 home 之外的路径与内部 URI 不注入", async () => {
 
 	const uri = await runRead(handlers, "skill://pi-extension-best-practice", root);
 	expect(uri).toBeUndefined();
+	fs.rmSync(root, { recursive: true, force: true });
+});
+
+test("grep/find/ls/glob 以目录为 path 时注入该目录自身及祖先链上下文", async () => {
+	for (const toolName of ["grep", "find", "ls", "glob", "ffgrep", "fffind"]) {
+		const root = makeProject();
+		const handlers = loadExtension();
+		fireSession(handlers, root);
+
+		const result = await runTool(handlers, toolName, { path: path.join(root, "src/components") }, root);
+		const texts = injectedTexts(result);
+
+		expect(texts).toHaveLength(2);
+		expect(texts[0]).toContain("SRC-OVERRIDE");
+		expect(texts[1]).toContain("COMPONENT-CONTEXT");
+		fs.rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test("grep 的 path 指向文件时从其所在目录起注入", async () => {
+	const root = makeProject();
+	const handlers = loadExtension();
+	fireSession(handlers, root);
+
+	const result = await runTool(handlers, "grep", { path: path.join(root, "src/components/Button.tsx"), pattern: "x" }, root);
+
+	expect(injectedTexts(result)).toHaveLength(2);
+	fs.rmSync(root, { recursive: true, force: true });
+});
+
+test("omp 风格的 path：glob 取静态前缀、行选择器剥离、多条目逐个处理", async () => {
+	const root = makeProject();
+	fs.mkdirSync(path.join(root, "lib"), { recursive: true });
+	fs.writeFileSync(path.join(root, "lib", "AGENTS.md"), "LIB-CONTEXT");
+	fs.writeFileSync(path.join(root, "lib", "m.ts"), "m");
+	const handlers = loadExtension();
+	fireSession(handlers, root);
+
+	const globbed = await runTool(handlers, "glob", { path: path.join(root, "src/components/**/*.tsx") }, root);
+	expect(injectedTexts(globbed).some((t) => t.includes("COMPONENT-CONTEXT"))).toBe(true);
+
+	const ranged = await runTool(handlers, "grep", { path: `${path.join(root, "lib/m.ts")}:1-5`, pattern: "m" }, root);
+	expect(injectedTexts(ranged).some((t) => t.includes("LIB-CONTEXT"))).toBe(true);
+
+	const multi = await runTool(
+		handlers,
+		"grep",
+		{ path: `${path.join(root, "src")} ${path.join(root, "lib")}`, pattern: "x" },
+		root,
+	);
+	// src override 与 lib 的上下文在前两次调用中已注入，多条目不应重复
+	expect(injectedTexts(multi)).toHaveLength(0);
+
+	const fresh = loadExtension();
+	fireSession(fresh, root);
+	const both = await runTool(fresh, "grep", { path: `${path.join(root, "src")},${path.join(root, "lib")}`, pattern: "x" }, root);
+	expect(injectedTexts(both)).toHaveLength(2);
+	fs.rmSync(root, { recursive: true, force: true });
+});
+
+test("未传 path（默认 cwd）与 bash 等未覆盖工具不注入", async () => {
+	const root = makeProject();
+	const handlers = loadExtension();
+	fireSession(handlers, root);
+
+	expect(await runTool(handlers, "grep", { pattern: "x" }, root)).toBeUndefined();
+	expect(await runTool(handlers, "bash", { command: `cd ${path.join(root, "src")} && ls` }, root)).toBeUndefined();
 	fs.rmSync(root, { recursive: true, force: true });
 });
 
