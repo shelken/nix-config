@@ -13,6 +13,7 @@ rec {
   macosSystem = import ./macosSystem.nix;
   nixosSystem = import ./nixosSystem.nix;
   mkTasksLib = import ./tasks.nix;
+  mkHomeManagerModule = import ./homeManagerModule.nix;
   relativeToRoot = lib.path.append ../.;
 
   # pkgs -> path -> attrs；先用 yj 转成 json 再读入（构建期 IFD）
