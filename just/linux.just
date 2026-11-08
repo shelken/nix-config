@@ -1,7 +1,7 @@
 # Linux 专用的低频任务；调用 just linux <配方>
 
 # 模块配方默认在本文件所在目录执行，这里统一回到仓库根目录，相对路径才与根 justfile 一致
-set working-directory := '../..'
+set working-directory := '..'
 set positional-arguments := true
 
 # 生成镜像（变体由 nixpkgs 提供：iso / iso-installer / qemu / proxmox / sd-card …）

@@ -1,7 +1,7 @@
 # macOS 专用的低频任务；调用 just mac <配方>
 
 # 模块配方默认在本文件所在目录执行，这里统一回到仓库根目录，相对路径才与根 justfile 一致
-set working-directory := '../..'
+set working-directory := '..'
 
 # 列出不在 nix 管理内的 brew 包（只列出，不删除）
 brew-diff:
@@ -11,7 +11,3 @@ brew-diff:
 # 磁盘是稀疏文件，只会涨不会缩；只有在肯重新下载/重编译时才值得重置
 builder-reset:
     @{{ justfile_directory() }}/utils/script/just/builder-reset
-
-# mac更新前调整nix到代理
-set-proxy:
-    @sudo python3 utils/script/just/darwin_set_proxy.py

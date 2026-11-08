@@ -1,7 +1,7 @@
 # 装机与演练：nixos-anywhere 的 kexec 缓存、Lima 演练机；调用 just anywhere <配方>
 
 # 模块配方默认在本文件所在目录执行，这里统一回到仓库根目录，相对路径才与根 justfile 一致
-set working-directory := '../..'
+set working-directory := '..'
 set positional-arguments := true
 
 # Lima 演练机：按 hosts/vm/lima-test/nixos-anywhere-test.yaml 起一台 Ubuntu 当「待接管的 Linux」

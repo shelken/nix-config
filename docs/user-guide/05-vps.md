@@ -188,5 +188,5 @@ lib/deployRsLib.nix                    # deploy-rs 的 lib，激活器换成 nix
 hosts/vps/common.nix                   # VPS 共有配置
 hosts/vps/vps-cc/README.md             # vps-cc 切换实录、演练、核对清单
 justfile                               # deploy
-utils/just/anywhere.just               # kexec-cache、lima-vps-up 等装机演练配方
+just/anywhere.just               # kexec-cache、lima-vps-up 等装机演练配方
 ```

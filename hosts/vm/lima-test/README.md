@@ -7,7 +7,7 @@
 - `default.nix`：主机配置，角色 `tui`，导入可选功能 `disko`（`modules/features/nixos/disko.nix`）
 - `facter.json`：nixos-facter 硬件报告，安装时生成并提交；不存在时 `default.nix` 用 virtio 兜底内核模块
 - `nixos-anywhere-test.yaml`：Lima 模板，声明目标机（Ubuntu 26.04、vz、plain 模式、vzNAT 网卡、root 授权 Lima 密钥）
-- `utils/just/anywhere.just` 里的 `lima-target-up` / `lima-target-ip` / `lima-target-rm`（`just anywhere <配方>`）
+- `just/anywhere.just` 里的 `lima-target-up` / `lima-target-ip` / `lima-target-rm`（`just anywhere <配方>`）
 
 ## 安装步骤
 

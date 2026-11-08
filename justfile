@@ -183,18 +183,18 @@ view:
 
 # 装机与演练：kexec-cache、Lima 演练机（just anywhere <配方>）
 [group('modules')]
-mod anywhere 'utils/just/anywhere.just'
+mod anywhere 'just/anywhere.just'
 
-# macOS 专用：brew-diff、builder-reset、set-proxy（just mac <配方>）
+# macOS 专用：brew-diff、builder-reset（just mac <配方>）
 [group('modules')]
 [macos]
-mod mac 'utils/just/mac.just'
+mod mac 'just/mac.just'
 
 # Linux 专用：gen-image、qip、wipe（just linux <配方>）
 [group('modules')]
 [linux]
-mod linux 'utils/just/linux.just'
+mod linux 'just/linux.just'
 
 # AI 工具链同步（just ai mp-sync / just ai pi-compaction）
 [group('modules')]
-mod ai 'utils/just/ai.just'
+mod ai 'just/ai.just'
