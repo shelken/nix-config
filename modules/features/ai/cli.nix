@@ -43,7 +43,7 @@
           # renovate: datasource=github-releases depName=rtk-ai/rtk extractVersion=^v(?<version>.+)$
           rtk = "0.50";
           # renovate: datasource=github-releases depName=lycorp-jp/sim-use
-          "github:lycorp-jp/sim-use" = "0.14"; # ios 模拟器控制
+          "github:lycorp-jp/sim-use" = "v0.16.0"; # ios 模拟器控制
 
           # agent client
           # 需要保留的会定死版本
