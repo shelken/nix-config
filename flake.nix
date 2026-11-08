@@ -128,7 +128,7 @@
     # 静态资源（flake = false）：他人维护、只锁版本的文件树，见 docs/adr/0006-static-assets-as-flake-inputs.md。
     # 用 git+https 而不是 github:：github fetcher 拒绝同时给 ref 与 rev，而 Renovate 要靠两者开 digest PR。
     anti-slop = {
-      url = "git+https://github.com/dmmulroy/anti-slop?ref=main&rev=e8c4880471b23ab7f216fba7b27d173a6ef07d4c&shallow=1";
+      url = "git+https://github.com/dmmulroy/anti-slop?ref=main&rev=13909c9e07590f5a85d93c62712259fe14a883f7&shallow=1";
       flake = false;
     };
     caldo-skills = {
@@ -136,15 +136,15 @@
       flake = false;
     };
     cursor-plugins = {
-      url = "git+https://github.com/cursor/plugins?ref=main&rev=6f6c9e62585436f69e560138d46709026fa5c69f&shallow=1";
+      url = "git+https://github.com/cursor/plugins?ref=main&rev=6b0300214a09fd6029cfb7077043125758cd1fd2&shallow=1";
       flake = false;
     };
     diagram-design = {
-      url = "git+https://github.com/cathrynlavery/diagram-design?ref=main&rev=cdfdc9686cd7465da70b68b036581833b503810c&shallow=1";
+      url = "git+https://github.com/cathrynlavery/diagram-design?ref=main&rev=e57eda6102a19444538ebd611d39534fad65b663&shallow=1";
       flake = false;
     };
     humanlayer-skills = {
-      url = "git+https://github.com/humanlayer/skills?ref=main&rev=653b6411c1f70c275a18e37673b042ff99f67ceb&shallow=1";
+      url = "git+https://github.com/humanlayer/skills?ref=main&rev=4d69d20f6e9b57b4fcf0d501ccfb1be961f0f329&shallow=1";
       flake = false;
     };
     kitty-icon = {
@@ -152,11 +152,11 @@
       flake = false;
     };
     llamaparse-agent-skills = {
-      url = "git+https://github.com/run-llama/llamaparse-agent-skills?ref=main&rev=a8d8b34ad6a815ba3257f921c5eccc9ca95e429f&shallow=1";
+      url = "git+https://github.com/run-llama/llamaparse-agent-skills?ref=main&rev=2dcef7c62417bd2ec4671fce4621bb1e8cce48d0&shallow=1";
       flake = false;
     };
     mattpocock-skills = {
-      url = "git+https://github.com/mattpocock/skills?ref=main&rev=59db609eb1e18aaf59b63284d0e52255aff0c63c&shallow=1";
+      url = "git+https://github.com/mattpocock/skills?ref=main&rev=4ae2317ddb22b046e26455e4f9c9b3aaaf62212d&shallow=1";
       flake = false;
     };
     rime-main = {
