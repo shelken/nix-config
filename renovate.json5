@@ -34,6 +34,7 @@
     {
       // mise 工具的版本写在 Nix 里，内置 mise manager 只认 mise.toml。
       // 每个固定版本的工具在上一行写 `# renovate: datasource=… depName=…[ extractVersion=…]`；
+      // depName 对应实际版本源；默认去掉 v 前缀，bun-v、rust-v 等特殊前缀用 extractVersion 覆盖
       // 没有这行的工具不会被升级。`latest` 不是固定版本，不需要标注
       customType: "regex",
       description: "Nix 里 programs.mise.globalConfig.tools 与登记表 mise 条目的版本",
@@ -41,6 +42,7 @@
       matchStrings: [
         '# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>\\S+)(?: extractVersion=(?<extractVersion>\\S+))?[ \\t]*\\n[^\\n=]+=[ \\t]*"(?<currentValue>[^"\\n]+)"',
       ],
+      extractVersionTemplate: "{{#if extractVersion}}{{{extractVersion}}}{{else}}^v?(?<version>.+)${{/if}}",
     },
     {
       // oci-containers 的 `image = "仓库:标签@sha256:..."` 没有内置 manager 认识。
@@ -57,6 +59,15 @@
   ],
 
   packageRules: [
+    {
+      description: "mise 的 major.minor 声明保持两段，patch 由 mise 解析；yt-dlp 使用日期版本",
+      matchManagers: ["custom.regex"],
+      matchFileNames: ["modules/**/*.nix"],
+      matchDepNames: ["!yt-dlp/yt-dlp"],
+      matchCurrentValue: "/^\\d+\\.\\d+$/",
+      versioning: "semver-partial",
+      rangeStrategy: "replace",
+    },
     {
       matchManagers: ["github-actions"],
       // Actions 使用完整 SHA + major 标签注释（# vN），由 Renovate 更新版本和 digest。

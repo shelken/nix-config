@@ -11,7 +11,7 @@
       #   enable = true;
       # };
       # renovate: datasource=github-releases depName=fastfetch-cli/fastfetch
-      programs.mise.globalConfig.tools.fastfetch = "2.71.0";
+      programs.mise.globalConfig.tools.fastfetch = "2.71";
       xdg.configFile = {
         "fastfetch/config.jsonc" = {
           source = ./config.jsonc;
