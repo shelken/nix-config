@@ -18,8 +18,12 @@ description: 子代理的派发、审查与规划规范，含 `spawn-subagent` �
 
 ## `spawn-subagent` 环境限制
 
-- `spawn-subagent` 支持 Pi 在 Herdr 或 Kitty 中运行（同时存在时 Herdr 优先）；其他终端会停止并报告，不做降级。Oh My Pi（omp）使用原生子代理控制
-- Kitty 要求 `allow_remote_control=socket-only` 与 `listen_on`（已由 nix-config 配置），且当前 tab 布局为 splits；pane-id 为 kitty 窗口 ID
+- `spawn-subagent` 支持 Pi 在三种终端运行，优先级 Herdr.app（`HC_TERMINAL_ID`）> 旧 Herdr（`HERDR_PANE_ID`）> Kitty（`KITTY_WINDOW_ID`）；其他终端会停止并报告，不做降级。Oh My Pi（omp）使用原生子代理控制
+- Herdr.app 内可能残留已失效的旧 `HERDR_PANE_ID`，以 `HC_TERMINAL_ID` 为准
+- Herdr.app 子代理默认后台运行，挂在当前终端下，用户在 Agents 列表查看；脚本不分屏、不聚焦，展示方式由用户决定
+- ID 含义随后端而定：Herdr.app 为 hc 终端地址（如 `t7`），旧 Herdr 为 pane ID，Kitty 为窗口 ID
+- 派发前脚本验证当前终端，失效时报 `context-error`（与模型无关），不回退到其他后端或聚焦 pane，batch 零派发；先修复终端环境再重试，不要换模型重试
+- Kitty 要求 `allow_remote_control=socket-only` 与 `listen_on`（已由 nix-config 配置），且当前 tab 布局为 splits
 - `scout` 在 pi 中只靠提示词约束输出结构（omp 里由 output schema 强制）；需要稳定的 Summary/Files/Architecture 三段式时，在派发任务里明确要求格式
 
 ## `spawn-subagent` 流程
@@ -29,7 +33,7 @@ description: 子代理的派发、审查与规划规范，含 `spawn-subagent` �
 然后按 SOP：
 
 1. `spawn-subagent list` 查看可用 profile 与生效配置
-2. 派发成功后主代理**立即结束当前回合**（不再调用任何工具、不 sleep、不轮询）：子代理结论经 intercom 自动注入并唤醒主代理继续处理。这是唯一可靠做法：herdr 对未聚焦 pane 的 agent 全程仅报 idle（无 working/done 区分），kitty 窗口更无任何完成信号，阻塞等待无可靠信号
-3. 结论收齐后按需 `spawn-subagent close <pane-id>` 清理
-   - 任务执行中子代理 blocked / failed：pane 保留供用户检查，不自动关闭
-   - 派发阶段健康门失败：脚本自动关闭该 pane，不残留（详见 `-h`）
+2. 派发成功后主代理**立即结束当前回合**（不再调用任何工具、不 sleep、不轮询）：子代理结论经 intercom 自动注入并唤醒主代理继续处理。这是唯一可靠做法：旧 herdr 对未聚焦 pane 的 agent 全程仅报 idle（无 working/done 区分），kitty 窗口更无任何完成信号，阻塞等待无可靠信号；不用 `hc wait` 代替
+3. 结论收齐后按需 `spawn-subagent close <id>` 清理（hc 终端含已结束的，`kill` + `rm`）
+   - 任务执行中子代理 blocked / failed：终端保留供用户检查，不自动关闭
+   - 派发阶段健康门失败：脚本自动关闭该 pane/终端，不残留（详见 `-h`）
