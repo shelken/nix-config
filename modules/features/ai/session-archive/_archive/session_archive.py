@@ -303,7 +303,10 @@ def seal(
 @contextlib.contextmanager
 def root_lock(root: str):
     """同一根目录同时只允许一个归档进程：卷名和 .part 名都由根目录内状态决定"""
-    fd = os.open(os.path.join(root, LOCK_NAME), os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        fd = os.open(os.path.join(root, LOCK_NAME), os.O_RDWR | os.O_CREAT, 0o600)
+    except OSError as e:
+        raise Failure(f"无法创建锁文件 {root}: {e}") from None
     try:
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -497,12 +500,15 @@ def extract(vol: Volume, cfg: Config, wanted: set[str] | None) -> int:
                             while chunk := src.read(CHUNK):
                                 out.write(chunk)
                             os.fchmod(out.fileno(), info.mode & 0o777)
-                        os.replace(part, base, src_dir_fd=dfd, dst_dir_fd=dfd)
+                        # link 不覆盖：还原期间别处新建的同名文件优先
+                        os.link(part, base, src_dir_fd=dfd, dst_dir_fd=dfd)
+                        print(f"已还原: {dest}")  # 新建文件，mtime 为现在
+                        done += 1
+                    except FileExistsError:
+                        print(f"目标已存在，跳过: {dest}", file=sys.stderr)
                     finally:
                         with contextlib.suppress(OSError):
                             os.unlink(part, dir_fd=dfd)
-                    print(f"已还原: {dest}")  # 新建文件，mtime 为现在
-                    done += 1
             finally:
                 os.close(dfd)
             if wanted is not None and not wanted:

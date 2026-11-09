@@ -46,10 +46,16 @@ def keygen(path: str) -> None:
     subprocess.run(["age-keygen", "-o", path], check=True, capture_output=True)
 
 
-def sa(*args, key: str | None = None, path_prefix: str | None = None, **kw):
+def sa(
+    *args,
+    key: str | None = None,
+    path_prefix: str | None = None,
+    roots: str | None = None,
+    **kw,
+):
     env = dict(os.environ)
     env.update(
-        SESSION_ARCHIVE_ROOTS=f"{root}\n{missing}",
+        SESSION_ARCHIVE_ROOTS=roots or f"{root}\n{missing}",
         SESSION_ARCHIVE_DAYS="30",
         SESSION_ARCHIVE_KEY_FILE=key or keys,
     )
@@ -429,6 +435,40 @@ try:
     )
     ok("restore 根目录")
 
+    # 13b. 还原期间别处新建了同名文件：不覆盖
+    raced = os.path.join(root, "proj9/lock.jsonl")
+    os.unlink(raced)
+    py = (
+        "import sys,time;d=sys.stdin.buffer;o=sys.stdout.buffer;"
+        "o.write(d.read(20000));o.flush();b=d.read();len(b)>50000 and time.sleep(2);o.write(b)"
+    )
+    slow_dec = shim(
+        "slowdec",
+        f'for a in "$@"; do [ "$a" = -d ] && {{ @REAL@ "$@" | {sys.executable} -c \'{py}\'; exit; }}; done\n'
+        'exec @REAL@ "$@"\n',
+    )
+    p = subprocess.Popen(
+        [sys.executable, SCRIPT, "restore", raced],
+        env=dict(env, PATH=slow_dec + os.pathsep + os.environ["PATH"]),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    for _ in range(200):
+        if leftovers():
+            break
+        time.sleep(0.1)
+    check(
+        bool(leftovers()),
+        f"未观察到 restore 的 .part，用例失效: rc={p.poll()} {p.stderr.read() if p.poll() is not None else ''}",
+    )
+    with open(raced, "w") as f:
+        f.write("NEW")
+    p.wait(timeout=60)
+    check(read("proj9/lock.jsonl") == "NEW", "还原不得覆盖期间新建的文件")
+    check(not leftovers(), "还原后不应残留 .part")
+    ok("restore 不覆盖期间新建的文件")
+
     # 14. 还原不跟随目录符号链接
     outside = os.path.join(work, "outside")
     os.makedirs(outside)
@@ -440,6 +480,23 @@ try:
         f"符号链接目录下的还原必须拒绝且不写外部: {os.listdir(outside)}",
     )
     ok("restore 拒绝符号链接")
+
+    # 15. 一个根目录无法加锁：计入失败，其余根目录照常归档
+    ro = os.path.join(work, "ro-root")
+    os.makedirs(ro)
+    mk("proj10/x.jsonl", 700)
+    os.chmod(ro, stat.S_IRUSR | stat.S_IXUSR)
+    try:
+        r = sa("run", roots=f"{ro}\n{root}")
+    finally:
+        os.chmod(ro, stat.S_IRWXU)
+    check(
+        r.returncode != 0
+        and "Traceback" not in r.stderr
+        and not exists("proj10/x.jsonl"),
+        f"加锁失败的根目录不应阻断其余根目录: {r.stderr}",
+    )
+    ok("锁文件创建失败不阻断其余根目录")
 
     print("ALL PASSED")
 finally:
