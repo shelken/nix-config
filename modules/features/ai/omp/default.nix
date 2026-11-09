@@ -85,6 +85,9 @@
         shelken.backup.app.omp = [
           "${config.home.homeDirectory}/.omp/agent/sessions"
         ];
+        shelken.sessionArchive.app.omp = [
+          "${config.home.homeDirectory}/.omp/agent/sessions"
+        ];
       };
     };
 }
