@@ -175,5 +175,8 @@
       shelken.backup.app.pi = [
         "${config.home.homeDirectory}/.pi/agent/sessions"
       ];
+      shelken.sessionArchive.app.pi = [
+        "${config.home.homeDirectory}/.pi/agent/sessions"
+      ];
     };
 }
