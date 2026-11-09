@@ -8,22 +8,19 @@ let
   cfg = config.shelken.sessionArchive;
   roots = lib.concatLists (lib.attrValues cfg.app);
 
-  # coreutils 排在 PATH 最前：交互 shell 里的 rm 可能被替换成回收站，归档必须真删
   archive = pkgs.writeShellApplication {
     name = "session-archive";
     runtimeInputs = with pkgs; [
+      python3
       age
       zstd
-      coreutils
-      findutils
-      diffutils
     ];
     runtimeEnv = {
       SESSION_ARCHIVE_ROOTS = lib.concatStringsSep "\n" roots;
       SESSION_ARCHIVE_DAYS = toString cfg.afterDays;
       SESSION_ARCHIVE_KEY_FILE = cfg.keyFile;
     };
-    text = builtins.readFile ./session-archive.sh;
+    text = ''exec python3 -P ${./session_archive.py} "$@"'';
   };
 in
 {

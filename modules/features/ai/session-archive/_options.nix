@@ -18,7 +18,7 @@
     afterDays = lib.mkOption {
       type = lib.types.ints.positive;
       default = 30;
-      description = "mtime 超过多少天的文件算冷文件";
+      description = "一个月结束后再过多少天才封存该月，此时该月的文件都已超过这个天数没动过";
     };
     keyFile = lib.mkOption {
       type = lib.types.str;
