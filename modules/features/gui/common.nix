@@ -9,7 +9,6 @@
 
     # browser
     "google-chrome"
-    "helium-browser"
 
     # misc
     "stats"

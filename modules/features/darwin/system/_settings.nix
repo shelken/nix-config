@@ -175,13 +175,6 @@
           # 登录项由 SMAppService 管理；不写 LaunchAtLoginNext/runAtLoginInitialized 迁移标记。
           Network_state = true;
         };
-        # Helium Browser
-        "net.imput.helium" = {
-          NSUserKeyEquivalents = {
-            "选择上一个标签" = "@←";
-            "选择下一个标签" = "@→";
-          };
-        };
         # Chrome Browser
         "com.google.Chrome" = {
           NSUserKeyEquivalents = {
