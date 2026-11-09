@@ -5,6 +5,7 @@
       config,
       lib,
       mylib,
+      myvars,
       ...
     }:
     let
@@ -120,7 +121,7 @@
         # 对标 omp 的 bash.autoBackground 阈值（60 秒）；也可写 ~/.pi/agent/shell-background.json，这里选环境变量。
         PIFY_SHELL_BG_MS = "60000";
       };
-      home.shellAliases.pi = "sec-run pi";
+      home.shellAliases.pi = import ../agent-gh/_launch.nix { inherit pkgs myvars; } "pi";
 
       shelken.dev.sandbox.writableRoots = [ ".pi/agent" ];
 
