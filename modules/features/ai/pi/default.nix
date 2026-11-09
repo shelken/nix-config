@@ -162,6 +162,8 @@
         ".pi/agent/prompts" = linkPi "prompts";
 
         ".pi/agent/caveman.json" = linkPiConfig "caveman.json";
+        # 结果只带日志最后 tailBytes 字节：插件没有单行长度上限，默认 64KB 遇到超长单行会整块进上下文
+        ".pi/agent/shell-background.json" = linkPiConfig "shell-background.json";
         ".pi/agent/extensions/pi-recap.json" = linkPiConfig "pi-recap.json";
         ".pi/agent/extensions/pi-rename.json" = linkPiConfig "pi-rename.json";
         ".pi/agent/extensions/pi-vision-handoff.json" = linkPiConfig "pi-vision-handoff.json";
@@ -170,6 +172,8 @@
         ".pi/agent/extensions/pi-dynamic-models/config.json" = linkPiConfig "pi-dynamic-models.json";
         ".pi/agent/extensions/subdir-context.ts" =
           mylib.mkConfigFile config ../omp/extensions/subdir-context.ts;
+        # omp 有单行列截断，pi 与 shell-background 没有；仅 pi 需要，不放进共享的 omp/extensions
+        ".pi/agent/extensions/line-cap.ts" = linkPi "extensions/line-cap.ts";
       };
 
       shelken.backup.app.pi = [
