@@ -36,9 +36,10 @@ cold_files() {
   local root
   while IFS= read -r root; do
     [ -d "$root" ] || continue
-    find "$root" -type f -mmin "+$((SESSION_ARCHIVE_DAYS * 1440))" \
-      ! -name .DS_Store ! -name '*.zst.age' ! -name '*.part' \
-      ! -name '*.db' ! -name '*.db-*' ! -name '*.lock*' -print0
+    # 根目录直属文件是 agent 自己的状态（如 sqlite 库，WAL 模式下主库 mtime 不随写入更新），
+    # 会话数据都在子目录里：按深度排除，不靠猜后缀
+    find "$root" -mindepth 2 -type f -mmin "+$((SESSION_ARCHIVE_DAYS * 1440))" \
+      ! -name .DS_Store ! -name '*.zst.age' ! -name '*.part' ! -name '*.lock*' -print0
   done <<<"$SESSION_ARCHIVE_ROOTS"
 }
 
@@ -66,6 +67,17 @@ check_targets() {
 
 mib() { echo "$(($1 / 1048576)) MiB"; }
 
+# 后缀统计：出现新类型的文件时能在日志里看到。awk 读完全部输入，避免 head 提前退出在 pipefail 下触发 SIGPIPE
+ext_of() {
+  local name=${1##*/}
+  case $name in *.*) echo ".${name##*.}" ;; *) echo "(无后缀)" ;; esac
+}
+print_exts() {
+  [ -n "$1" ] || return 0
+  echo "后缀统计 top 10:"
+  printf '%s' "$1" | sort | uniq -c | sort -rn | awk 'NR <= 10 { print "  " $0 }'
+}
+
 # 每一步都显式判断：函数在 || 上下文里被调用时 errexit 不生效
 archive_one() {
   local f=$1 out="$1.zst.age" tmp="$1.zst.age.part"
@@ -89,7 +101,7 @@ archive_one() {
 }
 
 cmd_run() {
-  local dry=0 f n=0 failed=0 before=0 after=0 size asize
+  local dry=0 f n=0 failed=0 before=0 after=0 size asize exts=""
   case "${1:-}" in
     "") ;;
     --dry-run) dry=1 ;;
@@ -106,12 +118,14 @@ cmd_run() {
     if [ "$dry" -eq 1 ]; then
       n=$((n + 1))
       before=$((before + size))
+      exts+=$(ext_of "$f")$'\n'
       continue
     fi
     echo "归档: $f"
     if archive_one "$f"; then
       n=$((n + 1))
       before=$((before + size))
+      exts+=$(ext_of "$f")$'\n'
       asize=$(wc -c <"$f.zst.age") || asize=0
       after=$((after + asize))
     else
@@ -125,6 +139,7 @@ cmd_run() {
   else
     echo "完成: 归档 ${n} 个，失败 ${failed} 个，原始 $(mib "$before") -> $(mib "$after")"
   fi
+  print_exts "$exts"
   [ "$failed" -eq 0 ]
 }
 

@@ -6,8 +6,9 @@
 
 - 冷文件：`shelken.sessionArchive.app.<名>` 声明的目录下，mtime 超过 `afterDays`（默认 30）天的普通文件，不区分 jsonl 与 artifacts
 - 归档：`zstd -19` 压缩，`age` 加密成 `<名>.zst.age`，原地存放
-- 跳过：`.DS_Store`、`.zst.age`、`.part`、`*.db`、`*.db-*`、`*.lock*`；目录不存在时静默跳过
-- 数据库与锁文件必须跳过：SQLite 的 WAL 模式下主库 mtime 只在 checkpoint 时更新，活跃的库也会显得很旧，pi 的 `sessions.db` 就是例子
+- 跳过：根目录直属的文件，以及子目录里的 `.DS_Store`、`*.zst.age`、`*.part`、`*.lock*`；目录不存在时静默跳过
+- 根目录直属文件是 agent 自己的状态，会话数据都在子目录里，所以按深度排除，不靠猜后缀。例如 pi 的 `sessions.db`：SQLite 在 WAL 模式下主库 mtime 只在 checkpoint 时更新，活跃的库也会显得很旧
+- 子目录里出现新的活跃状态文件时才需要补排除规则。`run` 与 `--dry-run` 末尾的「后缀统计」用来发现新类型；误归档可以 `restore`
 - 加入 `workstation` 角色即生效，没有 enable 开关；主机没开 `shelken.secrets.enable` 时构建报错
 - 每天 4:20 由 `shelken.tasks.session-archive` 运行；失败只写任务日志，不发通知
 
@@ -52,7 +53,7 @@ age 没有只改文件头的办法，rekey 要解密再加密每个文件，但�
 ## 验证
 
 ```bash
-bash modules/features/session-archive/_archive/e2e.sh
+bash modules/features/ai/session-archive/_archive/e2e.sh
 ```
 
 在临时目录里用临时密钥与改过 mtime 的假会话，覆盖 dry-run、归档、跳过规则、restore、校验失败、rekey。需要 `age` 与 `zstd` 在 PATH

@@ -39,8 +39,9 @@ mk() { # mk <路径> <几天前>
 mk "$root/proj/old.jsonl" 40
 mk "$root/proj/artifacts/old.md" 40
 mk "$root/proj/.DS_Store" 40
-mk "$root/proj/sessions.db" 40
-mk "$root/proj/sessions.db-wal" 40
+mk "$root/sessions.db" 40
+mk "$root/sessions.db-wal" 40
+mk "$root/stray-state.bin" 40
 mk "$root/proj/old.jsonl.lock.os" 40
 mk "$root/proj/new.jsonl" 1
 cp "$root/proj/old.jsonl" "$work/old.jsonl.orig"
@@ -48,6 +49,7 @@ cp "$root/proj/old.jsonl" "$work/old.jsonl.orig"
 # 1. dry-run 不写不删
 out=$(sa run --dry-run)
 echo "$out" | grep -q "2 个冷文件" || fail "dry-run 应报告 2 个冷文件: $out"
+echo "$out" | grep -Eq "1 \.jsonl" && echo "$out" | grep -Eq "1 \.md" || fail "dry-run 应给出后缀统计: $out"
 [ -f "$root/proj/old.jsonl" ] && [ ! -e "$root/proj/old.jsonl.zst.age" ] || fail "dry-run 改动了文件"
 ok "dry-run 只统计"
 
@@ -55,8 +57,8 @@ ok "dry-run 只统计"
 sa run >/dev/null || fail "run 失败"
 [ ! -e "$root/proj/old.jsonl" ] && [ -f "$root/proj/old.jsonl.zst.age" ] || fail "old.jsonl 未归档"
 [ ! -e "$root/proj/artifacts/old.md" ] && [ -f "$root/proj/artifacts/old.md.zst.age" ] || fail "artifact 未归档"
-for keep in new.jsonl .DS_Store sessions.db sessions.db-wal old.jsonl.lock.os; do
-  [ -f "$root/proj/$keep" ] || fail "不该归档的文件被动了: $keep"
+for keep in proj/new.jsonl proj/.DS_Store proj/old.jsonl.lock.os sessions.db sessions.db-wal stray-state.bin; do
+  [ -f "$root/$keep" ] || fail "不该归档的文件被动了: $keep"
 done
 ! grep -q "$secret" "$root/proj/old.jsonl.zst.age" || fail "归档文件含明文"
 [ -n "$(find "$root/proj/old.jsonl.zst.age" -mmin +$((30 * 1440)))" ] || fail "归档文件 mtime 应保留原值"
