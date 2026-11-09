@@ -11,6 +11,7 @@
 import argparse
 import contextlib
 import datetime as dt
+import fcntl
 import fnmatch
 import json
 import os
@@ -32,6 +33,7 @@ VOLUME_RE = re.compile(
 )
 # 根目录直属文件由 plan 按深度整体排除，这里只列子目录里要跳过的名字
 EXCLUDED_NAMES = (".DS_Store", "*.zst.age", "*.part", "*.lock*")
+LOCK_NAME = ".session-archive.lock"
 
 
 class Failure(Exception):
@@ -298,8 +300,34 @@ def seal(
     return vol
 
 
-def delete_originals(root: str, rels: list[str]) -> None:
-    for rel in rels:
+@contextlib.contextmanager
+def root_lock(root: str):
+    """同一根目录同时只允许一个归档进程：卷名和 .part 名都由根目录内状态决定"""
+    fd = os.open(os.path.join(root, LOCK_NAME), os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise Failure(f"已有另一个 session-archive 在处理 {root}") from None
+        yield
+    finally:
+        os.close(fd)
+
+
+def signature(path: str) -> tuple[int, int, int]:
+    st = os.lstat(path)
+    return st.st_ino, st.st_size, st.st_mtime_ns
+
+
+def delete_originals(root: str, snap: dict[str, tuple[int, int, int]]) -> None:
+    """只删仍与打包前快照一致的文件；打包后被写过的保留，之后按迟到文件处理"""
+    for rel, sig in sorted(snap.items()):
+        try:
+            if signature(os.path.join(root, rel)) != sig:
+                print(f"打包后文件有变化，保留: {rel}", file=sys.stderr)
+                continue
+        except FileNotFoundError:
+            continue
         os.unlink(os.path.join(root, rel))
         parent = os.path.dirname(os.path.join(root, rel))
         while parent != root:
@@ -319,6 +347,7 @@ def archive_month(
 ) -> list[Volume]:
     """返回本次新写的分卷。已有分卷已覆盖且内容一致的文件只补删原文件"""
     pending = dict(members)
+    snap = {rel: signature(os.path.join(root, rel)) for rel in pending}
     for vol in volumes(root, month):
         try:
             indexed = {rel for rel, _ in read_index(vol, cfg.key_file)}
@@ -331,13 +360,13 @@ def archive_month(
             verify(vol.tar, root, covered, cfg.key_file)
         except (Failure, OSError, tarfile.TarError):
             continue  # 同名但内容不同，留给新分卷
-        delete_originals(root, covered)
+        delete_originals(root, {r: snap[r] for r in covered})
         for r in covered:
             del pending[r]
     if not pending:
         return []
     vol = seal(root, month, sorted(pending.items()), cfg.key_file, recips)
-    delete_originals(root, sorted(pending))
+    delete_originals(root, {r: snap[r] for r in pending})
     return [vol]
 
 
@@ -354,9 +383,23 @@ def print_exts(rels: list[str]) -> None:
 
 
 def cmd_run(cfg: Config, dry: bool) -> int:
+    with contextlib.ExitStack() as stack:
+        roots, busy = [], 0
+        for root in cfg.roots:
+            try:
+                if not dry:
+                    stack.enter_context(root_lock(root))
+                roots.append(root)
+            except Failure as e:
+                print(f"跳过: {e}", file=sys.stderr)
+                busy += 1
+        return run_roots(cfg, roots, dry, busy)
+
+
+def run_roots(cfg: Config, roots: list[str], dry: bool, failed: int) -> int:
     recips = [] if dry else recipient_args(cfg.key_file)
-    now, failed, archived = time.time(), 0, []
-    for root in cfg.roots:
+    now, archived = time.time(), []
+    for root in roots:
         sealed, waiting, unreadable = plan(root, now, cfg.days)
         for rel in unreadable:
             print(f"无法读取，跳过: {os.path.join(root, rel)}", file=sys.stderr)
@@ -408,6 +451,20 @@ def safe_dest(root: str, name: str) -> str:
     return dest
 
 
+def open_dir(root: str, parts: list[str]) -> int:
+    """逐级用 O_NOFOLLOW 打开并创建目录，路径上任何符号链接都拒绝，避免明文写到根目录外"""
+    fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+    for p in parts:
+        try:
+            with contextlib.suppress(FileExistsError):
+                os.mkdir(p, 0o700, dir_fd=fd)
+            nxt = os.open(p, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+        finally:
+            os.close(fd)
+        fd = nxt
+    return fd
+
+
 def extract(vol: Volume, cfg: Config, wanted: set[str] | None) -> int:
     """wanted 为 None 时还原整卷，否则只还原其中的文件，找齐即停。已存在的文件不覆盖"""
     done = 0
@@ -421,21 +478,33 @@ def extract(vol: Volume, cfg: Config, wanted: set[str] | None) -> int:
             dest = safe_dest(vol.root, info.name)
             if wanted is not None:
                 wanted.discard(info.name)
-            if os.path.lexists(dest):
-                print(f"目标已存在，跳过: {dest}", file=sys.stderr)
-            else:
-                os.makedirs(os.path.dirname(dest), exist_ok=True)
-                part = dest + ".part"
+            rel_dir, base = os.path.split(os.path.relpath(dest, vol.root))
+            dfd = open_dir(vol.root, [p for p in rel_dir.split(os.sep) if p])
+            try:
                 try:
-                    with tf.extractfile(info) as src, open(part, "wb") as out:
-                        while chunk := src.read(CHUNK):
-                            out.write(chunk)
-                    os.chmod(part, info.mode & 0o777)
-                    os.replace(part, dest)  # 新建文件，mtime 为现在
-                finally:
-                    unlink_quiet(part)
-                print(f"已还原: {dest}")
-                done += 1
+                    os.lstat(base, dir_fd=dfd)
+                    print(f"目标已存在，跳过: {dest}", file=sys.stderr)
+                except FileNotFoundError:
+                    part = base + ".part"
+                    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW
+                    try:
+                        with (
+                            tf.extractfile(info) as src,
+                            os.fdopen(
+                                os.open(part, flags, 0o600, dir_fd=dfd), "wb"
+                            ) as out,
+                        ):
+                            while chunk := src.read(CHUNK):
+                                out.write(chunk)
+                            os.fchmod(out.fileno(), info.mode & 0o777)
+                        os.replace(part, base, src_dir_fd=dfd, dst_dir_fd=dfd)
+                    finally:
+                        with contextlib.suppress(OSError):
+                            os.unlink(part, dir_fd=dfd)
+                    print(f"已还原: {dest}")  # 新建文件，mtime 为现在
+                    done += 1
+            finally:
+                os.close(dfd)
             if wanted is not None and not wanted:
                 break
     if wanted:
@@ -460,7 +529,7 @@ def restore_path(cfg: Config, target: str) -> None:
         hit = {
             rel
             for rel, _ in read_index(vol, cfg.key_file)
-            if rel == prefix or rel.startswith(prefix + os.sep)
+            if prefix == "." or rel == prefix or rel.startswith(prefix + os.sep)
         } - handled
         if hit:
             handled |= hit
@@ -530,16 +599,21 @@ def rekey_file(path: str, key_file: str, recips: list[str]) -> None:
 def cmd_rekey(cfg: Config) -> int:
     recips, n, failed = recipient_args(cfg.key_file), 0, 0
     for root in cfg.roots:
-        for vol in volumes(root):
-            for path in (vol.tar, vol.idx):
-                if not os.path.exists(path):
-                    continue
-                try:
-                    rekey_file(path, cfg.key_file, recips)
-                    n += 1
-                except (Failure, OSError, subprocess.SubprocessError) as e:
-                    print(f"换钥失败: {path}: {e}", file=sys.stderr)
-                    failed += 1
+        try:
+            with root_lock(root):
+                for vol in volumes(root):
+                    for path in (vol.tar, vol.idx):
+                        if not os.path.exists(path):
+                            continue
+                        try:
+                            rekey_file(path, cfg.key_file, recips)
+                            n += 1
+                        except (Failure, OSError, subprocess.SubprocessError) as e:
+                            print(f"换钥失败: {path}: {e}", file=sys.stderr)
+                            failed += 1
+        except Failure as e:
+            print(f"跳过: {e}", file=sys.stderr)
+            failed += 1
     print(f"完成: 换钥 {n} 个，失败 {failed} 个")
     return 1 if failed else 0
 

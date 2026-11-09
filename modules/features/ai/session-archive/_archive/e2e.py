@@ -364,6 +364,46 @@ try:
     )
     ok("中断清理")
 
+    # 11b. 校验完成后、删除前文件被写入：保留被改写的文件，不丢新内容
+    race = mk("proj8/race.jsonl", 700)
+    cnt = os.path.join(work, "cnt")
+    racer = shim(
+        "race",
+        'for a in "$@"; do [ "$a" = -d ] && exec @REAL@ "$@"; done\n'
+        f"n=$(cat {cnt} 2>/dev/null || echo 0); n=$((n+1)); echo $n > {cnt}\n"
+        f"[ $n = 2 ] && echo LATE >> {race}\n"  # 第 2 次压缩是写清单，在 verify 之后
+        'exec @REAL@ "$@"\n',
+    )
+    r = sa("run", path_prefix=racer)
+    check(os.path.exists(cnt), "用例失效: 垫片未被调用")
+    check(
+        exists("proj8/race.jsonl") and read("proj8/race.jsonl").endswith("LATE\n"),
+        "校验后被写入的文件必须保留",
+    )
+    ok("校验后被写入的文件不被删")
+
+    # 11c. 同一根目录不允许两个归档进程并行
+    mk("proj9/lock.jsonl", 600)
+    p = subprocess.Popen(
+        [sys.executable, SCRIPT, "run"],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    for _ in range(100):
+        if leftovers():
+            break
+        time.sleep(0.1)
+    check(bool(leftovers()), "未观察到 .part，用例失效")
+    r = sa("run")
+    check(
+        r.returncode != 0 and "已有另一个" in r.stderr,
+        f"并行的第二个 run 应拒绝: {r.stderr}",
+    )
+    p.send_signal(signal.SIGTERM)
+    p.wait(timeout=30)
+    ok("并发 run 被锁拒绝")
+
     # 12. 换钥：密钥文件加入第二把后 rekey，只留新私钥仍可 list 与 restore
     sa("run")  # 把前面保留下来的文件正常封存
     k2 = os.path.join(work, "k2.txt")
@@ -379,6 +419,27 @@ try:
         f"rekey 后新私钥应能还原: {r.stderr}",
     )
     ok("rekey 与密钥轮换")
+
+    # 13. 还原整个根目录
+    os.unlink(os.path.join(root, "proj2/older.jsonl"))
+    r = sa("restore", root, key=k2)
+    check(
+        r.returncode == 0 and read("proj2/older.jsonl") == body("proj2/older.jsonl"),
+        f"restore <根目录> 应还原全部: {r.stderr}",
+    )
+    ok("restore 根目录")
+
+    # 14. 还原不跟随目录符号链接
+    outside = os.path.join(work, "outside")
+    os.makedirs(outside)
+    shutil.rmtree(os.path.join(root, "proj2"))
+    os.symlink(outside, os.path.join(root, "proj2"))
+    r = sa("restore", os.path.join(root, "proj2/older.jsonl"), key=k2)
+    check(
+        r.returncode != 0 and not os.listdir(outside),
+        f"符号链接目录下的还原必须拒绝且不写外部: {os.listdir(outside)}",
+    )
+    ok("restore 拒绝符号链接")
 
     print("ALL PASSED")
 finally:
