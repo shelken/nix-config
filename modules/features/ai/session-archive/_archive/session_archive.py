@@ -16,6 +16,7 @@ import fnmatch
 import json
 import os
 import re
+import secrets
 import signal
 import stat
 import subprocess
@@ -488,14 +489,14 @@ def extract(vol: Volume, cfg: Config, wanted: set[str] | None) -> int:
                     os.lstat(base, dir_fd=dfd)
                     print(f"目标已存在，跳过: {dest}", file=sys.stderr)
                 except FileNotFoundError:
-                    part = base + ".part"
-                    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW
+                    # 唯一临时名 + O_EXCL：不碰已有的 .part，也不与并行的 restore 共用
+                    part = f".{base}.{os.getpid()}.{secrets.token_hex(4)}.part"
+                    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+                    fd = os.open(part, flags, 0o600, dir_fd=dfd)
                     try:
                         with (
                             tf.extractfile(info) as src,
-                            os.fdopen(
-                                os.open(part, flags, 0o600, dir_fd=dfd), "wb"
-                            ) as out,
+                            os.fdopen(fd, "wb") as out,
                         ):
                             while chunk := src.read(CHUNK):
                                 out.write(chunk)

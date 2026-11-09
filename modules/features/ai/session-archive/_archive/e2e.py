@@ -498,6 +498,50 @@ try:
     )
     ok("锁文件创建失败不阻断其余根目录")
 
+    # 16. 还原不碰已有的同名 .part，也不与并行的 restore 共用临时文件
+    item = os.path.join(root, "proj10/x.jsonl")
+    foreign = item + ".part"
+    os.makedirs(os.path.dirname(item), exist_ok=True)
+    with open(foreign, "w") as f:
+        f.write("active application partial data")
+    r = sa("restore", item)
+    check(
+        r.returncode == 0 and read("proj10/x.jsonl") == body("proj10/x.jsonl"), r.stderr
+    )
+    check(
+        os.path.exists(foreign)
+        and read("proj10/x.jsonl.part") == "active application partial data",
+        "已有的 .part 必须原样保留",
+    )
+    os.unlink(foreign)
+    os.unlink(item)
+    slow_env = dict(env, PATH=slow_dec + os.pathsep + os.environ["PATH"])
+    procs = []
+    for i in range(2):
+        procs.append(
+            subprocess.Popen(
+                [sys.executable, SCRIPT, "restore", item],
+                env=slow_env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+        )
+        if i == 0:
+            for _ in range(200):
+                if leftovers():
+                    break
+                time.sleep(0.1)
+            check(bool(leftovers()), "未观察到 restore 的 .part，用例失效")
+    errs = [(q.wait(timeout=60), q.stderr.read()) for q in procs]
+    check(
+        all(rc == 0 for rc, _ in errs)
+        and read("proj10/x.jsonl") == body("proj10/x.jsonl"),
+        f"并行的两个 restore 必须互不干扰: {errs}",
+    )
+    check(not leftovers(), "并行还原后不应残留 .part")
+    ok("restore 的临时文件独立")
+
     print("ALL PASSED")
 finally:
     os.chmod(root, stat.S_IRWXU)
