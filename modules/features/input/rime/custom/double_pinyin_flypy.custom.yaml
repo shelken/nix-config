@@ -1,0 +1,3 @@
+patch:
+  # 预编辑区显示原始按键，不展开成全拼：输英文时能看到完整字母
+  translator/preedit_format: []

@@ -1,0 +1,52 @@
+patch:
+  # 只编译小鹤双拼；melt_eng、radical_pinyin 是它声明的依赖，会跟着编译
+  schema_list:
+    - schema: double_pinyin_flypy
+
+  menu:
+    page_size: 8
+
+  # 中英切换交给系统输入源，rime 自己的切换键全部屏蔽
+  ascii_composer:
+    switch_key:
+      Caps_Lock: noop
+      Shift_L: noop
+      Shift_R: noop
+      Control_L: noop
+      Control_R: noop
+
+  punctuator:
+    full_shape: &symtable
+      '"': { pair: ["「", "」"] }
+      ",": "，"
+      ".": "。"
+      "<": "《"
+      ">": "》"
+      "/": "/"
+      "?": "？"
+      ";": "；"
+      ":": "："
+      "'": { pair: ["‘", "’"] }
+      '\': "、"
+      "|": "|"
+      "`": "`"
+      "~": "~"
+      "!": "！"
+      "@": "@"
+      "#": "#"
+      "%": "%"
+      "$": "¥"
+      "^": "……"
+      "&": "&"
+      "*": "*"
+      "(": "（"
+      ")": "）"
+      "-": "-"
+      "_": ——
+      "+": "+"
+      "=": "="
+      "[": "【"
+      "]": "】"
+      "{": "「"
+      "}": "」"
+    half_shape: *symtable
