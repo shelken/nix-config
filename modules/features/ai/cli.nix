@@ -48,7 +48,7 @@
           # 需要保留的会定死版本
           # "npm:droid" = "latest";
           # renovate: datasource=github-releases depName=google-antigravity/antigravity-cli
-          antigravity-cli = "1.1.24";
+          antigravity-cli = "1.5.5";
           # 只在宿主用：不进共享登记表，沙箱里不装（沙箱只跑 omp、pi，见 ADR 0003）
           # renovate: datasource=github-releases depName=openai/codex extractVersion=^rust-v(?<version>.+)$
           codex = "0.160.1";
