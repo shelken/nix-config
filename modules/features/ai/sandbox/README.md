@@ -205,12 +205,11 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 在 VM 内（不在上下文内）运行 [guest/gc-guest.sh](./guest/gc-guest.sh)（路径经 `sb-config.json` 的 `guest_gc` 给出）：
 
 - 用户主动触发，不随 sync 或激活自动执行；有上下文在运行时直接拒绝
-- 默认只预估并打印 `[gc-dry]`，加 `--yes` 才真删
 - 复用 `sync` 的 `.sync.lock`：两者都写共用安装层，必须互斥
 - `mise prune --yes` 删掉脱离 tracked-configs 引用的旧版本；项目 `mise.toml` 仍在引用的版本不算 unused，不会被删
 - bun 缓存按 `$XDG_DATA_HOME/omp/plugins/bun.lock` 的 `"包名@版本"` 引用裁剪，`*.git/`、`@G@*`、`@GH@*` 无条件保留：清掉会让私有依赖重新 clone，网络一抖整次安装就失败
 - `bun.lock` 不存在时整个裁剪跳过（插件从未装过，无从判断引用），不清空缓存
-- gc 不新增沙箱机制，改动后无需跑隔离环境；验证只需：宿主 `sb gc`（预估不删）→ `sb gc --yes`（真删）→ `sb sync`（仍幂等），共用层体积变化用 `du -sk` 对比
+- gc 不新增沙箱机制，改动后无需跑隔离环境；验证只需：宿主 `sb gc` 真删 → `sb sync` 仍幂等，共用层体积变化用 `du -sk` 对比
 
 ## 配置与数据位置
 

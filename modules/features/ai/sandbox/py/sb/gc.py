@@ -12,13 +12,11 @@ from .locks import LockTimeout, flock
 from .msb import Msb
 
 
-def run_locked(cfg: Config, msb: Msb, *, dry_run: bool, to_stderr: bool = False) -> int:
-    # dry-run 与真删走同一个 guest 脚本，只用环境变量区分，避免两条代码路径各自演化
-    env = ("env", "SB_GC_DRY_RUN=1") if dry_run else ()
+def run_locked(cfg: Config, msb: Msb, *, to_stderr: bool = False) -> int:
     try:
         with flock(cfg.sync_lock, 600):
             return msb.run(
-                "exec", VM_NAME, "--stream", "--no-stdin", "--", *env, "bash", cfg.guest_gc, to_stderr=to_stderr
+                "exec", VM_NAME, "--stream", "--no-stdin", "--", "bash", cfg.guest_gc, to_stderr=to_stderr
             )
     except LockTimeout:
         print(f"[-] 错误: 获取共用 mise 目录写锁超时 (600s): {cfg.sync_lock}", file=sys.stderr)

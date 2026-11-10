@@ -18,7 +18,7 @@ sb up                创建或启动主 VM (sb-main)，已运行且上限一致�
 sb down              停止主 VM
 sb rm [--force]       删除主 VM，保留数据卷；有运行中上下文时拒绝，--force 强制删除
 sb sync              补齐沙箱内的 mise 工具与 OMP 插件 (幂等，只装缺失项；宿主写锁串行化)
-sb gc [--yes]        回收共用层的闲置工具版本与插件缓存 (默认只预估，--yes 执行删除)
+sb gc                回收共用层的闲置工具版本与插件缓存
 sb status            查看主 VM 状态、规格、能力上限指纹一致性与缺失工具
 sb plan [--json]     显示当前项目解析后的授权：挂载、导入、放行的私网目标与批准状态
 sb trust             批准当前项目的 .sandbox.yaml (内容哈希变了要重新批准)
@@ -90,10 +90,8 @@ def sync_cmd(cfg: Config, msb: Msb, args: list[str]) -> int:
 
 
 def gc_cmd(cfg: Config, msb: Msb, args: list[str]) -> int:
-    confirm = any(a in ("--yes", "-y") for a in args)
-    rest = [a for a in args if a not in ("--yes", "-y", "--dry-run")]
-    if rest:
-        raise SbError(f"sb gc 不接受参数 {rest}。用法: sb gc [--yes]")
+    if args:
+        raise SbError("sb gc 不接受参数")
     vm.ensure_running(cfg, msb)
     try:
         n = vm.count_contexts(cfg, msb)
@@ -101,11 +99,8 @@ def gc_cmd(cfg: Config, msb: Msb, args: list[str]) -> int:
         raise SbError(f"无法确认主 VM {VM_NAME} 是否有上下文在运行，拒绝回收。原因: {e}") from None
     if n > 0:
         raise SbError(f"主 VM {VM_NAME} 有 {n} 个上下文在运行，拒绝回收。请先退出这些上下文再执行 sb gc")
-    if not confirm:
-        print(f"[sb] 正在预估可回收的共用层内容 (sb gc --dry-run)...", file=sys.stderr)
-        return gc.run_locked(cfg, msb, dry_run=True)
-    print(f"[sb] 正在沙箱 {VM_NAME} 内回收共用层 (sb gc --yes)...", file=sys.stderr)
-    return gc.run_locked(cfg, msb, dry_run=False)
+    print(f"[sb] 正在沙箱 {VM_NAME} 内回收共用层 (sb gc)...", file=sys.stderr)
+    return gc.run_locked(cfg, msb)
 
 
 def run(cfg: Config, msb: Msb, args: list[str]) -> int:
