@@ -34,7 +34,7 @@ VOLUME_RE = re.compile(
     r"^archive-(\d{4}-\d{2})(?:-(\d+))?" + re.escape(TAR_SUFFIX) + "$"
 )
 # 根目录直属文件由 plan 按深度整体排除，这里只列子目录里要跳过的名字
-EXCLUDED_NAMES = (".DS_Store", "*.zst.age", "*.part", "*.lock*")
+EXCLUDED_NAMES = (".DS_Store", "*.part", "*.lock*")
 LOCK_NAME = ".session-archive.lock"
 
 
@@ -390,50 +390,50 @@ def print_exts(rels: list[str]) -> None:
         print(f"  {n:6d} {ext}")
 
 
-def cmd_run(cfg: Config, dry: bool) -> int:
-    with contextlib.ExitStack() as stack:
-        roots, busy = [], 0
-        for root in cfg.roots:
-            try:
-                if not dry:
-                    stack.enter_context(root_lock(root))
-                roots.append(root)
-            except Failure as e:
-                print(f"跳过: {e}", file=sys.stderr)
-                busy += 1
-        return run_roots(cfg, roots, dry, busy)
-
-
-def run_roots(cfg: Config, roots: list[str], dry: bool, failed: int) -> int:
-    recips = [] if dry else recipient_args(cfg.key_file)
-    now, archived = time.time(), []
-    for root in roots:
-        sealed, waiting, unreadable = plan(root, now, cfg.days)
-        for rel in unreadable:
-            print(f"无法读取，跳过: {os.path.join(root, rel)}", file=sys.stderr)
-        failed += len(unreadable)
-        for month, members in sorted(sealed.items()):
-            total = sum(s for _, s in members)
-            if dry:
-                print(f"{root} {month}: {len(members)} 个文件, {mib(total)}，将封存")
-                archived += [r for r, _ in members]
-                continue
-            print(f"封存 {root} {month}: {len(members)} 个文件, {mib(total)}")
-            try:
-                new = archive_month(root, month, members, cfg, recips)
-            except ERRORS as e:
-                print(f"失败，原文件保留: {root} {month}: {e}", file=sys.stderr)
-                failed += 1
-                continue
-            archived += [r for r, _ in members]
-            for vol in new:
-                size = os.path.getsize(vol.tar) + os.path.getsize(vol.idx)
-                print(f"  -> {os.path.basename(vol.tar)}: {mib(total)} -> {mib(size)}")
+def run_root(
+    cfg: Config, root: str, now: float, dry: bool, recips: list[str], archived: list
+) -> int:
+    """处理一个根目录，返回失败数；已归档的相对路径追加到 archived"""
+    sealed, waiting, unreadable = plan(root, now, cfg.days)
+    for rel in unreadable:
+        print(f"无法读取，跳过: {os.path.join(root, rel)}", file=sys.stderr)
+    failed = len(unreadable)
+    for month, members in sorted(sealed.items()):
+        total = sum(s for _, s in members)
         if dry:
-            for month, members in sorted(waiting.items()):
-                print(
-                    f"{root} {month}: {len(members)} 个文件, {mib(sum(s for _, s in members))}，{seal_time(month, cfg.days):%Y-%m-%d} 起可封存"
-                )
+            print(f"{root} {month}: {len(members)} 个文件, {mib(total)}，将封存")
+            archived += [r for r, _ in members]
+            continue
+        print(f"封存 {root} {month}: {len(members)} 个文件, {mib(total)}")
+        try:
+            new = archive_month(root, month, members, cfg, recips)
+        except ERRORS as e:
+            print(f"失败，原文件保留: {root} {month}: {e}", file=sys.stderr)
+            failed += 1
+            continue
+        archived += [r for r, _ in members]
+        for vol in new:
+            size = os.path.getsize(vol.tar) + os.path.getsize(vol.idx)
+            print(f"  -> {os.path.basename(vol.tar)}: {mib(total)} -> {mib(size)}")
+    if dry:
+        for month, members in sorted(waiting.items()):
+            print(
+                f"{root} {month}: {len(members)} 个文件, {mib(sum(s for _, s in members))}，{seal_time(month, cfg.days):%Y-%m-%d} 起可封存"
+            )
+    return failed
+
+
+def cmd_run(cfg: Config, dry: bool) -> int:
+    recips = [] if dry else recipient_args(cfg.key_file)
+    now, archived, failed = time.time(), [], 0
+    for root in cfg.roots:
+        try:
+            # dry-run 不写不删，不需要锁
+            with contextlib.nullcontext() if dry else root_lock(root):
+                failed += run_root(cfg, root, now, dry, recips, archived)
+        except Failure as e:
+            print(f"跳过: {e}", file=sys.stderr)
+            failed += 1
     print_exts(archived)
     print(f"{'dry-run: 不写不删' if dry else '完成'}，失败 {failed} 个")
     return 1 if failed else 0

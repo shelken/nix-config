@@ -21,7 +21,7 @@
 以下文件不归档，权威实现是 `_archive/session_archive.py` 的 `plan`
 
 - 根目录直属的文件
-- 子目录里的 `.DS_Store`、`*.zst.age`、`*.part`、`*.lock*`
+- 子目录里的 `.DS_Store`、`*.part`、`*.lock*`
 
 目录不存在时直接跳过，不报错
 
