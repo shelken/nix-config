@@ -3,7 +3,8 @@
 # 状态 = ~/.config/nix/icache.conf 是否存在，靠用户级 nix.conf 的 `!include icache.conf` 生效
 # （被包含文件不存在时 nix 静默忽略；用户级设置由客户端转发给 daemon，改文件即生效，不用重启）
 #
-# 必须用覆盖语义的 `substituters`：nix 按列表顺序逐个试源，`extra-substituters` 只会追加到末尾，
+# 必须用覆盖语义的 `substituters`：nix 先按各源 nix-cache-info 里的 Priority 排序，同级才按列表顺序。
+# icache 原样透传上游的 Priority，与原站同级，所以必须排在原站前面；`extra-substituters` 只会追加到末尾，
 # 等于 icache 永不命中。列表不在这里重复维护 —— on 时现取系统列表拼在前面。
 #
 # 关闭 builders-use-substitutes：置 true 时 linux-builder 用自己那份 nix.conf（只有 cache.nixos.org）
@@ -80,7 +81,11 @@ in
   flake.modules.nixos.nix-icache-system =
     { lib, ... }:
     {
-      # 必须前置：nix 按列表顺序试源，追加到末尾等于永不命中
-      nix.settings.substituters = lib.mkBefore mirrors;
+      nix.settings = {
+        # 必须前置：icache 与原站 Priority 相同，同级才按列表顺序试源，追加到末尾等于永不命中
+        substituters = lib.mkBefore mirrors;
+        # icache 是内网单点：默认 15 秒 × 5 次重试，不可达时每轮白等一分多钟
+        connect-timeout = 2;
+      };
     };
 }
