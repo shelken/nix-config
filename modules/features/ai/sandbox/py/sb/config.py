@@ -27,6 +27,7 @@ class Config:
     guest_status: str
     sync_lock: str
     guest_sync: str
+    guest_gc: str
     guest_config_mount: str
     guest_contexts_dir: str
     guest_data_dir: str
@@ -66,6 +67,7 @@ class Config:
             guest_status=nix["guest_status"],
             sync_lock=nix["sync_lock"],
             guest_sync=nix["guest_sync"],
+            guest_gc=nix["guest_gc"],
             guest_config_mount=guest["config_mount"],
             guest_contexts_dir=guest["contexts_dir"],
             guest_data_dir=guest["data_dir"],
