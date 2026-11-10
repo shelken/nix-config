@@ -1,51 +1,72 @@
 # 会话归档
 
-压缩并加密长期没有打开的 agent 会话文件，再删除原文件以回收磁盘。术语见根目录 `GLOSSARY.md` 的「会话归档」
+把长期没有打开的 agent 会话文件按月整体打包，压缩并加密，再删除原文件以回收磁盘。术语见根目录 `GLOSSARY.md` 的「会话归档」
 
 ## 工作方式
 
-- 范围：`shelken.sessionArchive.app.<名>` 声明的目录。pi 与 omp 在各自的功能里声明自己的 sessions 目录，其他 agent 照样加一行
-- 冷文件：目录下 mtime 超过 `afterDays`（默认 30）天的普通文件，jsonl 与 artifacts 一视同仁
-- 归档：`zstd -19` 压缩，`age` 加密成 `<名>.zst.age`，放在原文件旁边
+- 范围：`shelken.sessionArchive.app.<名>` 声明的目录，每个目录是一个根目录。pi 与 omp 在各自的功能里声明自己的 sessions 目录，其他 agent 照样加一行
+- 封存月份：文件按 mtime 所在的月份分组。一个月结束后再过 `afterDays`（默认 30）天，该月的全部文件都已是冷文件，这个月份才封存
+- 归档卷：每个根目录的每个封存月份写出两个文件，放在根目录下
+  - `archive-<月份>.tar.zst.age`：整月文件的 tar，`zstd -19 --long=27` 压缩，`age` 加密
+  - `archive-<月份>.idx.age`：成员清单，同样加密，因为目录名含项目路径
+- 不可变：封存之后归档卷不再改写。月份里又出现旧 mtime 的文件（如同步带来）时，写成新的卷 `archive-<月份>-2.*`
+- 位置：归档卷在根目录直属，根目录直属文件不被扫描，且仍在 kopia 的备份范围内
 - 启用：加入 `workstation` 角色即生效，没有 enable 开关。主机没开 `shelken.secrets.enable` 时构建报错
 - 调度：任务 `session-archive` 每天 4:20 运行。没有任何 app 声明目录时不安装任务。失败只写任务日志，不发通知
 
+整月打包让 zstd 看到文件之间的重复内容，也不再为每个小文件多占一个磁盘块。在两个月份上实测，体积比逐文件压缩小约四分之一到一半
+
 ## 排除规则
 
-以下文件不归档，权威实现是 `_archive/session-archive.sh` 的 `cold_files`
+以下文件不归档，权威实现是 `_archive/session_archive.py` 的 `plan`
 
 - 根目录直属的文件
-- 子目录里的 `.DS_Store`、`*.zst.age`、`*.part`、`*.lock*`
+- 子目录里的 `.DS_Store`、`*.part`、`*.lock*`
 
 目录不存在时直接跳过，不报错
 
 agent 把自己的状态文件放在根目录，会话数据放在子目录，所以按深度排除，不靠猜后缀。例如 pi 的 `sessions.db`：SQLite 的 WAL 模式只在 checkpoint 时更新主库的 mtime，正在使用的库也会显得很旧
 
-只有子目录里出现新的活跃状态文件时，才需要补排除规则。`run` 与 `--dry-run` 末尾的「后缀统计」用来发现新类型。误归档的文件可以 `restore`
+只有子目录里出现新的活跃状态文件时，才需要补排除规则。`run` 末尾的「后缀统计」用来发现新类型
 
 ## 命令
 
 ```bash
-session-archive run --dry-run     # 只列冷文件数量与原始大小，不写不删
-session-archive run               # 归档
-session-archive restore <路径>    # 文件或目录（递归）。解回原名，mtime 设为现在，删除 .zst.age
-session-archive rekey [路径]      # 用密钥文件里的当前全部公钥重新加密，缺省为全部目录
+session-archive run --dry-run     # 列出将封存与等待中的月份，不写不删
+session-archive run               # 封存
+session-archive list              # 列出全部归档卷
+session-archive restore <归档卷>  # 整卷还原到所在根目录，已存在的文件不覆盖
+session-archive rekey             # 用密钥文件里的当前全部公钥重新加密全部归档卷
 task run session-archive          # 以任务方式手动跑一次
 ```
 
 首次启用前先跑 `--dry-run`
 
+还原的文件是新建的，mtime 为现在，所以下一个封存月份才会再次归档它。归档卷本身不改动，旧卷里的副本保留。`restore` 不覆盖已存在的文件，所以同一路径在多个卷里时，先还原序号大的卷，得到的就是最新版本；恢复整个月份时，该月的每个卷都要还原
+
+查看一个卷里有哪些文件：`age -d -i <密钥文件> archive-<月份>.idx.age | zstd -d`，输出是路径与大小的 JSON 列表
+
 ## 安全保证
 
-- 校验：先写 `.part` 临时文件，解密解压后与原文件逐字节比对。一致才改名并删除原文件
-- 失败时保留原文件并以非零退出码结束。包括比对失败（压缩期间原文件被改动也算）和改名失败
-- 单个文件不可读时只记一次失败，继续处理其余文件
-- 目录枚举出错（如子目录无权限）只写日志，这次跳过该目录
-- 被信号终止时清掉当前 `.part`。`restore` 的 `.part` 是明文，不会留在原目录
-- `restore` 不覆盖已存在的文件
+封存一个月份的流程
+
+1. 把整月文件写成 `.part` 临时卷
+2. 解密解压，与磁盘上的每个原文件逐字节比对
+3. 写加密清单，把两个 `.part` 改名为正式卷
+4. 逐个对比文件的 inode、大小和 mtime 是否仍与打包前一致，一致才删除；再删除因此变空的子目录
+
+- 比对失败（压缩期间原文件被改动也算）或任何一步出错，都保留原文件并以非零退出码结束，只影响这个月份
+- 打包后、删除前被写入的文件保留在原处，之后按迟到文件进入新分卷。比对到删除之间仍有极短的窗口，严格保证需要会话写入方共用互斥锁
+- 同一根目录同时只允许一个 `run` 或 `rekey`，由根目录下的 `.session-archive.lock` 加排他锁；后到的进程跳过该根目录，处理其余，以非零退出码结束
+- 单个文件不可读（含所在目录无进入权限）时只记一次失败，其余文件照常归档
+- 重入：上次崩在删除之前时，已有的卷覆盖了这些文件，内容一致就只补删原文件，不另写新卷
+- 被信号终止时清掉 `.part`。`restore` 的明文先写进唯一命名的临时文件，退出时删除，不会留在原目录
+- `restore` 拒绝会落到根目录外的成员路径，包括经已有符号链接绕出去的，明文不会写到根目录外
 
 ## 代价
 
+- 归档延迟最长约 `afterDays` 加一个月，当月与上月的数据不会被归档
+- 只能整卷还原：取回一个文件也要还原整个月份，卷是百 MB 量级
 - 归档后 pi 与 omp 的 `/resume` 和 `history` 搜不到这些会话，需要先 `restore`
 - kopia 仍备份这些目录。旧快照里的明文要等保留策略过期才释放空间
 
@@ -56,8 +77,8 @@ task run session-archive          # 以任务方式手动跑一次
 轮换步骤
 
 1. 把新私钥追加到密钥文件
-2. 新归档同时对新旧公钥加密
-3. 运行 `session-archive rekey`，给旧归档补上新公钥
+2. 新归档卷同时对新旧公钥加密
+3. 运行 `session-archive rekey`，给旧卷补上新公钥
 4. 删除旧私钥
 
 age 无法只改文件头，所以 `rekey` 要解密再加密每个文件。压缩层不重做，处理的数据量是压缩后的大小
@@ -65,7 +86,7 @@ age 无法只改文件头，所以 `rekey` 要解密再加密每个文件。压�
 ## 验证
 
 ```bash
-bash modules/features/ai/session-archive/_archive/e2e.sh
+python3 modules/features/ai/session-archive/_archive/e2e.py
 ```
 
-脚本在临时目录里用临时密钥和改过 mtime 的假会话，覆盖 dry-run、归档、排除规则、restore、校验失败、改名失败、不可读文件、中断清理和 rekey。需要 `age` 与 `zstd` 在 PATH
+脚本在临时目录里用临时密钥和改过 mtime 的假会话，覆盖 dry-run、封存、排除规则、list、restore、重入与分卷、校验失败、写入失败、不可读文件、中断清理和 rekey。需要 `age` 与 `zstd` 在 PATH。失败用 PATH 里的 `zstd` 垫片注入，这是脚本唯一的外部接缝
