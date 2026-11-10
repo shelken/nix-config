@@ -9,6 +9,8 @@ let
   # 鼠须管只在 darwin
   rimeDir = "Library/Rime";
   squirrel = "/Library/Input Methods/Squirrel.app/Contents/MacOS/Squirrel";
+  # 各设备共用的同步目录，靠 iCloud「桌面与文稿」在设备间传递
+  syncDir = "${config.home.homeDirectory}/Documents/rime/sync";
 
   # 小鹤双拼实际读到的上游文件：方案本身、它声明的两个依赖方案、三者引用的词库与符号表。
   # 其余方案和上游仓库的杂项不进用户目录
@@ -81,4 +83,23 @@ in
       fi
     fi
   '';
+
+  # installation.yaml 由 rime 自己读写，不能整份接管：只在缺 sync_dir 时补上。
+  # 没有它 rime 会同步到本机的 ~/Library/Rime/sync，设备之间互相看不到
+  home.activation.rimeSyncDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    rimeInstallation="$HOME/${rimeDir}/installation.yaml"
+    if [ -f "$rimeInstallation" ] && ! /usr/bin/grep -q '^sync_dir:' "$rimeInstallation"; then
+      if [[ ! -v DRY_RUN ]]; then
+        printf '\nsync_dir: "%s"\n' "${syncDir}" >> "$rimeInstallation"
+      fi
+    fi
+  '';
+
+  # rime 只在手动点「同步用户数据」时才同步，放着不管用户词典就没有备份也不会合并
+  shelken.tasks.rime-sync = {
+    when = "4:30";
+    script = ''
+      "${squirrel}" --sync
+    '';
+  };
 }

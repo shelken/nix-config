@@ -30,6 +30,18 @@ rime 用源文件的修改时间判断配置要不要重新编译。Nix store �
 
 `_module.nix` 的 `rimeRedeploy` 给上游版本和 `custom/` 的内容算一个指纹，存在 `build/.nix-source-stamp`。指纹变化时删掉 `build/*.yaml` 并让鼠须管重新部署，词库的 `.bin` 按校验和判断，不受影响
 
+## 同步
+
+- 每天 4:30 由定时任务 `rime-sync` 触发一次同步，睡眠错过会在唤醒后补跑。手动触发用 `task run rime-sync`，日志用 `task log rime-sync`
+- 同步做两件事：把本机用户词典导出到 `<同步目录>/<installation_id>/`；把同步目录里其他设备的快照合并进本机词典
+- 同步目录是 `~/Documents/rime/sync`，靠 iCloud「桌面与文稿」在设备间传递。没开这个功能的主机上同步只相当于本机备份
+- `~/Library/Rime/installation.yaml` 里没有 `sync_dir` 时，激活阶段会补上；已有的值不会被改
+- 触发命令只发通知，不返回同步结果。确认是否真的同步过，看快照文件的修改时间
+
+  ```bash
+  ls -l ~/Documents/rime/sync/*/*.userdb.txt
+  ```
+
 ## 排查
 
 - 改了配置没生效 → 比较 `~/Library/Rime/build/<名>.yaml` 与源文件；删掉 `~/Library/Rime/build/*.yaml` 后重新部署
