@@ -3,6 +3,7 @@
   inputs,
   lib,
   mylib,
+  myvars,
   ...
 }:
 let
@@ -48,12 +49,15 @@ let
     "squirrel.custom.yaml" = ./custom/squirrel.custom.yaml;
   };
 
+  squirrelTheme = import ./_squirrel-theme.nix { inherit config lib myvars; };
+
   # 按内容取指纹：用仓库源路径的话，任何无关提交都会让它变
   sourceStamp = builtins.hashString "sha256" (
     lib.concatStrings (
       [ inputs.rime-main.outPath ]
       ++ upstreamFiles
       ++ upstreamDirs
+      ++ [ squirrelTheme ]
       ++ map (builtins.hashFile "sha256") (lib.attrValues customFiles)
     )
   );
@@ -66,7 +70,13 @@ in
     )
     // lib.mapAttrs' (
       name: path: lib.nameValuePair "${rimeDir}/${name}" (mylib.mkConfigFile config path)
-    ) customFiles;
+    ) customFiles
+    // {
+      "${rimeDir}/squirrel_catppuccin.yaml" = {
+        text = squirrelTheme;
+        force = true;
+      };
+    };
 
   # Nix store 里的文件 mtime 恒为 1，rime 靠 mtime 判断配置是否变化，
   # 所以源更新后它仍认为 build/ 里编译好的 yaml 是最新的。指纹变了就删掉它们并重新部署

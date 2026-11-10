@@ -6,6 +6,7 @@
 
 - 上游配置与词库：flake 输入 `rime-main`（iDvel/rime-ice），由 renovate 更新
 - `custom/`：对上游的三个补丁，各自的作用见文件内注释
+- 配色：`_squirrel-theme.nix` 按 `vars` 里的 catppuccin（flavor、accent）从调色板生成 `squirrel_catppuccin.yaml`，由 `custom/squirrel.custom.yaml` 引入；改主题改 `vars`，不改这里
 - 链接规则与激活钩子：`_module.nix`
 - 不受管理的文件：`~/Library/Rime` 下的用户词典 `*.userdb`、`installation.yaml`、`user.yaml`、`build/`，由 rime 自己读写
 
