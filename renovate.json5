@@ -86,7 +86,7 @@
     },
     {
       matchManagers: ["nix"],
-      matchDepNames: ["secrets", "dotfiles"],
+      matchDepNames: ["secrets"],
       enabled: false,
     },
     // 静态资源（flake.nix 里 flake = false 的 input，见 docs/adr/0006-static-assets-as-flake-inputs.md）：
