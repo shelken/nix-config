@@ -15,6 +15,7 @@
 | 看当前项目拿到了哪些授权        | `sb plan`                            |
 | 批准项目的 `.sandbox.yaml`      | `sb trust`                           |
 | 补齐登记的 mise 工具与 OMP 插件 | `sb sync`                            |
+| 回收共用层的闲置版本与缓存      | `sb gc`（默认只预估，`--yes` 删）    |
 | 看主 VM 状态与缺失工具          | `sb status`                          |
 | 停止、删除主 VM                 | `sb down`、`sb rm`（`--force` 强删） |
 

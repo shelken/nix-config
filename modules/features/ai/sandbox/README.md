@@ -48,8 +48,9 @@ flowchart LR
 - **执行计划 (Plan)**: `sb` 解析、校验能力上限与项目配置后交给 launcher 的数据，host → guest 的唯一契约。类型在 [py/sb/plan.py](./py/sb/plan.py)，guest 里只有 [guest/plan.sh](./guest/plan.sh) 解析它，改字段要同步两处，[py/test_contract.py](./py/test_contract.py) 校验两边一致。_避免_: plan_json（那只是它的序列化）
 - **发布目录 (Published Config)**: `~/.config/sandbox/current` 指向的版本化目录，只读挂进 VM 的 `/run/sandbox-config`，含声明配置副本、`mise.toml`、`guest-env.sh`、`declared-paths`、`writable-roots`。旧版本保留 7 天
 - **沙箱基础环境 (Sandbox Base)**: 沙箱启动与隔离所需的 Linux 工具，由 sandbox 模块管理，不属于共享工具。不含 C 工具链，见「设计决策」
+- **共用安装层 (Shared Install Layer)**: 宿主上由所有沙箱 VM 共用的一份 mise 安装产物与下载缓存；只进不出，清理走 `sb gc`。_避免_: 共享缓存、镜像卷
 - **补齐 (Sync)**: 显式安装已登记但缺失的 mise 工具和插件。_避免_: 升级、更新
-- **共用安装层 (Shared Install Layer)**: 宿主上由所有沙箱 VM 共用的一份 mise 安装产物与下载缓存。_避免_: 共享缓存、镜像卷
+- **回收 (GC)**: 用户主动触发的共用层清理，删掉不再被引用的工具版本与插件缓存。_避免_: 自动清理、sync 清理
 - **项目工具 (Project Tool)**: 项目自己的 mise 配置声明、不在登记表里的工具。在执行上下文内按需安装，落在共用安装层，所有项目与 VM 共用。_避免_: 本地工具、临时工具
 - **声明配置 (Declared Config)**: Nix 定义、发布进沙箱的配置文件或目录，即共享工具登记表 `files` 里的条目。上下文内只读，不管插件想不想改它。_避免_: 配置（太泛）
 - **运行状态 (Runtime State)**: 工具运行中产生或修改的文件，例如插件数据库、登录态、intercom 运行目录。可写，所有上下文共用，不写回宿主
@@ -198,6 +199,17 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 - 运行各工具的 `postInstall`。OMP 插件按 [package.json](../omp/plugins/package.json) 重建：先装到暂存目录（沿用 Bun 缓存），成功后才整体替换旧目录，清单外的插件因此消失；失败时恢复旧目录并以非零退出，恢复也失败则输出备份路径。宿主激活时失败只警告
 - 私有依赖用 `gh auth token` 读到的令牌认证（只传给本次 Bun 安装，guest 内是占位符），`git+ssh://`、`ssh://` 在本次安装中改走 https
 - 宿主与沙箱要装不同插件时，在清单顶层写 `sandboxExclude`：列出的依赖只从沙箱清单去掉，不在 `dependencies` 里则构建失败
+
+### `sb gc`
+
+在 VM 内（不在上下文内）运行 [guest/gc-guest.sh](./guest/gc-guest.sh)（路径经 `sb-config.json` 的 `guest_gc` 给出）：
+
+- 用户主动触发，不随 sync 或激活自动执行；有上下文在运行时直接拒绝
+- 默认只预估并打印 `[gc-dry]`，加 `--yes` 才真删
+- 复用 `sync` 的 `.sync.lock`：两者都写共用安装层，必须互斥
+- `mise prune --yes` 删掉脱离 tracked-configs 引用的旧版本；项目 `mise.toml` 仍在引用的版本不算 unused，不会被删
+- bun 缓存按 `$XDG_DATA_HOME/omp/plugins/bun.lock` 的 `"包名@版本"` 引用裁剪，`*.git/`、`@G@*`、`@GH@*` 无条件保留：清掉会让私有依赖重新 clone，网络一抖整次安装就失败
+- `bun.lock` 不存在时整个裁剪跳过（插件从未装过，无从判断引用），不清空缓存
 
 ## 配置与数据位置
 
@@ -354,14 +366,14 @@ pi 启动时按 `settings.json` 的 `packages` 检查已装的包，缺什么当
 - 宿主只有一个共用目录，取真实物理路径；所有 VM 把它挂到 `/opt/sandbox-mise`。指纹只含 guest 侧声明 `/opt/sandbox-mise:rw`，宿主路径变化不触发重建
 - 共用的只有安装产物与下载缓存；`state`、`shims`、可写用户层配置归各 VM 数据盘
 - guest 的固定路径（发布目录、上下文注册目录、数据盘、XDG）与环境变量只有一个来源 `guest-env.sh`，`sb sync`、执行上下文、`guest-status.sh` 统一 source；`sb` 需要的两处路径经 `sb-config.json` 的 `guest` 段由同一份 Nix 定义给出。工具自己的环境变量与预建目录由登记表条目的 `env`（宿主也要）、`sandboxEnv`（仅沙箱）、`sandboxDirs` 声明
-- `sb sync` 不清理下载缓存；主 VM 首次创建后自动 sync 一次，复用已有 VM 时不自动 sync
+- `sb sync` 不清理下载缓存；主 VM 首次创建后自动 sync 一次，复用已有 VM 时不自动 sync。清理走 `sb gc`
 - 上下文可写共用层，项目工具在上下文内 `mise install`，不经 `sb sync`。原先上下文只读，是为了让 sync 成为唯一写入方；但威胁模型只防误操作，Agent 本来就能下载并运行任意程序，只读挡不住什么，反而让项目 `mise.toml` 里的工具（kustomize、helm、flux 等）无法使用。上下文的安装不拿 `.sync.lock`，并发安装同一版本由 mise 自己串行
 - Home Manager 激活会重置 PATH：`postInstall` 先加登记表中的 Nix 工具，再加 mise shims，Nix 运行时不会被旧 mise shim 遮蔽
 - 沙箱基础环境不带 C 工具链，没有 linux 预编译产物的原生依赖装不上，这是刻意取舍：唯一需要它的 `simple-plannotator` 已从沙箱清单排除，省下约 331 MiB 闭包
 
 代价：
 
-- 共用层损坏影响所有 VM，用 `sb sync` 重装自愈；宿主目录约 1 至 2 GB
+- 共用层损坏影响所有 VM，用 `sb sync` 重装自愈；宿主目录约 1 至 2 GB，闲置版本靠 `sb gc` 回收
 - 需要现场编译的工具装不上（如 `node-pty`、依赖原生扩展的 `pipx:` 包）；没有有效 GitHub 凭据时私有插件装不上
 - 上下文里的 `mise uninstall`、`mise prune` 会删掉所有 VM 共用的版本：登记工具用 `sb sync` 补回，项目工具再 `mise install`
 - 没有 mise shell 激活，新工具要先 `mise install`（会生成 shim）
