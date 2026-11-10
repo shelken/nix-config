@@ -15,6 +15,7 @@ description: 子代理的派发、审查与规划规范，含 `spawn-subagent` �
 - 大量变更或多轮任务之后，适合使用 reviewer
 - 复审时用 intercom 与子代理交流；主代理有不同意见时可直接讨论，直到达成共识
 - 派发时提供相关 Issue、背景、前因后果和用户完整意图；细节用查询指针提供，如 Issue 链接和重要文件路径
+- 留意用户的说法, 除非用户指定`后缀`或者默认的失败, 当用户说明`task/reviewer`子代理时一般就是默认使用`task/reviewer`的无后缀版本
 
 ## `spawn-subagent` 环境限制
 
