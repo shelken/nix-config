@@ -154,6 +154,22 @@ let
     }
   }/bin/sync-guest";
 
+  gcGuestScript = "${
+    linuxPkgs.writeShellApplication {
+      name = "gc-guest";
+      runtimeInputs = with linuxPkgs; [
+        bashInteractive
+        coreutils
+        findutils
+        mise
+      ];
+      text = ''
+        ${guestEnvPrelude}
+        ${stripShebang ./guest/gc-guest.sh}
+      '';
+    }
+  }/bin/gc-guest";
+
   guestStatus = "${
     linuxPkgs.writeShellApplication {
       name = "guest-status";
@@ -193,6 +209,7 @@ in
   inherit
     guestEnvSh
     syncGuestScript
+    gcGuestScript
     guestStatus
     launcher
     ;

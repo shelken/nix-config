@@ -25,6 +25,7 @@ let
     launcher = "${guest.launcher}";
     guest_status = "${guest.guestStatus}";
     guest_sync = "${guest.syncGuestScript}";
+    guest_gc = "${guest.gcGuestScript}";
     sync_lock = "${manifest.miseLayer.hostDir}/.sync.lock";
     host_credentials = true;
     guest = {
