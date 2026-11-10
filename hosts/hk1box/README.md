@@ -52,7 +52,7 @@ ssh root@hk1box journalctl -u sing-box-sub-update -n 20
 
 ## 1. 构建并写 U 盘
 
-在 Mac 上（linux-builder 原生构建 aarch64）：
+在 Mac 上（Native Linux Builder 原生构建 aarch64）：
 
 ```bash
 git add hosts/hk1box

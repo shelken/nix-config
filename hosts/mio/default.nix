@@ -5,7 +5,6 @@ in
 {
   imports = [
     self.modules.darwin.workstation
-    self.modules.darwin.linux-builder
     self.modules.darwin.time-machine
     self.modules.darwin.dnscontrol
   ];

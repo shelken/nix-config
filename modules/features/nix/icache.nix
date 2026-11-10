@@ -7,8 +7,8 @@
 # icache 原样透传上游的 Priority，与原站同级，所以必须排在原站前面；`extra-substituters` 只会追加到末尾，
 # 等于 icache 永不命中。列表不在这里重复维护 —— on 时现取系统列表拼在前面。
 #
-# 关闭 builders-use-substitutes：置 true 时 linux-builder 用自己那份 nix.conf（只有 cache.nixos.org）
-# 自己去 substitute 输入，永远碰不到内网 icache；置 false 则本机经 icache 取输入，再通过本地 ssh 推给 builder。
+# 关闭 builders-use-substitutes：置 true 时 builder 自己去 substitute 输入，碰不到内网 icache；
+# 置 false 则本机经 icache 取输入，再推给 builder。
 # off 删掉文件即回落到系统层的 true，家外 builder 自己下载。
 # 这里被 darwin / nixos 的 HM 模块共用，NixOS 主机没有 builder 时该设置无副作用。
 #

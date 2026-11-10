@@ -22,7 +22,7 @@ $V sb up          # 首次创建数据卷与主 VM，并自动 sb sync 一次
 $V sb status      # 就绪：VM 状态 Running、上限一致 consistent、缺失工具 无
 ```
 
-- `setup` 需要 Linux 构建器（本机 `linux-builder` VM 已启动）
+- `setup` 需要 Linux 构建器（Native Linux Builder，无需手动启动）
 - 主 VM 规格：`$CPUS` 照抄仓库 `sb.yaml`，`$MEMORY` 为验证用的较小值，用 `SB_VERIFY_MEMORY` 覆盖；其他字段照抄 `sb.yaml`
 - 首次 `sb up` 要装插件（`bun install`），耗时取决于网络；mise 工具来自宿主共用层，已装齐时不下载
 

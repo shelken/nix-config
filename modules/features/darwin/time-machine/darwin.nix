@@ -19,7 +19,6 @@
         # 主机要额外排除别的目录时直接给这个选项赋值（列表会与本默认值合并）。
         default = [
           # 虚拟机磁盘：只增不缩的稀疏文件，每次备份都要重新扫描
-          "~/.local/state/linux-builder"
           "~/Data/sandboxes"
           "~/.lima"
           "~/.orbstack"

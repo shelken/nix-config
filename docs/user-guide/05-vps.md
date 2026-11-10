@@ -19,9 +19,9 @@ flowchart LR
   E --> F[日常 just deploy]
 ```
 
-日常部署的构建位置由 `hosts/default.nix` 的 `<主机>.deploy.remoteBuild` 决定。当前 VPS 设置为 `true`：Mac 求值配置，VPS 构建并获取二进制缓存，再激活系统，不需要本机 `linux-builder`
+日常部署的构建位置由 `hosts/default.nix` 的 `<主机>.deploy.remoteBuild` 决定。当前 VPS 设置为 `true`：Mac 求值配置，VPS 构建并获取二进制缓存，再激活系统，不需要本机 Linux 构建器
 
-使用下文 `--build-on local` 装机，或手动在本地构建 x86_64-linux 系统时，才需要启动本机 `linux-builder`。启停与重置见 [模块头部说明](../../modules/features/darwin/linux-builder/darwin.nix)：`linux-builder status` 看状态，`linux-builder stop` 停机；`just mac::builder-reset` 会删除 guest 磁盘，下次启动为空 Nix store，执行前必须停机
+使用下文 `--build-on local` 装机，或手动在本地构建 x86_64-linux 系统时，才会用上 Linux 构建器。macOS 上由 Determinate Nix 的 Native Linux Builder 提供，登录 FlakeHub 后 `nix build` 直接可用，无需启停服务
 
 ## 一台 VPS 由哪些文件组成
 
@@ -157,7 +157,7 @@ just deploy <主机> --dry-activate   # 只看激活会改什么
 nix eval --json .#deploy.nodes.<主机>.profiles.system.remoteBuild
 ```
 
-临时在本地构建、不部署，先确认 `linux-builder` 正在运行，再执行：
+临时在本地构建、不部署，直接执行：
 
 ```bash
 nix build -L --no-link .#nixosConfigurations.<主机>.config.system.build.toplevel
