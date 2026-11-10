@@ -34,4 +34,4 @@ rime 用源文件的修改时间判断配置要不要重新编译。Nix store �
 
 - 改了配置没生效 → 比较 `~/Library/Rime/build/<名>.yaml` 与源文件；删掉 `~/Library/Rime/build/*.yaml` 后重新部署
 - 部署报错 → 看 `$TMPDIR/rime.squirrel/` 下的日志
-- 想启用别的方案 → 改 `custom/default.custom.yaml` 的 `schema_list`
+- 想启用别的方案 → 改 `custom/default.custom.yaml` 的 `schema_list`，并把该方案的文件加进 `_module.nix` 的 `upstreamFiles`，再跑 `check.sh`
