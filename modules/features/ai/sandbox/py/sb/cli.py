@@ -103,9 +103,9 @@ def gc_cmd(cfg: Config, msb: Msb, args: list[str]) -> int:
         raise SbError(f"主 VM {VM_NAME} 有 {n} 个上下文在运行，拒绝回收。请先退出这些上下文再执行 sb gc")
     if not confirm:
         print(f"[sb] 正在预估可回收的共用层内容 (sb gc --dry-run)...", file=sys.stderr)
-        return gc.run_locked(cfg, msb, dry_run=True, to_stderr=True)
+        return gc.run_locked(cfg, msb, dry_run=True)
     print(f"[sb] 正在沙箱 {VM_NAME} 内回收共用层 (sb gc --yes)...", file=sys.stderr)
-    return gc.run_locked(cfg, msb, dry_run=False, to_stderr=True)
+    return gc.run_locked(cfg, msb, dry_run=False)
 
 
 def run(cfg: Config, msb: Msb, args: list[str]) -> int:
