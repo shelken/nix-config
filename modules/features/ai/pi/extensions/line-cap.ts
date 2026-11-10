@@ -38,6 +38,8 @@ type Message = {
 	customType?: string;
 	content?: string | Block[];
 	output?: string;
+	truncated?: boolean;
+	fullOutputPath?: string;
 	excludeFromContext?: boolean;
 };
 type ToolResultEvent = {
@@ -121,7 +123,7 @@ export function shape(head: string[], tail?: string[], gap: number = 0): Shaped 
 	const headBytes = Math.floor(MAX_BYTES * HEAD_SHARE);
 	const headLines = Math.floor(MAX_LINES * HEAD_SHARE);
 	const nh = takeFront(h, headBytes, headLines);
-	const back = t ?? h.slice(nh);
+	const back = t?.length ? t : h.slice(nh);
 	const nt = takeBack(back, MAX_BYTES - headBytes, MAX_LINES - headLines);
 	const omittedLines = h.length - nh + (t ? gap + t.length : 0) - nt;
 	const kept = [...h.slice(0, nh), ...(omittedLines > 0 ? [`[… ${omittedLines} lines omitted …]`] : []), ...back.slice(back.length - nt)];
@@ -152,21 +154,21 @@ export function readEnds(file: string, window: number = WINDOW_BYTES): { head: s
 	}
 }
 
-/** 返回 tool_result 的补丁；不需要改动时返回 undefined。 */
-export function capToolResult(event: ToolResultEvent, save: (t: string) => string | undefined = spill): ToolResultPatch | undefined {
-	if (!BASH_TOOLS.has(event.toolName)) return undefined;
-	const index = event.content.findIndex((block) => block.type === "text" && typeof block.text === "string");
-	if (index < 0) return undefined;
-	const text = event.content[index].text as string;
-
-	const truncation = event.details?.truncation;
-	let full = truncation?.truncated ? event.details?.fullOutputPath : undefined;
+/** 回读完整输出重排；不需要改动时返回 undefined。 */
+function capOutputText(
+	text: string,
+	truncated: boolean | undefined,
+	fullOutputPath: string | undefined,
+	totalLines: number | undefined,
+	save: (t: string) => string | undefined,
+): string | undefined {
+	let full = truncated ? fullOutputPath : undefined;
 	let shaped: Shaped | undefined;
 	let suffix = "";
 	if (full) {
 		try {
 			const ends = readEnds(full);
-			const gap = ends.tail ? Math.max(0, (truncation?.totalLines ?? 0) - ends.head.length - ends.tail.length) : 0;
+			const gap = ends.tail ? Math.max(0, (totalLines ?? 0) - ends.head.length - ends.tail.length) : 0;
 			shaped = shape(ends.head, ends.tail, gap);
 			// pi 的截断说明之后可能还有 "Command exited with code N"，必须保留
 			const footer = PI_FOOTER.exec(text);
@@ -180,8 +182,19 @@ export function capToolResult(event: ToolResultEvent, save: (t: string) => strin
 		if (shaped.cutLines === 0 && shaped.omittedLines === 0) return undefined;
 	}
 	const where = full ?? save(text) ?? "unavailable";
-	const note = `[line-cap: ${shaped.cutLines} line(s) cut to ${MAX_COLUMNS} chars, ${shaped.omittedLines} line(s) omitted. Full output: ${where}]`;
-	const content = event.content.map((block, i) => (i === index ? { ...block, text: `${shaped.text}\n\n${note}${suffix}` } : block));
+	return `${shaped.text}\n\n[line-cap: ${shaped.cutLines} line(s) cut to ${MAX_COLUMNS} chars, ${shaped.omittedLines} line(s) omitted. Full output: ${where}]${suffix}`;
+}
+
+/** 返回 tool_result 的补丁；不需要改动时返回 undefined。 */
+export function capToolResult(event: ToolResultEvent, save: (t: string) => string | undefined = spill): ToolResultPatch | undefined {
+	if (!BASH_TOOLS.has(event.toolName)) return undefined;
+	const index = event.content.findIndex((block) => block.type === "text" && typeof block.text === "string");
+	if (index < 0) return undefined;
+	const text = event.content[index].text as string;
+	const truncation = event.details?.truncation;
+	const replaced = capOutputText(text, truncation?.truncated, event.details?.fullOutputPath, truncation?.totalLines, save);
+	if (!replaced) return undefined;
+	const content = event.content.map((block, i) => (i === index ? { ...block, text: replaced } : block));
 	// 只换 content 会让 pi 丢掉 structuredContent，而 codemode 脚本读的正是它
 	return { content, structuredContent: event.structuredContent };
 }
@@ -196,9 +209,10 @@ export function capText(text: string, save: (t: string) => string | undefined = 
 /** 返回截短后的消息；没有任何改动时返回原对象，调用方据此决定是否替换列表。 */
 export function capMessage(m: Message, save: (t: string) => string | undefined = spill): Message {
 	if (m.role === "bashExecution") {
+		// 用户 !cmd 的输出由 bash-executor 截尾，和 tool_result 一样回读完整文件重排
 		if (m.excludeFromContext || typeof m.output !== "string") return m;
-		const output = capText(m.output, save);
-		return output === m.output ? m : { ...m, output };
+		const replaced = capOutputText(m.output, m.truncated, m.fullOutputPath, undefined, save);
+		return replaced === undefined ? m : { ...m, output: replaced };
 	}
 	if (m.role !== "custom" || m.customType !== DELIVERY_TYPE) return m;
 	if (typeof m.content === "string") {

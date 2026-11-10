@@ -109,6 +109,35 @@ test("capMessage：只处理后台结果消息和进上下文的 !cmd，同一�
 	expect(capMessage({ role: "bashExecution", output: long }, save).output?.length).toBeLessThan(1000);
 });
 
+test("shape：尾部窗口只剩一行超长行被清空时，回退用头部余量填充 80% 预算，不浪费", () => {
+	const lines = Array.from({ length: 3000 }, (_, i) => `L${i} ${"y".repeat(94)}`);
+	const giant = "GIANT " + "z".repeat(300 * 1024);
+	const full = write("tail-giant.log", `${[...lines, giant].join("\n")}\n`);
+	const ends = readEnds(full);
+	expect(ends.tail).toEqual([]);
+	const shaped = shape(ends.head, ends.tail);
+	const out = shaped.text.split("\n");
+	// 回退后开头仍在、输出行数远多于不回退时的 104 行、字节接近 50KB 上限
+	expect(out[0]).toBe(lines[0]);
+	expect(out.length).toBeGreaterThan(400);
+	expect(Buffer.byteLength(shaped.text)).toBeGreaterThan(40 * 1024);
+});
+
+test("capMessage：!cmd 截断输出回读 fullOutputPath 找回开头，与 tool_result 一致", () => {
+	const rows = Array.from({ length: 15 }, (_, i) => `ROW_START_${i + 1} ${"x".repeat(30000)} ROW_END_${i + 1}`);
+	const full = write("cmd-incident.log", `${["HEAD_MARKER", ...rows, "TAIL_MARKER"].join("\n")}\n`);
+	// bash-executor 的 output 是裸尾部，pi 在 convertToLlm 时才加截断注脚
+	const tail = `${rows[14]}\nTAIL_MARKER`;
+	const msg = { role: "bashExecution", output: tail, truncated: true, fullOutputPath: full };
+	const capped = capMessage(msg, save);
+	const out = capped.output ?? "";
+	expect(out.startsWith("HEAD_MARKER")).toBe(true);
+	expect(out).toContain("TAIL_MARKER");
+	expect(out.match(/ROW_START_\d+ /g)?.length).toBe(15);
+	expect(Math.max(...out.split("\n").map((line) => line.length))).toBeLessThan(MAX_COLUMNS + 200);
+	expect(out).toContain("Full output: " + full);
+});
+
 test("扩展注册 tool_result 与 context；没有改动时两个钩子都返回 undefined", () => {
 	const handlers = new Map<string, (event: unknown) => unknown>();
 	lineCap({ on: (event, handler) => void handlers.set(event, handler) });
