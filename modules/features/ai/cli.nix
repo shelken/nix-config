@@ -53,7 +53,7 @@
           # renovate: datasource=github-releases depName=openai/codex extractVersion=^rust-v(?<version>.+)$
           codex = "0.160.1";
           # renovate: datasource=npm depName=@anthropic-ai/claude-code
-          claude-code = "2.1.304";
+          claude-code = "2.1.322";
         };
       };
     };
