@@ -34,7 +34,8 @@ if [[ -n "$dry" ]]; then
 else
   snap=$(mktemp)
   find "$SB_MISE_DATA_DIR/installs" -mindepth 2 -maxdepth 2 -type d -exec du -sk {} + >"$snap"
-  mise prune --yes
+  # 宿主 Finder/Spotlight 会往共用层写 .DS_Store，目录删到一半时新文件会让删除报 Directory not empty；重试一次即可收尾
+  mise prune --yes || mise prune --yes
   while read -r kb d; do
     if [[ ! -d "$d" ]]; then
       say_delete "$d" "$kb"
@@ -65,7 +66,8 @@ else
     if [[ -n "$dry" ]]; then
       continue
     fi
-    rm -rf -- "$entry"
+    # 同上：删到一半被宿主塞进新文件时重试一次
+    rm -rf -- "$entry" || rm -rf -- "$entry"
     name="${key##*/}"
     alias="$(dirname "$entry")/${name%@*}/${name##*@}@@@1"
     if [[ -L "$alias" ]]; then
