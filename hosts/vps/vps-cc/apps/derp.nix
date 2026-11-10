@@ -21,7 +21,7 @@
   };
 
   virtualisation.oci-containers.containers.derp = {
-    image = "fredliang/derper:v1.104.2@sha256:a3b8b70b4974dbe3afb370bc7056b80c45691c51176651d0b83eea9b9062b14c";
+    image = "fredliang/derper:v1.104.5@sha256:7172639d0c463bf95fb45ec11b7638a43167db7975efb7dd05c65d70062e4d74";
     autoStart = true;
     environment = {
       TZ = "Asia/Shanghai";
