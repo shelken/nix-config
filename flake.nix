@@ -147,6 +147,10 @@
       url = "git+https://github.com/humanlayer/skills?ref=main&rev=4d69d20f6e9b57b4fcf0d501ccfb1be961f0f329&shallow=1";
       flake = false;
     };
+    improve = {
+      url = "git+https://github.com/shadcn/improve?ref=main&rev=cac56e1ebd3c279aa9153616cfeac7b174ab90f9&shallow=1";
+      flake = false;
+    };
     kitty-icon = {
       url = "git+https://github.com/DinkDonk/kitty-icon?ref=main&rev=b0108d7d4059164744eadd57ed644a7b2808ed3b&shallow=1";
       flake = false;

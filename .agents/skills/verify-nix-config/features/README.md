@@ -10,6 +10,16 @@
 - build 可共享 Nix store，但 proof 目录必须独立
 - switch 修改共享 system/Home 状态，同一时间只允许一个 drive，并要求任务明确授权
 
+## When no drive is required
+
+以下变更不改变任何 CLI 行为，不需要运行 `just hm-build`、`just hm`、`just sw` 或 `verify.sh`：
+
+- `.agents/skills/` 与 `modules/features/ai/skills/` 下的 skill 正文、`references/`、feature 文档
+- `modules/features/ai/_skill-sources.nix` 的分组声明、`frontmatter` 覆盖，以及为它新增或前进的 flake input
+- 仅被上述内容消费的 `utils/script/patch_frontmatter.py` 类改写脚本的文案调整
+
+验证到 `nix flake lock` 与 `nix eval --json .#skillSourceDirs` 为止，提交即可。改动涉及 `skill.nix` 的装配逻辑、部署路径或 `home.packages` 时，仍按对应 feature 驱动
+
 ## Driving conventions
 
 - Bash harness 为 `.agents/skills/verify-nix-config/scripts/verify.sh`

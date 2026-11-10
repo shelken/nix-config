@@ -26,8 +26,8 @@ description: 获取外部 skill 时使用
    ```
 4. 执行 `nix flake lock` 拉取该源
 5. 在 `modules/features/ai/_skill-sources.nix` 里按字母序声明分组：`input` 写 input 名，`base` 写仓库内路径前缀，`skills` 写启用的 skill 相对路径
-6. 执行 `just hm` 应用 Home Manager 配置
-7. 验证安装结果并提交
+6. 只改 skill 内容或来源声明时，验证到 `nix flake lock` 与 `nix eval --json .#skillSourceDirs` 即可，不跑 `just hm-build`、`just hm`；见 `.agents/skills/verify-nix-config/features/README.md` 的「When no drive is required」
+7. 涉及 `skill.nix` 装配逻辑、部署路径或依赖 CLI 时，仍按 `verify-nix-config` 驱动对应 feature 后提交
 
 ## 补全依赖 CLI
 

@@ -50,6 +50,13 @@
     # skills.visual-pr = "plugins/visual-pr/skills/visual-pr";
   };
 
+  improve = {
+    input = "improve";
+    base = ".";
+    skills.improve = "skills/improve";
+    frontmatter.improve.disable-model-invocation = true;
+  };
+
   llamaparse-agent-skills = {
     input = "llamaparse-agent-skills";
     base = "skills";

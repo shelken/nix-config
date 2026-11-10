@@ -401,6 +401,25 @@
         "type": "github"
       }
     },
+    "improve": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789212568,
+        "narHash": "sha256-czQV2LzhVddiT6kz0Wf3z+hHqGBgl4Zh/qw6hN3qEQw=",
+        "ref": "main",
+        "rev": "cac56e1ebd3c279aa9153616cfeac7b174ab90f9",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/shadcn/improve"
+      },
+      "original": {
+        "ref": "main",
+        "rev": "cac56e1ebd3c279aa9153616cfeac7b174ab90f9",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/shadcn/improve"
+      }
+    },
     "kitty-icon": {
       "flake": false,
       "locked": {
@@ -619,6 +638,7 @@
         "home-manager": "home-manager",
         "humanlayer-skills": "humanlayer-skills",
         "import-tree": "import-tree",
+        "improve": "improve",
         "kitty-icon": "kitty-icon",
         "llamaparse-agent-skills": "llamaparse-agent-skills",
         "mattpocock-skills": "mattpocock-skills",
