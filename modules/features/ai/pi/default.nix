@@ -117,9 +117,6 @@
       # 插件读的环境变量写在登记表 env：宿主与沙箱同源（沙箱不继承宿主 shell 的环境）
       shelken.dev.tools.pi.env = {
         ANTIGRAVITY_NO_EXTRA_TOOLS = "1";
-        # @pify/shell-background：前台命令超过该毫秒数自动转后台（插件默认 30000）。
-        # 对标 omp 的 bash.autoBackground 阈值（60 秒）；也可写 ~/.pi/agent/shell-background.json，这里选环境变量。
-        PIFY_SHELL_BG_MS = "60000";
       };
       home.shellAliases.pi = import ../agent-gh/_launch.nix { inherit pkgs myvars; } "pi";
 
