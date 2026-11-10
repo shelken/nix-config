@@ -186,7 +186,7 @@ view:
 [group('modules')]
 mod anywhere 'just/anywhere.just'
 
-# macOS 专用：brew-diff、builder-reset（just mac::<配方>）
+# macOS 专用：brew-diff（just mac::<配方>）
 [group('modules')]
 [macos]
 mod mac 'just/mac.just'

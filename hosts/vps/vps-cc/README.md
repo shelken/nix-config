@@ -44,7 +44,7 @@ install -d -m 700 "$EXTRA/var/lib/sops-nix"
 install -m 600 <vps-cc 的 age 私钥文件> "$EXTRA/var/lib/sops-nix/key.txt"
 
 KEXEC=$(just anywhere::kexec-cache x86_64 nixos-26.05)      # 必须 26.05，见下表
-# --build-on local：在 Mac 上经 linux-builder 构建 x86_64 系统；真机只有 2GiB 内存，不要在安装环境里构建
+# --build-on local：在 Mac 上经 Native Linux Builder 构建 x86_64 系统；真机只有 2GiB 内存，不要在安装环境里构建
 # 阶段一：kexec。完成后 nixos-anywhere 会去连 Mac 自己的 22 端口，卡住，超时即可（Lima 只转发了 $P）
 timeout 200 nixos-anywhere -f .#vps-test --target-host root@127.0.0.1 --build-on local --ssh-port $P -i $KEY \
   --kexec "$KEXEC" --kexec-extra-flags '-c' --phases kexec
@@ -204,7 +204,7 @@ just deploy vps-cc
 
 deploy-rs 用 root + 密钥推送，激活后新开一个 SSH 连接确认，30 秒内连不上就自动回滚。防火墙、网络、sshd 的改动尤其要依赖它
 
-构建位置由 `hosts/default.nix` 的 `vps-cc.deploy.remoteBuild` 控制，当前为 `true`：Mac 求值，VPS 构建并激活，日常部署不需要本机 `linux-builder`。临时本地构建与构建模式查询见 [VPS 指南「日常更新」](../../../docs/user-guide/05-vps.md#日常更新)
+构建位置由 `hosts/default.nix` 的 `vps-cc.deploy.remoteBuild` 控制，当前为 `true`：Mac 求值，VPS 构建并激活，日常部署不需要本机 Linux 构建器。临时本地构建与构建模式查询见 [VPS 指南「日常更新」](../../../docs/user-guide/05-vps.md#日常更新)
 
 构建之后再改已跟踪文件，会让一串系统组装层的小派生重建（nix-config #181）。想知道会不会重建，用 `nix build <路径> --dry-run`；判断某个工具是否有官方缓存，先 `nix path-info --store https://cache.nixos.org <路径>`，`--dry-run` 只列清单、不下载
 
