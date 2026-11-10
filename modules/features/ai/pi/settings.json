@@ -127,7 +127,6 @@
       ],
       "source": "npm:@dietrichgebert/ponytail@5.3.3"
     },
-    "git:github.com/shelken/pi-zed-provider",
     {
       "extensions": [
         "-./src/features/google-search.ts",
@@ -149,8 +148,5 @@
   "transport": "auto",
   "tuiMode": "fullscreen",
   "defaultProvider": "mp",
-  "defaultModel": "trae-cn/deepseek-v4.1-flash-max",
-  "extensionChangelogVersions": {
-    "{\"source\":\"git:github.com/shelken/pi-zed-provider\",\"scope\":\"user\"}": "1.1.0"
-  }
+  "defaultModel": "trae-cn/deepseek-v4.1-flash-max"
 }
