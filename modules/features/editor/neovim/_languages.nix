@@ -82,7 +82,7 @@ pkgs: {
     ];
   };
 
-  # rust-analyzer / rustfmt 由 features/cli/tui.nix 的 Rust 工具链提供
+  # rust-analyzer / rustfmt 由 mise 声明的 rust 工具链（rustup）提供
   rust = {
     lsp = [ "rust_analyzer" ];
     formatters.rust = [ "rustfmt" ];

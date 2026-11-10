@@ -1,5 +1,9 @@
 # Mise 版本管理器：跨平台 CLI
 { config, ... }:
+let
+  # renovate: datasource=github-releases depName=rust-lang/rust
+  rustVersion = "1.99";
+in
 {
   # 原属 gui 全覆盖，跨平台无 darwin 专属
   flake.modules.darwin.gui.imports = [ config.flake.modules.darwin.mise ];
@@ -25,13 +29,17 @@
         tools = {
           # renovate: datasource=github-releases depName=yt-dlp/yt-dlp
           yt-dlp = "2026.08";
-          # renovate: datasource=crate depName=mbx
-          "cargo:mbx" = "1.29"; # for cargo build, save storage
+          # Rust 工具链唯一来源是 rustup（经 mise 声明），nix 不再装 cargo/rustc；
+          # mr_boxington 让 cargo 经预编译 mbx 包一层构建缓存，别名与 cargo: 源码编译不再使用
+          rust = {
+            version = rustVersion;
+            mr_boxington = true;
+            components = "rust-analyzer";
+          };
+          # renovate: datasource=github-releases depName=jdx/mr-boxington
+          mr-boxington = "1.29";
         };
       };
-    };
-    home.shellAliases = {
-      cargo = "mbx";
     };
   };
 }

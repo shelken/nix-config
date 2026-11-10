@@ -11,13 +11,6 @@
         sops
         ssh-to-age
 
-        #-- rust
-        cargo
-        rustc
-        rust-analyzer
-        rustfmt
-        clippy
-
         #-- deploy
         ansible
         ansible-lint
