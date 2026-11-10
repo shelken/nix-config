@@ -28,7 +28,7 @@ in
         # bun 由共享工具登记表提供（shelken.dev.tools，ADR 0003），此处不再声明
         tools = {
           # renovate: datasource=github-releases depName=yt-dlp/yt-dlp
-          yt-dlp = "2026.08";
+          yt-dlp = "2026.10.26";
           # Rust 工具链唯一来源是 rustup（经 mise 声明），nix 不再装 cargo/rustc；
           # mr_boxington 让 cargo 经预编译 mbx 包一层构建缓存，别名与 cargo: 源码编译不再使用
           rust = {
