@@ -167,6 +167,8 @@
         ".pi/agent/extensions/pi-dynamic-models/config.json" = linkPiConfig "pi-dynamic-models.json";
         ".pi/agent/extensions/subdir-context.ts" =
           mylib.mkConfigFile config ../omp/extensions/subdir-context.ts;
+        # omp 自带单行列截断，pi 没有；只有 pi 需要，不放进共享的 omp/extensions
+        ".pi/agent/extensions/line-cap.ts" = linkPi "extensions/line-cap.ts";
       };
 
       shelken.backup.app.pi = [
