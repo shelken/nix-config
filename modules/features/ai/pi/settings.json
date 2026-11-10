@@ -59,7 +59,7 @@
   "enabledModels": [
     "mp/trae-cn/glm-5.3-flashx-max:high",
     "mp/trae-cn/deepseek-v4.1-flash-max:high",
-    "anthropic/claude-fable-5-2:medium",
+    "anthropic/claude-fable-5-2:low",
     "mp/qoder-cn/dfmodel:high",
     "cpa/claude-fable-5-2:medium",
     "mp/qoder-cn/gmodel:high",
@@ -95,7 +95,6 @@
   ],
   "packages": [
     "npm:pi-posthorse@0.10.10",
-    "npm:@shelken/pi-execution-time@0.1.0",
     "npm:@shelken/pi-status-bar@0.1.0",
     "npm:pi-token-speed@0.12.0",
     "npm:@tifan/pi-preferred-thinking@1.0.2",
