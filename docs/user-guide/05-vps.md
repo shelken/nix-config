@@ -21,7 +21,7 @@ flowchart LR
 
 日常部署的构建位置由 `hosts/default.nix` 的 `<主机>.deploy.remoteBuild` 决定。当前 VPS 设置为 `true`：Mac 求值配置，VPS 构建并获取二进制缓存，再激活系统，不需要本机 Linux 构建器
 
-使用下文 `--build-on local` 装机，或手动在本地构建 x86_64-linux 系统时，才会用上 Linux 构建器。macOS 上的 Linux 构建由 Determinate Nix 的 Native Linux Builder 提供，登录 FlakeHub 后无需启动任何服务，`nix build` 时自动拉起 VM。排查先看 `determinate-nixd status`（登录）与 `determinate-nixd version`（特性列表里要有 `native-linux-builder`），不生效时 `determinate-nixd auth logout && determinate-nixd auth login`，再不行 `sudo launchctl kickstart -k system/systems.determinate.nix-daemon`
+使用下文 `--build-on local` 装机，或手动在本地构建 x86_64-linux 系统时，才会用上 Linux 构建器。macOS 上由 Determinate Nix 的 Native Linux Builder 提供，登录 FlakeHub 后 `nix build` 直接可用，无需启停服务
 
 ## 一台 VPS 由哪些文件组成
 
@@ -157,7 +157,7 @@ just deploy <主机> --dry-activate   # 只看激活会改什么
 nix eval --json .#deploy.nodes.<主机>.profiles.system.remoteBuild
 ```
 
-临时在本地构建、不部署，确认 Linux 构建器可用后直接执行（不需要先启动服务）：
+临时在本地构建、不部署，直接执行：
 
 ```bash
 nix build -L --no-link .#nixosConfigurations.<主机>.config.system.build.toplevel
