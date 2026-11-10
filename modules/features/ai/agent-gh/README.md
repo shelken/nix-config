@@ -18,9 +18,12 @@
 | --- | --- |
 | 密钥 | [secrets.nix](../../secrets/secrets.nix) 的 `secretEnvMap` 把 sops 的 `github/agent-token` 导出成 `AGENT_GITHUB_TOKEN`，经 `sec-run` 进入 omp、pi 的环境 |
 | 宿主 | [_launch.nix](./_launch.nix) 生成 omp、pi 的启动别名：在 `sec-run` 前把包装目录放到 `PATH` 最前。不放全局 `PATH`，否则用户自己用 `gh` 的身份也会变 |
+| 沙箱 | [sb.yaml](../sandbox/sb.yaml) 声明 secret `AGENT_GITHUB_TOKEN`；[_guest.nix](../sandbox/_guest.nix) 用 `linuxPkgs` 构建同一个包装，放到 guest PATH 最前面。整台 VM 都是 agent 环境，不区分身份 |
 | 构建 | [_package.nix](./_package.nix) 用 `writeShellApplication`，`runtimeInputs` 让脚本里的 `gh` 解析到真实 `gh` |
 
-token 由用户写进外部 secrets 仓库的 `github/agent-token`，本仓库不含任何 token 值。合并前先加密钥并更新 `secrets` 输入，否则主机激活时读不到这个键
+沙箱里 guest 只有占位符，msb 发往 `github.com`、`api.github.com` 的请求时才换成真实值。创建或启动 VM 时宿主环境必须有 `AGENT_GITHUB_TOKEN`，缺失时 msb 拒绝创建；经 `sec-run` 启动会自动带上，没有 sops 密钥的主机启动不了沙箱。secret 集合属于能力上限，主 VM 下次启动会重建一次
+
+token 由用户写进外部 secrets 仓库的 `github/agent-token`，本仓库不含任何 token 值。这个键必须先存在于 `secrets` 输入，否则主机激活时读不到它
 
 ## 限制
 
