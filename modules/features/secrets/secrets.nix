@@ -74,6 +74,7 @@
 
       secretEnvMap = {
         GITHUB_TOKEN = "github/cli-token"; # 目前task依赖
+        AGENT_GITHUB_TOKEN = "github/agent-token"; # agent 专属身份，由 ai/agent-gh 的 gh 包装读取
       };
 
       enabledSecrets = lib.unique (lib.attrValues secretEnvMap);
