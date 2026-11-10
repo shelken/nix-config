@@ -5,6 +5,21 @@
   "compaction": {
     "reserveTokens": 22000,
     "modelOverrides": {
+      "mp/trae-cn/glm-5.3-flashx-max": {
+        "reserveTokens": 650000
+      },
+      "mp/trae-cn/deepseek-v4.1-flash-max": {
+        "reserveTokens": 650000
+      },
+      "anthropic/claude-fable-5-2": {
+        "reserveTokens": 650000
+      },
+      "mp/qoder-cn/dfmodel": {
+        "reserveTokens": 650000
+      },
+      "cpa/claude-fable-5-2": {
+        "reserveTokens": 650000
+      },
       "mp/qoder-cn/gmodel": {
         "reserveTokens": 650000
       },
@@ -12,7 +27,7 @@
         "reserveTokens": 698576
       },
       "anthropic/claude-sonnet-5-5": {
-        "reserveTokens": 600000
+        "reserveTokens": 650000
       },
       "mp/loomy/DeepSeek-V4.1-Flash": {
         "reserveTokens": 698576
@@ -23,32 +38,14 @@
       "mp/codex/gpt-6.1-sol": {
         "reserveTokens": 150000
       },
-      "mp/workbuddy/deepseek-v4.1-flash": {
-        "reserveTokens": 650000
-      },
-      "mp/workbuddy-ai/deepseek-v4.1-flash-sg": {
-        "reserveTokens": 650000
-      },
       "cpa/gpt-5.6-luna": {
-        "reserveTokens": 650000
+        "reserveTokens": 700000
       },
       "cpa/gpt-6-luna": {
-        "reserveTokens": 650000
-      },
-      "cpa/qwenworkcn/pro": {
-        "reserveTokens": 600000
-      },
-      "cpa/workbuddy/deepseek-v4.1-flash": {
-        "reserveTokens": 648576
-      },
-      "cpa/workbuddy/glm-5.2": {
-        "reserveTokens": 600000
-      },
-      "cpa/workbuddy/glm-5.3-flash": {
-        "reserveTokens": 600000
+        "reserveTokens": 700000
       },
       "antigravity/gemini-3.8-flash": {
-        "reserveTokens": 648576
+        "reserveTokens": 698576
       },
       "zed/anthropic/claude-sonnet-5-5": {
         "reserveTokens": 522000
@@ -60,21 +57,19 @@
     "+codemode"
   ],
   "enabledModels": [
+    "mp/trae-cn/glm-5.3-flashx-max:high",
+    "mp/trae-cn/deepseek-v4.1-flash-max:high",
+    "anthropic/claude-fable-5-2:medium",
+    "mp/qoder-cn/dfmodel:high",
+    "cpa/claude-fable-5-2:medium",
     "mp/qoder-cn/gmodel:high",
     "mp/loomy/GLM-5.3-Flash:high",
     "anthropic/claude-sonnet-5-5:high",
     "mp/loomy/DeepSeek-V4.1-Flash:high",
     "mp/codex/gpt-5.6-sol:high",
     "mp/codex/gpt-6.1-sol:high",
-    "mp/workbuddy/deepseek-v4.1-flash:high",
-    "mp/workbuddy-ai/deepseek-v4.1-flash-sg:high",
     "cpa/gpt-5.6-luna:high",
     "cpa/gpt-6-luna:high",
-    "cpa/qwenworkcn/pro:high",
-    "cpa/workbuddy/deepseek-v4.1-flash:high",
-    "cpa/workbuddy/glm-5.2:high",
-    "cpa/workbuddy/glm-5.3-flash:high",
-    "cpa/workbuddy/hy3:high",
     "antigravity/gemini-3.8-flash:high",
     "zed/anthropic/claude-sonnet-5-5:high"
   ],
@@ -118,7 +113,7 @@
     "npm:@shelken/copy-cut@0.2.2",
     "npm:@shelken/pi-sounds@0.1.0",
     "npm:@juicesharp/rpiv-todo@2.15.0",
-    "npm:@juicesharp/rpiv-ask-user-question@2.15.0",
+    "npm:pi-ask-user@0.17.2",
     "npm:pi-caveman@1.0.12",
     "npm:@ff-labs/pi-fff@0.11.0",
     "npm:pi-intercom@0.18.1",
@@ -155,7 +150,7 @@
   "transport": "auto",
   "tuiMode": "fullscreen",
   "defaultProvider": "mp",
-  "defaultModel": "loomy/DeepSeek-V4.1-Flash",
+  "defaultModel": "trae-cn/deepseek-v4.1-flash-max",
   "extensionChangelogVersions": {
     "{\"source\":\"git:github.com/shelken/pi-zed-provider\",\"scope\":\"user\"}": "1.1.0"
   }

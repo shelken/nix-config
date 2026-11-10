@@ -11,17 +11,18 @@ mnemopi:
   embeddingModel: gemini-embedding-2
   embeddingApiUrl: https://generativelanguage.googleapis.com/v1beta
 modelRoles:
-  glm-flash: mp/qoder-cn/gfmodel:high
+  glm-flash: mp/trae-cn/glm-5.3-flashx-max:high
   glm-max: mp/qoder-cn/gmodel:high
-  dsf: mp/qoder-cn/dfmodel:high
+  dsf: mp/trae-cn/deepseek-v4.1-flash-max:high
   gpt: mp/codex/gpt-6.1-sol:high
   gpt-lite: mp/codex/gpt-5.6-luna:max
   claude-lite: anthropic/claude-haiku-5-5:max
   claude: anthropic/claude-sonnet-5-5:high
   claude-max: anthropic/claude-opus-5-5:medium
+  fable: anthropic/claude-opus-5-5:medium
   reviewer-gemini: google-antigravity/gemini-3.8-flash:high
   reviewer-ds: "@dsf"
-  reviewer-glm: "@glm-max"
+  reviewer-glm: "@glm-flash"
   reviewer-gpt: "@gpt:xhigh"
   reviewer-cc: "@claude"
   judge: "@claude"
@@ -35,7 +36,7 @@ modelRoles:
   smol: "@gpt-lite"
   scout: "@dsf"
   default: "@dsf"
-  task: "@dsf"
+  task: "@glm-flash"
   slow: "@gpt:high"
 cycleOrder:
   - smol
@@ -123,6 +124,7 @@ retry:
       - cpa/workbuddy/hy3:high
     glm-flash:
       - mp/loomy/GLM-5.3-Flash:high
+      - mp/trae-cn/glm-5.3-flashx-max:high
       - mp/qoder-cn/gfmodel:high
       - cpa/workbuddy/glm-5.3-flash:max
     glm-max:
@@ -130,6 +132,7 @@ retry:
       - cpa/workbuddy/glm-5.3:high
     dsf:
       - mp/loomy/DeepSeek-V4.1-Flash:high
+      - mp/trae-cn/deepseek-v4.1-flash-max:high
       - mp/qoder-cn/dfmodel:high
       - cpa/workbuddy/deepseek-v4.1-flash:max
     web:

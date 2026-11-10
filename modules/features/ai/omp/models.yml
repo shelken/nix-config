@@ -42,6 +42,9 @@ providers:
       workbuddy/kimi-k3-1:
         name: "Kimi-K3"
         input: ["text", "image"]
+      workbuddy/hy4free:
+        name: "Hy4"
+        input: ["text", "image"]
       workbuddy-ai/hy3:
         input: ["text", "image"]
       workbuddy-ai/deepseek-v4.1-flash-sg:
@@ -74,16 +77,9 @@ providers:
       trae-cn/kimi-k3-auto-max:
         name: "Kimi-K3 (Max)"
         input: ["text", "image"]
-      opencode-zen-free/nemotron-3.5-super-vl-free:
-        thinking:
-          mode: effort
-          efforts: [minimal, low, medium, high, xhigh]
-      opencode-zen-free/crouton-alpha-free:
-        name: "Crouton Alpha Free"
+      opencode-zen-free/longcat-2.5-free:
+        name: "LongCat 2.5 Free"
         input: ["text", "image"]
-        thinking:
-          mode: effort
-          efforts: [minimal, low, medium, high, xhigh, max]
       opencode-zen-free/iceman-free:
         name: "Iceman Free"
       opencode-zen-free/inkling-2-small-free:
@@ -92,14 +88,12 @@ providers:
         thinking:
           mode: effort
           efforts: [minimal, low, medium, high, max]
-      qwenwork/flash:
-        name: "标准"
-        input: ["text", "image"]
-      qwenwork/pro:
-        name: "高级"
-        input: ["text", "image"]
-      qwenwork/qwen3.8-max-preview:
-        name: "Qwen3.8-Max"
+      opencode-zen-free/nemotron-3.5-super-vl-free:
+        thinking:
+          mode: effort
+          efforts: [minimal, low, medium, high, xhigh]
+      claude/claude-fable-5-2:
+        name: "Claude Fable 5.2"
         input: ["text", "image"]
     # <<< mp-modelOverrides:auto-sync <<<
   cpa:

@@ -5,6 +5,7 @@
   },
   "font": "Iosevka Nerd Font Mono",
   "font_ligatures": false,
-  "minimum_contrast": 1.0,
-  "option_as_alt": "on"
+  "minimum_contrast": 1,
+  "option_as_alt": "on",
+  "appearance": "dark"
 }

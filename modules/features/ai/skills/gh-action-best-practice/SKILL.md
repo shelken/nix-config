@@ -21,3 +21,4 @@ description: GitHub Actions workflow 的编写与排错规范：观察运行状�
 ## 依赖与检查结果
 
 - 所有 Action 的 Annotations 保持无警告；依赖和构建组件使用稳定、受支持的版本
+- 禁止对任何action组件使用`latest`这种不显式声明的版本号
