@@ -203,55 +203,54 @@ try:
         and "3 个文件" in r.stdout,
         f"list: {r.stdout}{r.stderr}",
     )
-    r = sa("list", os.path.join(root, f"archive-{M2}.tar.zst.age"))
-    check("proj2/older.jsonl" in r.stdout, f"list 归档卷: {r.stdout}")
     ok("list")
 
-    # 5. restore 单个文件：内容一致，mtime 为现在，不覆盖已存在文件，归档卷保持不变
-    r = sa("restore", os.path.join(root, "proj/old.jsonl"))
+    # 5. restore 整卷：内容一致，mtime 为现在，不覆盖已存在文件，归档卷保持不变
+    vol1 = os.path.join(root, f"archive-{M1}.tar.zst.age")
+    r = sa("restore", vol1)
     check(
-        r.returncode == 0 and read("proj/old.jsonl") == body("proj/old.jsonl"),
+        r.returncode == 0
+        and all(
+            read(rel) == body(rel)
+            for rel in (
+                "proj/old.jsonl",
+                "proj/artifacts/old.md",
+                "proj/sub/deep/x.log",
+            )
+        ),
         f"restore 内容: {r.stdout}{r.stderr}",
     )
     check(
         time.time() - os.stat(os.path.join(root, "proj/old.jsonl")).st_mtime < 300,
         "还原文件 mtime 应为现在",
     )
-    check(not exists("proj/artifacts/old.md"), "只应还原指定的文件")
+    check(not exists("proj2/older.jsonl"), "只应还原指定的卷")
     with open(os.path.join(root, "proj/old.jsonl"), "w") as f:
         f.write("edited")
-    sa("restore", os.path.join(root, "proj/old.jsonl"))
-    check(read("proj/old.jsonl") == "edited", "restore 不应覆盖已存在的文件")
-    check(len(vols()) == 2, "restore 不应改动归档卷")
-    ok("restore 单个文件")
+    r = sa("restore", vol1)
+    check(
+        r.returncode == 0 and read("proj/old.jsonl") == "edited",
+        "restore 不应覆盖已存在的文件",
+    )
+    check(len(vols()) == 2 and not leftovers(), "restore 不应改动归档卷或残留 .part")
+    ok("restore 整卷")
 
-    # 6. restore 目录前缀与整卷；刚还原的文件不会被再次归档
-    r = sa("restore", os.path.join(root, "proj/sub"))
+    # 6. 不是归档卷的路径报错；刚还原的文件不会被再次归档
     check(
-        r.returncode == 0
-        and read("proj/sub/deep/x.log") == body("proj/sub/deep/x.log"),
-        f"restore 目录: {r.stderr}",
-    )
-    r = sa("restore", os.path.join(root, f"archive-{M1}.tar.zst.age"))
-    check(
-        r.returncode == 0
-        and read("proj/artifacts/old.md") == body("proj/artifacts/old.md"),
-        f"restore 整卷: {r.stderr}",
+        sa("restore", os.path.join(root, "proj/old.jsonl")).returncode != 0,
+        "不是归档卷的路径应报错",
     )
     check(
-        sa("restore", os.path.join(root, "proj/not-there.jsonl")).returncode != 0,
-        "归档里没有的路径应报错",
-    )
-    check(
-        sa("restore", os.path.join(work, "outside.txt")).returncode != 0,
-        "不在根目录下的路径应报错",
+        sa("restore", os.path.join(root, "archive-1999-01.tar.zst.age")).returncode
+        != 0,
+        "不存在的归档卷应报错",
     )
     r = sa("run")
     check(
         r.returncode == 0 and len(vols()) == 2 and exists("proj/artifacts/old.md"),
         "刚还原的文件不应被再次归档",
     )
-    ok("restore 目录、整卷、错误路径")
+    ok("restore 错误路径")
 
     # 7. 重入：原文件与归档一致时只补删，不另写分卷；同名但内容不同则写新分卷
     t = NOW - 100 * DAY
@@ -280,10 +279,10 @@ try:
         f"archive-{M1}-3.tar.zst.age" in vols() and not exists("proj/late.jsonl"),
         f"迟到文件应写分卷: {vols()}",
     )
-    r = sa("restore", os.path.join(root, "proj/artifacts/old.md"))
+    r = sa("restore", os.path.join(root, f"archive-{M1}-2.tar.zst.age"))
     check(
-        read("proj/artifacts/old.md") == body("changed"),
-        "同名文件应还原最新分卷里的版本",
+        r.returncode == 0 and read("proj/artifacts/old.md") == body("changed"),
+        f"分卷应可单独还原: {r.stderr}",
     )
     ok("重入与分卷")
 
@@ -419,25 +418,17 @@ try:
     r = sa("rekey")
     check(r.returncode == 0, f"rekey 失败: {r.stdout}{r.stderr}")
     check(sa("list", key=k2).returncode == 0, "rekey 后新私钥应能读清单")
-    r = sa("restore", os.path.join(root, "proj2/older.jsonl"), key=k2)
+    vol2 = os.path.join(root, f"archive-{M2}.tar.zst.age")
+    r = sa("restore", vol2, key=k2)
     check(
         r.returncode == 0 and read("proj2/older.jsonl") == body("proj2/older.jsonl"),
         f"rekey 后新私钥应能还原: {r.stderr}",
     )
     ok("rekey 与密钥轮换")
 
-    # 13. 还原整个根目录
-    os.unlink(os.path.join(root, "proj2/older.jsonl"))
-    r = sa("restore", root, key=k2)
-    check(
-        r.returncode == 0 and read("proj2/older.jsonl") == body("proj2/older.jsonl"),
-        f"restore <根目录> 应还原全部: {r.stderr}",
-    )
-    ok("restore 根目录")
-
-    # 13b. 还原期间别处新建了同名文件：不覆盖
-    raced = os.path.join(root, "proj9/lock.jsonl")
-    os.unlink(raced)
+    # 13. 还原期间别处新建了同名文件：不覆盖
+    raced = os.path.join(root, "proj7/slow.jsonl")
+    check(not exists("proj7/slow.jsonl"), "用例前提: proj7/slow.jsonl 已封存并删除")
     py = (
         "import sys,time;d=sys.stdin.buffer;o=sys.stdout.buffer;"
         "o.write(d.read(20000));o.flush();b=d.read();len(b)>50000 and time.sleep(2);o.write(b)"
@@ -448,7 +439,12 @@ try:
         'exec @REAL@ "$@"\n',
     )
     p = subprocess.Popen(
-        [sys.executable, SCRIPT, "restore", raced],
+        [
+            sys.executable,
+            SCRIPT,
+            "restore",
+            os.path.join(root, f"archive-{month(600)}.tar.zst.age"),
+        ],
         env=dict(env, PATH=slow_dec + os.pathsep + os.environ["PATH"]),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
@@ -465,7 +461,7 @@ try:
     with open(raced, "w") as f:
         f.write("NEW")
     p.wait(timeout=60)
-    check(read("proj9/lock.jsonl") == "NEW", "还原不得覆盖期间新建的文件")
+    check(read("proj7/slow.jsonl") == "NEW", "还原不得覆盖期间新建的文件")
     check(not leftovers(), "还原后不应残留 .part")
     ok("restore 不覆盖期间新建的文件")
 
@@ -474,7 +470,7 @@ try:
     os.makedirs(outside)
     shutil.rmtree(os.path.join(root, "proj2"))
     os.symlink(outside, os.path.join(root, "proj2"))
-    r = sa("restore", os.path.join(root, "proj2/older.jsonl"), key=k2)
+    r = sa("restore", vol2, key=k2)
     check(
         r.returncode != 0 and not os.listdir(outside),
         f"符号链接目录下的还原必须拒绝且不写外部: {os.listdir(outside)}",
@@ -497,50 +493,6 @@ try:
         f"加锁失败的根目录不应阻断其余根目录: {r.stderr}",
     )
     ok("锁文件创建失败不阻断其余根目录")
-
-    # 16. 还原不碰已有的同名 .part，也不与并行的 restore 共用临时文件
-    item = os.path.join(root, "proj10/x.jsonl")
-    foreign = item + ".part"
-    os.makedirs(os.path.dirname(item), exist_ok=True)
-    with open(foreign, "w") as f:
-        f.write("active application partial data")
-    r = sa("restore", item)
-    check(
-        r.returncode == 0 and read("proj10/x.jsonl") == body("proj10/x.jsonl"), r.stderr
-    )
-    check(
-        os.path.exists(foreign)
-        and read("proj10/x.jsonl.part") == "active application partial data",
-        "已有的 .part 必须原样保留",
-    )
-    os.unlink(foreign)
-    os.unlink(item)
-    slow_env = dict(env, PATH=slow_dec + os.pathsep + os.environ["PATH"])
-    procs = []
-    for i in range(2):
-        procs.append(
-            subprocess.Popen(
-                [sys.executable, SCRIPT, "restore", item],
-                env=slow_env,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-        )
-        if i == 0:
-            for _ in range(200):
-                if leftovers():
-                    break
-                time.sleep(0.1)
-            check(bool(leftovers()), "未观察到 restore 的 .part，用例失效")
-    errs = [(q.wait(timeout=60), q.stderr.read()) for q in procs]
-    check(
-        all(rc == 0 for rc, _ in errs)
-        and read("proj10/x.jsonl") == body("proj10/x.jsonl"),
-        f"并行的两个 restore 必须互不干扰: {errs}",
-    )
-    check(not leftovers(), "并行还原后不应残留 .part")
-    ok("restore 的临时文件独立")
 
     print("ALL PASSED")
 finally:

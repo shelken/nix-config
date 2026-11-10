@@ -16,12 +16,13 @@ import fnmatch
 import json
 import os
 import re
-import secrets
+import shutil
 import signal
 import stat
 import subprocess
 import sys
 import tarfile
+import tempfile
 import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -39,6 +40,10 @@ LOCK_NAME = ".session-archive.lock"
 
 class Failure(Exception):
     """单个月份或单个文件的处理失败，不影响其余部分"""
+
+
+# 一个月份、一个还原目标的处理失败都按这组异常记账，不影响其余部分
+ERRORS = (Failure, OSError, tarfile.TarError, subprocess.SubprocessError)
 
 
 @dataclass(frozen=True)
@@ -113,7 +118,7 @@ def encode(write_plain, out_path: str, recips: list[str]) -> None:
 
 @contextlib.contextmanager
 def decrypted(path: str, key_file: str):
-    """age 解密后的字节流（仍是 zstd 压缩的）。读完才检查返回码，提前退出用 strict=False 的调用方不会走到这里"""
+    """age 解密后的字节流（仍是 zstd 压缩的）。不检查返回码，只供 rekey 比对两份密文的内容"""
     age = subprocess.Popen(["age", "-d", "-i", key_file, path], stdout=subprocess.PIPE)
     try:
         yield age.stdout
@@ -124,8 +129,8 @@ def decrypted(path: str, key_file: str):
 
 
 @contextlib.contextmanager
-def decoded(path: str, key_file: str, strict: bool = True):
-    """解密并解压后的明文字节流。strict 时读完整个流并检查返回码，不完整的流视为失败"""
+def decoded(path: str, key_file: str):
+    """解密并解压后的明文字节流。退出时读完整个流并检查返回码，不完整的流视为失败"""
     age = subprocess.Popen(["age", "-d", "-i", key_file, path], stdout=subprocess.PIPE)
     zstd = subprocess.Popen(
         ["zstd", "-d", "-q", "-c"], stdin=age.stdout, stdout=subprocess.PIPE
@@ -134,18 +139,17 @@ def decoded(path: str, key_file: str, strict: bool = True):
     clean = False
     try:
         yield zstd.stdout
-        if strict:
-            while zstd.stdout.read(CHUNK):
-                pass
+        while zstd.stdout.read(CHUNK):
+            pass
         clean = True
     finally:
         zstd.stdout.close()
-        if not (clean and strict):
+        if not clean:
             zstd.kill()
             age.kill()
         zstd.wait()
         age.wait()
-    if strict and (zstd.returncode or age.returncode):
+    if zstd.returncode or age.returncode:
         raise Failure(f"解密或解压失败: {path}")
 
 
@@ -417,12 +421,7 @@ def run_roots(cfg: Config, roots: list[str], dry: bool, failed: int) -> int:
             print(f"封存 {root} {month}: {len(members)} 个文件, {mib(total)}")
             try:
                 new = archive_month(root, month, members, cfg, recips)
-            except (
-                Failure,
-                OSError,
-                tarfile.TarError,
-                subprocess.SubprocessError,
-            ) as e:
+            except ERRORS as e:
                 print(f"失败，原文件保留: {root} {month}: {e}", file=sys.stderr)
                 failed += 1
                 continue
@@ -440,83 +439,28 @@ def run_roots(cfg: Config, roots: list[str], dry: bool, failed: int) -> int:
     return 1 if failed else 0
 
 
-def find_root(cfg: Config, path: str) -> str:
-    path = os.path.abspath(path)
-    for root in cfg.roots:
-        if path == root or path.startswith(root + os.sep):
-            return root
-    raise Failure(f"不在任何根目录下: {path}")
-
-
-def safe_dest(root: str, name: str) -> str:
-    dest = os.path.normpath(os.path.join(root, name))
-    if os.path.isabs(name) or not dest.startswith(root + os.sep):
-        raise Failure(f"归档成员路径越界: {name}")
-    return dest
-
-
-def open_dir(root: str, parts: list[str]) -> int:
-    """逐级用 O_NOFOLLOW 打开并创建目录，路径上任何符号链接都拒绝，避免明文写到根目录外"""
-    fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
-    for p in parts:
-        try:
-            with contextlib.suppress(FileExistsError):
-                os.mkdir(p, 0o700, dir_fd=fd)
-            nxt = os.open(p, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
-        finally:
-            os.close(fd)
-        fd = nxt
-    return fd
-
-
-def extract(vol: Volume, cfg: Config, wanted: set[str] | None) -> int:
-    """wanted 为 None 时还原整卷，否则只还原其中的文件，找齐即停。已存在的文件不覆盖"""
-    done = 0
-    with (
-        decoded(vol.tar, cfg.key_file, strict=wanted is None) as s,
-        tarfile.open(fileobj=s, mode="r|") as tf,
-    ):
+def restore(vol: Volume, key_file: str) -> None:
+    """还原整卷到它所在的根目录。已存在的文件不覆盖；还原出的是新文件，mtime 为现在"""
+    with decoded(vol.tar, key_file) as s, tarfile.open(fileobj=s, mode="r|") as tf:
         for info in tf:
-            if not info.isreg() or (wanted is not None and info.name not in wanted):
+            if not info.isreg():
                 continue
-            dest = safe_dest(vol.root, info.name)
-            if wanted is not None:
-                wanted.discard(info.name)
-            rel_dir, base = os.path.split(os.path.relpath(dest, vol.root))
-            dfd = open_dir(vol.root, [p for p in rel_dir.split(os.sep) if p])
-            try:
+            # data_filter 拒绝会落到根目录外的成员路径，包括经已有符号链接绕出去的
+            dest = os.path.join(vol.root, tarfile.data_filter(info, vol.root).name)
+            if os.path.lexists(dest):
+                print(f"目标已存在，跳过: {dest}", file=sys.stderr)
+                continue
+            parent = os.path.dirname(dest)
+            os.makedirs(parent, exist_ok=True)
+            # 明文先写进唯一临时文件再 link：中断不留半截文件，link 不覆盖期间新建的同名文件
+            with tempfile.NamedTemporaryFile(dir=parent, suffix=".part") as tmp:
+                shutil.copyfileobj(tf.extractfile(info), tmp, CHUNK)
+                tmp.flush()
                 try:
-                    os.lstat(base, dir_fd=dfd)
+                    os.link(tmp.name, dest)
+                    print(f"已还原: {dest}")
+                except FileExistsError:
                     print(f"目标已存在，跳过: {dest}", file=sys.stderr)
-                except FileNotFoundError:
-                    # 唯一临时名 + O_EXCL：不碰已有的 .part，也不与并行的 restore 共用
-                    part = f".{base}.{os.getpid()}.{secrets.token_hex(4)}.part"
-                    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
-                    fd = os.open(part, flags, 0o600, dir_fd=dfd)
-                    try:
-                        with (
-                            tf.extractfile(info) as src,
-                            os.fdopen(fd, "wb") as out,
-                        ):
-                            while chunk := src.read(CHUNK):
-                                out.write(chunk)
-                            os.fchmod(out.fileno(), info.mode & 0o777)
-                        # link 不覆盖：还原期间别处新建的同名文件优先
-                        os.link(part, base, src_dir_fd=dfd, dst_dir_fd=dfd)
-                        print(f"已还原: {dest}")  # 新建文件，mtime 为现在
-                        done += 1
-                    except FileExistsError:
-                        print(f"目标已存在，跳过: {dest}", file=sys.stderr)
-                    finally:
-                        with contextlib.suppress(OSError):
-                            os.unlink(part, dir_fd=dfd)
-            finally:
-                os.close(dfd)
-            if wanted is not None and not wanted:
-                break
-    if wanted:
-        raise Failure(f"归档里找不到 {len(wanted)} 个文件，例如 {min(wanted)}")
-    return done
 
 
 def parse_volume(path: str) -> Volume:
@@ -528,51 +472,26 @@ def parse_volume(path: str) -> Volume:
     )
 
 
-def restore_path(cfg: Config, target: str) -> None:
-    root = find_root(cfg, target)
-    prefix = os.path.relpath(os.path.abspath(target), root)
-    handled: set[str] = set()
-    for vol in reversed(volumes(root)):  # 新分卷优先，旧分卷里的同名旧副本不再还原
-        hit = {
-            rel
-            for rel, _ in read_index(vol, cfg.key_file)
-            if prefix == "." or rel == prefix or rel.startswith(prefix + os.sep)
-        } - handled
-        if hit:
-            handled |= hit
-            extract(vol, cfg, set(hit))
-    if not handled:
-        raise Failure("归档里没有这个路径")
-
-
 def cmd_restore(cfg: Config, targets: list[str]) -> int:
     failed = 0
     for target in targets:
         try:
-            if target.endswith(TAR_SUFFIX):
-                extract(parse_volume(target), cfg, None)
-            else:
-                restore_path(cfg, target)
-        except (Failure, OSError, tarfile.TarError, subprocess.SubprocessError) as e:
+            restore(parse_volume(target), cfg.key_file)
+        except ERRORS as e:
             print(f"还原失败: {target}: {e}", file=sys.stderr)
             failed += 1
     return 1 if failed else 0
 
 
-def cmd_list(cfg: Config, targets: list[str]) -> int:
+def cmd_list(cfg: Config) -> int:
     try:
-        if targets:
-            for t in targets:
-                for rel, size in read_index(parse_volume(t), cfg.key_file):
-                    print(f"{size:12d} {rel}")
-        else:
-            for root in cfg.roots:
-                for vol in volumes(root):
-                    index = read_index(vol, cfg.key_file)
-                    print(
-                        f"{vol.tar}  {len(index)} 个文件, {mib(sum(s for _, s in index))} -> {mib(os.path.getsize(vol.tar))}"
-                    )
-    except (Failure, OSError, tarfile.TarError, subprocess.SubprocessError) as e:
+        for root in cfg.roots:
+            for vol in volumes(root):
+                index = read_index(vol, cfg.key_file)
+                print(
+                    f"{vol.tar}  {len(index)} 个文件, {mib(sum(s for _, s in index))} -> {mib(os.path.getsize(vol.tar))}"
+                )
+    except ERRORS as e:
         print(f"失败: {e}", file=sys.stderr)
         return 1
     return 0
@@ -634,12 +553,10 @@ def main(argv: list[str]) -> int:
     run.add_argument(
         "--dry-run", action="store_true", help="只列出将封存与等待中的月份，不写不删"
     )
+    sub.add_parser("list", help="列出全部归档卷")
     sub.add_parser(
-        "list", help="不带参数列出全部归档卷，带归档卷路径则列出其中的文件"
-    ).add_argument("targets", nargs="*")
-    sub.add_parser(
-        "restore", help="还原：归档卷路径还原整卷，其余路径按前缀还原"
-    ).add_argument("targets", nargs="+")
+        "restore", help="把归档卷整卷还原到它所在的根目录，已存在的文件不覆盖"
+    ).add_argument("targets", nargs="+", metavar="归档卷")
     sub.add_parser("rekey", help="用密钥文件里的当前全部公钥重新加密全部归档卷")
     args = ap.parse_args(argv)
 
@@ -650,7 +567,7 @@ def main(argv: list[str]) -> int:
     if args.cmd == "run":
         return cmd_run(cfg, args.dry_run)
     if args.cmd == "list":
-        return cmd_list(cfg, args.targets)
+        return cmd_list(cfg)
     if args.cmd == "restore":
         return cmd_restore(cfg, args.targets)
     return cmd_rekey(cfg)
