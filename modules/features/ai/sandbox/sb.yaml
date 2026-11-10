@@ -56,8 +56,3 @@ secrets:
       - "cpa.int.ooooo.space"
     passthrough:
       - "*"
-  WX_PI_API_KEY:
-    allow:
-      - "chatapi.weixin.qq.com"
-    passthrough:
-      - "*"

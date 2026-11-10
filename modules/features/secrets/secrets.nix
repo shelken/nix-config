@@ -44,11 +44,11 @@
       # ─── 凭据基座与覆盖层 ───
       # 基座：仓库内声明的 op:// 引用映射，注入文件只含引用不含明文，可安全进 nix store
       opSecretMap = {
-        APIM_API_KEY = "Personal/APIM_API_KEY";
+        # APIM_API_KEY = "Personal/APIM_API_KEY";
         BRAVE_API_KEY = "Personal/BRAVE_API_KEY";
         BRAVE_SEARCH_API_KEY = "Personal/BRAVE_SEARCH_API_KEY";
         BWS_ACCESS_TOKEN = "Personal/BWS_ACCESS_TOKEN";
-        COMMANDCODE_API_KEY = "Personal/COMMANDCODE_API_KEY";
+        # COMMANDCODE_API_KEY = "Personal/COMMANDCODE_API_KEY";
         CONTEXT_API_KEY = "Personal/CONTEXT_API_KEY";
         CPA_PI_API_KEY = "Personal/CPA_PI_API_KEY";
         CPA_TOKEN = "Personal/CPA_TOKEN";
@@ -59,8 +59,8 @@
         MODELSCOPE_API_KEY = "Personal/MODELSCOPE_API_KEY";
         MODELSCOPE_API_TOKEN = "Personal/MODELSCOPE_API_TOKEN";
         OMLX_API_KEY = "Personal/OMLX_API_KEY";
-        OPENCODE_API_KEY = "Personal/OPENCODE_API_KEY";
-        WX_PI_API_KEY = "Personal/WX_PI_API_KEY";
+        # OPENCODE_API_KEY = "Personal/OPENCODE_API_KEY";
+        # WX_PI_API_KEY = "Personal/WX_PI_API_KEY";
       };
 
       # 基座 env 文件：VAR=op://<vault>/<item>/credential，只含引用不含明文
