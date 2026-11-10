@@ -37,7 +37,7 @@ in
             components = "rust-analyzer";
           };
           # renovate: datasource=github-releases depName=jdx/mr-boxington
-          mr-boxington = "1.29";
+          mr-boxington = "1.30";
         };
       };
     };
