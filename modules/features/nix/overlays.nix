@@ -1,5 +1,5 @@
 # nixpkgs overlays：全部平台统一注入
-# overlays 里的文件以 specialArgs 为参数（mylib、dotfiles 等）
+# overlays 里的文件以 specialArgs 为参数（mylib 等）
 { config, ... }:
 {
   flake.modules.darwin.core.imports = [ config.flake.modules.darwin.overlays ];

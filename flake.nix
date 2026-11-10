@@ -116,10 +116,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    dotfiles = {
-      url = "github:shelken/dotfiles.nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     secrets = {
       url = "git+https://github.com/shelken/secrets.nix.git?shallow=1";
       flake = false;

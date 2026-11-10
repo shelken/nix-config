@@ -1,6 +1,6 @@
 ---
 name: update-owned-inputs
-description: 当用户要更新、修改、同步自己维护的外部 input 或其上游源码仓库时使用，尤其适用于 `dotfiles.nix`、`secrets.nix` 等，以及“先改上游再回当前项目更新 flake.lock”“等 action 跑完再 upp”这类场景
+description: 当用户要更新、修改、同步自己维护的外部 input 或其上游源码仓库时使用，尤其适用于 `secrets.nix` 等，以及“先改上游再回当前项目更新 flake.lock”这类场景
 ---
 
 # 外部 input 工作流
@@ -13,14 +13,7 @@ description: 当用户要更新、修改、同步自己维护的外部 input 或
 
 ## 项目一句话说明
 
-- `dotfiles.nix`：将个人配置仓库封装为 flake packages，当前项目通过它获取上游源码
-- `secrets.nix`：个人 secrets 仓库，当前项目直接引用
-- `rime-auto-deploy`：rime 输入法配置仓库
-
-## Action 一句话说明
-
-- `dotfiles.nix` 的 `sync-upstream.yml`：接收 input 名称，执行 `nix flake lock --update-input` 并自动提交 `flake.lock`
-- `secrets.nix`：通常无联动 action
+- `secrets.nix`：个人 secrets 仓库，当前项目直接引用，通常无联动 action
 
 ## 参考流程
 
@@ -39,15 +32,14 @@ description: 当用户要更新、修改、同步自己维护的外部 input 或
 
 ## 例子
 
-### 改 `dotfiles.nix` 的上游源码仓库
+### 改 `secrets.nix` 的上游仓库
 
 1. 在 `~/Code` 搜索并定位该上游仓库
-2. 修改源码并完成本地测试
+2. 修改并完成本地测试
 3. 提交并推送至远程
-4. 等待上游仓库与 `dotfiles.nix` 的联动 action（若有）执行完成
-5. 返回当前项目执行 `just upp dotfiles`
-6. 依据影响范围执行 `just hm` 或 `just sw`
-7. 检查 `flake.lock` diff 并提交当前项目
+4. 返回当前项目执行 `just upp secrets`
+5. 依据影响范围执行 `just hm` 或 `just sw`
+6. 检查 `flake.lock` diff 并提交当前项目
 
 ## 不要这样做
 
@@ -56,4 +48,4 @@ description: 当用户要更新、修改、同步自己维护的外部 input 或
 
 ## 一句话记忆版
 
-先在 `~/Code` 找到上游仓库，修改并推送，等待关联 action 完成，返回当前项目执行 `just upp <input>`，使用 `just hm` 或 `just sw` 验证后提交
+先在 `~/Code` 找到上游仓库，修改并推送，等待关联 action 完成（若有），返回当前项目执行 `just upp <input>`，使用 `just hm` 或 `just sw` 验证后提交
