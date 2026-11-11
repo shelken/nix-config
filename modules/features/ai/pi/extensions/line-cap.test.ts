@@ -123,6 +123,17 @@ test("shape：尾部窗口只剩一行超长行被清空时，回退用头部余
 	expect(Buffer.byteLength(shaped.text)).toBeGreaterThan(40 * 1024);
 });
 
+test("shape：尾部窗口为空时，没读到的行标在输出末尾，不让最后一行冒充结尾", () => {
+	const lines = Array.from({ length: 3000 }, (_, i) => `L${i} ${"y".repeat(94)}`);
+	const shaped = shape(lines, [], 7);
+	const out = shaped.text.split("\n");
+	expect(out.at(-1)).toBe("[… 7 lines omitted …]");
+	expect(out.at(-2)).toBe(lines.at(-1));
+	const between = shaped.omittedLines - 7;
+	expect(out).toContain(`[… ${between} lines omitted …]`);
+	expect(between + out.length - 2).toBe(3000);
+});
+
 test("capMessage：!cmd 截断输出回读 fullOutputPath 找回开头，与 tool_result 一致", () => {
 	const rows = Array.from({ length: 15 }, (_, i) => `ROW_START_${i + 1} ${"x".repeat(30000)} ROW_END_${i + 1}`);
 	const full = write("cmd-incident.log", `${["HEAD_MARKER", ...rows, "TAIL_MARKER"].join("\n")}\n`);

@@ -12,6 +12,7 @@
  *
  * 缓存：结果只由输入决定（落盘路径取原文哈希），同一条消息每次发给模型的字节相同。
  * 落盘路径若含时间戳、随机数或进程号，提供方的前缀缓存即失效。
+ * 例外是被截断的 !cmd：每轮重读 pi 的临时文件，文件被系统清理后退回只有尾部的文本。
  *
  * 不处理 read：截断源码行会让模型照残缺文本去 edit。
  */
@@ -125,9 +126,12 @@ export function shape(head: string[], tail?: string[], gap: number = 0): Shaped 
 	const nh = takeFront(h, headBytes, headLines);
 	const back = t?.length ? t : h.slice(nh);
 	const nt = takeBack(back, MAX_BYTES - headBytes, MAX_LINES - headLines);
-	const omittedLines = h.length - nh + (t ? gap + t.length : 0) - nt;
-	const kept = [...h.slice(0, nh), ...(omittedLines > 0 ? [`[… ${omittedLines} lines omitted …]`] : []), ...back.slice(back.length - nt)];
-	return { text: kept.join("\n"), cutLines, omittedLines };
+	// 尾部窗口为空时 back 取自头部窗口，没读到的行在它之后；标在末尾，否则最后一行会被当成输出的结尾
+	const between = h.length - nh - nt + (t?.length ? gap + t.length : 0);
+	const after = t?.length ? 0 : gap;
+	const mark = (n: number) => (n > 0 ? [`[… ${n} lines omitted …]`] : []);
+	const kept = [...h.slice(0, nh), ...mark(between), ...back.slice(back.length - nt), ...mark(after)];
+	return { text: kept.join("\n"), cutLines, omittedLines: between + after };
 }
 
 const splitLines = (text: string) => text.replace(/\n+$/, "").split("\n");
