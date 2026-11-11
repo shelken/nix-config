@@ -94,21 +94,21 @@
     "npm:@shelken/pi-sounds"
   ],
   "packages": [
-    "npm:pi-posthorse@0.10.10",
-    "npm:@shelken/pi-status-bar@0.1.0",
+    "npm:pi-posthorse@0.10.20",
+    "npm:@shelken/pi-status-bar@0.2.0",
     "npm:pi-token-speed@0.12.0",
     "npm:@tifan/pi-preferred-thinking@1.0.2",
     "npm:@tifan/pi-recap@0.4.8",
     "npm:@tifan/pi-titlebar-spinner@1.1.0",
     "npm:@tifan/pi-rename@0.6.0",
-    "npm:pi-vision-handoff@0.10.12",
+    "npm:pi-vision-handoff@0.10.13",
     "npm:@shelken/pi-auto-model-prompts@0.3.1",
     "npm:@shelken/pi-dynamic-models@0.2.8",
     "npm:@shelken/pi-guard@0.7.1",
     "npm:@shelken/pi-inline-skills@0.1.0",
     "npm:@shelken/pi-co-authored-by@0.2.17",
     "npm:@shelken/pi-command-history@0.1.6",
-    "npm:@shelken/simple-plannotator@0.1.8",
+    "npm:@shelken/simple-plannotator@0.1.9",
     "npm:@shelken/copy-cut@0.2.2",
     "npm:@shelken/pi-sounds@0.1.0",
     "npm:@juicesharp/rpiv-todo@2.15.0",
@@ -132,7 +132,7 @@
         "-./src/features/google-search.ts",
         "-./src/features/generate-image.ts"
       ],
-      "source": "npm:pi-antigravity@0.11.0"
+      "source": "npm:pi-antigravity@0.12.0"
     },
     "-npm:pi-rewind",
     "-npm:pi-observational-memory",
