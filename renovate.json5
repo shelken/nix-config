@@ -119,15 +119,45 @@
       // 仓库没有 PR 级构建，不等状态检查
       ignoreTests: true,
     },
-    // 插件代码会在 agent 进程里执行，每次升级都要人看过再合并：pi 与 omp 两份清单的全部插件合成一个 PR
+    // pi / omp 插件的三条规则按顺序叠加，后面的覆盖前面的
     {
-      description: "pi / omp 插件：全部合成一个 PR，手动合并",
+      // 插件代码会在 agent 进程里执行，别人的插件每次升级都要人看过再合并。
+      // 不分组：某个插件有问题时可以单独搁置，不挡住其他插件
+      description: "pi / omp 插件：每个插件一个 PR，手动合并",
       matchFileNames: [
         "modules/features/ai/pi/settings.json",
         "modules/features/ai/omp/plugins/package.json",
       ],
-      groupName: "pi / omp plugins",
       automerge: false,
+    },
+    {
+      // 合成一个 PR：它们改的是同一个文件的相邻行，分开会互相冲突，自动合并要等逐个 rebase
+      description: "自己维护的 pi / omp 插件：合成一个 PR，自动合并",
+      matchFileNames: [
+        "modules/features/ai/pi/settings.json",
+        "modules/features/ai/omp/plugins/package.json",
+      ],
+      matchPackageNames: ["@shelken/**"],
+      groupName: "shelken pi / omp plugins",
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: true,
+      // 仓库没有 PR 级构建，不等状态检查
+      ignoreTests: true,
+    },
+    {
+      // 信得过上游 patch 版本的插件写进 matchPackageNames；minor / major 仍然手动合并
+      description: "pi / omp 插件 patch 自动合并名单",
+      matchFileNames: [
+        "modules/features/ai/pi/settings.json",
+        "modules/features/ai/omp/plugins/package.json",
+      ],
+      matchPackageNames: ["pi-posthorse"],
+      matchUpdateTypes: ["patch"],
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: true,
+      ignoreTests: true,
     },
     {
       // vps-cc（oci-containers）与 sakamoto（compose.yaml）的容器镜像永远一起升级：
