@@ -69,6 +69,17 @@
       rangeStrategy: "replace",
     },
     {
+      // 发版太频繁，版本由人决定何时动。删掉这条规则即恢复升级，标注行保留在 cli.nix 里
+      description: "agent 客户端（antigravity-cli、codex、claude-code）：不升级",
+      matchFileNames: ["modules/features/ai/cli.nix"],
+      matchDepNames: [
+        "google-antigravity/antigravity-cli",
+        "openai/codex",
+        "@anthropic-ai/claude-code",
+      ],
+      enabled: false,
+    },
+    {
       matchManagers: ["github-actions"],
       // Actions 使用完整 SHA + major 标签注释（# vN），由 Renovate 更新版本和 digest。
       pinDigests: true,
