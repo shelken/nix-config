@@ -4,6 +4,7 @@
   manifest,
   guest,
   policyFile,
+  hostSecretFiles,
 }:
 let
   msbHome = manifest.statePaths.msbHome;
@@ -27,6 +28,7 @@ let
     guest_sync = "${guest.syncGuestScript}";
     sync_lock = "${manifest.miseLayer.hostDir}/.sync.lock";
     host_credentials = true;
+    host_secret_files = hostSecretFiles;
     guest = {
       config_mount = manifest.guestPaths.configMount;
       contexts_dir = manifest.guestPaths.contextsDir;

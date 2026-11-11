@@ -274,6 +274,29 @@ class RunTest(unittest.TestCase):
         want = {"MSB_HOME": str(self.e.tmp / "msbhome"), "MSB_CONFIG_PATH": str(self.e.tmp / "msb-config.json")}
         self.assertEqual([e for e in envs if e != want], [])
 
+    def host_credentials(self, **files):
+        """打开宿主凭据注入；假 sec-run 原样执行命令，避免测试碰到真实的 sec-run。"""
+        sec_run = self.e.tmp / "bin" / "sec-run"
+        sec_run.write_text('#!/bin/sh\nexec "$@"\n')
+        sec_run.chmod(0o755)
+        self.e.write_config(host_credentials=True, host_secret_files=files)
+
+    def test_host_secret_files_reach_msb_only_when_it_creates_the_vm(self):
+        token = self.e.tmp / "cli-token"
+        token.write_text("gh-secret\n")
+        self.host_credentials(GITHUB_TOKEN=str(token))
+        self.e.sb("up")
+        seen = self.e.msb_state()["secret_envs"]
+        self.assertEqual({v for cmd, v in seen if cmd == "create"}, {"gh-secret"})
+        self.assertEqual({v for cmd, v in seen if cmd != "create"}, {None})
+
+    def test_an_unreadable_host_secret_file_is_reported_before_the_vm_is_created(self):
+        self.host_credentials(GITHUB_TOKEN=str(self.e.tmp / "missing"))
+        r = self.e.sb("up")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("GITHUB_TOKEN", r.stderr)
+        self.assertEqual(self.e.calls("create"), [])
+
 
 if __name__ == "__main__":
     unittest.main()

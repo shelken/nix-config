@@ -20,6 +20,7 @@ st = json.load(open(state_path))
 args = sys.argv[1:]
 st["calls"].append(args)
 st["envs"].append({{k: os.environ.get(k) for k in ("MSB_HOME", "MSB_CONFIG_PATH")}})
+st["secret_envs"].append([args[0], os.environ.get("GITHUB_TOKEN")])
 
 def save():
     json.dump(st, open(state_path, "w"))
@@ -103,7 +104,7 @@ class SbEnv:
         self.state.write_text(
             json.dumps(
                 {
-                    "vm": None, "volumes": [], "calls": [], "envs": [], "busy": 0, "busy_rc": 0, "missing": [],
+                    "vm": None, "volumes": [], "calls": [], "envs": [], "secret_envs": [], "busy": 0, "busy_rc": 0, "missing": [],
                     "sync_rc": 0, "run_rc": 0, "copy_rc": 0, "create_rc": 0,
                 }
             )
@@ -131,7 +132,7 @@ class SbEnv:
         config = {
             "msb_config": str(self.tmp / "msb-config.json"), "msb_home": str(self.tmp / "msbhome"), "policy_yaml": str(self.policy),
             "publish_dir": str(self.publish), "launcher": "/fake/launcher", "guest_status": "/fake/guest-status", "guest_sync": "/fake/sync-guest",
-            "sync_lock": str(self.tmp / "sync.lock"), "host_credentials": False,
+            "sync_lock": str(self.tmp / "sync.lock"), "host_credentials": False, "host_secret_files": {},
             "guest": {"config_mount": "/run/sandbox-config", "contexts_dir": "/run/sandbox/contexts", "data_dir": "/data"},
             "mise": {"host_dir": str(self.mise), "guest_mount": "/opt/sandbox-mise"},
         }  # fmt: skip

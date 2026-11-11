@@ -5,7 +5,7 @@
 #   - 共用 mise 目录只挂载、绝不写入/移动/删除：guest_sync 指向 /dev/null，
 #     首次建 VM 的自动 sb sync 什么都不装（上下文只用 launcher 内置的
 #     bash/coreutils/git/curl，无需 mise 工具）；sync 锁放在临时目录，不在共用层创建锁文件。
-#   - host_credentials=false 禁止 sec-run 注入宿主真实凭据。
+#   - host_credentials=false 禁止注入宿主真实凭据（sec-run 的环境与 host_secret_files 都不读）。
 #   - sb 读取的 sb-config.json 由真实产物的那份改写而来，只换目录、策略文件与上面两项。
 set -euo pipefail
 

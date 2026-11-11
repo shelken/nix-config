@@ -39,6 +39,10 @@
           guest
           ;
         policyFile = ./sb.yaml;
+        # 用户本人的 GitHub token 不经 sec-run 进入宿主环境，由 sb 在创建、启动 VM 时直接读 sops 文件
+        hostSecretFiles = lib.optionalAttrs config.shelken.secrets.enable {
+          GITHUB_TOKEN = config.sops.secrets."github/cli-token".path;
+        };
       };
     in
     {
