@@ -7,7 +7,7 @@
   commitMessagePrefix: "chore(deps):",
   commitMessageAction: "update",
   rebaseWhen: "conflicted",
-  prConcurrentLimit: 10,
+  prConcurrentLimit: 20,
   prHourlyLimit: 0,
 
   nix: {
