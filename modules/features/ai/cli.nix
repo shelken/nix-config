@@ -51,7 +51,7 @@
           antigravity-cli = "1.1.24";
           # 只在宿主用：不进共享登记表，沙箱里不装（沙箱只跑 omp、pi，见 ADR 0003）
           # renovate: datasource=github-releases depName=openai/codex extractVersion=^rust-v(?<version>.+)$
-          codex = "0.160.1";
+          codex = "0.167.1";
           # renovate: datasource=npm depName=@anthropic-ai/claude-code
           claude-code = "2.1.304";
         };
