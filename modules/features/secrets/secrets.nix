@@ -89,52 +89,14 @@
           fi
         '') secretEnvMap
       );
+      # 脚本正文在 sec-run.zsh，这里只写入 Nix 侧才知道的路径；测试见 test.sh
       secRun = pkgs.writeScriptBin "sec-run" ''
         #!${pkgs.zsh}/bin/zsh
-        if (( $# == 0 )); then
-          echo "Usage: sec-run <command> [args...]" >&2
-          exit 1
-        fi
-
-        # sops 凭据直接进本进程环境，op run 会继承
+        # sops 凭据直接进本进程环境，目标命令继承
         ${shellInit}
-
-        SPECIFIC_ZSH="$HOME/.specific.zsh"
-
-        # 注入来源清单：op run 在子进程中解析引用，父进程看不到结果，
-        # 所以直接从环境文件读 KEY 名，而不是执行后比对环境
-        if [[ -n "''${SEC_RUN_VERBOSE:-}" ]]; then
-          print -u2 -- "🔐 [sec-run] 基座: ${opEnvBase}"
-          [[ -s "$SPECIFIC_ZSH" ]] && print -u2 -- "🔐 [sec-run] 覆盖层: $SPECIFIC_ZSH"
-          typeset _keys
-          _keys=$(cat "${opEnvBase}" "$SPECIFIC_ZSH" 2>/dev/null |
-            sed -nE 's/^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)=.*/\2/p' |
-            sort -u | paste -sd ' ' -)
-          [[ -n "$_keys" ]] && print -u2 -- "🔐 [sec-run] 变量: $_keys"
-        fi
-
-        # 有 op：基座 + 覆盖层交给 op run 解析 op://，同名后者覆盖
-        if command -v op >/dev/null 2>&1; then
-          # service account：op 见到 token 就不找桌面 App，没有 Touch ID 弹窗，
-          # 无人值守的 agent 任务与 SSH 会话都能解析
-          typeset -a _strip
-          if [[ -r "${opTokenFile}" ]]; then
-            export OP_SERVICE_ACCOUNT_TOKEN="$(<"${opTokenFile}")"
-            # token 只给这一次 op run：留在目标命令的环境里，会让其中所有 op 调用
-            # 都被限制在 Agent vault（如 singbox-config 的 op inject 读不到 Personal）
-            _strip=( ${pkgs.coreutils}/bin/env -u OP_SERVICE_ACCOUNT_TOKEN )
-          fi
-          typeset -a _files
-          _files=( --env-file="${opEnvBase}" )
-          [[ -s "$SPECIFIC_ZSH" ]] && _files+=( --env-file="$SPECIFIC_ZSH" )
-          # --no-masking：op run 默认代理 stdout 做敏感值遮蔽，会破坏 TUI 的
-          # tty 探测与 SIGWINCH（omp/pi 白屏卡死）。关闭遮蔽后终端直接交给子进程。
-          exec op run --no-masking "''${_files[@]}" -- "''${_strip[@]}" "$@"
-        fi
-
-        # 无 op：旧行为，直接 source 覆盖层，然后执行
-        [[ -s "$SPECIFIC_ZSH" ]] && source "$SPECIFIC_ZSH"
-        exec "$@"
+        SEC_RUN_BASE=${opEnvBase}
+        SEC_RUN_TOKEN_FILE=${opTokenFile}
+        ${builtins.readFile ./sec-run.zsh}
       '';
 
       secEnv = pkgs.writeScriptBin "sec-env" ''
