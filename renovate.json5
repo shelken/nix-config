@@ -69,13 +69,16 @@
       rangeStrategy: "replace",
     },
     {
-      // 发版太频繁，版本由人决定何时动。删掉这条规则即恢复升级，标注行保留在 cli.nix 里
-      description: "agent 客户端（antigravity-cli、codex、claude-code）：不升级",
-      matchFileNames: ["modules/features/ai/cli.nix"],
+      // 目前不需要跟进，版本由人决定何时动。从名单里删掉即恢复升级，标注行保留在各自的 nix 文件里
+      description: "不升级的 mise 工具",
+      matchManagers: ["custom.regex"],
+      matchFileNames: ["modules/**/*.nix"],
       matchDepNames: [
         "google-antigravity/antigravity-cli",
         "openai/codex",
         "@anthropic-ai/claude-code",
+        "yt-dlp/yt-dlp",
+        "Infisical/cli",
       ],
       enabled: false,
     },
