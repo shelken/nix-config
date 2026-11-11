@@ -21,7 +21,7 @@
 | 沙箱 | [sb.yaml](../sandbox/sb.yaml) 声明 secret `AGENT_GITHUB_TOKEN`；[_guest.nix](../sandbox/_guest.nix) 用 `linuxPkgs` 构建同一个包装，放到 guest PATH 最前面。整台 VM 都是 agent 环境，不区分身份 |
 | 构建 | [_package.nix](./_package.nix) 用 `writeShellApplication`，`runtimeInputs` 让脚本里的 `gh` 解析到真实 `gh` |
 
-沙箱里 guest 只有占位符，msb 发往 `github.com`、`api.github.com` 的请求时才换成真实值。创建或启动 VM 时宿主环境必须有 `AGENT_GITHUB_TOKEN`，缺失时 msb 拒绝创建；经 `sec-run` 启动会自动带上，没有 sops 密钥的主机启动不了沙箱。secret 集合属于能力上限，主 VM 下次启动会重建一次
+沙箱里 guest 只有占位符，msb 发往 `github.com`、`api.github.com` 的请求时才换成真实值。创建或启动 VM 时 msb 必须拿到 `AGENT_GITHUB_TOKEN`，缺失时拒绝创建；`sb` 在这两个动作上经 `sec-run` 自动带上，没有 sops 密钥的主机启动不了沙箱。secret 集合属于能力上限，主 VM 下次启动会重建一次
 
 token 由用户写进外部 secrets 仓库的 `github/agent-token`，本仓库不含任何 token 值。这个键必须先存在于 `secrets` 输入，否则主机激活时读不到它
 
@@ -29,11 +29,11 @@ token 由用户写进外部 secrets 仓库的 `github/agent-token`，本仓库�
 
 这是路由，不是安全边界。agent 仍可：
 
-- 用 `gh api`、`gh pr create` 等不在规则表内的命令，它们用的是环境里的 `GITHUB_TOKEN`
-- 直接调用 Nix store 里的真实 `gh`，或用 `curl` 带上 `GITHUB_TOKEN`
+- 用 `gh api`、`gh pr create` 等不在规则表内的命令，它们用的是用户身份：宿主上是 `gh` 的登录态（`~/.config/gh/hosts.yml`），沙箱里是 `GITHUB_TOKEN` 占位符
+- 直接调用 Nix store 里的真实 `gh`，或用 `gh auth token` 取出用户 token 再交给 `curl`
 - 在 issue 或 PR 命令里用被当作链接的参数值（如 `-b` 的正文恰好是一条链接）影响 owner 判断
 
-要真正拦住，需把用户 token 移出 agent 环境，或在 guard 的 `deny_commands` 加规则
+宿主上用户 token 已不在 agent 的环境变量里（`sec-run` 不注入它），但 `gh` 的登录态仍可读。要真正拦住，需让 agent 读不到这份登录态，或在 guard 的 `deny_commands` 加规则
 
 ## 测试
 

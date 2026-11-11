@@ -72,8 +72,10 @@
         + "\n"
       );
 
+      # 经 sec-run 进入目标命令环境的 sops 凭据。用户本人的 github/cli-token 不在这里：
+      # 环境变量会随 agent 的 env 输出进入对话；gh、git、mise 从 gh 的 hosts.yml 取它，
+      # 定时任务与沙箱各自读 sops 文件
       secretEnvMap = {
-        GITHUB_TOKEN = "github/cli-token"; # 目前task依赖
         AGENT_GITHUB_TOKEN = "github/agent-token"; # agent 专属身份，由 ai/agent-gh 的 gh 包装读取
       };
 
@@ -208,14 +210,22 @@
         home.sessionVariables.SOPS_AGE_KEY_FILE = config.sops.age.keyFile;
 
         # ─── 统一凭据定义 ───
-        sops.secrets = (mylib.mkSopsSecrets (enabledSecrets ++ [ opTokenSecret ])) // {
-          "wakatime/conf" = mylib.mkDefaultSecret {
-            path = "${config.home.homeDirectory}/.wakatime.cfg";
+        sops.secrets =
+          (mylib.mkSopsSecrets (
+            enabledSecrets
+            ++ [
+              opTokenSecret
+              "github/cli-token"
+            ]
+          ))
+          // {
+            "wakatime/conf" = mylib.mkDefaultSecret {
+              path = "${config.home.homeDirectory}/.wakatime.cfg";
+            };
+            "asciinema/install-id" = mylib.mkDefaultSecret {
+              path = "${config.home.homeDirectory}/.config/asciinema/install-id";
+            };
           };
-          "asciinema/install-id" = mylib.mkDefaultSecret {
-            path = "${config.home.homeDirectory}/.config/asciinema/install-id";
-          };
-        };
 
         sops.templates."gh-hosts.yml" = {
           path = "${config.home.homeDirectory}/.config/gh/hosts.yml";
