@@ -43,24 +43,25 @@
 
       # ─── 凭据基座与覆盖层 ───
       # 基座：仓库内声明的 op:// 引用映射，注入文件只含引用不含明文，可安全进 nix store
+      # 条目必须放在 Agent vault：sec-run 用的 service account 只能读它（1Password 不允许授权 Personal）
       opSecretMap = {
-        # APIM_API_KEY = "Personal/APIM_API_KEY";
-        BRAVE_API_KEY = "Personal/BRAVE_API_KEY";
-        BRAVE_SEARCH_API_KEY = "Personal/BRAVE_SEARCH_API_KEY";
-        BWS_ACCESS_TOKEN = "Personal/BWS_ACCESS_TOKEN";
-        # COMMANDCODE_API_KEY = "Personal/COMMANDCODE_API_KEY";
-        CONTEXT_API_KEY = "Personal/CONTEXT_API_KEY";
-        CPA_PI_API_KEY = "Personal/CPA_PI_API_KEY";
-        CPA_TOKEN = "Personal/CPA_TOKEN";
-        DEEPSEEK_API_KEY = "Personal/DEEPSEEK_API_KEY";
-        EXA_API_KEY = "Personal/EXA_API_KEY";
-        FIRECRAWL_API_KEY = "Personal/FIRECRAWL_API_KEY";
-        MNEMOPI_EMBEDDING_API_KEY = "Personal/MNEMOPI_EMBEDDING_API_KEY";
-        MODELSCOPE_API_KEY = "Personal/MODELSCOPE_API_KEY";
-        MODELSCOPE_API_TOKEN = "Personal/MODELSCOPE_API_TOKEN";
-        OMLX_API_KEY = "Personal/OMLX_API_KEY";
-        # OPENCODE_API_KEY = "Personal/OPENCODE_API_KEY";
-        # WX_PI_API_KEY = "Personal/WX_PI_API_KEY";
+        # APIM_API_KEY = "Agent/APIM_API_KEY";
+        BRAVE_API_KEY = "Agent/BRAVE_API_KEY";
+        BRAVE_SEARCH_API_KEY = "Agent/BRAVE_SEARCH_API_KEY";
+        BWS_ACCESS_TOKEN = "Agent/BWS_ACCESS_TOKEN";
+        # COMMANDCODE_API_KEY = "Agent/COMMANDCODE_API_KEY";
+        CONTEXT_API_KEY = "Agent/CONTEXT_API_KEY";
+        CPA_PI_API_KEY = "Agent/CPA_PI_API_KEY";
+        CPA_TOKEN = "Agent/CPA_TOKEN";
+        DEEPSEEK_API_KEY = "Agent/DEEPSEEK_API_KEY";
+        EXA_API_KEY = "Agent/EXA_API_KEY";
+        FIRECRAWL_API_KEY = "Agent/FIRECRAWL_API_KEY";
+        MNEMOPI_EMBEDDING_API_KEY = "Agent/MNEMOPI_EMBEDDING_API_KEY";
+        MODELSCOPE_API_KEY = "Agent/MODELSCOPE_API_KEY";
+        MODELSCOPE_API_TOKEN = "Agent/MODELSCOPE_API_TOKEN";
+        OMLX_API_KEY = "Agent/OMLX_API_KEY";
+        # OPENCODE_API_KEY = "Agent/OPENCODE_API_KEY";
+        # WX_PI_API_KEY = "Agent/WX_PI_API_KEY";
       };
 
       # 基座 env 文件：VAR=op://<vault>/<item>/credential，只含引用不含明文
@@ -78,6 +79,9 @@
       };
 
       enabledSecrets = lib.unique (lib.attrValues secretEnvMap);
+
+      opTokenSecret = "op/service-account-token";
+      opTokenFile = config.sops.secrets."${opTokenSecret}".path;
 
       shellInit = lib.concatStringsSep "\n" (
         lib.mapAttrsToList (var: secret: ''
@@ -112,12 +116,21 @@
 
         # 有 op：基座 + 覆盖层交给 op run 解析 op://，同名后者覆盖
         if command -v op >/dev/null 2>&1; then
+          # service account：op 见到 token 就不找桌面 App，没有 Touch ID 弹窗，
+          # 无人值守的 agent 任务与 SSH 会话都能解析
+          typeset -a _strip
+          if [[ -r "${opTokenFile}" ]]; then
+            export OP_SERVICE_ACCOUNT_TOKEN="$(<"${opTokenFile}")"
+            # token 只给这一次 op run：留在目标命令的环境里，会让其中所有 op 调用
+            # 都被限制在 Agent vault（如 singbox-config 的 op inject 读不到 Personal）
+            _strip=( ${pkgs.coreutils}/bin/env -u OP_SERVICE_ACCOUNT_TOKEN )
+          fi
           typeset -a _files
           _files=( --env-file="${opEnvBase}" )
           [[ -s "$SPECIFIC_ZSH" ]] && _files+=( --env-file="$SPECIFIC_ZSH" )
           # --no-masking：op run 默认代理 stdout 做敏感值遮蔽，会破坏 TUI 的
           # tty 探测与 SIGWINCH（omp/pi 白屏卡死）。关闭遮蔽后终端直接交给子进程。
-          exec op run --no-masking "''${_files[@]}" -- "$@"
+          exec op run --no-masking "''${_files[@]}" -- "''${_strip[@]}" "$@"
         fi
 
         # 无 op：旧行为，直接 source 覆盖层，然后执行
@@ -234,7 +247,7 @@
         home.sessionVariables.SOPS_AGE_KEY_FILE = config.sops.age.keyFile;
 
         # ─── 统一凭据定义 ───
-        sops.secrets = (mylib.mkSopsSecrets enabledSecrets) // {
+        sops.secrets = (mylib.mkSopsSecrets (enabledSecrets ++ [ opTokenSecret ])) // {
           "wakatime/conf" = mylib.mkDefaultSecret {
             path = "${config.home.homeDirectory}/.wakatime.cfg";
           };
