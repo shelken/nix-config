@@ -1,6 +1,7 @@
 ---
 name: workflow-best-practice
-description: 动态工作流（dynamic workflow）的编排原则：模型选择、阶段并行度、agent prompt 内容。编排动态工作流时使用。
+description: 动态工作流（dynamic workflow）的编排原则：模型选择、阶段并行度、agent prompt 内容。编排动态工作流时使用
+disable-model-invocation: true
 ---
 
 # 编排原则

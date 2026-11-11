@@ -1,6 +1,7 @@
 ---
 name: docs-translate
 description: Translate a named document in place, keeping a language-suffixed backup of the original. Use when the user names a document to translate or localize, or names a suffixed version (e.g. `guide_cn.md`) to sync back into the unsuffixed original.
+disable-model-invocation: true
 ---
 
 # Docs Translate
