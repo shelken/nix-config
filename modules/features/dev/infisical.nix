@@ -15,7 +15,7 @@
     {
       # CLI 由 mise 托管(latest, 0.43.x), nix 侧只负责声明配置
       # renovate: datasource=github-releases depName=Infisical/cli
-      programs.mise.globalConfig.tools.infisical = "0.43";
+      programs.mise.globalConfig.tools.infisical = "0.45";
 
       # 项目解析顺序(v0.43.88+): --projectId > INFISICAL_PROJECT_ID > .infisical.json
       # 环境变量钉死项目, 避免其默认在 cwd 找 .infisical.json 的目录导向行为
