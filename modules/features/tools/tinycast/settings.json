@@ -117,13 +117,7 @@
   },
   "quickActions": {
     "targetLanguage": "zh",
-    "commands": {
-      "translate": {
-        "shortcut": "option+d",
-        "alias": null,
-        "showInLauncher": true
-      }
-    }
+    "commands": {}
   },
   "dictation": {
     "mode": "pushToTalk",
