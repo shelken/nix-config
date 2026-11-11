@@ -5,12 +5,6 @@
   "compaction": {
     "reserveTokens": 22000,
     "modelOverrides": {
-      "mp/trae-cn/glm-5.3-flashx-max": {
-        "reserveTokens": 650000
-      },
-      "mp/trae-cn/deepseek-v4.1-flash-max": {
-        "reserveTokens": 650000
-      },
       "anthropic/claude-fable-5-2": {
         "reserveTokens": 650000
       },
@@ -46,9 +40,6 @@
       },
       "antigravity/gemini-3.8-flash": {
         "reserveTokens": 698576
-      },
-      "zed/anthropic/claude-sonnet-5-5": {
-        "reserveTokens": 522000
       }
     }
   },
@@ -57,8 +48,6 @@
     "+codemode"
   ],
   "enabledModels": [
-    "mp/trae-cn/glm-5.3-flashx-max:high",
-    "mp/trae-cn/deepseek-v4.1-flash-max:high",
     "anthropic/claude-fable-5-2:low",
     "mp/qoder-cn/dfmodel:high",
     "cpa/claude-fable-5-2:medium",
@@ -70,8 +59,7 @@
     "mp/codex/gpt-6.1-sol:high",
     "cpa/gpt-5.6-luna:high",
     "cpa/gpt-6-luna:high",
-    "antigravity/gemini-3.8-flash:high",
-    "zed/anthropic/claude-sonnet-5-5:high"
+    "antigravity/gemini-3.8-flash:high"
   ],
   "extensions": [],
   "fullscreenScrollbar": "auto",
@@ -95,7 +83,7 @@
   ],
   "packages": [
     "npm:pi-posthorse@0.10.10",
-    "npm:@shelken/pi-status-bar@0.1.0",
+    "npm:@shelken/pi-status-bar@0.2.0",
     "npm:pi-token-speed@0.12.0",
     "npm:@tifan/pi-preferred-thinking@1.0.2",
     "npm:@tifan/pi-recap@0.4.8",
@@ -148,5 +136,8 @@
   "transport": "auto",
   "tuiMode": "fullscreen",
   "defaultProvider": "mp",
-  "defaultModel": "trae-cn/deepseek-v4.1-flash-max"
+  "defaultModel": "loomy/DeepSeek-V4.1-Flash",
+  "extensionChangelogVersions": {
+    "{\"source\":\"npm:pi-inspect\",\"scope\":\"project\"}": "0.6.0"
+  }
 }
