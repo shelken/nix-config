@@ -5,6 +5,9 @@
   "compaction": {
     "reserveTokens": 22000,
     "modelOverrides": {
+      "mp/antigravity/gemini-3.8-flash": {
+        "reserveTokens": 698576
+      },
       "anthropic/claude-fable-5-2": {
         "reserveTokens": 650000
       },
@@ -26,20 +29,8 @@
       "mp/loomy/DeepSeek-V4.1-Flash": {
         "reserveTokens": 698576
       },
-      "mp/codex/gpt-5.6-sol": {
-        "reserveTokens": 22000
-      },
       "mp/codex/gpt-6.1-sol": {
         "reserveTokens": 150000
-      },
-      "cpa/gpt-5.6-luna": {
-        "reserveTokens": 700000
-      },
-      "cpa/gpt-6-luna": {
-        "reserveTokens": 700000
-      },
-      "antigravity/gemini-3.8-flash": {
-        "reserveTokens": 698576
       }
     }
   },
@@ -56,11 +47,7 @@
     "mp/loomy/GLM-5.3-Flash:high",
     "anthropic/claude-sonnet-5-5:high",
     "mp/loomy/DeepSeek-V4.1-Flash:high",
-    "mp/codex/gpt-5.6-sol:high",
-    "mp/codex/gpt-6.1-sol:high",
-    "cpa/gpt-5.6-luna:high",
-    "cpa/gpt-6-luna:high",
-    "antigravity/gemini-3.8-flash:high"
+    "mp/codex/gpt-6.1-sol:high"
   ],
   "extensions": [],
   "fullscreenScrollbar": "auto",

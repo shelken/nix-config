@@ -33,6 +33,9 @@ providers:
       qoder-cn/gfmodel:
         name: "GLM-5.3-Flash"
         input: ["text", "image"]
+      workbuddy/hy4free:
+        name: "Hy4"
+        input: ["text", "image"]
       workbuddy/hy3:
         input: ["text", "image"]
       workbuddy/glm-5.3:
@@ -41,9 +44,6 @@ providers:
         input: ["text", "image"]
       workbuddy/kimi-k3-1:
         name: "Kimi-K3"
-        input: ["text", "image"]
-      workbuddy/hy4free:
-        name: "Hy4"
         input: ["text", "image"]
       workbuddy-ai/hy3:
         input: ["text", "image"]
