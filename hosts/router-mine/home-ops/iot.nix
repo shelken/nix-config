@@ -12,6 +12,28 @@
     };
   };
 
+  # IoT 的两个 SSID，SSID 与密码在 1Password（router-mine 条目的 wifi 分组）
+  uci.settings.wireless = {
+    wifinet4 = {
+      _type = "wifi-iface";
+      device = "radio0";
+      encryption = "psk-mixed";
+      key = "{{ op://Personal/router-mine/wifi/iot-key }}";
+      mode = "ap";
+      network = "viot";
+      ssid = "{{ op://Personal/router-mine/wifi/iot-ssid }}";
+    };
+    wifinet6 = {
+      _type = "wifi-iface";
+      device = "radio0";
+      encryption = "psk-mixed";
+      key = "{{ op://Personal/router-mine/wifi/iot2-key }}";
+      mode = "ap";
+      network = "viot";
+      ssid = "{{ op://Personal/router-mine/wifi/iot2-ssid }}";
+    };
+  };
+
   uci.settings.dhcp.viot = {
     _type = "dhcp";
     interface = "viot";

@@ -35,6 +35,8 @@ preview:
 push:
     #!/usr/bin/env bash
     set -euo pipefail
+    # 热点中继在 LuCI 里开启时，声明里它是关闭的，下发会把它关掉并让路由器断网
+    [ "$(ssh {{ target }} 'uci -q get wireless.wifinet7.disabled')" = 1 ] || { echo '热点中继（wifinet7）已启用，先在 LuCI 关掉再下发' >&2; exit 1; }
     avahi_before=$(ssh {{ target }} 'md5sum /etc/avahi/avahi-daemon.conf')
     {{ nuci }}deploy "$tmp/uci.json" --target {{ target }} 2>&1 | mask
     # bird -p 校验失败时不重载，BIRD 继续跑旧配置
