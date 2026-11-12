@@ -3,7 +3,9 @@
 {
   imports = [
     ./system
-    ./services
     ./network
+    ./services
+    ./home-ops
+    ./hk1box
   ];
 }

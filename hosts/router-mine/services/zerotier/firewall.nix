@@ -56,7 +56,7 @@
       {
         _type = "rule";
         dest = "lan";
-        dest_ip = "10.42.0.0/16";
+        dest_ip = [ "10.42.0.0/16" ];
         enabled = "0";
         name = "Allow-K8s-Pod-Zt-to-Lan";
         src = "zt";

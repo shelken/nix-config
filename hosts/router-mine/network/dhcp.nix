@@ -1,4 +1,5 @@
-# DNS 与 DHCP。IP 优先取自 vars/networking.nix；静态租约的 MAC 在 1Password（router-mine 条目的 dhcp 分组）
+# DNS 与 DHCP。IP 优先取自 vars/networking.nix；静态租约的 MAC 在 1Password（router-mine 条目的 dhcp 分组）。
+# lan、viot 的网关与 DNS 选项（指向 hk1box）在 hk1box/dhcp.nix
 { lib, ... }:
 let
   net = import ../../../vars/networking.nix { inherit lib; };
@@ -146,11 +147,6 @@ in
 
     lan = {
       _type = "dhcp";
-      dhcp_option = [
-        "3,${ip "hk1box"}"
-        "121,0.0.0.0/0,${ip "hk1box"},192.168.50.0/24,${ip "router-mine"}"
-        "6,${ip "hk1box"}"
-      ];
       dhcpv4 = "server";
       force = "1";
       interface = "lan";
@@ -179,7 +175,6 @@ in
     };
     viot = {
       _type = "dhcp";
-      dhcp_option = [ "6,${ip "hk1box"}" ];
       interface = "viot";
       leasetime = "12h";
       limit = "150";

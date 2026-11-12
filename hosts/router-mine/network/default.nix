@@ -1,3 +1,6 @@
 {
-  imports = [ ./dhcp.nix ];
+  imports = [
+    ./dhcp.nix
+    ./firewall.nix
+  ];
 }
