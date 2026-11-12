@@ -30,8 +30,13 @@ preview:
     set -euo pipefail
     {{ nuci }}diff "$tmp/uci.json" --target {{ target }} 2>&1 | mask
 
+# nuci 对 uci.files 只写文件：不校验也不重载服务，所以 BIRD 与 avahi 的生效在下发之后补做
 [doc('把声明下发到路由器，会改设备；务必先 just router::preview')]
 push:
     #!/usr/bin/env bash
     set -euo pipefail
+    avahi_before=$(ssh {{ target }} 'md5sum /etc/avahi/avahi-daemon.conf')
     {{ nuci }}deploy "$tmp/uci.json" --target {{ target }} 2>&1 | mask
+    # bird -p 校验失败时不重载，BIRD 继续跑旧配置
+    ssh {{ target }} 'bird -p -c /etc/bird.conf && birdc configure'
+    [ "$avahi_before" = "$(ssh {{ target }} 'md5sum /etc/avahi/avahi-daemon.conf')" ] || ssh {{ target }} '/etc/init.d/avahi-daemon restart'
