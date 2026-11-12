@@ -21,21 +21,6 @@ in
       }
     ];
 
-    redirect = [
-      {
-        _type = "redirect";
-        dest = "lan";
-        dest_ip = "fd73:6666::141";
-        dest_port = "443";
-        enabled = "0";
-        family = "ipv6";
-        name = "homelab-443";
-        src = "wan";
-        src_dport = "443";
-        target = "DNAT";
-      }
-    ];
-
     rule = [
       {
         _type = "rule";
