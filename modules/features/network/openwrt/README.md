@@ -18,13 +18,26 @@
 
 1. 导出现状，挑出设备数据与密钥（见「数据放哪」）
    ```bash
-   just router::import dhcp > hosts/router-mine/dhcp.nix
+   just router::import dhcp > hosts/router-mine/<分组>/dhcp.nix
    ```
-2. 在 `hosts/router-mine/default.nix` 的 `imports` 里加入该文件
-3. `just router::preview`，差异只剩自己想改的
-4. `just router::push`
+2. 在该分组的 `default.nix` 里 `imports` 该文件；新分组再加进 `hosts/router-mine/default.nix`
+3. 配置用到的包写进同一个文件的 `uci.packages`
+4. `just router::preview`，差异只剩自己想改的
+5. `just router::push`
 
 nuci 只管声明里出现的配置文件，没迁移的文件原样保留。一个文件一旦声明就要写全，规则见「已知问题」
+
+## 目录与包
+
+`hosts/router-mine/` 按功能分组，一个 UCI 配置文件一个 `.nix`；分组目录随迁移批次建立，尚未迁移的不建空目录：
+
+| 分组        | 内容                                        |
+| :---------- | :------------------------------------------ |
+| `system/`   | 设备自身：watchcat                          |
+| `services/` | 不涉及接口的独立服务：rpcd、upnpd、zerotier |
+| `network/`  | 靠接口名互相引用：dhcp、firewall、network   |
+
+只列用户显式安装的包（opkg 标 `user installed`），依赖由 opkg 自动带上，不进列表。固件自带的包不管。列表里去掉一个包不会卸载它，卸载要写 `-包名`。没有 UCI 配置的包（如 `bird2c`）放 `services/home-ops.nix`，配置由 home-ops 下发
 
 ## 数据放哪
 

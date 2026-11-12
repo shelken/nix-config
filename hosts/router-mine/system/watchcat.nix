@@ -1,4 +1,6 @@
 {
+  uci.packages = [ "luci-app-watchcat" ];
+
   uci.settings.watchcat = {
     watchcat = [
       {

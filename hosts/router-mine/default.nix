@@ -1,5 +1,5 @@
 # router-mine 的声明（nuci 写法），编译与下发见 modules/features/network/openwrt/README.md
-# 一个 UCI 配置文件一个 .nix，按批次加入；这里只放可公开的部分
+# 按功能分组，一个 UCI 配置文件一个 .nix，配置用到的包写在同一个文件里；这里只放可公开的部分
 {
-  imports = [ ./watchcat.nix ];
+  imports = [ ./system ];
 }
