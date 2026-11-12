@@ -1,5 +1,5 @@
 # DNS 与 DHCP。IP 优先取自 vars/networking.nix；静态租约的 MAC 在 1Password（router-mine 条目的 dhcp 分组）。
-# lan、viot 的网关与 DNS 选项（指向 hk1box）在 hk1box/dhcp.nix
+# lan、viot 的网关与 DNS 选项（指向 hk1box）在 hk1box/dhcp.nix，viot 的基础段在 home-ops/iot.nix
 { lib, ... }:
 let
   net = import ../../../vars/networking.nix { inherit lib; };
@@ -172,13 +172,6 @@ in
       leasefile = "/tmp/hosts/odhcpd";
       leasetrigger = "/usr/sbin/odhcpd-update";
       loglevel = "4";
-    };
-    viot = {
-      _type = "dhcp";
-      interface = "viot";
-      leasetime = "12h";
-      limit = "150";
-      start = "100";
     };
     vipv6 = {
       _type = "dhcp";

@@ -4,5 +4,6 @@
     ./avahi.nix
     ./bird.nix
     ./firewall.nix
+    ./iot.nix
   ];
 }
