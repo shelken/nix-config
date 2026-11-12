@@ -7,14 +7,11 @@
     global = {
       _type = "zerotier";
       enabled = "0";
-      fw_allow_input = "1";
     };
     main = {
       _type = "network";
       allow_default = "1";
       allow_global = "1";
-      fw_allow_forward = "1";
-      fw_allow_input = "1";
     };
   };
 }
