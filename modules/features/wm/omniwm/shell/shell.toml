@@ -2,4 +2,16 @@
 
 [profiles.default]
 theme = "catppuccin"
-trailing = ["openusage", "media", "notifications", "volume", "wifi", "battery-details", "control-center", "system-stats", "clock"]
+leading = ["workspaces"]
+center = []
+trailing = []
+
+[profiles.default.workspaceBar]
+position = "overlappingMenuBar"
+fullWidth = false
+notchMode = "off"
+height = 24
+reserveLayoutSpace = false
+autoHide = true
+autoHideRevealDelayMilliseconds = 1000
+revealModifier = "controlOption"
