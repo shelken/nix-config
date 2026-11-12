@@ -167,7 +167,7 @@
       flake = false;
     };
     rime-main = {
-      url = "git+https://github.com/iDvel/rime-ice?ref=main&rev=99662ba01e3affa6a0f009174ca530b887bac3b6&shallow=1";
+      url = "git+https://github.com/iDvel/rime-ice?ref=main&rev=927e1cf1d3eeb9bf4be85e3f684dba4dd485b6f6&shallow=1";
       flake = false;
     };
     security-audit-skill = {
