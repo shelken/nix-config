@@ -45,7 +45,7 @@
         dest = "lan";
         dest_port = "9993";
         enabled = "0";
-        name = "内网穿透";
+        name = "zt-9993";
         proto = [
           "tcp"
           "udp"
