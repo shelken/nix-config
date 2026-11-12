@@ -19,6 +19,7 @@
 
       xdg.configFile = {
         "omniwm/settings.toml" = mylib.mkConfigFile config ./omniwm/settings.toml;
+        "omniwm/shell/shell.toml" = mylib.mkConfigFile config ./omniwm/shell/shell.toml;
       };
     };
 }
