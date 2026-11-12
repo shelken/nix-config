@@ -1,5 +1,4 @@
-# 节点身份取自 1Password，网络 ID main.id 在私有部分补进同名段；
-# nuci 会删掉声明段里没写的选项，缺了私有部分不要下发
+# 节点身份与网络 ID 取自 1Password（router-mine 条目的 zerotier 分组）
 {
   uci.packages = [ "luci-app-zerotier" ];
 
@@ -11,6 +10,7 @@
     };
     main = {
       _type = "network";
+      id = "{{ op://Personal/router-mine/zerotier/network-id }}";
       allow_default = "1";
       allow_global = "1";
     };
