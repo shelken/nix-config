@@ -113,6 +113,50 @@ let
       target = "ACCEPT";
     }
   ];
+
+  # IoT 网段只能向路由器本机要这几样：DHCP、mDNS（avahi 反射到主网）、ping、IPv6 邻居发现。
+  # 实测 IoT 发给路由器的流量只有 mDNS，DNS 由 DHCP 指向 hk1box，其余一律拒绝；某个设备出问题再逐项开放
+  iotInputRules = [
+    {
+      _type = "rule";
+      dest_port = "67";
+      family = "ipv4";
+      name = "Allow-IoT-DHCP";
+      proto = "udp";
+      src = "iot";
+      target = "ACCEPT";
+    }
+    {
+      _type = "rule";
+      dest_port = "5353";
+      family = "ipv4";
+      name = "Allow-IoT-mDNS";
+      proto = "udp";
+      src = "iot";
+      target = "ACCEPT";
+    }
+    {
+      _type = "rule";
+      family = "ipv4";
+      icmp_type = "echo-request";
+      name = "Allow-IoT-Ping";
+      proto = "icmp";
+      src = "iot";
+      target = "ACCEPT";
+    }
+    {
+      _type = "rule";
+      family = "ipv6";
+      icmp_type = [
+        "neighbour-solicitation"
+        "neighbour-advertisement"
+      ];
+      name = "Allow-IoT-NeighbourDiscovery";
+      proto = "icmp";
+      src = "iot";
+      target = "ACCEPT";
+    }
+  ];
 in
 {
   uci.settings.firewall = {
@@ -163,7 +207,7 @@ in
       {
         _type = "zone";
         forward = "ACCEPT";
-        input = "ACCEPT";
+        input = "REJECT";
         name = "iot";
         network = [ "viot" ];
         output = "ACCEPT";
@@ -183,6 +227,6 @@ in
       }
     ];
 
-    rule = routerDefaultRules;
+    rule = routerDefaultRules ++ iotInputRules;
   };
 }
