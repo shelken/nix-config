@@ -9,6 +9,11 @@ let
   palette =
     (lib.importJSON "${config.catppuccin.sources.palette}/palette.json")
     .${myvars.catppuccin.flavor}.colors;
+  hex = c: lib.removePrefix "#" c.hex;
+  # 与 kitty 主题的 tab_bar_background / active_tab_background 一致，圆角字符靠它们融入背景
+  bar = hex palette.crust;
+  pill = hex palette.mauve;
+  dim = hex palette.overlay0; # 序号
 in
 {
   programs.kitty = {
@@ -93,13 +98,15 @@ in
       window_padding_width = "3 5 1 5";
 
       tab_bar_edge = "bottom";
-      tab_bar_style = "powerline";
-      tab_powerline_style = "slanted";
+      # separator 不额外画分隔符，胶囊圆角由标题模板自己画
+      tab_bar_style = "separator";
+      tab_separator = ''""'';
       tab_bar_min_tabs = 2;
-      # 只显示活跃 panel 标题的最后一级（去掉 :N: 窗口数、去掉长路径前缀）
-      tab_title_template = "{title.rsplit('/', 1)[-1]}";
-
-      tab_bar_background = palette.surface0.hex;
+      # 标题取活跃 panel 标题的最后一级；非激活 tab 前后各补 2 格，与激活 tab 的「圆角+空格」等宽
+      # 以空格开头/结尾的值必须加引号，否则 kitty 解析时会去掉
+      tab_title_template = ''"  {fmt.fg._${dim}}{index} {fmt.fg.tab}{title.rsplit('/', 1)[-1]}  "'';
+      # U+E0B6 / U+E0B4 是 Nerd Font 的左右半圆，前景=胶囊色、背景=条色
+      active_tab_title_template = "{fmt.fg._${pill}}{fmt.bg._${bar}}{fmt.bg.tab}{fmt.fg.tab} {index} {title.rsplit('/', 1)[-1]} {fmt.fg._${pill}}{fmt.bg._${bar}}";
 
       macos_option_as_alt = "yes";
 
