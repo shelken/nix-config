@@ -181,11 +181,24 @@ mode = "macOS"
 
 [shellPermissions]
 programs = []
-widgets = []
 
 [shellPermissions.services]
 lyrics = false
 weather = false
+
+[[shellPermissions.widgets]]
+allowed = ["127.0.0.1"]
+denied = []
+name = "openusage"
+role = "bar"
+source = "/Users/shelken/.config/omniwm/shell/widgets/openusage"
+
+[[shellPermissions.widgets]]
+allowed = ["127.0.0.1"]
+denied = []
+name = "openusage"
+role = "bar"
+source = "/Users/shelken/nix-config/modules/features/wm/omniwm/shell/widgets/openusage"
 
 [statusBar]
 showAppNames = false
@@ -1313,7 +1326,7 @@ binding = "Unassigned"
 id = "removeWindowMark"
 
 [[hotkeys]]
-binding = "Unassigned"
+binding = "Control+Option+Grave"
 id = "toggleWorkspaceBarVisibility"
 
 [[hotkeys]]
@@ -1338,11 +1351,39 @@ id = "toggleSystemStats"
 
 [[hotkeys]]
 binding = "Unassigned"
+id = "toggleShellWidget.battery-details"
+
+[[hotkeys]]
+binding = "Unassigned"
+id = "toggleShellWidget.clock"
+
+[[hotkeys]]
+binding = "Unassigned"
+id = "toggleShellWidget.control-center"
+
+[[hotkeys]]
+binding = "Unassigned"
 id = "toggleShellWidget.hidden-bar"
 
 [[hotkeys]]
 binding = "Unassigned"
+id = "toggleShellWidget.media"
+
+[[hotkeys]]
+binding = "Unassigned"
+id = "toggleShellWidget.notifications"
+
+[[hotkeys]]
+binding = "Unassigned"
 id = "toggleShellWidget.system-stats"
+
+[[hotkeys]]
+binding = "Unassigned"
+id = "toggleShellWidget.volume"
+
+[[hotkeys]]
+binding = "Unassigned"
+id = "toggleShellWidget.wifi"
 
 [[hotkeys]]
 binding = "Unassigned"

@@ -1,0 +1,1 @@
+capabilities = { network = ["127.0.0.1"], purpose = "读取 OpenUsage 本机 API 显示额度" }
