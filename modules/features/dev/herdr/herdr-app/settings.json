@@ -7,5 +7,6 @@
   "font_ligatures": false,
   "minimum_contrast": 1,
   "option_as_alt": "on",
-  "appearance": "dark"
+  "appearance": "dark",
+  "telemetry": false
 }
