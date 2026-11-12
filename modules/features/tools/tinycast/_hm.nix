@@ -70,6 +70,15 @@ let
       };
     }
     {
+      name = "OmniWM 栏切换（系统菜单栏 / 通栏）";
+      command = lib.getExe scripts.omniwm-bar-toggle;
+      iconSymbol = "menubar.rectangle";
+      hotkey = {
+        keyCode = 11; # b
+        modifiers = 6144; # ctrl + alt
+      };
+    }
+    {
       name = "New Kitty Window";
       command = lib.getExe scripts.new-kitty;
       iconSymbol = "terminal";
