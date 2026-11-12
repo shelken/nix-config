@@ -1,4 +1,5 @@
 # Allow-K8s-Pod-Zt-to-Lan 含 Pod 网段，匿名段无法拆开，整条在私有部分
+# 9993 两条规则只在上游把 9993 转发进来时才有意义，并不是连接的必要条件，关闭保留
 {
   uci.settings.firewall = {
     zone = [
@@ -35,6 +36,7 @@
       {
         _type = "rule";
         dest_port = "9993";
+        enabled = "0";
         name = "open-port";
         src = "wan";
         target = "ACCEPT";
