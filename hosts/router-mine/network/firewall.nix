@@ -139,7 +139,6 @@ in
         name = "lan";
         network = [
           "lan"
-          "vipv6"
           "noipv6"
         ];
         output = "ACCEPT";
@@ -154,8 +153,8 @@ in
         network = [
           "wan"
           "wan6"
-          "wwan2"
-          "wwan2_v6"
+          "hotspot"
+          "hotspot_v6"
         ];
         output = "ACCEPT";
       }

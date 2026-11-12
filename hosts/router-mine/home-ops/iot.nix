@@ -7,7 +7,6 @@
       _type = "interface";
       device = "br-lan.50";
       ipaddr = "192.168.50.1";
-      multipath = "off";
       netmask = "255.255.255.0";
       proto = "static";
     };

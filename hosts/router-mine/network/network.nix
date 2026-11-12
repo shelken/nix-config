@@ -48,16 +48,6 @@ in
         ];
         vlan = "50";
       }
-      {
-        _type = "bridge-vlan";
-        device = "br-lan";
-        ports = [
-          "lan1:t"
-          "lan2:t"
-          "lan3:t"
-        ];
-        vlan = "70";
-      }
     ];
 
     loopback = {
@@ -72,15 +62,9 @@ in
       _type = "interface";
       delegate = "0";
       device = "br-lan.6";
-      dns = [
-        "119.29.29.29"
-        "223.5.5.5"
-        "223.6.6.6"
-      ];
       ip6assign = "64";
       ip6ifaceid = "::1";
       ipaddr = net.hostAddress.router-mine.address;
-      multipath = "off";
       netmask = "255.255.255.0";
       proto = "static";
     };
@@ -90,15 +74,6 @@ in
       _type = "interface";
       delegate = "0";
       ipaddr = "192.168.20.1";
-      multipath = "off";
-      netmask = "255.255.255.0";
-      proto = "static";
-    };
-
-    vipv6 = {
-      _type = "interface";
-      device = "br-lan.70";
-      ipaddr = "192.168.70.1";
       netmask = "255.255.255.0";
       proto = "static";
     };
@@ -115,10 +90,8 @@ in
         "223.5.5.5"
       ];
       metric = "10";
-      multipath = "off";
       peerdns = "0";
       proto = "dhcp";
-      type = "bridge";
     };
 
     wan6 = {
@@ -137,8 +110,9 @@ in
       reqprefix = "auto";
     };
 
-    # 热点中继：让路由器临时连手机热点上网，开关在 LuCI 拨（无线配置不在声明里）
-    wwan2 = {
+    # 热点中继：让路由器临时连手机热点上网，开关在 LuCI 拨。
+    # 无线配置不在声明里，无线 wifinet7 的 network 选项要写这两个接口名
+    hotspot = {
       _type = "interface";
       delegate = "0";
       device = "phy1-sta0";
@@ -148,15 +122,13 @@ in
         "223.6.6.6"
       ];
       metric = "1";
-      multipath = "off";
       peerdns = "0";
       proto = "dhcp";
     };
 
-    wwan2_v6 = {
+    hotspot_v6 = {
       _type = "interface";
       delegate = "0";
-      multipath = "off";
       norelease = "1";
       proto = "dhcpv6";
       reqaddress = "try";

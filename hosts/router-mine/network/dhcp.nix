@@ -173,14 +173,6 @@ in
       leasetrigger = "/usr/sbin/odhcpd-update";
       loglevel = "4";
     };
-    vipv6 = {
-      _type = "dhcp";
-      dhcpv4 = "server";
-      interface = "vipv6";
-      leasetime = "12h";
-      limit = "150";
-      start = "100";
-    };
     wan = {
       _type = "dhcp";
       ignore = "1";
@@ -190,9 +182,9 @@ in
       ra = "relay";
       ra_useleasetime = "1";
     };
-    wwan2 = {
+    hotspot = {
       _type = "dhcp";
-      interface = "wwan2";
+      interface = "hotspot";
       ndp = "relay";
       ra = "relay";
     };
