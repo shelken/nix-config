@@ -19,7 +19,7 @@ in
   ];
 
   virtualisation.oci-containers.containers.dhp = {
-    image = "registry:3.1@sha256:38907510915c3f1604c7e83d6ab602ab3020d092f73bdaed8696773693ff768c";
+    image = "registry:3.1@sha256:82f6ff4a7f982960c8aa51617fea3aabc485df6e55cce80d22deb1de36f1bc3c";
     autoStart = true;
     environment.REGISTRY_PROXY_REMOTEURL = "https://registry-1.docker.io";
     volumes = [
