@@ -1,28 +1,28 @@
 # 无线：两个射频与主网、无 IPv6 网段的 SSID、热点中继。两个 IoT 的 SSID 在 home-ops/iot.nix。
-# SSID 与密码在 1Password（router-mine 条目的 wifi 分组）。射频的 path 是硬件路径，换路由器要改。
+# SSID 与密码在 1Password（router-mine 条目的 wifi 分组）。射频的 band、path 等机型相关的值在 hardware.nix
 # 热点中继 hotspot 的开关在 LuCI 拨，声明里它是关闭的：开着热点时 just router::push 会拒绝下发，否则会把它关掉导致断网
+{ ... }:
+let
+  hw = import ../hardware.nix;
+in
 {
   uci.settings.wireless = {
     radio0 = {
       _type = "wifi-device";
-      band = "2g";
+      inherit (hw.radios.radio0) band path type;
       cell_density = "3";
       channel = "11";
       country = "CN";
       htmode = "HE20";
-      path = "1e140000.pcie/pci0000:00/0000:00:01.0/0000:02:00.0";
-      type = "mac80211";
       vendor_vht = "1";
     };
     radio1 = {
       _type = "wifi-device";
-      band = "5g";
+      inherit (hw.radios.radio1) band path type;
       cell_density = "3";
       channel = "36";
       country = "CN";
       htmode = "HE80";
-      path = "1e140000.pcie/pci0000:00/0000:00:01.0/0000:02:00.0+1";
-      type = "mac80211";
     };
     wifinet3 = {
       _type = "wifi-iface";

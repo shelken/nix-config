@@ -3,6 +3,7 @@
 { lib, ... }:
 let
   net = import ../../../vars/networking.nix { inherit lib; };
+  hw = import ../hardware.nix;
 in
 {
   uci.settings.network = {
@@ -16,36 +17,24 @@ in
       {
         _type = "device";
         name = "br-lan";
-        ports = [
-          "lan1"
-          "lan2"
-          "lan3"
-        ];
+        ports = hw.lanPorts;
         promisc = "1";
         type = "bridge";
       }
     ];
 
-    # lan1~3 是 PVE / K8s 节点的口：主网不打标签，其余 VLAN 打标签。VLAN50 是 IoT 网（home-ops/iot.nix）
+    # LAN 口是 PVE / K8s 节点的口：主网不打标签，其余 VLAN 打标签。VLAN50 是 IoT 网（home-ops/iot.nix）
     bridge-vlan = [
       {
         _type = "bridge-vlan";
         device = "br-lan";
-        ports = [
-          "lan1:u*"
-          "lan2:u*"
-          "lan3:u*"
-        ];
+        ports = map (p: "${p}:u*") hw.lanPorts;
         vlan = "6";
       }
       {
         _type = "bridge-vlan";
         device = "br-lan";
-        ports = [
-          "lan1:t"
-          "lan2:t"
-          "lan3:t"
-        ];
+        ports = map (p: "${p}:t") hw.lanPorts;
         vlan = "50";
       }
     ];
@@ -81,7 +70,7 @@ in
     wan = {
       _type = "interface";
       delegate = "0";
-      device = "wan";
+      device = hw.wanDevice;
       dns = [
         "2400:3200::1"
         "2400:3200:baba::1"
@@ -97,7 +86,7 @@ in
     wan6 = {
       _type = "interface";
       delegate = "0";
-      device = "wan";
+      device = hw.wanDevice;
       dns = [
         "2001:4860:4860::8888"
         "240c::6666"
@@ -115,7 +104,7 @@ in
     hotspot = {
       _type = "interface";
       delegate = "0";
-      device = "phy1-sta0";
+      device = hw.hotspotDevice;
       dns = [
         "2400:3200::1"
         "2400:3200:baba::1"

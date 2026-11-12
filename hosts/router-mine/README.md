@@ -9,3 +9,8 @@
 ## 命名约定
 
 - 规则、段的 `name` 只用 ASCII，不用中文：nuci 的 diff 会把非 ASCII 值按字节显示成乱码，`just router::preview` 就会永远多出一条「变更」（下发的值本身是对的）
+
+## 机型相关的值
+
+- 射频的 `band`、`path`、LAN 口名、WAN 口设备名、热点的 sta 设备名都集中在 `hardware.nix`，换路由器时只改它
+- 它是纯数据，由 `network/` 下的文件 `import`，不在 `default.nix` 的 `imports` 里
