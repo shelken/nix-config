@@ -147,7 +147,7 @@ in
     lan = {
       _type = "dhcp";
       dhcp_option = [
-        " 3,${ip "hk1box"}"
+        "3,${ip "hk1box"}"
         "121,0.0.0.0/0,${ip "hk1box"},192.168.50.0/24,${ip "router-mine"}"
         "6,${ip "hk1box"}"
       ];
