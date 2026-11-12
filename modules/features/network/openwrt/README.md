@@ -37,6 +37,8 @@ nuci 只管声明里出现的配置文件，没迁移的文件原样保留。一
 | `services/` | 不涉及接口的独立服务：rpcd、upnpd、zerotier |
 | `network/`  | 靠接口名互相引用：dhcp、firewall、network   |
 
+跨多个 UCI 文件的功能（如 zerotier）一个目录，目录里一个 UCI 文件一个 `.nix`，相关的段都写在这里。私有部分用同名目录镜像：具名段可以在私有部分补字段，匿名段是列表里独立的一条，含设备数据时整条放私有部分。
+
 只列用户显式安装的包（opkg 标 `user installed`），依赖由 opkg 自动带上，不进列表。固件自带的包不管。列表里去掉一个包不会卸载它，卸载要写 `-包名`。没有 UCI 配置的包（如 `bird2c`）放 `services/home-ops.nix`，配置由 home-ops 下发
 
 ## 数据放哪
