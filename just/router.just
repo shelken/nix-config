@@ -14,7 +14,8 @@ nuci := '''
 esc=$'\033'
 src=$(''' + uci + ''')
 mask_expr=$(jq -r --arg esc "$esc" -f modules/features/network/openwrt/mask.jq "$src")
-mask() { sed -E "$mask_expr"; }
+# 兜底：被删除的条目声明里没有占位符，规则覆盖不到，MAC 一律打码
+mask() { sed -E -e "$mask_expr" -e 's/([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}/<MAC>/g'; }
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 op inject -i "$src" -o "$tmp/uci.json"
 mise exec -- nuci '''
