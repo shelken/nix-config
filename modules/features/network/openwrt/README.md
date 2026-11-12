@@ -12,7 +12,7 @@
 | `just router::preview`       | 对比声明与路由器现状，显示待变更的差异，不改设备       |
 | `just router::push`          | 下发声明，会改路由器；回滚范围见「已知问题」           |
 
-`preview` 与 `push` 每次按最新声明重新编译，改完声明不用单独构建。末尾是 `0 to add, 0 to remove, 0 to change` 说明路由器与声明一致
+`preview` 与 `push` 每次按最新声明重新编译，改完声明不用单独构建；声明里的 1Password 引用在临时目录展开，需要 `op` 已登录（Touch ID）。末尾是 `0 to add, 0 to remove, 0 to change` 说明路由器与声明一致
 
 ## 迁移一个配置文件
 
@@ -45,11 +45,11 @@ nuci 只管声明里出现的配置文件，没迁移的文件原样保留。一
 
 本仓库公开，设备运行环境数据不能进来
 
-| 内容                                    | 位置                                                                                                                 |
-| :-------------------------------------- | :------------------------------------------------------------------------------------------------------------------- |
-| 结构与通用选项（区域、时区、通用开关）  | `hosts/router-mine/`                                                                                                 |
-| 设备数据（IP、MAC、主机名、VLAN、SSID） | secrets 仓库 `hosts/router-mine/`，明文 Nix，加进机器表该机器的 `uci-modules`                                        |
-| 密钥（WiFi 密码、ZeroTier secret 等）   | secrets 仓库的 sops 文件，由私有部分的 `uci.secrets.sops.files` 引用；声明里写 `@名字@`，nuci 下发时调用 `sops` 解密 |
+| 内容                                    | 位置                                                                                                                                       |
+| :-------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------- |
+| 结构与通用选项（区域、时区、通用开关）  | `hosts/router-mine/`                                                                                                                       |
+| 设备数据（IP、MAC、主机名、VLAN、SSID） | secrets 仓库 `hosts/router-mine/`，明文 Nix，加进机器表该机器的 `uci-modules`                                                              |
+| 密钥（WiFi 密码、ZeroTier secret 等）   | 1Password `Personal` 的 `router-mine` 条目；声明里写 `{{ op://Personal/router-mine/<分组>/<字段> }}`，`just router::*` 用 `op inject` 展开 |
 
 ## 已知问题
 

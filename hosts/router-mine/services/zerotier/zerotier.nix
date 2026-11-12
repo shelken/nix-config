@@ -1,4 +1,4 @@
-# 节点身份 global.secret 与网络 ID main.id 在私有部分补进同名段；
+# 节点身份取自 1Password，网络 ID main.id 在私有部分补进同名段；
 # nuci 会删掉声明段里没写的选项，缺了私有部分不要下发
 {
   uci.packages = [ "luci-app-zerotier" ];
@@ -7,6 +7,7 @@
     global = {
       _type = "zerotier";
       enabled = "0";
+      secret = "{{ op://Personal/router-mine/zerotier/secret }}";
     };
     main = {
       _type = "network";
