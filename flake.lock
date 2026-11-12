@@ -513,6 +513,23 @@
         "type": "github"
       }
     },
+    "openwrt-nix": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1794201196,
+        "narHash": "sha256-YZ/RUM3Q6i9/y8poKZLrloHQtqyAD2cVZ43c2GM4Z8o=",
+        "owner": "lonerOrz",
+        "repo": "openwrt-nix",
+        "rev": "b5790f69f557c0f308956010d5b53aaed2061816",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lonerOrz",
+        "ref": "v0.1.2",
+        "repo": "openwrt-nix",
+        "type": "github"
+      }
+    },
     "rime-main": {
       "flake": false,
       "locked": {
@@ -555,6 +572,7 @@
         "nix-darwin": "nix-darwin",
         "nixpkgs": "nixpkgs",
         "nixpkgs-darwin": "nixpkgs-darwin",
+        "openwrt-nix": "openwrt-nix",
         "rime-main": "rime-main",
         "secrets": "secrets",
         "security-audit-skill": "security-audit-skill",

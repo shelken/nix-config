@@ -121,6 +121,13 @@
       flake = false;
     };
 
+    # nuci 的 Nix 模块（声明 → uci.json）；nuci 二进制由 mise 按这里的 Cargo.toml 版本安装，两边因此同版本
+    # 钉 release tag：main 上的提交可能领先已发布的二进制
+    openwrt-nix = {
+      url = "github:lonerOrz/openwrt-nix/v0.1.2";
+      flake = false;
+    };
+
     # 静态资源（flake = false）：他人维护、只锁版本的文件树，见 docs/adr/0006-static-assets-as-flake-inputs.md。
     # 用 git+https 而不是 github:：github fetcher 拒绝同时给 ref 与 rev，而 Renovate 要靠两者开 digest PR。
     anti-slop = {

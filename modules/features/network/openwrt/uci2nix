@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# 只读：把路由器上一个 UCI 配置文件的现状转成 nuci 的 Nix 写法，打印到标准输出
+# 用法: uci2nix <ssh 目标> <配置名>
+set -euo pipefail
+target=$1 config=$2
+json=$(mktemp)
+trap 'rm -f "$json"' EXIT
+
+# ubus 给出带段类型、匿名标记和顺序的 JSON，比解析 uci export 文本可靠
+# 具名段以段名为键；匿名段按原顺序放进以类型为键的列表，这是 nuci 的约定
+ssh "$target" "ubus call uci get '{\"config\":\"$config\"}'" |
+  jq --arg c "$config" '
+    .values | to_entries | sort_by(.value[".index"])
+    | reduce .[] as $s ({};
+        ($s.value | with_entries(select(.key | startswith(".") | not)) + { _type: .[".type"] }) as $body
+        | if $s.value[".anonymous"] then .[$s.value[".type"]] += [$body] else .[$s.key] = $body end)' >"$json"
+
+# 值由 Nix 自己打印，转义交给它，不手拼 Nix 字符串
+printf '{ uci.settings.%s = %s; }' "$config" "$(nix eval --impure --expr "builtins.fromJSON (builtins.readFile $json)")" |
+  nix run nixpkgs#nixfmt -- -

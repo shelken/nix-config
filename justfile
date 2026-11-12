@@ -203,3 +203,7 @@ mod ai 'just/ai.just'
 # DNS 配置：编辑加密的 dnsconfig（just dns::edit）
 [group('modules')]
 mod dns 'just/dns.just'
+
+# OpenWrt 路由器：导入现状、看差异、下发（just router::<配方>）
+[group('modules')]
+mod router 'just/router.just'
