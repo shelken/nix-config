@@ -1,4 +1,7 @@
-# 设备自身：看门狗等
+# 设备自身：看门狗、管理登录
 {
-  imports = [ ./watchcat.nix ];
+  imports = [
+    ./dropbear.nix
+    ./watchcat.nix
+  ];
 }
