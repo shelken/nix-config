@@ -74,4 +74,10 @@ in
     darwin-modules = [ ./ling ];
     home-modules = [ ./ling/home.nix ];
   };
+
+  # OpenWrt 路由器不是 Nix 系统：只把声明编译成 nuci 的 uci.json，见 modules/features/network/openwrt/
+  router-mine = {
+    type = "openwrt";
+    uci-modules = [ ./router-mine ];
+  };
 }

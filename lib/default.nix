@@ -114,13 +114,17 @@ rec {
       hostnames ? null,
     }:
     let
+      # 不是 Nix 系统的机器目录（OpenWrt 路由器）不参与排程，否则新增它会挪动其他主机的时段
+      nonNixHostDirs = [ "router-mine" ];
       # 如果提供了hostnames，使用它；否则读取hosts目录中的目录名
       allHostnames =
         if hostnames != null then
           hostnames
         else
           builtins.attrNames (
-            lib.attrsets.filterAttrs (_name: type: type == "directory") (builtins.readDir ../hosts)
+            lib.attrsets.filterAttrs (name: type: type == "directory" && !lib.elem name nonNixHostDirs) (
+              builtins.readDir ../hosts
+            )
           );
       # 按hash值排序获得稳定分布
       hostnameHashes = map (h: {
