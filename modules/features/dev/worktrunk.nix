@@ -1,5 +1,9 @@
+# worktrunk（wt）：git worktree 管理，工作区统一放在 ~/Code/worktrees
+{ config, ... }:
 {
-  flake.modules.homeManager.ai =
+  flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.worktrunk ];
+
+  flake.modules.homeManager.worktrunk =
     {
       config,
       pkgs,

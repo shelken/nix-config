@@ -1,5 +1,9 @@
+# rm 改为移到废纸篓：Agent 与人在宿主上误删可从废纸篓找回
+{ config, ... }:
 {
-  flake.modules.homeManager.ai =
+  flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.trash ];
+
+  flake.modules.homeManager.trash =
     {
       pkgs,
       lib,
