@@ -1,30 +1,15 @@
 {
-  config,
-  lib,
   pkgs,
-  mylib,
   myvars,
   ...
 }:
 let
   themeName = myvars.catppuccin.displayName;
-  snippetFiles = builtins.attrNames (
-    lib.filterAttrs (name: type: type == "regular" && lib.strings.hasSuffix ".json" name) (
-      builtins.readDir ./snippets
-    )
-  );
-  snippetLinks = lib.listToAttrs (
-    map (name: {
-      name = ".config/zed/snippets/${name}";
-      value = mylib.mkConfigFile config (./snippets + "/${name}");
-    }) snippetFiles
-  );
 in
 {
   catppuccin.zed.enable = false;
   # zed 的 nix 扩展不带 LSP 二进制, 从 PATH 取 nixd(依赖归属: 谁用谁声明)
   home.packages = [ pkgs.nixd ];
-  home.file = snippetLinks;
   home.shellAliases = {
     zed = "sec-run zed";
   };

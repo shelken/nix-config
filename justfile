@@ -172,6 +172,11 @@ hm-timing *args:
 up:
     @nix flake update
 
+# 列出没有被任何主机载入的功能模块文件（仅统计 git 已跟踪的 modules/features、modules/profiles）
+[group('flake')]
+unused:
+    @{{ justfile_directory() }}/utils/script/just/unused-modules
+
 # 指定输入更新
 [group('flake')]
 upp input:

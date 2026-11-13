@@ -24,7 +24,7 @@
           "~/.orbstack"
           "~/Parallels"
           "~/Library/Containers/com.utmapp.UTM"
-          "~/Library/Containers/com.isaacmarovitz.Whisky"
+          # "~/Library/Containers/com.isaacmarovitz.Whisky"
           # 可重建的缓存
           "~/.cache"
           "~/.vscode"

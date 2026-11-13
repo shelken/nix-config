@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""列出没有被任何主机载入的功能模块文件。
+
+候选是 modules/features 与 modules/profiles 下被 import-tree 自动导入的 .nix 文件。
+"已载入"取自各主机求值结果的模块图（darwin/NixOS 系统与其中的 Home Manager 用户）：
+只要文件的任一 flake.modules.* 贡献进入了某台主机，就算被引用。
+所以一个文件里有多个功能、只用到其中一个时不会被列出。
+"""
+import json
+import subprocess
+import sys
+
+# 模块图的 file 形如 "<store>/modules/x.nix, via option flake.modules.darwin.x"，
+# 展平后只取我们自己的源码树内的路径
+GRAPH_FILES = """cs: builtins.mapAttrs (_: c:
+  let
+    flat = n: [ n.file ] ++ builtins.concatMap flat (n.imports or [ ]);
+    files = g: builtins.concatMap flat g;
+    users = c.options.home-manager.users.valueMeta.attrs or { };
+  in
+  files c.graph
+  ++ builtins.concatMap (u: files u.configuration.graph) (builtins.attrValues users)) cs"""
+
+
+def run(*args):
+    return subprocess.check_output(args, text=True)
+
+
+def main():
+    # HM 自带的 modules/ 与本仓库同名，必须按源码树的 store 路径区分
+    root = json.loads(run("nix", "flake", "prefetch", "--json", "."))["storePath"] + "/"
+
+    loaded = set()
+    for kind in ("darwinConfigurations", "nixosConfigurations"):
+        hosts = json.loads(run("nix", "eval", "--quiet", "--json", f".#{kind}", "--apply", GRAPH_FILES))
+        for files in hosts.values():
+            loaded.update(f[len(root):].split(",")[0] for f in files if f.startswith(root))
+
+    # 路径含 /_ 的文件不被自动导入，不是候选
+    tracked = run("git", "ls-files", "modules/features", "modules/profiles").split()
+    candidates = {f for f in tracked if f.endswith(".nix") and "/_" not in f}
+
+    unused = sorted(candidates - loaded)
+    print("\n".join(unused))
+    print(f"{len(unused)} / {len(candidates)} 个文件未被任何主机引用", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()
