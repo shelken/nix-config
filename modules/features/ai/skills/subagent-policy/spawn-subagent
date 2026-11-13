@@ -521,7 +521,8 @@ const hcTerm: Term = {
     try {
       const out = hcOut([
         "run", "--bg", "--json", "--name", agentName, "--parent", process.env.HC_TERMINAL_ID!, "--cwd", process.cwd(),
-        "env", `PI_CODING_AGENT_DIR=${subHome}`,
+        // hc run 继承 hc 守护进程的环境，其 PATH 可能没有 mise 安装的 pi；传入主窗口 PATH
+        "env", `PI_CODING_AGENT_DIR=${subHome}`, `PATH=${process.env.PATH}`,
         "pi", "--session-id", sessionId, "--model", g.model, "--thinking", g.thinking, "--tools", g.tools,
         ...(promptFile ? ["--append-system-prompt", promptFile] : []), "--", prompt,
       ]);
