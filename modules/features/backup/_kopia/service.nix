@@ -135,12 +135,11 @@ in
       }
     ];
 
-    # 定时快照与维护接入 shelken.tasks：调度、抖动、日志、灵动岛与失败通知全部由任务系统提供
+    # 定时快照与维护接入 shelken.tasks：调度、抖动、日志与失败通知全部由任务系统提供
     shelken.tasks = {
       kopia-backup = {
         when = cfg.calendarInterval;
         jitter = 600;
-        island = true;
         packages = [ pkgs.kopia ];
         env = {
           KOPIA_CONFIG_PATH = kopiaConfigPath;
