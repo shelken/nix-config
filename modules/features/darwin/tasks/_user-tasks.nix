@@ -1,4 +1,4 @@
-# tasks 用户态部分：用户 launch agents、task-island、日志目录与主机任务发现
+# tasks 用户态部分：用户 launch agents、task CLI 与主机任务发现
 # hosts/<host>/tasks/ 中的任务与 feature 模块声明的 shelken.tasks.<name> 汇总到
 # 同一份选项：user 任务生成 LaunchAgent + task-<name> 手动命令。
 #
@@ -22,32 +22,15 @@ let
   taskCfg = config.shelken.tasks;
   userTasks = tasksLib.userTasks taskCfg;
 
-  taskCli = tasksLib.mkTaskCli;
-
-  islandDir = "${config.home.homeDirectory}/Library/Logs/task-island";
-  islandEnabled = lib.any (t: t.island) (lib.attrValues userTasks);
-
-  # 灵动岛进程：必须放 gui 域（只有 Aqua session 的进程能连 WindowServer），
-  # 由任务触碰 marker 经 launchd WatchPaths 按需拉起。没有图形登录会话时该 agent
-  # 根本不存在，任务本身在 user 域照常执行，二者互不影响。
-  islandAgents = lib.optionalAttrs islandEnabled {
-    task-island = mylib.mkLaunchCommand {
-      name = "task-island";
-      domain = "gui";
-      commandFile = "${tasksLib.taskIsland}/bin/task-island";
-      config = {
-        RunAtLoad = false;
-        KeepAlive = false;
-        WatchPaths = [ islandDir ];
-        ProgramArguments = [
-          "${tasksLib.taskIsland}/bin/task-island"
-          "watch"
-          "--dir"
-          islandDir
-        ];
-      };
-    };
-  };
+  # 标签前缀只在 lib/tasks.nix 定义一次，构建时注入 CLI
+  taskCli = pkgs.writers.writePython3Bin "task" { flakeIgnore = [ "E501" ]; } (
+    builtins.replaceStrings [ "@labelPrefix@" ] [ tasksLib.labelPrefix ] (
+      builtins.readFile ./_cli/task.py
+    )
+  );
+  taskCompletion = pkgs.writeTextDir "share/zsh/site-functions/_task" (
+    builtins.readFile ./_cli/_task
+  );
 in
 {
   options.shelken.tasks = lib.mkOption {
@@ -66,56 +49,28 @@ in
       }
     );
 
-    assertions =
-      lib.concatLists (
-        lib.mapAttrsToList (name: t: [
-          {
-            assertion = !(t.when != [ ] && t.every != null);
-            message = "shelken.tasks.${name}: when 与 every 不能同时设置";
-          }
-          {
-            assertion = t.weekday == [ ] || (t.when != [ ] && t.every == null);
-            message = "shelken.tasks.${name}: weekday 必须配合 when 使用，不能与 every 共用";
-          }
-        ]) taskCfg
-      )
-      ++ [
-        # 用户层只生成 LaunchAgent，root 任务在这里会被静默丢弃，改成构建期报错
-        {
-          assertion = lib.all (t: t.user) (lib.attrValues taskCfg);
-          message = "shelken.tasks: Home Manager 层的任务必须 user = true；root 任务写到 hosts/<机器>/tasks/ 或 modules/features/darwin/tasks/_global/";
-        }
-      ];
+    assertions = tasksLib.mkAssertions taskCfg ++ [
+      # 用户层只生成 LaunchAgent，root 任务在这里会被静默丢弃，改成构建期报错
+      {
+        assertion = lib.all (t: t.user) (lib.attrValues taskCfg);
+        message = "shelken.tasks: Home Manager 层的任务必须 user = true；root 任务写到 hosts/<机器>/tasks/ 或 modules/features/darwin/tasks/_global/";
+      }
+    ];
 
-    launchd.agents =
-      lib.mapAttrs (
-        name: t:
-        mylib.mkLaunchCommand {
-          name = "task-${name}";
-          commandFile = "${t.package}/bin/task-${name}";
-          # 始终 user domain：任务执行不与图形会话绑定（gui domain 在无图形登录时不运行）
-          domain = "user";
-          config = {
-            RunAtLoad = false;
-            KeepAlive = false;
-            # 任务脚本据此区分「launchd 调度唤起」与「手动 task run」：抖动与通知只在前者生效
-            EnvironmentVariables = {
-              SHELKEN_TASK_LAUNCHD = "1";
-            };
-            StandardOutPath = "${config.home.homeDirectory}/Library/Logs/task-${name}.log";
-            StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/task-${name}.log";
-          }
-          // (tasksLib.mkTrigger t);
-        }
-      ) userTasks
-      // islandAgents;
-
-    # WatchPaths 需要目录预先存在
-    home.file."Library/Logs/task-island/.keep".text = "";
+    launchd.agents = lib.mapAttrs (
+      name: t:
+      mylib.mkLaunchCommand {
+        name = "task-${name}";
+        commandFile = "${t.package}/bin/task-${name}";
+        # 始终 user domain：任务执行不与图形会话绑定（gui domain 在无图形登录时不运行）
+        domain = "user";
+        config = tasksLib.mkLaunchdConfig name t;
+      }
+    ) userTasks;
 
     home.packages = (lib.mapAttrsToList (_: t: t.package) userTasks) ++ [
       taskCli
-      tasksLib.taskIsland
+      taskCompletion
     ];
   };
 }

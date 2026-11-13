@@ -9,8 +9,9 @@
   shelken.tasks.nix-gc = {
     when = "3:15";
     user = false;
+    # --quiet 去掉逐条 deleting 输出：一次几千行，日志一个月涨到 8MB；汇总行走 stdout 不受影响
     script = ''
-      exec /nix/var/nix/profiles/default/bin/nix-collect-garbage --delete-older-than 7d
+      exec /nix/var/nix/profiles/default/bin/nix-collect-garbage --quiet --delete-older-than 7d
     '';
   };
 }

@@ -38,7 +38,6 @@
 shelken.tasks.kopia-backup = {
   when = [ "6:39" "18:39" ];
   jitter = 600;
-  island = true;
   packages = [ pkgs.kopia ];
   script = "kopia snapshot create $HOME/Code";
 };
@@ -48,20 +47,19 @@ shelken.tasks.kopia-backup = {
 
 ## 字段
 
-| 字段       | 类型                 | 默认值  | 作用                                                           |
-| ---------- | -------------------- | ------- | -------------------------------------------------------------- |
-| `enable`   | bool                 | `true`  | 是否部署任务，`false` 时保留声明，不安装 job 与手动命令        |
-| `when`     | `"H:M"` 或字符串列表 |         | 日历时间，机器睡眠错过的会在唤醒后补跑                         |
-| `weekday`  | 0 到 7 的整数列表    | `[ ]`   | 限制 `when` 的星期，空列表表示每天，0 与 7 均代表周日          |
-| `every`    | 整数（秒）           |         | 间隔时间，机器关机期间错过的不会补跑                           |
-| `user`     | bool                 | `true`  | `true` 生成用户态 LaunchAgent，`false` 生成 root LaunchDaemon  |
-| `packages` | package 列表         | `[ ]`   | 脚本依赖的 CLI 工具，注入隔离的运行时 PATH                     |
-| `secrets`  | 属性集               | `{ }`   | 环境变量到 sops 解密文件路径的映射，运行时读文件注入           |
-| `env`      | 属性集               | `{ }`   | 普通环境变量，明文写入此处                                     |
-| `jitter`   | 整数（秒）或 `null`  | `null`  | 调度唤起后的最大随机延迟，取值 `1` 到 `32767`                  |
-| `notify`   | 属性集               | 见下    | 默认 `failure = true`、`success = false`、`title = null`       |
-| `island`   | bool                 | `false` | 执行期间在灵动岛显示状态（运行中转圈，成功自动收回，失败常驻） |
-| `script`   | bash 脚本            | 必填    | 脚本内容；构建期只做 `bash -n` 语法检查，不跑 shellcheck       |
+| 字段       | 类型                 | 默认值 | 作用                                                          |
+| ---------- | -------------------- | ------ | ------------------------------------------------------------- |
+| `enable`   | bool                 | `true` | 是否部署任务，`false` 时保留声明，不安装 job 与手动命令       |
+| `when`     | `"H:M"` 或字符串列表 |        | 日历时间，机器睡眠错过的会在唤醒后补跑                        |
+| `weekday`  | 0 到 7 的整数列表    | `[ ]`  | 限制 `when` 的星期，空列表表示每天，0 与 7 均代表周日         |
+| `every`    | 整数（秒）           |        | 间隔时间，机器关机期间错过的不会补跑                          |
+| `user`     | bool                 | `true` | `true` 生成用户态 LaunchAgent，`false` 生成 root LaunchDaemon |
+| `packages` | package 列表         | `[ ]`  | 脚本依赖的 CLI 工具，注入隔离的运行时 PATH                    |
+| `secrets`  | 属性集               | `{ }`  | 环境变量到 sops 解密文件路径的映射，运行时读文件注入          |
+| `env`      | 属性集               | `{ }`  | 普通环境变量，明文写入此处                                    |
+| `jitter`   | 整数（秒）或 `null`  | `null` | 调度唤起后的最大随机延迟，取值 `1` 到 `32767`                 |
+| `notify`   | 属性集               | 见下   | 默认 `failure = true`、`success = false`、`title = null`      |
+| `script`   | bash 脚本            | 必填   | 脚本内容；构建期只做 `bash -n` 语法检查，不跑 shellcheck      |
 
 写错字段名或漏写 `script` 会在构建时直接报错，不会静默按默认值部署
 
@@ -82,7 +80,7 @@ when = "5:00";
 weekday = [ 0 ]; # 每周日 5:00，睡眠错过后在唤醒时补跑
 ```
 
-`weekday` 必须配合非空的 `when` 使用，与 `every` 共用会在构建期报错；`task ls` 会显示具体星期（例如 `when Sun 05:00`）
+`weekday` 必须配合非空的 `when` 使用，与 `every` 共用会在构建期报错；`task ls` 会显示具体星期（例如 `Sun 05:00`）
 
 ## 临时禁用
 
@@ -113,12 +111,6 @@ notify = {
 
 `title` 同时替换成功与失败两种通知的标题；仅 launchd 唤起的运行会发送通知，手动 `task run` 保持安静；root 任务不发送通知，图形会话不在席时亦不发送
 
-## 灵动岛
-
-`island = true` 让任务执行期间显示在刘海灵动岛中：执行中转圈，成功自动收回，失败常驻
-
-灵动岛观察者运行在 `gui` 域，仅在登录图形会话后生效；任务本身在 `user` 域照常执行，两者互不影响
-
 ## 日志
 
 | 任务类型 | 路径                           |
@@ -126,17 +118,26 @@ notify = {
 | 用户态   | `~/Library/Logs/task-<名>.log` |
 | root     | `/Library/Logs/task-<名>.log`  |
 
-启用灵动岛的任务会额外写入一份到 `~/Library/Logs/task-island/<名>.log` 供观察者读取；查看日志使用 `task log <名>`，实时跟随真实日志文件
+每次运行在日志里以 `===== Task '<名>' Started (launchd) =====` 开始、`===== Task '<名>' Finished (exit code: N) =====` 结束；手动运行标注 `(manual)`，旧记录没有括号部分
 
-`task run` 与直接执行 `task-<名>` 在当前终端前台运行，输出只显示在终端，不写入上述日志文件；`task log` 仅展示 launchd 触发后的输出记录
+`task log <名>` 默认只显示最近一次运行；`-n N` 显示最近 N 次，`-f` 跟随实时输出，`--all` 显示整个文件
+
+`task run` 的输出同时写入上述日志文件；直接执行 `task-<名>` 只在终端输出，不写日志
+
+日志由 macOS newsyslog 轮转：超过 1MB 轮转，保留 5 份 gzip 旧档（`task-<名>.log.0.gz` 最新），更早的自动删除；配置在 `/etc/newsyslog.d/space.ooooo.tasks.conf`，由 `modules/features/darwin/tasks/_framework.nix` 生成，需 `just sw` 生效
+
+手动验证轮转：`sudo newsyslog -nvf /etc/newsyslog.d/space.ooooo.tasks.conf`（`-n` 只打印将要执行的动作）
 
 ## 命令
 
 ```bash
 task              # 等同于 task ls
-task ls           # 列出任务、调度、权限层与日志路径
-task run <名>     # 手动执行任务，root 任务自动引导 sudo
-task log <名>     # 追踪并查看该任务的日志
+task ls           # 状态表：上次运行、结果、是否已装载
+task ls --names   # 每行一个任务名，供 shell 补全使用
+task log <名>     # 查看日志；默认最近一次，-n N 最近 N 次，-f 跟随，--all 全部
+task run <名>     # 前台执行，输出同时写入日志，root 任务自动引导 sudo
+task info <名>    # 调度、日志与 plist 路径、launchd 状态
+task help -v      # 完整说明；--debug 输出各阶段耗时
 task-<名>         # 绕过 task CLI 直接执行底层脚本
 ```
 
@@ -157,7 +158,8 @@ task-<名>         # 绕过 task CLI 直接执行底层脚本
 ```text
 lib/tasks.nix                                  # 字段契约与脚本包装：mkTaskType、taskDefaults、mkPackage
 modules/features/darwin/tasks/_framework.nix   # root 任务转 LaunchDaemon
-modules/features/darwin/tasks/_user-tasks.nix  # 用户任务转 LaunchAgent，并安装 task CLI
+modules/features/darwin/tasks/_user-tasks.nix  # 用户任务转 LaunchAgent，并构建 task CLI
+modules/features/darwin/tasks/_cli/            # task CLI（Python）与 zsh 补全
 modules/features/darwin/tasks/_global/         # 全设备默认任务
 modules/features/darwin/tasks/_notify.nix      # 通知组件 terminal-notifier
 ```

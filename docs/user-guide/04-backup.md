@@ -47,9 +47,9 @@ shelken.backup.calendarInterval = [ "3:10" "15:10" ];
 shelken.backup.policySyncWhen = "5:30";
 ```
 
-快照任务带 0 到 599 秒的随机抖动，避免多台机器同时压同一个后端；抖动只在 launchd 唤起时生效，手动跑不等待。策略同步任务不带抖动、不上灵动岛
+快照任务带 0 到 599 秒的随机抖动，避免多台机器同时压同一个后端；抖动只在 launchd 唤起时生效，手动跑不等待。策略同步任务不带抖动
 
-快照任务执行期间会出现在灵动岛。两个任务失败时都会发系统通知，标题分别为 `Kopia Backup`、`Kopia Policy Sync`，点通知打开日志
+两个任务失败时都会发系统通知，标题分别为 `Kopia Backup`、`Kopia Policy Sync`，点通知打开日志
 
 `kopia-backup` 的抖动窗口最大 10 分钟，也就是说 `when` 到实际开始快照之间可能隔这么久
 
@@ -118,4 +118,4 @@ modules/features/backup/_kopia/service.nix     # 两个任务、手动维护、�
 modules/features/backup/_kopia/policy-defaults.nix  # 默认策略
 ```
 
-定时如何生成、日志落在哪、通知与灵动岛的行为见 [声明式定时任务](01-tasks.md)
+定时如何生成、日志落在哪、通知的行为见 [声明式定时任务](01-tasks.md)
