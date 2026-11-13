@@ -1,6 +1,7 @@
 # home-ops 的 DNS：集群域转给 k8s-gateway，集群外自举名由路由器本地应答。
 # 是返回 dnsmasq 段选项的函数，由 network/dhcp.nix 并入（该段是匿名段，不能由别的文件补字段）。
 # 自举名与 hosts/sakamoto 的 Caddyfile 里 internal-access 的站点一一对应
+# 这里只放 homelab 自身依赖的服务（集群起不来时也要能解析）；普通内网服务由 home-ops 经 envoy-internal 暴露
 { bootstrapAddress }:
 let
   bootstrapNames = [
