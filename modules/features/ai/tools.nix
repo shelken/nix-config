@@ -1,4 +1,4 @@
-# 共享工具登记表：ai 侧条目（omp/pi/bun，ADR 0003）。codex、claude-code 只在宿主用，不登记，见 cli.nix
+# 共享工具登记表：ai 侧条目（omp/pi/bun，ADR 0003）。codex、claude-code 只在宿主用，不登记，见 ai-apps
 {
   config,
   lib,

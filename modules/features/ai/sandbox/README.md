@@ -178,7 +178,7 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 | `sandboxCommand` | harness 在沙箱内的可执行名（omp、pi）；宿主据此生成 `<可执行名>-sb`，不写则不生成 |
 | `postInstall` | 宿主激活时与 `sb sync` 时各运行一次 |
 
-条目在 [dev/tools-base.nix](../../dev/tools-base.nix)（rg、fd、jq、gh、node、python3、uv 走 Nix；prek 走 mise）与 [ai/tools.nix](../tools.nix)（omp、pi、bun，走 mise）。宿主独有的工具不登记，如 codex、claude-code 在 [ai/cli.nix](../cli.nix) 按宿主独有声明，沙箱里不装
+条目在 [dev/tools-base.nix](../../dev/tools-base.nix)（rg、fd、jq、gh、node、python3、uv 走 Nix；prek 走 mise）与 [ai/tools.nix](../tools.nix)（omp、pi、bun，走 mise）。宿主独有的工具不登记，如 codex、claude-code 在 [ai/ai-apps](../ai-apps/default.nix) 按宿主独有声明，沙箱里不装
 
 `agent-common` 不对应可执行程序，只放 omp 与 pi 共用的配置：`.agents/` 下的 skills 与模型提示词，以及不专属某个 harness 的插件配置（如 `.config/ponytail`、`.config/rpiv-web-tools`）
 

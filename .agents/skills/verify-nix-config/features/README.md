@@ -14,7 +14,7 @@
 
 以下变更不改变任何 CLI 行为，不需要运行 `just hm-build`、`just hm`、`just sw` 或 `verify.sh`：
 
-- `.agents/skills/` 与 `modules/features/ai/skills/` 下的 skill 正文、`references/`、feature 文档
+- `.agents/skills/`、`modules/features/ai/skills/` 与功能目录下登记的 skill 的正文、`references/`、feature 文档
 - `modules/features/ai/_skill-sources.nix` 的分组声明、`frontmatter` 覆盖，以及为它新增或前进的 flake input
 - 仅被上述内容消费的 `utils/script/patch_frontmatter.py` 类改写脚本的文案调整
 
