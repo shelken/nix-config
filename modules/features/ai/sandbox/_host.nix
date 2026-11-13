@@ -30,7 +30,7 @@ let
     host_credentials = true;
     host_secret_files = hostSecretFiles;
     # APFS 本地快照，普通用户即可执行；系统会在磁盘紧张时清除，只用于撤销近期误删
-    snapshot_cmd = lib.optionals pkgs.stdenv.isDarwin [
+    snapshot_cmd = lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
       "/usr/bin/tmutil"
       "localsnapshot"
     ];
