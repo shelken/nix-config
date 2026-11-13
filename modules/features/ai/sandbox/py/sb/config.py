@@ -34,6 +34,7 @@ class Config:
     mise_guest_mount: str
     host_credentials: bool
     host_secret_files: Mapping[str, str]  # 变量名 -> 宿主上存放真实值的文件；只在 msb 创建、启动 VM 时读
+    snapshot_cmd: tuple[str, ...]  # 启动上下文前在宿主建本地快照的命令；空表示不建
     home: str
     msb_env: Mapping[str, str]  # msb 子进程的环境：调用者环境加上解析后的 MSB_HOME、MSB_CONFIG_PATH，不依赖用户 shell 是否导出
 
@@ -74,6 +75,7 @@ class Config:
             mise_guest_mount=nix["mise"]["guest_mount"],
             host_credentials=nix["host_credentials"],
             host_secret_files=nix["host_secret_files"],
+            snapshot_cmd=tuple(nix["snapshot_cmd"]),
             home=env.get("HOME", ""),
             msb_env={**env, "MSB_HOME": msb_home, "MSB_CONFIG_PATH": msb_config},
         )

@@ -132,7 +132,7 @@ class SbEnv:
         config = {
             "msb_config": str(self.tmp / "msb-config.json"), "msb_home": str(self.tmp / "msbhome"), "policy_yaml": str(self.policy),
             "publish_dir": str(self.publish), "launcher": "/fake/launcher", "guest_status": "/fake/guest-status", "guest_sync": "/fake/sync-guest",
-            "sync_lock": str(self.tmp / "sync.lock"), "host_credentials": False, "host_secret_files": {},
+            "sync_lock": str(self.tmp / "sync.lock"), "host_credentials": False, "host_secret_files": {}, "snapshot_cmd": [],
             "guest": {"config_mount": "/run/sandbox-config", "contexts_dir": "/run/sandbox/contexts", "data_dir": "/data"},
             "mise": {"host_dir": str(self.mise), "guest_mount": "/opt/sandbox-mise"},
         }  # fmt: skip

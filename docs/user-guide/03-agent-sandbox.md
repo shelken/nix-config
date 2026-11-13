@@ -110,6 +110,28 @@ sb run -t bash      # 同 sb shell，进当前项目的上下文
 | OMP、pi 的声明配置（`config.yml` 等）    | 沙箱里只读，改配置见场景五                         |
 | 其他位置（`/tmp`、家目录里没声明的文件） | 退出即消失                                         |
 
+宿主的 `/tmp` 也在挂载根里，可以直接在 `/tmp/xxx` 里开 Agent；它在沙箱里的路径是 `/private/tmp/xxx`，与沙箱自己的 `/tmp` 不是同一个目录
+
+### 误删了项目文件
+
+每次开 Agent 前，`sb` 会在宿主建一个 APFS 本地快照。系统在磁盘紧张时会清掉它，发现误删要尽快恢复
+
+```bash
+tmutil listlocalsnapshots /     # 找到开 Agent 前的那个，名字里是创建时间
+```
+
+- 图形界面：在 Finder 里打开项目目录，菜单栏 Time Machine 图标 → 浏览 Time Machine 备份，选对应时间点恢复
+- 命令行：挂载快照需要 sudo
+
+```bash
+mkdir /tmp/snap
+sudo mount_apfs -o rdonly -s com.apple.TimeMachine.<时间>.local /System/Volumes/Data /tmp/snap
+cp -R /tmp/snap/Users/<你>/Code/<项目>/<文件> ~/Code/<项目>/
+sudo umount /tmp/snap
+```
+
+开 Agent 时看到「本地快照失败」的警告，说明这次没有兜底
+
 ## 场景三：项目需要凭据、私网服务或项目外目录
 
 在项目根目录写 `.sandbox.yaml`，然后批准它。批准之后才能启动：

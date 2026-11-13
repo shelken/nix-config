@@ -16,6 +16,8 @@ volume:
 mount_roots:
   - "${HOME}/Code"
   - "${HOME}/nix-config"
+  # 临时目录也能作项目根；写真实路径，macOS 的 /tmp 是指向它的符号链接
+  - "/private/tmp"
 
 # VM 级网络策略：公网 + DNS + 私网。私网在这一层整体放开，逐项限制由每个
 # 执行上下文自己的 iptables 链完成：只有 sb.yaml 的 default_grant 与已批准（sb trust）的

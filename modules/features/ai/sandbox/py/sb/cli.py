@@ -4,6 +4,7 @@ import json
 import os
 import random
 import signal
+import subprocess
 import sys
 import time
 
@@ -110,6 +111,7 @@ def run(cfg: Config, msb: Msb, args: list[str]) -> int:
     p = _plan(cfg)
     if approvals.state(cfg, p.project_root) == "unapproved":
         raise SbError(f"{p.project_root}/.sandbox.yaml 未批准，或批准后已变更。先执行 sb plan 查看授权内容，确认后执行 sb trust")
+    _snapshot(cfg)
     ctx_id = f"ctx_{int(time.time())}_{random.randrange(32768)}"
 
     vm.ensure(cfg, msb)
@@ -128,6 +130,19 @@ def run(cfg: Config, msb: Msb, args: list[str]) -> int:
         return msb.run("exec", VM_NAME, *terminal, "--", "bash", cfg.launcher, ctx_id, p.to_json(), cwd, *args)
     finally:
         signal.signal(signal.SIGINT, old)
+
+
+def _snapshot(cfg: Config) -> None:
+    """项目根可写直通宿主，Agent 误删的文件只能从宿主快照恢复。快照失败只警告，不挡住启动。"""
+    if not cfg.snapshot_cmd:
+        return
+    try:
+        r = subprocess.run(cfg.snapshot_cmd, capture_output=True, text=True)
+        err = "" if r.returncode == 0 else (r.stderr or r.stdout).strip() or f"退出码 {r.returncode}"
+    except OSError as e:
+        err = str(e)
+    if err:
+        print(f"[sb] 警告: 本地快照失败，本次没有误删兜底: {err}", file=sys.stderr)
 
 
 def _stage_imports(cfg: Config, msb: Msb, ctx_id: str, p: Plan) -> None:

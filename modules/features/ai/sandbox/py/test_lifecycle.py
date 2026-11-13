@@ -213,6 +213,38 @@ class RunTest(unittest.TestCase):
         self.assertEqual(json.loads(plan_json)["project_root"], str(self.e.project))
         self.assertEqual((cwd, cmd), (str(self.e.project), ["git", "status"]))
 
+    def snapshot_script(self, rc):
+        # 记下快照发生时 launcher 已被调用的次数：快照必须先于上下文启动
+        log = self.e.tmp / "snapshot.log"
+        script = self.e.tmp / "snapshot"
+        script.write_text(
+            f"#!/bin/sh\n"
+            f"echo noise\n"
+            f"grep -o '/fake/launcher\", \"ctx_' \"$FAKE_MSB_STATE\" | wc -l | tr -d ' ' >> {log}\n"
+            f"exit {rc}\n"
+        )
+        script.chmod(0o755)
+        self.e.write_config(snapshot_cmd=[str(script)])
+        return log
+
+    def test_run_takes_a_host_snapshot_before_the_context_starts(self):
+        self.e.sb("up")
+        log = self.snapshot_script(0)
+        r = self.e.sb("run", "true")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(log.read_text().split(), ["0"])
+        self.assertNotIn("noise", r.stdout + r.stderr)
+        self.launcher_call()
+
+    def test_a_failed_snapshot_warns_but_still_runs_the_command(self):
+        self.e.sb("up")
+        self.snapshot_script(1)
+        self.e.msb_state(run_rc=7)
+        r = self.e.sb("run", "true")
+        self.assertEqual(r.returncode, 7)
+        self.assertIn("快照", r.stderr)
+        self.launcher_call()
+
     def test_run_returns_the_command_exit_code(self):
         self.e.sb("up")
         self.e.msb_state(run_rc=42)

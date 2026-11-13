@@ -2,7 +2,7 @@
 
 `sb` 与 `omp-sb`、`pi-sb` 等 harness 命令让 Agent 在 Linux 虚拟机里运行，只看得到当前项目。本文讲机制；日常操作见 [用户指南](../../../../docs/user-guide/03-agent-sandbox.md)
 
-威胁模型只防 Agent 误操作（越界删除、误连其他项目的私网服务），不防恶意逃逸。设计原因见文末「设计决策」；共享工具登记表的决策见 [ADR 0003](../../../../docs/adr/0003-shared-tool-single-declaration.md)
+威胁模型只防 Agent 误操作（越界删除、误连其他项目的私网服务），不防恶意逃逸。项目内的误删靠启动前的宿主快照撤销。设计原因见文末「设计决策」；共享工具登记表的决策见 [ADR 0003](../../../../docs/adr/0003-shared-tool-single-declaration.md)
 
 由 `shelken.dev.ai.sandbox.enable` 控制，默认关闭
 
@@ -104,6 +104,7 @@ flowchart LR
 sequenceDiagram
   participant H as 宿主 sb
   participant G as guest launcher
+  H->>H: 建 APFS 本地快照（失败只警告）
   H->>H: 生命周期锁内确保 sb-main 就绪，然后释放锁
   H->>G: 有 imports 时建目录、打 starting 标记、逐个复制
   H->>G: msb exec launcher（执行计划）
@@ -296,6 +297,14 @@ msb 的 `allow` 支持 `private` 目标组：只写 `public` 时对内网明文 
 所以 `sb.yaml` 的 `network.default_grant` 列出所有上下文默认放行的私网目标，只接受 `IP:端口`，按端口收窄，同一台机器的其他端口仍需项目声明。它是上下文级授权，不进 VM 配置、不改指纹，改后下一个新上下文即生效
 
 放弃的方案：按 IP 整体放行（项目能访问该机器上的全部服务）；保持每个项目声明（每个新项目要先写 `.sandbox.yaml` 才能用 OMP）
+
+### 启动上下文前建宿主快照
+
+上下文只看得到当前项目，但项目根可写直通宿主：Agent 在项目里 `rm -rf`，删的就是宿主文件，worktree 场景连主仓库的 git common dir 也可写。每次 `sb run` 在启动上下文前执行 `sb-config.json` 的 `snapshot_cmd`，macOS 上是 `tmutil localsnapshot`：普通用户可执行、不到 1 秒，快照在宿主上，VM 里的进程碰不到。快照失败只打警告、照常启动，不让兜底变成故障点
+
+局限：本地快照属于可清除空间，系统在磁盘紧张时会删掉，只用于撤销近期误删，长期备份仍靠 Time Machine；不覆盖远端破坏（force push、删分支）
+
+放弃的方案：项目根改用 overlayfs 写时复制（宿主实时编辑与沙箱写入冲突，还要额外的「提交回宿主」流程）；`.git` 只读（Agent 无法 commit）
 
 ### 导入文件按目标目录绑定
 
