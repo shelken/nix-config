@@ -8,9 +8,11 @@
 - `modules/profiles/`: 角色链 `core ⊂ tui ⊂ gui ⊂ desktop ⊂ workstation`，与它并列的服务器角色 `server`（只含 `core`，NixOS 专用，主机放在 `hosts/vps/`），以及附加角色 `homelab`
 - `modules/flake/`: flake-parts 胶水（`homeManager.<名>` 自动挂到同名系统模块）
 - `hosts/<hostname>/default.nix`: 机器配置，`.host-profile` 记录当前机器对应 flake 中的名字
-- `vars/`: 全局变量（用户名、邮箱等）
+- `vars/`: 全局变量（用户名、邮箱、设备IP、ssh网络、主题选择等）
 - `lib/`: 自定义函数（`mylib.mkConfigFile`、`mylib.relativeToRoot` 等）
 - `secrets/`: 引用外部 secrets flake，通过 sops-nix 做秘密管理
+- `modules/features/network/dnscontrol`: 手动管理DNS
+- `hosts/router-mine`: 主路由配置, 由nuci管理; 见`just/router.just`
 
 ## 约束
 
