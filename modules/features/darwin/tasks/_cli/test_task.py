@@ -1,4 +1,5 @@
 # task CLI 纯函数单元测试：不碰真实 launchd 与日志，只验证解析与格式化
+import gzip
 import os
 import re
 import sys
@@ -64,6 +65,11 @@ RUN_LINES = [
     "Backing up again",
     "[2026-11-13 19:52:34] ===== Task 'kopia-backup' Finished (exit code: 0) =====",
 ]
+
+ROTATED_TEXT = """[2026-11-12 03:24:46] ===== Task 'x' Started (launchd) =====
+deleting '/nix/store/...'
+[2026-11-12 03:24:52] ===== Task 'x' Finished (exit code: 0) =====
+"""
 
 
 class ParseRunsTest(unittest.TestCase):
@@ -178,6 +184,37 @@ class SelectLogLinesTest(unittest.TestCase):
     def test_fallback_last_50(self):
         lines = [f"line {index}" for index in range(120)]
         self.assertEqual(task.select_log_lines(lines, 1, False), lines[-50:])
+
+
+class RotatedLogTest(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.mkdtemp()
+        self.path = os.path.join(self.directory, "task-x.log")
+        open(self.path, "w").close()
+        with gzip.open(self.path + ".0.gz", "wt") as handle:
+            handle.write(ROTATED_TEXT)
+
+    def test_falls_back_to_rotated(self):
+        run = task.latest_run(self.path)
+        self.assertIsNotNone(run)
+        self.assertEqual(run.start, "2026-11-12 03:24:46")
+        self.assertEqual(run.code, 0)
+
+    def test_current_log_wins(self):
+        with open(self.path, "w") as handle:
+            handle.write(NEW_FORMAT)
+        run = task.latest_run(self.path)
+        self.assertEqual(run.start, "2026-11-13 20:33:48")
+
+    def test_large_run_output(self):
+        with open(self.path, "w") as handle:
+            handle.write("[2026-11-13 01:00:00] ===== Task 'x' Started (launchd) =====\n")
+            handle.write("x" * 300000 + "\n")
+            handle.write("[2026-11-13 01:05:00] ===== Task 'x' Finished (exit code: 3) =====\n")
+        run = task.latest_run(self.path)
+        self.assertIsNotNone(run)
+        self.assertEqual(run.start, "2026-11-13 01:00:00")
+        self.assertEqual(run.code, 3)
 
 
 if __name__ == "__main__":

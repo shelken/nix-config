@@ -2,6 +2,7 @@
 # 标签前缀是占位符，构建时由 lib/tasks.nix 的 labelPrefix 注入，避免两处硬编码漂移
 import argparse
 import glob
+import gzip
 import os
 import plistlib
 import re
@@ -223,24 +224,37 @@ def render_table(rows, color):
     return "\n".join(lines)
 
 
-def read_tail(path, max_bytes=262144):
-    try:
-        size = os.path.getsize(path)
-        with open(path, "rb") as handle:
-            if size > max_bytes:
-                handle.seek(size - max_bytes)
-                handle.readline()
-            return handle.read().decode("utf-8", "replace")
-    except OSError:
-        return ""
-
-
 def read_file(path):
     try:
         with open(path, "rb") as handle:
             return handle.read().decode("utf-8", "replace")
     except OSError:
         return ""
+
+
+def read_log_text(path):
+    # 轮转刚发生时当前日志为空，回看最近一份 gzip 旧档；读全文件是因为单次运行输出可能很长
+    # （轮转后单个日志不超过约 1MB）
+    text = read_file(path)
+    if parse_runs(text):
+        return text
+    rotated = f"{path}.0.gz"
+    if os.path.isfile(rotated):
+        try:
+            with gzip.open(rotated, "rb") as handle:
+                return handle.read().decode("utf-8", "replace")
+        except OSError:
+            pass
+    return text
+
+
+def latest_run(path):
+    runs = parse_runs(read_log_text(path))
+    return runs[-1] if runs else None
+
+
+def count_rotated(path):
+    return len(glob.glob(f"{path}.*.gz"))
 
 
 def load_tasks():
@@ -341,8 +355,7 @@ def cmd_ls(tasks, names_only, debug):
         for name in sorted(tasks):
             task = tasks[name]
             status = statuses[name]
-            runs = parse_runs(read_tail(task.log_path))
-            run = runs[-1] if runs else None
+            run = latest_run(task.log_path)
             rows.append(
                 {
                     "name": name,
@@ -419,10 +432,14 @@ def cmd_run(tasks, name, args):
 
 def log_display(path):
     try:
-        size = os.path.getsize(path)
+        size = human_size(os.path.getsize(path))
     except OSError:
-        return f"{path} (不存在)"
-    return f"{path} ({human_size(size)})"
+        size = "不存在"
+    parts = [size]
+    rotated = count_rotated(path)
+    if rotated:
+        parts.append(f"{rotated} rotated")
+    return f"{path} ({', '.join(parts)})"
 
 
 def cmd_info(tasks, name, debug):
@@ -433,8 +450,7 @@ def cmd_info(tasks, name, debug):
     with debug.phase("launchctl", count=1):
         status = launchd_status(task)
     with debug.phase("parse logs"):
-        runs = parse_runs(read_tail(task.log_path))
-    run = runs[-1] if runs else None
+        run = latest_run(task.log_path)
     print(f"name        {task.name}")
     print(f"tier        {task.tier}")
     print(f"schedule    {task.schedule}")

@@ -64,6 +64,13 @@ in
         serviceConfig = tasksLib.mkLaunchdConfig name t;
       }) rootTasks;
 
+      # launchd 每次启动任务才打开日志，轮转后无需发信号（N）；超 1MB 轮转、留 5 份 gzip 旧档
+      environment.etc."newsyslog.d/space.ooooo.tasks.conf".text = ''
+        # logfilename                          [owner:group]               mode count size(KB) when flags
+        /Library/Logs/task-*.log               root:wheel                  644  5     1024     *    GNZ
+        ${userHome}/Library/Logs/task-*.log    ${myvars.username}:staff    644  5     1024     *    GNZ
+      '';
+
       environment.systemPackages = lib.attrValues (lib.mapAttrs (_: t: t.package) rootTasks);
     };
 }
