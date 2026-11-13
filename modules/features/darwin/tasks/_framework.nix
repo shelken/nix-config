@@ -56,34 +56,12 @@ in
         secretPath = secret: config.home-manager.users.${myvars.username}.sops.secrets.${secret}.path;
       };
 
-      assertions = lib.concatLists (
-        lib.mapAttrsToList (name: t: [
-          {
-            assertion = !(t.when != [ ] && t.every != null);
-            message = "shelken.tasks.${name}: when 与 every 不能同时设置";
-          }
-          {
-            assertion = t.weekday == [ ] || (t.when != [ ] && t.every == null);
-            message = "shelken.tasks.${name}: weekday 必须配合 when 使用，不能与 every 共用";
-          }
-        ]) taskCfg
-      );
+      assertions = tasksLib.mkAssertions taskCfg;
 
       # root 任务：launchd daemon；手动执行 sudo task-<name>
       launchd.daemons = lib.mapAttrs (name: t: {
         command = "${t.package}/bin/task-${name}";
-        serviceConfig = {
-          Label = "space.ooooo.task-${name}";
-          RunAtLoad = false;
-          KeepAlive = false;
-          # 任务脚本据此区分「launchd 调度唤起」与「手动 sudo task-<name>」
-          EnvironmentVariables = {
-            SHELKEN_TASK_LAUNCHD = "1";
-          };
-          StandardOutPath = "/Library/Logs/task-${name}.log";
-          StandardErrorPath = "/Library/Logs/task-${name}.log";
-        }
-        // (tasksLib.mkTrigger t);
+        serviceConfig = tasksLib.mkLaunchdConfig name t;
       }) rootTasks;
 
       environment.systemPackages = lib.attrValues (lib.mapAttrs (_: t: t.package) rootTasks);

@@ -26,6 +26,45 @@ rec {
     };
   };
 
+  # launchd Label 前缀；task CLI 靠它从 plist 目录里认出任务
+  labelPrefix = "space.ooooo.task-";
+
+  logPath =
+    name: t:
+    if t.user then "${homeDir}/Library/Logs/task-${name}.log" else "/Library/Logs/task-${name}.log";
+
+  # daemon 与 agent 共用的 launchd 字段；两层只各自补上启动命令
+  mkLaunchdConfig =
+    name: t:
+    {
+      Label = "${labelPrefix}${name}";
+      RunAtLoad = false;
+      KeepAlive = false;
+      # 任务脚本据此区分「launchd 调度唤起」与「手动运行」：抖动与通知只在前者生效
+      EnvironmentVariables = {
+        SHELKEN_TASK_LAUNCHD = "1";
+      };
+      StandardOutPath = logPath name t;
+      StandardErrorPath = logPath name t;
+    }
+    // mkTrigger t;
+
+  # 两层共用的字段组合约束
+  mkAssertions =
+    tasks:
+    lib.concatLists (
+      lib.mapAttrsToList (name: t: [
+        {
+          assertion = !(t.when != [ ] && t.every != null);
+          message = "shelken.tasks.${name}: when 与 every 不能同时设置";
+        }
+        {
+          assertion = t.weekday == [ ] || (t.when != [ ] && t.every == null);
+          message = "shelken.tasks.${name}: weekday 必须配合 when 使用，不能与 every 共用";
+        }
+      ]) tasks
+    );
+
   # "3:15" -> { Hour = 3; Minute = 15; }
   parseTime =
     t:
@@ -235,9 +274,6 @@ rec {
         ${t.script}
       '';
 
-      canonicalLog =
-        if t.user then "${homeDir}/Library/Logs/task-${name}.log" else "/Library/Logs/task-${name}.log";
-
       # 通知：默认仅 launchd 调度唤起且非零退出时提示失败，可配置成功也通知与自定义标题。
       # 标题来自配置，必须转义后再拼进脚本；消息是模板自己拼的，含运行期展开的变量
       mkNotify =
@@ -252,7 +288,7 @@ rec {
             -message "${message}" \
             -sound ${sound} \
             -group "task-${name}" \
-            -open "file://${canonicalLog}" \
+            -open "file://${logPath name t}" \
             2>/dev/null || true
         '';
 

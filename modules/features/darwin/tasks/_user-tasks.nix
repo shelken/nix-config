@@ -41,26 +41,13 @@ in
       }
     );
 
-    assertions =
-      lib.concatLists (
-        lib.mapAttrsToList (name: t: [
-          {
-            assertion = !(t.when != [ ] && t.every != null);
-            message = "shelken.tasks.${name}: when 与 every 不能同时设置";
-          }
-          {
-            assertion = t.weekday == [ ] || (t.when != [ ] && t.every == null);
-            message = "shelken.tasks.${name}: weekday 必须配合 when 使用，不能与 every 共用";
-          }
-        ]) taskCfg
-      )
-      ++ [
-        # 用户层只生成 LaunchAgent，root 任务在这里会被静默丢弃，改成构建期报错
-        {
-          assertion = lib.all (t: t.user) (lib.attrValues taskCfg);
-          message = "shelken.tasks: Home Manager 层的任务必须 user = true；root 任务写到 hosts/<机器>/tasks/ 或 modules/features/darwin/tasks/_global/";
-        }
-      ];
+    assertions = tasksLib.mkAssertions taskCfg ++ [
+      # 用户层只生成 LaunchAgent，root 任务在这里会被静默丢弃，改成构建期报错
+      {
+        assertion = lib.all (t: t.user) (lib.attrValues taskCfg);
+        message = "shelken.tasks: Home Manager 层的任务必须 user = true；root 任务写到 hosts/<机器>/tasks/ 或 modules/features/darwin/tasks/_global/";
+      }
+    ];
 
     launchd.agents = lib.mapAttrs (
       name: t:
@@ -69,17 +56,7 @@ in
         commandFile = "${t.package}/bin/task-${name}";
         # 始终 user domain：任务执行不与图形会话绑定（gui domain 在无图形登录时不运行）
         domain = "user";
-        config = {
-          RunAtLoad = false;
-          KeepAlive = false;
-          # 任务脚本据此区分「launchd 调度唤起」与「手动 task run」：抖动与通知只在前者生效
-          EnvironmentVariables = {
-            SHELKEN_TASK_LAUNCHD = "1";
-          };
-          StandardOutPath = "${config.home.homeDirectory}/Library/Logs/task-${name}.log";
-          StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/task-${name}.log";
-        }
-        // (tasksLib.mkTrigger t);
+        config = tasksLib.mkLaunchdConfig name t;
       }
     ) userTasks;
 
