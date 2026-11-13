@@ -32,5 +32,5 @@ cua-driver call <工具> '<JSON 参数>'    # 调用工具
 
 - **应用名是本地化的。** `list_windows` 的 `app` 过滤按显示名子串或 bundle id 精确匹配：`屏幕共享` 与 `com.apple.ScreenSharing` 都命中，英文名 `Screen Sharing` 命中 0 个窗口。先 `cua-driver call list_apps` 查 bundle id，再用它
 - **权限归属 CuaDriver.app。** 授权与复核走 `cua-driver permissions grant` 与 `cua-driver permissions status`；在终端里直接 `cua-driver serve` 会让授权归属终端，Accessibility 与 Screen Recording 缺失
-- **安装与升级走 Homebrew cask `cuadriver`**，声明在 `modules/features/ai/host-commands/cua-driver.nix`，升级用 `brew upgrade --cask cuadriver`。不要用 `cua-driver skills install`：它会往 nix 管理的 `~/.agents/skills/` 写链接
+- **安装与升级走 Homebrew cask `cuadriver`**，声明在 `modules/features/ai/computer-use/default.nix`，升级用 `brew upgrade --cask cuadriver`。不要用 `cua-driver skills install`：它会往 nix 管理的 `~/.agents/skills/` 写链接
 - **沙箱里不可用**，`cua-driver` 在沙箱内是报错桩

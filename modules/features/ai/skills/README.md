@@ -2,6 +2,10 @@
 
 本仓库自管的 agent 技能源目录，由 `../skill.nix` 部署到各 agent
 
+## 与功能自带 skill 的分工
+
+本目录只放所有导入 `ai` 的机器都需要的 skill。只在部分机器需要的 skill（如 `iphone/iphone-use-best-practice`、`computer-use/computer-use-best-practice`）放在所属功能目录，经 `shelken.dev.ai.skills` 登记，随功能部署（ADR 0008）；两处 skill 不能重名，本文其余规则对两处同样适用
+
 ## 目录结构
 
 - `<name>/SKILL.md`：单个技能正文，目录名与 frontmatter 的 `name` 严格一致

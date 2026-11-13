@@ -56,6 +56,7 @@
           sb = "sb 是宿主沙箱管理 CLI，沙箱内部无法嵌套管理沙箱 VM";
           just = "just hm / just sw 是宿主系统切换命令，沙箱内无法修改宿主系统配置";
         };
+        shelken.dev.ai.sandboxInstructions = builtins.readFile ./AGENTS.sandbox.md;
         # renovate: datasource=github-releases depName=superradcompany/microsandbox
         programs.mise.globalConfig.tools.microsandbox = "0.7.14";
 

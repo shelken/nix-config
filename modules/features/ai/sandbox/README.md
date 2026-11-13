@@ -178,11 +178,13 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 | `sandboxCommand` | harness 在沙箱内的可执行名（omp、pi）；宿主据此生成 `<可执行名>-sb`，不写则不生成 |
 | `postInstall` | 宿主激活时与 `sb sync` 时各运行一次 |
 
-条目在 [dev/tools-base.nix](../../dev/tools-base.nix)（rg、fd、jq、gh、node、python3、uv 走 Nix；prek 走 mise）与 [ai/tools.nix](../tools.nix)（omp、pi、bun，走 mise）。宿主独有的工具不登记，如 codex、claude-code 在 [ai/cli.nix](../cli.nix) 按宿主独有声明，沙箱里不装
+条目在 [dev/tools-base.nix](../../dev/tools-base.nix)（rg、fd、jq、gh、node、python3、uv 走 Nix；prek 走 mise）与 [ai/tools.nix](../tools.nix)（omp、pi、bun，走 mise）。宿主独有的工具不登记，如 codex、claude-code 在 [ai/ai-apps](../ai-apps/default.nix) 按宿主独有声明，沙箱里不装
 
 `agent-common` 不对应可执行程序，只放 omp 与 pi 共用的配置：`.agents/` 下的 skills 与模型提示词，以及不专属某个 harness 的插件配置（如 `.config/ponytail`、`.config/rpiv-web-tools`）
 
 生成器把 Nix 条目合成 guest PATH（来自 `/nix/store` 只读挂载），把 mise 条目写成 `/run/sandbox-config/current/mise.toml`。`sb`、`just`、`spawn-subagent`、`cua-driver` 等宿主控制命令在 guest PATH 里是同名桩，调用时以非零码退出并说明原因（[shelken.dev.sandbox.hostCommands](../../dev/tools.nix)）
+
+沙箱内 omp、pi 的 AGENTS.md 是宿主同一份全局说明加上 `shelken.dev.ai.sandboxInstructions`（`sandbox` 自己提供 [AGENTS.sandbox.md](AGENTS.sandbox.md)），经 `sandboxFiles` 覆盖；宿主上的 AGENTS.md 不含这一段
 
 ### 共用 mise 安装层
 

@@ -11,9 +11,5 @@
     ];
 
     dev.ai.sandbox.enable = true;
-    # dev.ai.claudePreset = "cpa-codex";
-    # dev.ai.claudePreset = "cpa-gemini";
-    # dev.ai.claudePreset = "cpa-gemini-claude";
-    # dev.ai.claudePreset = "anti-tools";
   };
 }

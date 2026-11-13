@@ -18,4 +18,4 @@
 
 ## 放置约定
 
-- 项目级 skill 必须放在仓库根 `.agents/skills/` 下，不要放到 `modules/features/ai/skills/`（那里是部署到所有机器的全局 skill）
+- 项目级 skill 必须放在仓库根 `.agents/skills/` 下，不要放到 `modules/features/ai/skills/`（那里是部署到所有导入 `ai` 的机器的全局 skill）；只在部分机器需要的 skill 放进所属功能目录，登记到 `shelken.dev.ai.skills`（ADR 0008）
