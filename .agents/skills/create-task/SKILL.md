@@ -59,6 +59,8 @@ just bd
 task ls
 ```
 
+状态表每行显示 LOADED（launchd 里是否已装载）、LAST RUN（上次运行时间）与 RESULT（上次结果）
+
 ### 4. 手动运行与验证
 
 调用统一管理 CLI 验证执行与排障:
@@ -67,8 +69,12 @@ task ls
 # 手动运行任务(root 任务自动引导 sudo)
 task run <name>
 
-# 实时查看任务日志
+# 查看任务详情：调度、日志与 plist 路径、launchd 状态
+task info <name>
+
+# 查看日志：默认只显示最近一次运行，-f 跟随实时输出
 task log <name>
+task log <name> -f
 ```
 
 ## 常见排坑指南

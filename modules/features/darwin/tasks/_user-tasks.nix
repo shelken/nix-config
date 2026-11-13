@@ -22,7 +22,15 @@ let
   taskCfg = config.shelken.tasks;
   userTasks = tasksLib.userTasks taskCfg;
 
-  taskCli = tasksLib.mkTaskCli;
+  # 标签前缀只在 lib/tasks.nix 定义一次，构建时注入 CLI
+  taskCli = pkgs.writers.writePython3Bin "task" { flakeIgnore = [ "E501" ]; } (
+    builtins.replaceStrings [ "@labelPrefix@" ] [ tasksLib.labelPrefix ] (
+      builtins.readFile ./_cli/task.py
+    )
+  );
+  taskCompletion = pkgs.writeTextDir "share/zsh/site-functions/_task" (
+    builtins.readFile ./_cli/_task
+  );
 in
 {
   options.shelken.tasks = lib.mkOption {
@@ -62,6 +70,7 @@ in
 
     home.packages = (lib.mapAttrsToList (_: t: t.package) userTasks) ++ [
       taskCli
+      taskCompletion
     ];
   };
 }

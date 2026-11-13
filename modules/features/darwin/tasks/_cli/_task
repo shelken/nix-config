@@ -1,0 +1,36 @@
+#compdef task
+
+local -a _task_commands _task_names
+_task_commands=(
+  'ls:任务状态表（上次运行、结果、是否已装载）'
+  'log:查看任务日志；-n N 最近 N 次，-f 跟随，--all 全部'
+  'run:前台执行任务，输出同时写入日志'
+  'info:调度、日志与 plist 路径、launchd 状态'
+  'help:显示帮助；-v 完整说明'
+)
+_task_names=(${(f)"$(task ls --names 2>/dev/null)"})
+
+_arguments -C \
+  '--debug[输出各阶段耗时]' \
+  '1:command:->command' \
+  '*::argument:->argument'
+
+case $state in
+  command)
+    _describe 'command' _task_commands
+    ;;
+  argument)
+    case $words[1] in
+      log)
+        _arguments \
+          "2:task name:($_task_names)" \
+          '-n[最近 N 次运行]:N:' \
+          '-f[跟随日志输出]' \
+          '--all[显示整个日志文件]'
+        ;;
+      run|info)
+        _arguments "2:task name:($_task_names)"
+        ;;
+    esac
+    ;;
+esac

@@ -80,7 +80,7 @@ when = "5:00";
 weekday = [ 0 ]; # 每周日 5:00，睡眠错过后在唤醒时补跑
 ```
 
-`weekday` 必须配合非空的 `when` 使用，与 `every` 共用会在构建期报错；`task ls` 会显示具体星期（例如 `when Sun 05:00`）
+`weekday` 必须配合非空的 `when` 使用，与 `every` 共用会在构建期报错；`task ls` 会显示具体星期（例如 `Sun 05:00`）
 
 ## 临时禁用
 
@@ -118,17 +118,22 @@ notify = {
 | 用户态   | `~/Library/Logs/task-<名>.log` |
 | root     | `/Library/Logs/task-<名>.log`  |
 
-查看日志使用 `task log <名>`，实时跟随真实日志文件
+每次运行在日志里以 `===== Task '<名>' Started (launchd) =====` 开始、`===== Task '<名>' Finished (exit code: N) =====` 结束；手动运行标注 `(manual)`，旧记录没有括号部分
 
-`task run` 与直接执行 `task-<名>` 在当前终端前台运行，输出只显示在终端，不写入上述日志文件；`task log` 仅展示 launchd 触发后的输出记录
+`task log <名>` 默认只显示最近一次运行；`-n N` 显示最近 N 次，`-f` 跟随实时输出，`--all` 显示整个文件
+
+`task run` 的输出同时写入上述日志文件；直接执行 `task-<名>` 只在终端输出，不写日志
 
 ## 命令
 
 ```bash
 task              # 等同于 task ls
-task ls           # 列出任务、调度、权限层与日志路径
-task run <名>     # 手动执行任务，root 任务自动引导 sudo
-task log <名>     # 追踪并查看该任务的日志
+task ls           # 状态表：上次运行、结果、是否已装载
+task ls --names   # 每行一个任务名，供 shell 补全使用
+task log <名>     # 查看日志；默认最近一次，-n N 最近 N 次，-f 跟随，--all 全部
+task run <名>     # 前台执行，输出同时写入日志，root 任务自动引导 sudo
+task info <名>    # 调度、日志与 plist 路径、launchd 状态
+task help -v      # 完整说明；--debug 输出各阶段耗时
 task-<名>         # 绕过 task CLI 直接执行底层脚本
 ```
 
@@ -149,7 +154,8 @@ task-<名>         # 绕过 task CLI 直接执行底层脚本
 ```text
 lib/tasks.nix                                  # 字段契约与脚本包装：mkTaskType、taskDefaults、mkPackage
 modules/features/darwin/tasks/_framework.nix   # root 任务转 LaunchDaemon
-modules/features/darwin/tasks/_user-tasks.nix  # 用户任务转 LaunchAgent，并安装 task CLI
+modules/features/darwin/tasks/_user-tasks.nix  # 用户任务转 LaunchAgent，并构建 task CLI
+modules/features/darwin/tasks/_cli/            # task CLI（Python）与 zsh 补全
 modules/features/darwin/tasks/_global/         # 全设备默认任务
 modules/features/darwin/tasks/_notify.nix      # 通知组件 terminal-notifier
 ```
