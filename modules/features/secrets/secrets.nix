@@ -8,13 +8,16 @@
   flake.modules.nixos.core.imports = [ config.flake.modules.nixos.secrets ];
 
   flake.modules.darwin.secrets =
-    { lib, ... }:
+    { lib, config, ... }:
     {
       options.shelken.secrets.enable = lib.mkOption {
         type = lib.types.bool;
         default = false;
         description = "Whether or not this host holds age secrets";
       };
+
+      # sec-run 用 op 与 service account token 取 1Password 里的 key，不依赖桌面 App
+      config.homebrew.casks = lib.mkIf config.shelken.secrets.enable [ "1password-cli" ];
     };
 
   flake.modules.nixos.secrets =
