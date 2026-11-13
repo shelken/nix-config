@@ -57,7 +57,7 @@
           just = "just hm / just sw 是宿主系统切换命令，沙箱内无法修改宿主系统配置";
         };
         # renovate: datasource=github-releases depName=superradcompany/microsandbox
-        programs.mise.globalConfig.tools.microsandbox = "0.7.14";
+        programs.mise.globalConfig.tools.microsandbox = "0.7.15";
 
         home.sessionVariables = host.sessionVariables;
 
