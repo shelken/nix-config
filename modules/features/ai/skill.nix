@@ -255,8 +255,29 @@ in
 
       localFlattenSkillSources = listToAttrsWithUniqueNameCheck "检测到本地 skill 平铺命名冲突：请调整目录名，或修改 flattenSkillName 规则。" localFlattenSkillEntries;
 
+      # 功能目录登记的 skill（shelken.dev.ai.skills）：只部署到导入了该功能的主机，平铺与分组形态相同
+      registeredSkillSources =
+        let
+          entries = map (path: {
+            name = builtins.baseNameOf path;
+            value = mylib.mkConfigLink config path;
+          }) cfg.skills;
+          missing = builtins.filter (path: !(builtins.pathExists (path + "/SKILL.md"))) cfg.skills;
+          taken =
+            builtins.attrNames localFlattenSkillSources
+            ++ builtins.attrNames localGroupedSkillSources
+            ++ fetchedFlattenSkillNames
+            ++ builtins.attrNames fetchedGroupedSkillSources;
+          clashes = builtins.filter (e: builtins.elem e.name taken) entries;
+        in
+        assert lib.assertMsg (missing == [ ]) "shelken.dev.ai.skills 中的目录缺少 SKILL.md：${toString missing}";
+        assert lib.assertMsg (clashes == [ ])
+          "shelken.dev.ai.skills 与已有 skill 重名：${toString (map (e: e.name) clashes)}";
+        listToAttrsWithUniqueNameCheck "shelken.dev.ai.skills 中有同名目录。" entries;
+
       localSkillSourcesFor =
-        flatten: if flatten then localFlattenSkillSources else localGroupedSkillSources;
+        flatten:
+        (if flatten then localFlattenSkillSources else localGroupedSkillSources) // registeredSkillSources;
       fetchedSkillSourcesFor =
         flatten: if flatten then fetchedFlattenSkillSources else fetchedGroupedSkillSources;
 
