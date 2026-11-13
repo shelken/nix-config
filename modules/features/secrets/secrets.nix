@@ -93,8 +93,10 @@
         '') secretEnvMap
       );
       # 脚本正文在 sec-run.zsh，这里只写入 Nix 侧才知道的路径；测试见 test.sh
+      # -f：不读启动文件。调用者环境里没有 __NIX_DARWIN_SET_ENVIRONMENT_DONE 时（hc 守护进程启动的子代理），
+      # /etc/zshenv 会把 PATH 重置成系统默认，mise 装的目标命令和 agent-gh 包装就找不到了
       secRun = pkgs.writeScriptBin "sec-run" ''
-        #!${pkgs.zsh}/bin/zsh
+        #!${pkgs.zsh}/bin/zsh -f
         # sops 凭据直接进本进程环境，目标命令继承
         ${shellInit}
         SEC_RUN_BASE=${opEnvBase}
