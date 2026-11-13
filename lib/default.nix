@@ -28,20 +28,6 @@ rec {
       )
     );
 
-  # 沙箱内 loopback 指向 VM 自身，provider 的 baseUrl 要改成宿主网关
-  rewriteLoopbackBaseUrls =
-    gateway:
-    lib.mapAttrs (
-      _: provider:
-      let
-        m = builtins.match "(https?://)(127[.]0[.]0[.]1|localhost|::1)(.*)" (provider.baseUrl or "");
-      in
-      if m == null then
-        provider
-      else
-        provider // { baseUrl = builtins.elemAt m 0 + gateway + builtins.elemAt m 2; }
-    );
-
   mkBoolOpt =
     default: description:
     mkOption {

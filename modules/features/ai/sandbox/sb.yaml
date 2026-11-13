@@ -17,7 +17,7 @@ mount_roots:
   - "${HOME}/Code"
   - "${HOME}/nix-config"
 
-# VM 级网络策略：公网 + DNS + 私网 + 宿主端口。私网在这一层整体放开，逐项限制由每个
+# VM 级网络策略：公网 + DNS + 私网。私网在这一层整体放开，逐项限制由每个
 # 执行上下文自己的 iptables 链完成：只有 sb.yaml 的 default_grant 与已批准（sb trust）的
 # .sandbox.yaml 声明的目标才放行。不在上下文里运行的 guest 进程（如 sb sync）不受上下文链约束，
 # 也能连私网。改这一段会改变上限指纹、触发重建；授权的增减不会触发重建。
@@ -27,9 +27,7 @@ network:
     - "public"
     - "dns"
     - "private"
-    - "host:tcp:3425"
-    - "host:tcp:8080"
-  # 所有执行上下文默认放行的私网 IP:端口：家里的模型服务
+  # 所有执行上下文默认放行的私网 IP:端口：内网入口，cpa、magpie 等模型服务都经它访问
   default_grant:
     - "192.168.69.46:443"
 
@@ -54,5 +52,10 @@ secrets:
   CPA_PI_API_KEY:
     allow:
       - "cpa.int.ooooo.space"
+    passthrough:
+      - "*"
+  MAGPIE_API_KEY:
+    allow:
+      - "magpie.int.ooooo.space"
     passthrough:
       - "*"

@@ -102,12 +102,6 @@
         builtins.filter (lib.hasPrefix "npm:") (map entrySource piSettings.packages)
       );
 
-      sandboxModels = jsonFormat.generate "pi-sandbox-models.json" {
-        providers = mylib.rewriteLoopbackBaseUrls "host.microsandbox.internal" (
-          lib.mapAttrs (_: adaptProvider) mergedModels.providers
-        );
-      };
-
     in
     {
       imports = [ ./_theme.nix ];
@@ -142,7 +136,6 @@
       shelken.dev.tools.pi.sandboxFiles = {
         # 沙箱用 Nix 渲染的变体（去掉 sandboxExclude 列出的包）；宿主仍是仓库文件的软链
         ".pi/agent/settings.json" = sandboxSettings;
-        ".pi/agent/models.json" = sandboxModels;
       };
 
       shelken.dev.tools.pi.files = {
