@@ -184,6 +184,8 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 
 生成器把 Nix 条目合成 guest PATH（来自 `/nix/store` 只读挂载），把 mise 条目写成 `/run/sandbox-config/current/mise.toml`。`sb`、`just`、`spawn-subagent`、`cua-driver` 等宿主控制命令在 guest PATH 里是同名桩，调用时以非零码退出并说明原因（[shelken.dev.sandbox.hostCommands](../../dev/tools.nix)）
 
+沙箱内 omp、pi 的 AGENTS.md 是宿主同一份全局说明加上 `shelken.dev.ai.sandboxInstructions`（`sandbox` 自己提供 [AGENTS.sandbox.md](AGENTS.sandbox.md)），经 `sandboxFiles` 覆盖；宿主上的 AGENTS.md 不含这一段
+
 ### 共用 mise 安装层
 
 mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-linux`（`just hm` 创建），挂到所有 VM 的 `/opt/sandbox-mise`，新 VM 不必重新下载。目录、挂载点与上下文环境只在 [_mise-layer.nix](./_mise-layer.nix) 定义。mise 的 state、shims 与用户层配置留在各 VM 数据卷
