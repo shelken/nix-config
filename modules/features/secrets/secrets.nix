@@ -51,6 +51,7 @@
         # COMMANDCODE_API_KEY = "Agent/COMMANDCODE_API_KEY";
         CONTEXT_API_KEY = "Agent/CONTEXT_API_KEY";
         CPA_PI_API_KEY = "Agent/CPA_PI_API_KEY";
+        MAGPIE_API_KEY = "Agent/MAGPIE_API_KEY";
         CPA_TOKEN = "Agent/CPA_TOKEN";
         DEEPSEEK_API_KEY = "Agent/DEEPSEEK_API_KEY";
         EXA_API_KEY = "Agent/EXA_API_KEY";

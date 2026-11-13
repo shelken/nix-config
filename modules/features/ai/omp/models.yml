@@ -4,9 +4,9 @@ providers:
     apiKey: CPA_PI_API_KEY
     api: anthropic-messages
   mp:
-    baseUrl: http://127.0.0.1:3425/v1
+    baseUrl: https://magpie.int.ooooo.space/v1
     api: openai-responses
-    apiKey: magpie
+    apiKey: MAGPIE_API_KEY
     discovery:
       type: openai-models-list
       timeoutMs: 3000
