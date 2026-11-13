@@ -17,9 +17,35 @@
       cap = glyph "E0BA";
       sep = glyph "E0BC";
       end = glyph "E0B0";
-      rcap = glyph "E0B2";
+      # 右侧 status/cmd_duration 可能缺席，打头的块不固定；每块自带 ◀，底色取 prev_bg，首块落在终端底色上。
+      rhead = color: "[${glyph "E0B2"}](bg:prev_bg fg:${color})";
     in
     {
+      # Starship 不提供 zsh 的 transient prompt：行编辑结束时把提示符重绘成单行 ❯，屏幕上只留最新的完整 bar；
+      # 旧 bar 不再占满整行，窗口缩放时也不会被终端重排成残块。
+      programs.zsh.initContent = ''
+        autoload -Uz add-zle-hook-widget add-zsh-hook
+        _starship_transient_prompt=$'\n'
+        _starship_transient_prompt+='$(starship module character --status="''${STARSHIP_CMD_STATUS:-}")'
+        _starship_transient_finish() {
+          [[ $PROMPT == "$_starship_transient_prompt" ]] && return
+          _starship_full_prompt=$PROMPT _starship_full_rprompt=$RPROMPT
+          PROMPT=$_starship_transient_prompt RPROMPT=
+          zle .reset-prompt
+        }
+        _starship_transient_restore() {
+          [[ $PROMPT == "$_starship_transient_prompt" ]] || return 0
+          PROMPT=$_starship_full_prompt RPROMPT=$_starship_full_rprompt
+        }
+        add-zle-hook-widget line-finish _starship_transient_finish
+        # Ctrl-C 中断行编辑时不走 line-finish。
+        TRAPINT() {
+          zle && _starship_transient_finish
+          return $(( 128 + $1 ))
+        }
+        add-zsh-hook precmd _starship_transient_restore
+      '';
+
       # 色板与 palette 由 catppuccin.starship（autoEnable）注入，这里只引用颜色名。
       programs.starship = {
         enable = true;
@@ -38,7 +64,6 @@
             "\${custom.end_nogit}"
             "\${custom.end_clean}"
             "$fill"
-            "[${rcap}](fg:surface1)"
             "$status"
             "$cmd_duration"
             "$hostname"
@@ -115,20 +140,20 @@
           status = {
             disabled = false;
             style = "bg:red fg:crust";
-            format = "[ ✘$status ]($style)";
+            format = "${rhead "red"}[ ${glyph "F00D"} $status ]($style)";
           };
 
           cmd_duration = {
             min_time = 3000;
             show_milliseconds = false;
             style = "bg:peach fg:crust";
-            format = "[ ${glyph "F252"}$duration ]($style)";
+            format = "${rhead "peach"}[ ${glyph "F252"}$duration ]($style)";
           };
 
           hostname = {
             ssh_only = false;
             style = "bg:surface1 fg:${accent}";
-            format = "[ @$hostname ]($style)";
+            format = "${rhead "surface1"}[ @$hostname ]($style)";
           };
 
           nix_shell = {
