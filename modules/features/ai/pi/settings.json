@@ -5,6 +5,9 @@
   "compaction": {
     "reserveTokens": 22000,
     "modelOverrides": {
+      "anthropic/claude-opus-5-5": {
+        "reserveTokens": 650000
+      },
       "mp/antigravity/gemini-3.8-flash": {
         "reserveTokens": 698576
       },
@@ -39,6 +42,7 @@
     "+codemode"
   ],
   "enabledModels": [
+    "anthropic/claude-opus-5-5:medium",
     "mp/antigravity/gemini-3.8-flash:high",
     "anthropic/claude-fable-5-2:low",
     "mp/qoder-cn/dfmodel:high",
@@ -52,7 +56,7 @@
   "extensions": [],
   "fullscreenScrollbar": "auto",
   "hideThinkingBlock": false,
-  "lastChangelogVersion": "1.5.0",
+  "lastChangelogVersion": "1.5.2",
   "npmCommand": [
     "bun"
   ],
@@ -115,6 +119,7 @@
       ],
       "source": "npm:pi-antigravity@0.11.0"
     },
+    "npm:pi-better@0.2.0",
     "-npm:pi-rewind",
     "-npm:pi-observational-memory",
     "-/Users/shelken/Code/active/pi-balance",
@@ -129,8 +134,5 @@
   "transport": "auto",
   "tuiMode": "fullscreen",
   "defaultProvider": "mp",
-  "defaultModel": "loomy/DeepSeek-V4.1-Flash",
-  "extensionChangelogVersions": {
-    "{\"source\":\"npm:pi-inspect\",\"scope\":\"project\"}": "0.6.0"
-  }
+  "defaultModel": "loomy/DeepSeek-V4.1-Flash"
 }
