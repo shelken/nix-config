@@ -4,19 +4,11 @@
 
   flake.modules.darwin.ai = {
     homebrew = {
-      taps = [
-        {
-          name = "stablyai/orca";
-          trusted = true;
-        }
-      ];
+      taps = [ ];
       casks = [
         # "ollama-app"
-        "stablyai/orca/orca"
 
         "openusage"
-
-        "agentsview"
 
         "alma"
         # "osaurus"
