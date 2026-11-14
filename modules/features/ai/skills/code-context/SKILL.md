@@ -10,10 +10,7 @@ disable-model-invocation: true
 
 ## CLI 准备
 
-```bash
-# Context7 CLI
-command -v ctx7 >/dev/null 2>&1 || bun add -g ctx7@latest
-```
+`ctx7` 由 mise 声明并钉版本。命令不存在时告知用户，不要用 `bun add -g` 或 bunx 自行安装
 
 ## 查询顺序
 

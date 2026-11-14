@@ -1,19 +1,14 @@
 ---
 name: agent-browser
 description: Browser automation CLI for AI agents. Use when the user needs to interact with websites, including navigating pages, filling forms, clicking buttons, taking screenshots, extracting data, testing web apps, or automating any browser task. Triggers include requests to "open a website", "fill out a form", "click a button", "take a screenshot", "scrape data from a page", "test this web app", "login to a site", "automate browser actions", or any task requiring programmatic web interaction.
-allowed-tools: Bash(bunx agent-browser:*), Bash(agent-browser:*)
+allowed-tools: Bash(agent-browser:*)
 ---
 
 # Browser Automation with agent-browser
 
 The CLI uses Chrome/Chromium via CDP directly.
 
-**Before any install/bunx/npx step: first check whether `agent-browser` already exists** (`command -v agent-browser`). If it exists, use it directly; only if missing, install/run in order of preference:
-- `bunx agent-browser`
-- `npx agent-browser`
-- `npm i -g agent-browser` 
-- `cargo install agent-browser`
- Run `agent-browser install` to download Chrome. Run `agent-browser upgrade` to update to the latest version.
+`agent-browser` is installed by nix and drives the system Google Chrome (the path is pinned in `~/.agent-browser/config.json`). If the command is missing, tell the user. Do not install it with bunx, npx, npm or cargo, and do not run `agent-browser install` or `agent-browser upgrade`: the browser and the version are managed declaratively.
 
 ## Core Workflow
 

@@ -8,7 +8,7 @@ description: >
 
 # deepwiki
 
-Query any public GitHub repo's docs from the terminal via DeepWiki. The `deepwiki` CLI is pre-installed via nix.
+Query any public GitHub repo's docs from the terminal via DeepWiki. The `deepwiki` CLI is pre-installed via mise.
 
 ## Commands
 

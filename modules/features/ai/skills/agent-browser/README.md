@@ -4,8 +4,9 @@
 
 ## 与上游的差异
 
-- `SKILL.md` 从 694 行压缩到 212 行，只保留核心工作流，低频章节原文移入 `references/`
-  - 开头新增「先用 `command -v agent-browser` 检查是否已安装，再决定是否安装」的要求
+- `SKILL.md` 从 694 行压缩到 207 行，只保留核心工作流，低频章节原文移入 `references/`
+  - 开头的安装说明改为：由 nix 安装、使用系统 Chrome；命令缺失时告知用户，不用 bunx/npx/npm/cargo 自行安装，也不运行 `agent-browser install`、`agent-browser upgrade`
+  - frontmatter 的 `allowed-tools` 去掉 `Bash(bunx agent-browser:*)`
   - 「Handling Authentication」整节改为一段指针，指向 `references/authentication.md` 的「Choosing an Approach」，保留明文 token 的警告
   - 「Batch Execution」「Common Patterns」「Diffing (Verifying Changes)」「Timeouts and Slow Pages」「Annotated Screenshots (Vision Mode)」「Semantic Locators (Alternative to Refs)」「JavaScript Evaluation (eval)」移入 `references/patterns.md`
   - 「Security」「Configuration File」「Browser Engine Selection」移入 `references/configuration.md`

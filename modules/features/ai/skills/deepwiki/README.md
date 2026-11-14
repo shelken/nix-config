@@ -5,5 +5,5 @@
 ## 与上游的差异
 
 只有 `SKILL.md` 有改动
-- 命令由 `bunx @seflless/deepwiki <子命令>` 改为 `deepwiki <子命令>`，对应 `../../cli.nix` 中封装的 `deepwiki` 命令
-- 开头一句由「Assumes Node.js is installed」改为「The `deepwiki` CLI is pre-installed via nix」
+- 命令由 `bunx @seflless/deepwiki <子命令>` 改为 `deepwiki <子命令>`，对应 `../../cli.nix` 里 mise 声明的 `npm:@seflless/deepwiki`
+- 开头一句由「Assumes Node.js is installed」改为「The `deepwiki` CLI is pre-installed via mise」
