@@ -6,6 +6,11 @@ import unittest
 from testenv import SbEnv
 
 
+def env_args(call):
+    head = call[: call.index("--")]
+    return [head[i + 1] for i, x in enumerate(head) if x == "-e"]
+
+
 class LifecycleTest(unittest.TestCase):
     def setUp(self):
         self.e = SbEnv()
@@ -40,7 +45,7 @@ class LifecycleTest(unittest.TestCase):
         self.assertIn("沙箱配置尚未发布", r.stderr)
         self.assertEqual(self.e.calls("create"), [])
         (self.e.publish / "current").mkdir()
-        self.e.write_config(mise={"host_dir": str(self.e.tmp / "missing"), "guest_mount": "/opt/sandbox-mise"})
+        self.e.write_config(mise={"host_dir": str(self.e.tmp / "missing"), "guest_mount": "/opt/sandbox-mise", "url_replacements_file": ""})
         self.assertIn("共用 mise 目录不存在", self.e.sb("up").stderr)
 
     def test_a_sb_yaml_field_of_the_wrong_type_is_an_error(self):
@@ -112,7 +117,7 @@ class LifecycleTest(unittest.TestCase):
         self.e.sb("up")
         moved = self.e.tmp / "elsewhere"
         (moved / "data").mkdir(parents=True)
-        self.e.write_config(mise={"host_dir": str(moved), "guest_mount": "/opt/sandbox-mise"})
+        self.e.write_config(mise={"host_dir": str(moved), "guest_mount": "/opt/sandbox-mise", "url_replacements_file": ""})
         r = self.e.sb("up")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("复用现有 VM", r.stderr)
@@ -195,6 +200,17 @@ class LifecycleTest(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("msb create 失败 (退出码 9)", r.stderr)
 
+    def test_icache_on_hands_the_mise_rewrite_to_sync(self):
+        rules = self.e.icache_on()
+        self.e.sb("up")
+        r = self.e.sb("sync")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        syncs = [c for c in self.e.calls("exec") if "/fake/sync-guest" in c]
+        self.assertTrue(syncs)
+        for call in syncs:  # 首次 up 的自动 sync 与显式 sync 都要带上
+            envs = [e for e in env_args(call) if e.startswith("MISE_URL_REPLACEMENTS=")]
+            self.assertEqual([json.loads(e.split("=", 1)[1]) for e in envs], [rules])
+
 
 class RunTest(unittest.TestCase):
     def setUp(self):
@@ -203,6 +219,19 @@ class RunTest(unittest.TestCase):
 
     def launcher_call(self):
         return [c for c in self.e.calls("exec") if "/fake/launcher" in c and "--check-busy" not in c][-1]
+
+    def test_icache_on_hands_the_mise_rewrite_to_the_context(self):
+        rules = self.e.icache_on()
+        r = self.e.sb("run", "true")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        envs = [e for e in env_args(self.launcher_call()) if e.startswith("MISE_URL_REPLACEMENTS=")]
+        self.assertEqual(len(envs), 1)
+        self.assertEqual(json.loads(envs[0].split("=", 1)[1]), rules)
+
+    def test_icache_off_leaves_the_context_without_a_rewrite(self):
+        r = self.e.sb("run", "true")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse(any(e.startswith("MISE_URL_REPLACEMENTS=") for e in env_args(self.launcher_call())))
 
     def test_run_hands_context_id_plan_and_command_to_the_launcher(self):
         r = self.e.sb("run", "git", "status")

@@ -1,5 +1,9 @@
 # icache 开关：在家走内网镜像，出门关掉，避免每次 substituter 查询白等连接超时
 #
+# 同一个开关也管 mise：on 时写 ~/.config/mise/conf.d/icache.toml，把 GitHub Releases 下载改写到 icache。
+# mise 下载失败不回退原站，所以规则只能跟开关走，不能写进 Home Manager 生成的 mise 配置。
+# 用文件而不是环境变量：mise 每次运行都重读配置，已开的终端随开关立即生效。沙箱经 miseConfigFile 读同一个文件
+#
 # 状态 = ~/.config/nix/icache.conf 是否存在，靠用户级 nix.conf 的 `!include icache.conf` 生效
 # （被包含文件不存在时 nix 静默忽略；用户级设置由客户端转发给 daemon，改文件即生效，不用重启）
 #
@@ -18,22 +22,38 @@
 # 重启一次，之后 on/off 即时生效。root 跑的 nix（sudo / nixos-rebuild）读不到用户级配置，仍走系统列表。
 { config, ... }:
 let
+  icache = "https://icache.int.ooooo.space";
   mirrors = [
-    "https://icache.int.ooooo.space/cache.nixos.org"
-    "https://icache.int.ooooo.space/nix-community.cachix.org"
+    "${icache}/cache.nixos.org"
+    "${icache}/nix-community.cachix.org"
   ];
+  # 只改写 releases/download：icache 只放行这一类，latest 等会变的地址它会拒绝，必须留给原站
+  miseUrlReplacements = {
+    "regex:^https://github\\.com/([^/]+)/([^/]+)/releases/download/(.+)" =
+      "${icache}/github.com/$1/$2/releases/download/$3";
+  };
 in
 {
   flake.modules.darwin.core.imports = [ config.flake.modules.darwin.nix-icache ];
   flake.modules.nixos.core.imports = [ config.flake.modules.nixos.nix-icache ];
 
   flake.modules.homeManager.nix-icache =
-    { lib, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
+      miseConf = "${config.home.homeDirectory}/.config/mise/conf.d/icache.toml";
+      miseConfSource = (pkgs.formats.toml { }).generate "mise-icache.toml" {
+        settings.url_replacements = miseUrlReplacements;
+      };
       nix-icache = pkgs.writeShellApplication {
         name = "nix-icache";
         text = ''
           conf="$HOME/.config/nix/icache.conf"
+          miseConf="$HOME/.config/mise/conf.d/icache.toml"
           mirrors="${lib.concatStringsSep " " mirrors}"
 
           # 只读系统层，避免把已写入的 icache 再算一遍
@@ -54,10 +74,11 @@ in
                 echo "builders-use-substitutes = false"
               } > "$conf.tmp"
               mv "$conf.tmp" "$conf"
+              install -D -m 0644 ${miseConfSource} "$miseConf"
               echo "icache: on"
               ;;
             off)
-              rm -f "$conf"
+              rm -f "$conf" "$miseConf"
               echo "icache: off"
               ;;
             status)
@@ -72,8 +93,17 @@ in
       };
     in
     {
-      home.packages = [ nix-icache ];
-      home.file.".config/nix/nix.conf".text = lib.mkAfter "!include icache.conf";
+      options.shelken.nix.icache.miseConfigFile = lib.mkOption {
+        type = lib.types.str;
+        readOnly = true;
+        default = miseConf;
+        description = "开关打开时存在的 mise 下载改写配置；沙箱的 sb 每次进入 VM 前读它";
+      };
+
+      config = {
+        home.packages = [ nix-icache ];
+        home.file.".config/nix/nix.conf".text = lib.mkAfter "!include icache.conf";
+      };
     };
 
   # 常驻家里的主机（没装 Home Manager，用不了用户级开关）在系统层直接吃 icache。

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import sys
 
+from . import mise_mirror
 from .config import VM_NAME, Config
 from .locks import LockTimeout, flock
 from .msb import Msb
@@ -15,7 +16,9 @@ from .msb import Msb
 def run_locked(cfg: Config, msb: Msb, *, to_stderr: bool = False) -> int:
     try:
         with flock(cfg.sync_lock, 600):
-            return msb.run("exec", VM_NAME, "--stream", "--no-stdin", "--", "bash", cfg.guest_sync, to_stderr=to_stderr)
+            return msb.run(
+                "exec", VM_NAME, "--stream", "--no-stdin", *mise_mirror.exec_env_args(cfg), "--", "bash", cfg.guest_sync, to_stderr=to_stderr
+            )
     except LockTimeout:
         print(f"[-] 错误: 获取共用 mise 目录写锁超时 (600s): {cfg.sync_lock}", file=sys.stderr)
         return 1

@@ -192,6 +192,8 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 
 上下文对共用层可写：在上下文里 `mise trust`、`mise install` 即可装项目工具，产物落在宿主目录，重建 VM 后和其他 VM 都复用。launcher 设 `MISE_PREFER_OFFLINE=1` 而不是 `MISE_OFFLINE=1`：后者连安装下载也拒绝，前者让已装的 `latest` 工具直接用本地版本，不必每次联网等版本列表
 
+宿主 `nix-icache on` 时，沙箱里 mise 的 GitHub Releases 下载也经内网 icache：`sb run`、`sb sync` 每次进入 VM 前读宿主的 mise 改写配置（路径经 `sb-config.json` 的 `mise.url_replacements_file` 给出，来自 [icache.nix](../../nix/icache.nix)），存在就以 `MISE_URL_REPLACEMENTS` 传给 guest，`off` 后下一个上下文直连原站。用环境变量而不是 guest 内的配置文件：VM 看不到宿主文件，而上下文和 sync 都由宿主现启动。已在运行的上下文保留启动时的状态。上下文能连 icache，是因为它和模型服务在同一个内网入口后面，由 `network.default_grant` 放行
+
 ### `sb sync`
 
 在 VM 内（不在上下文内）运行 [sync-guest.sh](./sync-guest.sh)（Nix store 里的版本，路径经 `sb-config.json` 的 `guest_sync` 给出）：
