@@ -10,7 +10,7 @@
 
 - `<name>/SKILL.md`：单个技能正文，目录名与 frontmatter 的 `name` 严格一致
 - `<name>/README.md`：可选文件；自研技能记录设计决策，外部拷贝并调整过的技能记录上游来源与差异清单
-- `../skill.nix`：`shelken.dev.ai.skills` 的选项与部署；本目录由 `mylib.discoverSkills ./skills` 整体登记，所有导入 `ai` 的机器都需要的外部 skill 也在这里声明（ADR 0009）
+- `../skill.nix`：`shelken.dev.ai.skills` 的选项与部署；本目录由 `mylib.discoverSkills ./skills { }` 整体登记，所有导入 `ai` 的机器都需要的外部 skill 也在这里声明（ADR 0009）
 
 ## 外部拷贝技能的来源记录
 
@@ -19,7 +19,7 @@
 - 随后以「与上游的差异」逐项列出改动，未变动文件一并说明
 - 修改此类技能时，同步更新差异清单
 
-与上游完全一致的技能不放在本目录：在 `flake.nix` 加 input，再在需要它的功能里写 `shelken.dev.ai.skills.<名> = "${inputs.<input>}/<仓库内目录>";`，流程见 `add-external-skill`
+与上游完全一致的技能不放在本目录：在 `flake.nix` 加 input，再在需要它的功能里写 `shelken.dev.ai.skills = [ "${inputs.<input>}/<仓库内目录>" ];`，流程见 `add-external-skill`
 
 列出现有的外部拷贝技能
 

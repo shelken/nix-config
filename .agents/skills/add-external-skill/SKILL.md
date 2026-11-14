@@ -25,7 +25,7 @@ description: 获取外部 skill 时使用
    };
    ```
 4. 执行 `nix flake lock` 拉取该源
-5. 在需要它的功能的 Home Manager 模块里声明 `shelken.dev.ai.skills.<名> = "${inputs.<input>}/<仓库内目录>";`：所有导入 `ai` 的机器都需要的写在 `modules/features/ai/skill.nix` 的 `ai` 声明里，只在部分机器需要的写在所属功能目录（ADR 0008、0009）；要覆盖 frontmatter 时写 `{ source = …; frontmatter.<字段> = …; }`
+5. 在需要它的功能的 Home Manager 模块里声明 `shelken.dev.ai.skills = [ "${inputs.<input>}/<仓库内目录>" ];`（列表追加一项）：所有导入 `ai` 的机器都需要的写在 `modules/features/ai/skill.nix` 的 `ai` 声明里，只在部分机器需要的写在所属功能目录（ADR 0008、0009）；要覆盖 frontmatter 时写 `{ source = …; frontmatter.<字段> = …; }`
 6. 只加 input 与声明时，验证到 `nix flake lock` 与 `nix eval --json .#skillUpstreams.<本机>`（输出里有新目录）即可，不跑 `just hm-build`、`just hm`；见 `.agents/skills/verify-nix-config/features/README.md` 的「When no drive is required」
 7. 涉及 `skill.nix` 的部署逻辑、部署路径或依赖 CLI 时，仍按 `verify-nix-config` 驱动对应 feature 后提交
 
