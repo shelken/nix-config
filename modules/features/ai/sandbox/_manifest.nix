@@ -83,6 +83,8 @@ in
 
   gitUser = config.programs.git.settings.user;
 
+  miseUrlReplacementsFile = config.shelken.nix.icache.miseConfigFile;
+
   tools = devTools;
   miseTools = devMiseTools;
   writableRoots = devWritableRoots;

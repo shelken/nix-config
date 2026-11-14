@@ -8,7 +8,7 @@ import subprocess
 import sys
 import time
 
-from . import approvals, sync, vm
+from . import approvals, mise_mirror, sync, vm
 from .config import VM_NAME, Config
 from .errors import SbError
 from .msb import Msb
@@ -127,7 +127,7 @@ def run(cfg: Config, msb: Msb, args: list[str]) -> int:
     # 用空处理函数而不是 SIG_IGN：忽略的信号会被 exec 继承，子进程就再也停不下来
     old = signal.signal(signal.SIGINT, lambda *_: None)
     try:
-        return msb.run("exec", VM_NAME, *terminal, "--", "bash", cfg.launcher, ctx_id, p.to_json(), cwd, *args)
+        return msb.run("exec", VM_NAME, *terminal, *mise_mirror.exec_env_args(cfg), "--", "bash", cfg.launcher, ctx_id, p.to_json(), cwd, *args)
     finally:
         signal.signal(signal.SIGINT, old)
 

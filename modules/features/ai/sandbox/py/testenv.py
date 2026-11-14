@@ -134,9 +134,15 @@ class SbEnv:
             "publish_dir": str(self.publish), "launcher": "/fake/launcher", "guest_status": "/fake/guest-status", "guest_sync": "/fake/sync-guest",
             "sync_lock": str(self.tmp / "sync.lock"), "host_credentials": False, "host_secret_files": {}, "snapshot_cmd": [],
             "guest": {"config_mount": "/run/sandbox-config", "contexts_dir": "/run/sandbox/contexts", "data_dir": "/data"},
-            "mise": {"host_dir": str(self.mise), "guest_mount": "/opt/sandbox-mise"},
+            "mise": {"host_dir": str(self.mise), "guest_mount": "/opt/sandbox-mise", "url_replacements_file": str(self.tmp / "mise-icache.toml")},
         }  # fmt: skip
         self.config_file.write_text(json.dumps({**config, **overrides}))
+
+    def icache_on(self):
+        (self.tmp / "mise-icache.toml").write_text(
+            '[settings.url_replacements]\n"regex:^https://github\\\\.com/(.+)" = "https://mirror.example/github.com/$1"\n'
+        )
+        return {"regex:^https://github\\.com/(.+)": "https://mirror.example/github.com/$1"}
 
     def close(self):
         subprocess.run(["rm", "-rf", str(self.tmp)])

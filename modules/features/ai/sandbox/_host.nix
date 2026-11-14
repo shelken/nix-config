@@ -42,6 +42,8 @@ let
     mise = {
       host_dir = manifest.miseLayer.hostDir;
       guest_mount = manifest.miseLayer.guestMount;
+      # nix-icache 开关打开时才存在；sb 每次进入 VM 前现读，VM 看不到宿主文件
+      url_replacements_file = manifest.miseUrlReplacementsFile;
     };
   };
 

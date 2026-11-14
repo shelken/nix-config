@@ -32,6 +32,7 @@ class Config:
     guest_data_dir: str
     mise_host_dir: str
     mise_guest_mount: str
+    mise_url_replacements_file: str
     host_credentials: bool
     host_secret_files: Mapping[str, str]  # 变量名 -> 宿主上存放真实值的文件；只在 msb 创建、启动 VM 时读
     snapshot_cmd: tuple[str, ...]  # 启动上下文前在宿主建本地快照的命令；空表示不建
@@ -73,6 +74,7 @@ class Config:
             guest_data_dir=guest["data_dir"],
             mise_host_dir=nix["mise"]["host_dir"],
             mise_guest_mount=nix["mise"]["guest_mount"],
+            mise_url_replacements_file=nix["mise"]["url_replacements_file"],
             host_credentials=nix["host_credentials"],
             host_secret_files=nix["host_secret_files"],
             snapshot_cmd=tuple(nix["snapshot_cmd"]),
