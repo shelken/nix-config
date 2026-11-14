@@ -9,8 +9,7 @@ Agent 相关配置，按能力组织（ADR 0008）。`ai` 是跑 agent 的机器
 | `omp/`、`pi/` | 两个 agent harness 的配置、模型、插件、扩展 |
 | `agents/` | 子代理定义与提示词；`spawn-subagent.nix` 在宿主终端开子代理窗格 |
 | `agent.nix`、`_agents.md` | 全局 AGENTS.md 及其部署目标 |
-| `skill.nix`、`_skill-sources.nix`、`skills/` | skill 部署：本地 `skills/`、外部来源、功能登记的 skill（`shelken.dev.ai.skills`） |
-| `skill-options.nix`、`_skill-options.nix` | `shelken.dev.ai.skills` 的接口选项，挂在 core，任何功能都能登记自带的 skill |
+| `skill.nix`、`skills/` | skill 唯一入口 `shelken.dev.ai.skills`：选项挂在 core、部署、`ai` 需要的通用 skill（本地 `skills/` 与外部 input），以及 CI 读的 `flake.skillUpstreams`（ADR 0009） |
 | `tools.nix` | 共享工具登记表中 omp、pi、bun 的条目（ADR 0003） |
 | `plugins.nix`、`auto-model-prompts/` | omp 与 pi 共用的插件配置、按模型注入的提示词 |
 | `cli.nix` | skill 与 harness 依赖的 CLI（ctx7、deepwiki、lit、agent-browser、herdr、rtk 等） |
