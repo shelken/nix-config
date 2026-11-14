@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""iphone: Pinky 的 MCP 薄封装，读取并操作 USB 连接的真实 iPhone。
+"""iphone: Pinky 的 MCP 薄封装，读取并操作经 USB 或 Wi-Fi 连接的真实 iPhone。
 
 只依赖标准库。每条子命令对应一个 phone_* 工具，经 Pinky 的 Streamable HTTP 端点调用；
 MCP 会话 ID 存在 $IPHONE_HOME/session，所以租约跨进程保留。审批、屏蔽 App、凭据字段拦截都由 Pinky 网关执行。
@@ -318,7 +318,7 @@ def main():
     for k in ("x1", "y1", "x2", "y2"):
         sp.add_argument(k, type=int)
     sp.add_argument("--duration", type=int, default=300, help="毫秒，80 到 1200")
-    sp = add("launch", cmd_launch, "启动 App：bundle id 或名称，不收 URL", action=True)
+    sp = add("launch", cmd_launch, "启动 App 或打开链接：bundle id、名称或 http(s) 链接", action=True)
     sp.add_argument("app")
     sp = add("apps", cmd_apps, "按关键词查已装 App（Pinky 允许范围内）；不带关键词要加 --all")
     sp.add_argument("query", nargs="?")
