@@ -1,6 +1,6 @@
 # openwrt
 
-用 [nuci](https://github.com/lonerOrz/openwrt-nix) 声明式管理 OpenWrt 路由器的 UCI 配置、少数非 UCI 文件与软件包。机器表 `hosts/default.nix` 里 `type = "openwrt"` 的机器（当前是 `router-mine`）把声明放在 `hosts/<机器>/`，编译成 `uci.json` 后由 nuci 对比差异、下发到路由器。决策背景见 [ADR-0007](../../../../docs/adr/0007-router-declared-with-nuci.md)
+用 [nuci](https://github.com/lonerOrz/openwrt-nix) 声明式管理 OpenWrt 路由器的 UCI 配置、少数非 UCI 文件与软件包。机器表 `hosts/default.nix` 里 `type = "openwrt"` 的机器（当前是 `router-mine`）把声明放在 `hosts/<机器>/`，编译成 `uci.json` 后由 nuci 对比差异、下发到路由器。设计原因见文末「设计决策」
 
 可选功能，只有在 `imports` 里声明的主机才有：当前是 `mio`（`self.modules.darwin.openwrt`）。操作入口是 `just router::<配方>`，定义在 `just/router.just`
 
@@ -88,3 +88,22 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 - `mask.jq`：从未展开的声明里找出写了 `{{ op://… }}` 的位置，生成输出打码规则
 - 升级 nuci：改 `flake.nix` 里 `openwrt-nix` 的 tag，再 `nix flake lock --update-input openwrt-nix`
 - `hosts/router-mine/` 不是 Nix 系统，`lib/default.nix` 的 `calcUniformSchedule` 把它排除在备份排程之外
+
+## 设计决策
+
+每节记录为什么这样设计和考虑过的替代方案。机制本身与代价见上文各节
+
+### 用 nuci 声明，配置只在本仓库下发
+
+路由器的 UCI 配置、少数非 UCI 文件与软件包都在 `hosts/router-mine/` 声明，由 nuci 对比差异后下发。DNS、BIRD、Avahi 原先在 home-ops 下发，已迁到这里（home-ops 的 ADR-0009、ADR-0010）
+
+- **dewclaw**：整文件替换，没有差异预览，会删掉不在保留列表里的 `/etc/config` 文件，LuCI 里拨的开关和未声明的段都会丢
+- **Ansible `community.openwrt`**：能满足需求，但要维护 playbook 与「删除」的墓碑项，不是声明式
+- **LuCI 手工加脚本**：无法审查，也无法在换设备时复现
+- **配置分在 home-ops 与本仓库两处下发**：同一台路由器有两个所有者，换设备要两处重建
+
+### 秘密与设备标识走 1Password 引用
+
+声明里只写 `op://` 引用，下发时在临时目录展开，见「数据放哪」
+
+- **nuci 自带的 sops 支持**：每台操作机都要带 age 密钥；本仓库的其他外部秘密（如 singbox 配置）已经用 `op://` 引用，沿用同一套
