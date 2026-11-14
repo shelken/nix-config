@@ -18,9 +18,7 @@
     lib.unique (
       lib.concatMap (
         user:
-        lib.filter (upstream: upstream != null) (
-          lib.mapAttrsToList (_: skill: skill.upstream) user.shelken.dev.ai.skills
-        )
+        lib.filter (upstream: upstream != null) (map (skill: skill.upstream) user.shelken.dev.ai.skills)
       ) (lib.attrValues host.config.home-manager.users)
     )
   ) (config.flake.darwinConfigurations // config.flake.nixosConfigurations);
@@ -37,6 +35,16 @@
             source = mkOption {
               type = sourceType;
               description = "skill 目录：路径字面量（本仓库内，liveEdit 时软链回工作树）、input 里的目录字符串或派生";
+            };
+            name = mkOption {
+              type = types.str;
+              default =
+                if lib.isDerivation config.source then
+                  throw "shelken.dev.ai.skills：派生来源必须写 name"
+                else
+                  builtins.unsafeDiscardStringContext (baseNameOf (toString config.source));
+              defaultText = lib.literalMD "`source` 的目录名";
+              description = "skill 名，部署目录名";
             };
             frontmatter = mkOption {
               type = types.attrsOf types.anything;
@@ -55,11 +63,11 @@
     in
     {
       options.shelken.dev.ai.skills = mkOption {
-        type = types.attrsOf (types.coercedTo sourceType (source: { inherit source; }) skillType);
-        default = { };
+        type = types.listOf (types.coercedTo sourceType (source: { inherit source; }) skillType);
+        default = [ ];
         description = ''
-          skill 名 → 来源。值可以直接写来源，也可以写 { source; frontmatter; upstream; }。
-          同名 skill 来源不同时求值失败；只在导入 ai 的主机上部署（ADR 0008）
+          skill 列表。条目可以直接写来源，也可以写 { source; name; frontmatter; upstream; }；
+          名字默认取来源的目录名，重名时求值失败。只在导入 ai 的主机上部署（ADR 0008）
         '';
       };
     };
@@ -77,10 +85,10 @@
       cfg = config.shelken.dev.ai;
 
       skillSource =
-        name: skill:
+        skill:
         if skill.frontmatter != { } then
           # 逐字复制：与旧 applyFrontmatterOverrides 的构建脚本相同
-          pkgs.runCommand "skill-${name}" { } ''
+          pkgs.runCommand "skill-${skill.name}" { } ''
             cp -r ${skill.source} $out
             chmod -R +w $out
             ${pkgs.python3}/bin/python ${mylib.relativeToRoot "utils/script/patch_frontmatter.py"} "$out/SKILL.md" \
@@ -91,16 +99,30 @@
         else
           skill.source;
 
+      # list 合并不查重：同名会让多个来源争同一个部署目录
+      skillSources =
+        let
+          names = map (skill: skill.name) cfg.skills;
+          duplicates = lib.unique (builtins.filter (name: lib.count (n: n == name) names > 1) names);
+        in
+        assert lib.assertMsg (duplicates == [ ]) "shelken.dev.ai.skills 有重名：${toString duplicates}";
+        lib.listToAttrs (
+          map (skill: {
+            inherit (skill) name;
+            value = skillSource skill;
+          }) cfg.skills
+        );
+
       allSkillLinks = lib.listToAttrs (
         lib.concatMap (
           target:
-          lib.mapAttrsToList (name: skill: {
+          lib.mapAttrsToList (name: source: {
             name = "${target}/${name}";
             value = {
-              source = skillSource name skill;
+              inherit source;
               force = true;
             };
-          }) cfg.skills
+          }) skillSources
         ) cfg.skillTargets
       );
 
@@ -119,14 +141,88 @@
               ${./skills/pstack-harness/pi.md}
           '';
 
+      # 从改写后的整树里取出单个 skill；子路径只是文本，丢掉字符串上下文，派生只依赖 pstackSkills
+      pstackSkill =
+        skill:
+        skill
+        // {
+          source = pkgs.runCommand "pstack-skill-${skill.name}" { } ''
+            cp -r ${pstackSkills}/${builtins.unsafeDiscardStringContext (lib.removePrefix "${inputs.cursor-plugins}/pstack/" skill.source)} $out
+          '';
+          upstream = skill.source;
+        };
+
+      # 本仓库自管
+      local = mylib.discoverSkills ./skills { };
+
       # tdd 用 mattpocock 的版本
-      pstack = lib.mapAttrs (name: upstream: {
-        # 丢掉字符串上下文：子路径只是文本，派生只依赖 pstackSkills
-        source = pkgs.runCommand "pstack-skill-${name}" { } ''
-          cp -r ${pstackSkills}/${builtins.unsafeDiscardStringContext (lib.removePrefix "${inputs.cursor-plugins}/pstack/" upstream)} $out
-        '';
-        inherit upstream;
-      }) (builtins.removeAttrs (mylib.discoverSkills "${inputs.cursor-plugins}/pstack/skills") [ "tdd" ]);
+      pstack = map pstackSkill (
+        mylib.discoverSkills "${inputs.cursor-plugins}/pstack/skills" {
+          exclude = [ "tdd" ];
+          frontmatter = {
+            poteto-mode.name = "poteto-mode";
+            make-bot-ui.name = "make-bot-ui";
+            setup-pstack.disable-model-invocation = true;
+          };
+        }
+      );
+
+      mattpocock = map (dir: "${inputs.mattpocock-skills}/skills/${dir}") [
+        "engineering/improve-codebase-architecture"
+        "engineering/codebase-design"
+        "engineering/diagnosing-bugs"
+        "productivity/grill-me"
+        "engineering/grill-with-docs"
+        "productivity/grilling"
+        "productivity/handoff"
+        "engineering/prototype"
+        "engineering/tdd"
+        "engineering/to-tickets"
+        "engineering/to-spec"
+        "productivity/writing-for-agents"
+        "in-progress/loop-me"
+        # "engineering/code-review"
+        "engineering/implement"
+        "engineering/implement-spec"
+        "engineering/setup-matt-pocock-skills"
+        "engineering/wayfinder"
+        "engineering/research"
+        "engineering/domain-modeling"
+        "engineering/ask-matt"
+        "engineering/triage"
+        "engineering/retro"
+        "engineering/pr"
+      ];
+
+      humanlayer = [
+        "${inputs.humanlayer-skills}/plugins/design-control-loop/skills/design-control-loop"
+        {
+          source = "${inputs.humanlayer-skills}/plugins/show-me/skills/show-me";
+          frontmatter.disable-model-invocation = false;
+        }
+        # "${inputs.humanlayer-skills}/plugins/visual-pr/skills/visual-pr"
+      ];
+
+      # 只取一个 skill 的仓库
+      singles = [
+        "${inputs.caldo-skills}/skills/untangle-codebase"
+        # pstack 把 CLI/TUI 验收委托给它；control-ui 由本机 agent-browser 承担，见 skills/pstack-harness
+        "${inputs.cursor-plugins}/cursor-team-kit/skills/control-cli"
+        "${inputs.diagram-design}/skills/diagram-design"
+        "${inputs.llamaparse-agent-skills}/skills/liteparse"
+        {
+          source = "${inputs.anti-slop}/skills/install-anti-slop";
+          frontmatter.disable-model-invocation = true;
+        }
+        {
+          source = "${inputs.improve}/skills/improve";
+          frontmatter.disable-model-invocation = true;
+        }
+        {
+          source = "${inputs.security-audit-skill}/skills/security-audit";
+          frontmatter.disable-model-invocation = true;
+        }
+      ];
     in
     {
       options.shelken.dev.ai.skillTargets = mkOption {
@@ -142,65 +238,7 @@
       };
 
       config = {
-        shelken.dev.ai.skills = lib.mkMerge [
-          (mylib.discoverSkills ./skills)
-          pstack
-          {
-            poteto-mode.frontmatter.name = "poteto-mode";
-            make-bot-ui.frontmatter.name = "make-bot-ui";
-            setup-pstack.frontmatter.disable-model-invocation = true;
-
-            install-anti-slop = {
-              source = "${inputs.anti-slop}/skills/install-anti-slop";
-              frontmatter.disable-model-invocation = true;
-            };
-            untangle-codebase = "${inputs.caldo-skills}/skills/untangle-codebase";
-            # pstack 把 CLI/TUI 验收委托给它；control-ui 由本机 agent-browser 承担，见 skills/pstack-harness
-            control-cli = "${inputs.cursor-plugins}/cursor-team-kit/skills/control-cli";
-            diagram-design = "${inputs.diagram-design}/skills/diagram-design";
-            design-control-loop = "${inputs.humanlayer-skills}/plugins/design-control-loop/skills/design-control-loop";
-            show-me = {
-              source = "${inputs.humanlayer-skills}/plugins/show-me/skills/show-me";
-              frontmatter.disable-model-invocation = false;
-            };
-            # visual-pr = "${inputs.humanlayer-skills}/plugins/visual-pr/skills/visual-pr";
-            improve = {
-              source = "${inputs.improve}/skills/improve";
-              frontmatter.disable-model-invocation = true;
-            };
-            liteparse = "${inputs.llamaparse-agent-skills}/skills/liteparse";
-            security-audit = {
-              source = "${inputs.security-audit-skill}/skills/security-audit";
-              frontmatter.disable-model-invocation = true;
-            };
-          }
-          (lib.mapAttrs (_: dir: "${inputs.mattpocock-skills}/skills/${dir}") {
-            improve-codebase-architecture = "engineering/improve-codebase-architecture";
-            codebase-design = "engineering/codebase-design";
-            diagnosing-bugs = "engineering/diagnosing-bugs";
-            grill-me = "productivity/grill-me";
-            grill-with-docs = "engineering/grill-with-docs";
-            grilling = "productivity/grilling";
-            handoff = "productivity/handoff";
-            prototype = "engineering/prototype";
-            tdd = "engineering/tdd";
-            to-tickets = "engineering/to-tickets";
-            to-spec = "engineering/to-spec";
-            writing-for-agents = "productivity/writing-for-agents";
-            loop-me = "in-progress/loop-me";
-            # code-review = "engineering/code-review";
-            implement = "engineering/implement";
-            implement-spec = "engineering/implement-spec";
-            setup-matt-pocock-skills = "engineering/setup-matt-pocock-skills";
-            wayfinder = "engineering/wayfinder";
-            research = "engineering/research";
-            domain-modeling = "engineering/domain-modeling";
-            ask-matt = "engineering/ask-matt";
-            triage = "engineering/triage";
-            retro = "engineering/retro";
-            pr = "engineering/pr";
-          })
-        ];
+        shelken.dev.ai.skills = local ++ pstack ++ mattpocock ++ humanlayer ++ singles;
 
         home.file = allSkillLinks;
         # skills 进共享工具登记表（与 agents 文档同机制）：宿主照常，沙箱经 files 拿到

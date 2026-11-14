@@ -6,8 +6,10 @@
   flake.modules.homeManager.iphone =
     { config, mylib, ... }:
     {
-      shelken.dev.ai.skills.iphone-use-best-practice = ./iphone-use-best-practice;
-      shelken.dev.ai.skills.swipt = "${inputs.swipt-skills}/skills/swipt";
+      shelken.dev.ai.skills = [
+        ./iphone-use-best-practice
+        "${inputs.swipt-skills}/skills/swipt"
+      ];
 
       # iphone 与 skill 同源，软链到工作树源码即时生效
       home.file.".local/bin/iphone" = mylib.mkConfigFile config ./iphone-use-best-practice/scripts/iphone;
