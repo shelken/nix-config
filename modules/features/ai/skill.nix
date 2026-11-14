@@ -356,10 +356,14 @@ in
         ) allSkillLinks;
         shelken.dev.sandbox.writableRoots = [ ".agents" ];
 
+        # skills CLI 由 mise 提供，版本钉死，不再用 npx/bunx 现取
+        # renovate: datasource=npm depName=skills
+        programs.mise.globalConfig.tools."npm:skills" = "1.8.1";
+
         # 手动命令
-        # bunx skills update
-        # bunx skills add github/repo -g -y -a claude-code codex --skill [skill-name]
-        # bunx skills add microsoft/playwright-cli -g -y -a claude-code codex --skill playwright-cli
+        # skills update
+        # skills add github/repo -g -y -a claude-code codex --skill [skill-name]
+        # skills add microsoft/playwright-cli -g -y -a claude-code codex --skill playwright-cli
       };
     };
 }
