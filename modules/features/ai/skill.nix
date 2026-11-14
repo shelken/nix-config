@@ -1,104 +1,68 @@
-# 外部 skill 来源的解析与部署。声明在 _skill-sources.nix（纯数据），这里把它解析成两件事：
-#   - flake.skillSourceDirs：input → 启用的 skill 仓库内相对目录，CI 用它过滤 Renovate PR 的文件
-#   - Home 的部署来源：分组/平铺规则与声明前一致
-{ inputs, lib, ... }:
-let
-  declarations = import ./_skill-sources.nix;
-
-  flattenSkillName = lib.replaceStrings [ "/" ] [ "--" ];
-
-  collectSkillRootRelativePaths =
-    dirPath: relativePath:
-    let
-      entries = builtins.readDir dirPath;
-      childDirs = builtins.attrNames (lib.filterAttrs (_: fileType: fileType == "directory") entries);
-      childRelativePath =
-        childName: if relativePath == "" then childName else "${relativePath}/${childName}";
-    in
-    if builtins.hasAttr "SKILL.md" entries then
-      [ relativePath ]
-    else
-      lib.concatMap (
-        childName: collectSkillRootRelativePaths "${dirPath}/${childName}" (childRelativePath childName)
-      ) childDirs;
-
-  listToAttrsWithUniqueNameCheck =
-    errorMsg: entries:
-    let
-      names = map (entry: entry.name) entries;
-    in
-    assert lib.assertMsg (builtins.length names == builtins.length (lib.unique names)) errorMsg;
-    builtins.listToAttrs entries;
-
-  inputRoot = inputName: inputs.${inputName};
-
-  # base 为 "." 时，skill 在 base 内的相对路径就是仓库内路径
-  dirInRepo = base: relativePath: if base == "." then relativePath else "${base}/${relativePath}";
-
-  # 一个分组 → 启用的 skill（名字 → base 内相对路径）及它们的仓库内目录。
-  # discover 只扫 input 的源树，不读 build 期派生目录，避免 IFD。
-  resolveGroup =
-    groupName: decl:
-    let
-      base = decl.base;
-      scanRoot = "${inputRoot decl.input}${if base == "." then "" else "/${base}"}";
-      discovered =
-        if decl.discover or false then
-          listToAttrsWithUniqueNameCheck "${groupName}: 自动发现的 skill 名冲突。" (
-            map (relativePath: {
-              name = flattenSkillName relativePath;
-              value = relativePath;
-            }) (collectSkillRootRelativePaths scanRoot "")
-          )
-        else
-          { };
-      explicit = decl.skills or { };
-      duplicateNames = lib.intersectLists (builtins.attrNames discovered) (builtins.attrNames explicit);
-      combined = discovered // explicit;
-      exclusions = decl.exclude or [ ];
-      unknownExclusions = builtins.filter (name: !(builtins.hasAttr name combined)) exclusions;
-      resolved = builtins.removeAttrs combined exclusions;
-      overrideNames = builtins.attrNames (decl.frontmatter or { });
-      unknownOverrides = builtins.filter (name: !(builtins.hasAttr name resolved)) overrideNames;
-    in
-    assert lib.assertMsg (
-      duplicateNames == [ ]
-    ) "${groupName}: 自动发现与显式声明存在同名 skill：${builtins.concatStringsSep ", " duplicateNames}";
-    assert lib.assertMsg (
-      unknownExclusions == [ ]
-    ) "${groupName}: exclude 包含不存在的 skill：${builtins.concatStringsSep ", " unknownExclusions}";
-    assert lib.assertMsg (
-      unknownOverrides == [ ]
-    ) "${groupName}: frontmatter 包含不存在的 skill：${builtins.concatStringsSep ", " unknownOverrides}";
-    assert lib.assertMsg (resolved != { }) "${groupName}: 没有可用的 skill";
-    {
-      inherit (decl) input;
-      frontmatter = decl.frontmatter or { };
-      inherit base;
-      derived = decl.derived or null;
-      skills = resolved;
-      dirs = lib.mapAttrs (_: relativePath: dirInRepo base relativePath) resolved;
-    };
-
-  groups = lib.mapAttrs resolveGroup declarations;
-
-  skillSourceDirs = builtins.listToAttrs (
-    map (inputName: {
-      name = inputName;
-      value = lib.sort builtins.lessThan (
-        lib.unique (
-          lib.concatMap (group: builtins.attrValues group.dirs) (
-            lib.filter (group: group.input == inputName) (builtins.attrValues groups)
-          )
-        )
-      );
-    }) (lib.unique (map (group: group.input) (builtins.attrValues groups)))
-  );
-in
+# skill 的唯一入口 shelken.dev.ai.skills（ADR 0009）：
+#   - 选项挂在 core（ADR 0004「接口放 core」），任何功能都能声明自己需要的 skill
+#   - 部署挂在 ai：链接到各 agent 的 skill 目录；ai 自己需要的通用 skill 也在这里声明
+#   - flake.skillUpstreams：各主机 skill 的上游目录，CI 据此只展示在用目录的上游改动
 {
-  # 供 CI 读取：某个 input 前进后，只看这些目录里的文件改动。
-  # `nix eval --json .#skillSourceDirs` 只读 input 源树，不触发构建
-  flake.skillSourceDirs = skillSourceDirs;
+  config,
+  inputs,
+  lib,
+  ...
+}:
+{
+  flake.modules.darwin.core.imports = [ config.flake.modules.darwin.skill-options ];
+  flake.modules.nixos.core.imports = [ config.flake.modules.nixos.skill-options ];
+
+  # 每台主机单独求值；读不到私有 secrets 的主机由 CI 脚本跳过
+  flake.skillUpstreams = lib.mapAttrs (
+    _: host:
+    lib.unique (
+      lib.concatMap (
+        user:
+        lib.filter (upstream: upstream != null) (
+          lib.mapAttrsToList (_: skill: skill.upstream) user.shelken.dev.ai.skills
+        )
+      ) (lib.attrValues host.config.home-manager.users)
+    )
+  ) (config.flake.darwinConfigurations // config.flake.nixosConfigurations);
+
+  flake.modules.homeManager.skill-options =
+    { lib, ... }:
+    let
+      inherit (lib) mkOption types;
+      sourceType = types.either types.path types.package;
+      skillType = types.submodule (
+        { config, ... }:
+        {
+          options = {
+            source = mkOption {
+              type = sourceType;
+              description = "skill 目录：路径字面量（本仓库内，liveEdit 时软链回工作树）、input 里的目录字符串或派生";
+            };
+            frontmatter = mkOption {
+              type = types.attrsOf types.anything;
+              default = { };
+              description = "覆盖 SKILL.md frontmatter 的字段";
+            };
+            upstream = mkOption {
+              type = types.nullOr types.str;
+              default = if builtins.isString config.source then config.source else null;
+              defaultText = lib.literalMD "字符串来源时等于 `source`，否则为 `null`";
+              description = "上游目录，CI 据此只展示在用目录的上游改动；派生来源需要手写";
+            };
+          };
+        }
+      );
+    in
+    {
+      options.shelken.dev.ai.skills = mkOption {
+        type = types.attrsOf (types.coercedTo sourceType (source: { inherit source; }) skillType);
+        default = { };
+        description = ''
+          skill 名 → 来源。值可以直接写来源，也可以写 { source; frontmatter; upstream; }。
+          同名 skill 来源不同时求值失败；只在导入 ai 的主机上部署（ADR 0008）
+        '';
+      };
+    };
 
   flake.modules.homeManager.ai =
     {
@@ -112,15 +76,42 @@ in
       inherit (lib) mkOption types;
       cfg = config.shelken.dev.ai;
 
-      # 外部来源整树改写：漂移门需要跨 skill 的全局视野（同一专名可能出现在任意 skill），
-      # 逐 skill 派生无法做这个断言。脚本幂等，每次 build 重算需要指针的集合。
+      skillSource =
+        name: skill:
+        if skill.frontmatter != { } then
+          # 逐字复制：与旧 applyFrontmatterOverrides 的构建脚本相同
+          pkgs.runCommand "skill-${name}" { } ''
+            cp -r ${skill.source} $out
+            chmod -R +w $out
+            ${pkgs.python3}/bin/python ${mylib.relativeToRoot "utils/script/patch_frontmatter.py"} "$out/SKILL.md" \
+              ${lib.escapeShellArg (builtins.toJSON skill.frontmatter)}
+          ''
+        else if builtins.isPath skill.source then
+          mylib.mkConfigLink config skill.source
+        else
+          skill.source;
+
+      allSkillLinks = lib.listToAttrs (
+        lib.concatMap (
+          target:
+          lib.mapAttrsToList (name: skill: {
+            name = "${target}/${name}";
+            value = {
+              source = skillSource name skill;
+              force = true;
+            };
+          }) cfg.skills
+        ) cfg.skillTargets
+      );
+
+      # 上游是 Cursor 方言：build 期整树改写（漂移门需要跨 skill 的全局视野），再逐个取出。逐字复制
       pstackSkills =
         pkgs.runCommand "pstack-skills"
           {
             nativeBuildInputs = [ pkgs.python3 ];
           }
           ''
-            cp -r ${inputRoot groups.pstack.input}/${groups.pstack.derived} $out
+            cp -r ${inputs.cursor-plugins}/pstack $out
             chmod -R u+w $out
             python3 ${mylib.relativeToRoot "utils/script/adapt_pstack_skills.py"} \
               "$out" \
@@ -128,226 +119,89 @@ in
               ${./skills/pstack-harness/pi.md}
           '';
 
-      # 普通分组取 input 源树里的目录；derived 分组的内容 build 期才生成，
-      # 派生内的子目录不能当 source 字符串用（eval 会做存在性检查），逐 skill 复制成独立派生。
-      groupSource =
-        group: relativePath:
-        let
-          inRepo = dirInRepo group.base relativePath;
-        in
-        if group.derived == null then
-          "${inputRoot group.input}/${inRepo}"
-        else
-          {
-            derived = pkgs.runCommand "pstack-skill-${flattenSkillName relativePath}" { } ''
-              cp -r ${pstackSkills}/${lib.removePrefix "${group.derived}/" inRepo} $out
-            '';
-          };
-
-      fetchedSkillSourcesByRepo = lib.mapAttrs (
-        _: group: lib.mapAttrs (_: groupSource group) group.skills
-      ) groups;
-
-      fetchedSkillRepos = lib.mapAttrs (_: group: { inherit (group) frontmatter; }) groups;
-
-      # 单文件来源统一包装成目录，skill 目标形态与目录来源保持一致，避免目录内再挂单文件链接。
-      normalizeFetchedSkillSource =
-        sourcePath:
-        if lib.pathIsDirectory sourcePath then
-          sourcePath
-        else
-          pkgs.writeTextDir (builtins.unsafeDiscardStringContext (builtins.baseNameOf (toString sourcePath))) (
-            builtins.readFile sourcePath
-          );
-
-      applyFrontmatterOverrides =
-        skillName: sourcePath: overrides:
-        if overrides == { } then
-          sourcePath
-        else
-          pkgs.runCommand "skill-${skillName}" { } ''
-            cp -r ${sourcePath} $out
-            chmod -R +w $out
-            ${pkgs.python3}/bin/python ${mylib.relativeToRoot "utils/script/patch_frontmatter.py"} "$out/SKILL.md" \
-              ${lib.escapeShellArg (builtins.toJSON overrides)}
-          '';
-
-      normalizedFetchedSkillSourcesByRepo = lib.mapAttrs (
-        repoName:
-        lib.mapAttrs (
-          skillName: sourcePath:
-          let
-            # 派生来源不经过单文件判定：pathIsDirectory/pathExists 会读派生产物，触发 IFD。
-            resolvedSource = if builtins.isAttrs sourcePath then sourcePath.derived else sourcePath;
-            normalized =
-              if builtins.isAttrs sourcePath then resolvedSource else normalizeFetchedSkillSource sourcePath;
-          in
-          applyFrontmatterOverrides skillName normalized (
-            fetchedSkillRepos.${repoName}.frontmatter.${skillName} or { }
-          )
-        )
-      ) fetchedSkillSourcesByRepo;
-
-      skillSourceToEntry = skillName: sourcePath: {
-        name = skillName;
-        value = sourcePath;
-      };
-
-      fetchedFlattenSkillEntries = lib.concatMap (
-        skillSources: lib.mapAttrsToList skillSourceToEntry skillSources
-      ) (builtins.attrValues normalizedFetchedSkillSourcesByRepo);
-
-      fetchedFlattenSkillSources = listToAttrsWithUniqueNameCheck "检测到外部 skill 平铺命名冲突：请调整 skill 名，或改为非平铺映射。" fetchedFlattenSkillEntries;
-
-      fetchedRepos = lib.mapAttrsToList (name: skillSources: {
-        inherit name skillSources;
-      }) normalizedFetchedSkillSourcesByRepo;
-
-      mkFetchedRepoLinkFarm =
-        repo:
-        pkgs.linkFarm repo.name (
-          lib.mapAttrsToList (skillName: sourcePath: {
-            name = skillName;
-            path = sourcePath;
-          }) repo.skillSources
-        );
-
-      mkFetchedGroupedSkillEntry =
-        repo:
-        let
-          skillNames = builtins.attrNames repo.skillSources;
-          skillName = builtins.head skillNames;
-        in
-        if builtins.length skillNames == 1 then
-          skillSourceToEntry skillName repo.skillSources.${skillName}
-        else
-          {
-            inherit (repo) name;
-            value = mkFetchedRepoLinkFarm repo;
-          };
-
-      fetchedGroupedSkillEntries = map mkFetchedGroupedSkillEntry fetchedRepos;
-
-      fetchedGroupedSkillSources = listToAttrsWithUniqueNameCheck "检测到外部 skill 分组命名冲突：请调整 skill 名，或启用平铺映射。" fetchedGroupedSkillEntries;
-
-      fetchedFlattenSkillNames = builtins.attrNames fetchedFlattenSkillSources;
-
-      localSkillEntries = builtins.readDir ./skills;
-
-      isLocalGroupedSkill =
-        name: fileType: fileType == "directory" && !(builtins.elem name fetchedFlattenSkillNames);
-
-      localTopLevelSkillDirs = builtins.attrNames (lib.filterAttrs isLocalGroupedSkill localSkillEntries);
-
-      mkLocalSkillSource = relativePath: mylib.mkConfigLink config (./skills + "/${relativePath}");
-
-      localGroupedSkillSources = builtins.listToAttrs (
-        map (name: {
-          inherit name;
-          value = mkLocalSkillSource name;
-        }) localTopLevelSkillDirs
-      );
-
-      localFlattenSkillEntries = map (relativePath: {
-        name = flattenSkillName relativePath;
-        value = mkLocalSkillSource relativePath;
-      }) (collectSkillRootRelativePaths ./skills "");
-
-      localFlattenSkillSources = listToAttrsWithUniqueNameCheck "检测到本地 skill 平铺命名冲突：请调整目录名，或修改 flattenSkillName 规则。" localFlattenSkillEntries;
-
-      # 功能目录登记的 skill（shelken.dev.ai.skills）：只部署到导入了该功能的主机，平铺与分组形态相同
-      registeredSkillSources =
-        let
-          entries = map (path: {
-            name = builtins.baseNameOf path;
-            value = mylib.mkConfigLink config path;
-          }) cfg.skills;
-          missing = builtins.filter (path: !(builtins.pathExists (path + "/SKILL.md"))) cfg.skills;
-          taken =
-            builtins.attrNames localFlattenSkillSources
-            ++ builtins.attrNames localGroupedSkillSources
-            ++ fetchedFlattenSkillNames
-            ++ builtins.attrNames fetchedGroupedSkillSources;
-          clashes = builtins.filter (e: builtins.elem e.name taken) entries;
-        in
-        assert lib.assertMsg (missing == [ ]) "shelken.dev.ai.skills 中的目录缺少 SKILL.md：${toString missing}";
-        assert lib.assertMsg (clashes == [ ])
-          "shelken.dev.ai.skills 与已有 skill 重名：${toString (map (e: e.name) clashes)}";
-        listToAttrsWithUniqueNameCheck "shelken.dev.ai.skills 中有同名目录。" entries;
-
-      localSkillSourcesFor =
-        flatten:
-        (if flatten then localFlattenSkillSources else localGroupedSkillSources) // registeredSkillSources;
-      fetchedSkillSourcesFor =
-        flatten: if flatten then fetchedFlattenSkillSources else fetchedGroupedSkillSources;
-
-      mkSkillLinks =
-        targetPath: skillSources:
-        lib.mapAttrsToList (name: sourcePath: {
-          name = "${targetPath}/${name}";
-          value = {
-            source = sourcePath;
-            force = true;
-          };
-        }) skillSources;
-
-      linksForTarget =
-        target:
-        mkSkillLinks target.path (localSkillSourcesFor target.flatten)
-        ++ mkSkillLinks target.path (fetchedSkillSourcesFor target.flatten);
-
-      allSkillLinks = lib.listToAttrs (lib.concatMap linksForTarget cfg.skillTargets);
+      # tdd 用 mattpocock 的版本
+      pstack = lib.mapAttrs (name: upstream: {
+        # 丢掉字符串上下文：子路径只是文本，派生只依赖 pstackSkills
+        source = pkgs.runCommand "pstack-skill-${name}" { } ''
+          cp -r ${pstackSkills}/${builtins.unsafeDiscardStringContext (lib.removePrefix "${inputs.cursor-plugins}/pstack/" upstream)} $out
+        '';
+        inherit upstream;
+      }) (builtins.removeAttrs (mylib.discoverSkills "${inputs.cursor-plugins}/pstack/skills") [ "tdd" ]);
     in
     {
-      options.shelken.dev.ai = {
-        skillTargets = mkOption {
-          type = types.listOf (
-            types.submodule {
-              options = {
-                path = mkOption {
-                  type = types.str;
-                  description = "skill 目标目录（相对 ~/）";
-                };
-
-                flatten = mkOption {
-                  type = types.bool;
-                  default = true;
-                  description = ''
-                    是否平铺本地 skill。
-                    true: 递归查找含 SKILL.md 的目录并平铺（/ -> --）。
-                    false: 保留分组目录整体映射（pi 风格）。
-                  '';
-                };
-              };
-            }
-          );
-          default = [
-            {
-              path = ".claude/skills";
-            }
-            {
-              path = ".agents/skills"; # codex,opencode
-            }
-            {
-              path = ".gemini/config/skills";
-            }
-            {
-              path = ".workbuddy/skills";
-            }
-            {
-              path = ".dsh/skills"; # dsh (deepseek-harness) 用户级 skills, 读取 $DSH_HOME/skills; dsh 不支持多目录结构, 必须展平
-            }
-          ];
-          description = "skill 目标目录及映射策略";
-          example = [
-            {
-              path = ".claude/skills";
-              flatten = true;
-            }
-          ];
-        };
+      options.shelken.dev.ai.skillTargets = mkOption {
+        type = types.listOf types.str;
+        default = [
+          ".claude/skills"
+          ".agents/skills" # codex,opencode
+          ".gemini/config/skills"
+          ".workbuddy/skills"
+          ".dsh/skills" # dsh (deepseek-harness) 用户级 skills, 读取 $DSH_HOME/skills; dsh 不支持多目录结构, 必须展平
+        ];
+        description = "skill 部署目标目录（相对 ~/）";
       };
+
       config = {
+        shelken.dev.ai.skills = lib.mkMerge [
+          (mylib.discoverSkills ./skills)
+          pstack
+          {
+            poteto-mode.frontmatter.name = "poteto-mode";
+            make-bot-ui.frontmatter.name = "make-bot-ui";
+            setup-pstack.frontmatter.disable-model-invocation = true;
+
+            install-anti-slop = {
+              source = "${inputs.anti-slop}/skills/install-anti-slop";
+              frontmatter.disable-model-invocation = true;
+            };
+            untangle-codebase = "${inputs.caldo-skills}/skills/untangle-codebase";
+            # pstack 把 CLI/TUI 验收委托给它；control-ui 由本机 agent-browser 承担，见 skills/pstack-harness
+            control-cli = "${inputs.cursor-plugins}/cursor-team-kit/skills/control-cli";
+            diagram-design = "${inputs.diagram-design}/skills/diagram-design";
+            design-control-loop = "${inputs.humanlayer-skills}/plugins/design-control-loop/skills/design-control-loop";
+            show-me = {
+              source = "${inputs.humanlayer-skills}/plugins/show-me/skills/show-me";
+              frontmatter.disable-model-invocation = false;
+            };
+            # visual-pr = "${inputs.humanlayer-skills}/plugins/visual-pr/skills/visual-pr";
+            improve = {
+              source = "${inputs.improve}/skills/improve";
+              frontmatter.disable-model-invocation = true;
+            };
+            liteparse = "${inputs.llamaparse-agent-skills}/skills/liteparse";
+            security-audit = {
+              source = "${inputs.security-audit-skill}/skills/security-audit";
+              frontmatter.disable-model-invocation = true;
+            };
+          }
+          (lib.mapAttrs (_: dir: "${inputs.mattpocock-skills}/skills/${dir}") {
+            improve-codebase-architecture = "engineering/improve-codebase-architecture";
+            codebase-design = "engineering/codebase-design";
+            diagnosing-bugs = "engineering/diagnosing-bugs";
+            grill-me = "productivity/grill-me";
+            grill-with-docs = "engineering/grill-with-docs";
+            grilling = "productivity/grilling";
+            handoff = "productivity/handoff";
+            prototype = "engineering/prototype";
+            tdd = "engineering/tdd";
+            to-tickets = "engineering/to-tickets";
+            to-spec = "engineering/to-spec";
+            writing-for-agents = "productivity/writing-for-agents";
+            loop-me = "in-progress/loop-me";
+            # code-review = "engineering/code-review";
+            implement = "engineering/implement";
+            implement-spec = "engineering/implement-spec";
+            setup-matt-pocock-skills = "engineering/setup-matt-pocock-skills";
+            wayfinder = "engineering/wayfinder";
+            research = "engineering/research";
+            domain-modeling = "engineering/domain-modeling";
+            ask-matt = "engineering/ask-matt";
+            triage = "engineering/triage";
+            retro = "engineering/retro";
+            pr = "engineering/pr";
+          })
+        ];
+
         home.file = allSkillLinks;
         # skills 进共享工具登记表（与 agents 文档同机制）：宿主照常，沙箱经 files 拿到
         shelken.dev.tools.agent-common.package = null;

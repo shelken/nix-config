@@ -150,6 +150,30 @@ rec {
         value = mkDefaultSecret { };
       }) secretsList
     );
+  # dir 下递归查找含 SKILL.md 的目录，返回 skill 名 → 目录；嵌套目录名的 / 换成 --。
+  # dir 是路径字面量时值也是路径字面量（本地 skill 据此走 liveEdit），是字符串时值是字符串
+  discoverSkills =
+    dir:
+    let
+      collect =
+        rel:
+        let
+          entries = builtins.readDir (if rel == "" then dir else dir + "/${rel}");
+          child = name: if rel == "" then name else "${rel}/${name}";
+        in
+        if entries ? "SKILL.md" then
+          [ rel ]
+        else
+          lib.concatMap (name: collect (child name)) (
+            builtins.attrNames (lib.filterAttrs (_: type: type == "directory") entries)
+          );
+    in
+    builtins.listToAttrs (
+      map (rel: {
+        name = lib.replaceStrings [ "/" ] [ "--" ] rel;
+        value = dir + "/${rel}";
+      }) (collect "")
+    );
   # 根据 config.shelken.dotfiles.liveEdit 开关决定配置来源：
   # - liveEdit = true（本机开发环境）：使用 mkOutOfStoreSymlink 软链至本地 ~/nix-config/<相对路径>，支持免 rebuild 热加载
   # - liveEdit = false（远程部署节点/默认）：解析为仓库根下的纯 Nix store 路径，保证闭包自包含与原子回滚
