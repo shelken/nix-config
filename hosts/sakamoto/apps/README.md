@@ -1,7 +1,7 @@
 # sakamoto：Compose 服务的声明与启动
 
-`sakamoto` 的业务容器原先由 home-ops 的 `compose/sakamoto/` 声明并部署，现在声明在本目录。
-运行时仍是 OrbStack + Compose：macOS 侧没有 `oci-containers` 这类原生模块，容器、命名卷与 `homelab` 网络都在 OrbStack 里。声明进 Nix store、口令由 sops 模板渲染、启动交给 launchd agent。
+`sakamoto` 的业务容器声明在本目录。
+运行时是 OrbStack + Compose：macOS 侧没有 `oci-containers` 这类原生模块，容器、命名卷与 `homelab` 网络都在 OrbStack 里。声明进 Nix store、口令由 sops 模板渲染、启动交给 launchd agent。
 
 ## 组成
 
@@ -17,6 +17,8 @@
 - `CADDYFILE`、`MIRROR_CONFIG` 等变量：`configs/` 里每个文件各自的 store 路径，`compose.yaml` 用 `volumes:` 把它们挂进容器
 
 入口脚本 `modules/features/backup/_kopia-server/entrypoint.sh` 在 git 里是 100755，进 store 后保留执行位，容器可以直接执行。
+
+`configs/caddy/Caddyfile` 里 `internal-access` 的站点要与路由器 `hosts/router-mine/home-ops/dns.nix` 的自举名一一对应：这里加一个站点，那边加一个名字。
 
 ## 配置怎么触发重建
 
@@ -47,20 +49,11 @@ launchd agent（Label `space.ooooo.sakamoto-compose`，`gui` 域）负责拉起�
 
 `up` 先等 OrbStack 与渲染出的 env，再逐个检查数据目录：外接盘没挂载时直接失败，不让 Docker 以 root 新建空目录。日志在 `~/Library/Logs/sakamoto-compose.log`。
 
-## 切换
+## 验证改动
 
-前置：私有 `secrets` 仓库里补上 `default.nix` 中 `secretNames` 列出的键，推送后在本仓库 `just upp secrets` 刷新 lock。
-
-1. 构建：在 sakamoto 上 `just hm-build`；从别的机器只做轻量求值 `nix eval .#darwinConfigurations.sakamoto.config.home-manager.users.shelken.home.activationPackage.drvPath`
-2. 确认 `~/.config/sops/age/keys.txt` 能解开密文，然后 `just hm`
-3. 看 agent 是否接管：`launchctl list | grep sakamoto-compose`、`tail -f ~/Library/Logs/sakamoto-compose.log`
-4. 第一轮 `up` 会重建 7 个容器：caddy、四个 mirror、两个 kopia（配置文件从 `configs:` 改成了 `volumes:`，服务定义变了）；rustfs、dockerproxy、nvidia-dls 不动。命名卷（`homelab-compose_kopia_cache`、`homelab-compose_kopia_local_cache`）不动，kopia 的对账指纹与缓存保留
-5. 验收通过后，手动删除旧目录 `~/homelab-compose`：里面有旧流程渲染出的明文 `.env` 与 `repository.config`
-
-## 回退
-
-1. 撤掉 `hosts/sakamoto/home.nix` 里的 `imports = [ ./apps ]` 并 `just hm`：agent 与命令行消失，容器继续跑但不再受管理
-2. 旧目录 `~/homelab-compose` 与旧入口（home-ops 的 `task compose:deploy:sakamoto`）在删除前都能回退：旧入口 `-- --force-recreate` 部署一次，配置文件的挂载源就换回旧目录
+- 在 sakamoto 上 `just hm-build`；从别的机器只做轻量求值 `nix eval .#darwinConfigurations.sakamoto.config.home-manager.users.shelken.home.activationPackage.drvPath`
+- 新增机密：先在私有 `secrets` 仓库补上 `default.nix` 中 `secretNames` 列出的键，推送后在本仓库 `just upp secrets` 刷新 lock
+- 应用后确认 agent：`launchctl list | grep sakamoto-compose`、`tail -f ~/Library/Logs/sakamoto-compose.log`
 
 ## 日常操作
 
