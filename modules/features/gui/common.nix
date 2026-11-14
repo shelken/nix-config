@@ -7,9 +7,6 @@
     # input-source
     "squirrel-app"
 
-    # browser
-    "google-chrome"
-
     # misc
     "stats"
     "appcleaner"
