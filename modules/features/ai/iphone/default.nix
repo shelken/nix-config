@@ -1,12 +1,15 @@
 # iPhone 控制：经宿主上的 Pinky 操作 USB 连接的 iPhone，只有工作站接着手机
-{ config, ... }:
+{ config, inputs, ... }:
 {
   flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.iphone ];
 
   flake.modules.homeManager.iphone =
     { config, mylib, ... }:
     {
-      shelken.dev.ai.skills = [ ./iphone-use-best-practice ];
+      shelken.dev.ai.skills = [
+        ./iphone-use-best-practice
+        "${inputs.swipt-skills}/skills/swipt"
+      ];
 
       # iphone 与 skill 同源，软链到工作树源码即时生效
       home.file.".local/bin/iphone" = mylib.mkConfigFile config ./iphone-use-best-practice/scripts/iphone;

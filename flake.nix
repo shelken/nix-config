@@ -174,5 +174,9 @@
       url = "git+https://github.com/cloudflare/security-audit-skill?ref=main&rev=c1c8a8c1471069fb0e188eeaff69b8e8db6564a8&shallow=1";
       flake = false;
     };
+    swipt-skills = {
+      url = "git+https://github.com/swipt-automation/skills?ref=main&rev=8edabfa0444ad5c4a03ad045d0c0641b157ef7b6&shallow=1";
+      flake = false;
+    };
   };
 }

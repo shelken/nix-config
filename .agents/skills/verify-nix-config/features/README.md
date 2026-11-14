@@ -15,10 +15,10 @@
 以下变更不改变任何 CLI 行为，不需要运行 `just hm-build`、`just hm`、`just sw` 或 `verify.sh`：
 
 - `.agents/skills/`、`modules/features/ai/skills/` 与功能目录下登记的 skill 的正文、`references/`、feature 文档
-- `modules/features/ai/_skill-sources.nix` 的分组声明、`frontmatter` 覆盖，以及为它新增或前进的 flake input
+- `shelken.dev.ai.skills` 里外部 skill 的声明与 `frontmatter` 覆盖，以及为它新增或前进的 flake input
 - 仅被上述内容消费的 `utils/script/patch_frontmatter.py` 类改写脚本的文案调整
 
-验证到 `nix flake lock` 与 `nix eval --json .#skillSourceDirs` 为止，提交即可。改动涉及 `skill.nix` 的装配逻辑、部署路径或 `home.packages` 时，仍按对应 feature 驱动
+验证到 `nix flake lock` 与 `nix eval --json .#skillUpstreams.<本机>` 为止，提交即可。改动涉及 `skill.nix` 的部署逻辑、部署路径或 `home.packages` 时，仍按对应 feature 驱动
 
 ## Driving conventions
 

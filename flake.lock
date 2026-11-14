@@ -576,7 +576,8 @@
         "rime-main": "rime-main",
         "secrets": "secrets",
         "security-audit-skill": "security-audit-skill",
-        "sops-nix": "sops-nix"
+        "sops-nix": "sops-nix",
+        "swipt-skills": "swipt-skills"
       }
     },
     "secrets": {
@@ -633,6 +634,25 @@
         "owner": "Mic92",
         "repo": "sops-nix",
         "type": "github"
+      }
+    },
+    "swipt-skills": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1794510090,
+        "narHash": "sha256-CPA9mQMcazD02UnQuafKOsbJc59XCv18JivdPlDWOaY=",
+        "ref": "main",
+        "rev": "8edabfa0444ad5c4a03ad045d0c0641b157ef7b6",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/swipt-automation/skills"
+      },
+      "original": {
+        "ref": "main",
+        "rev": "8edabfa0444ad5c4a03ad045d0c0641b157ef7b6",
+        "shallow": true,
+        "type": "git",
+        "url": "https://github.com/swipt-automation/skills"
       }
     },
     "systems": {
