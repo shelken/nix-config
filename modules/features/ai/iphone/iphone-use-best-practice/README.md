@@ -66,7 +66,7 @@ Pinky 做得比旧脚本好的地方：helper 启动时设 `USE_IP=127.0.0.1`，
 
 ## Pinky 与 Swipt 的对比
 
-日期: 2026-11-08，标「2026-11-15 复测」的行用 Pinky 2026.1115.1 重测。Swipt 是另一个控制 iPhone 的工具，`scripts/iphone` 不调用它；skill 里两者的分工见 SKILL.md 的「选通道」。以下在 iPhone 17（iOS 27）上实测，Swipt 为 0.1.0 (59)。除「没有 USB 时可用」一行外，2026-11-08 的测试手机插着 USB，Swipt 的 Mac 到手机链路始终是局域网 HTTP。判断是否插线用 `xcrun devicectl list devices --json-output <文件>` 里的 `transportType`（`wired` 或 `localNetwork`）；`iphone status` 的 CONNECTION 列显示 Pinky 实际用的连接（`usb` 或 `wifi`）
+日期: 2026-11-08，标「2026-11-15 复测」的行用 Pinky 2026.1115.1 与 Swipt 0.1.0 (83) 重测。Swipt 是另一个控制 iPhone 的工具，`scripts/iphone` 不调用它；skill 里两者的分工见 SKILL.md 的「选通道」。以下在 iPhone 17（iOS 27）上实测，Swipt 为 0.1.0 (59)。除「没有 USB 时可用」一行外，2026-11-08 的测试手机插着 USB，Swipt 的 Mac 到手机链路始终是局域网 HTTP。判断是否插线用 `xcrun devicectl list devices --json-output <文件>` 里的 `transportType`（`wired` 或 `localNetwork`）；`iphone status` 的 CONNECTION 列显示 Pinky 实际用的连接（`usb` 或 `wifi`）
 
 图例
 
@@ -92,9 +92,9 @@ Pinky 做得比旧脚本好的地方：helper 启动时设 `USE_IP=127.0.0.1`，
 | 读原生 App 界面 | ✅ | ✅ | 主屏、设置、Safari 外壳都能读 |
 | 读网页里的输入框 | ✅ | ✅ | 2026-11-15 复测：Pinky 给出带 ref 的 `input ... editable`，密码框另带 `password`（DIYgod/pinky#4，2026.1108.21 起）；Swipt 给出 `textField`、`webContent` 和 `secure` 标记 |
 | 屏幕文字识别 | ✅ | ✅ | Pinky 是 `ocr` 行；Swipt 用 `screen.find`，中文不要传 `languages`，传了找不到 |
-| 按文字查找 | ✅ | ⚠️ | Swipt 的 `accessibility.find` 在 Safari 页面上找不到元素，改用 `snapshot().find` 才命中 |
+| 按文字查找 | ✅ | ⚠️ | 2026-11-15 复测：Swipt 的 `accessibility.find` 在原生 App 可用，在 Safari 网页内容里找不到元素（`depth` 加到上限 56 也一样），改用 `snapshot().find` 才命中。系统弹出的面板（如加入无线局域网）要 `snapshot({scope: "fullScreen"})` 才读得到 |
 | 截图 | ✅ | ✅ | Pinky 存 JPEG；Swipt 存 PNG，能写到手机文件再拉回 Mac |
-| 等待文字出现 | ✅ | ➖ | Swipt 只有等画面稳定、等变化，没有按文字等待 |
+| 等待文字出现 | ✅ | ⚠️ | 2026-11-15 复测：Swipt 的 `accessibility.find(selector, {timeoutMs})` 读到为止，原生 App 里 946 ms 命中；网页里同样找不到，要自己轮询 `snapshot()` |
 | 等待画面稳定 | ❓ | ✅ | Pinky 每个动作自带稳定检测，没有单独命令 |
 
 ### 操作
@@ -103,23 +103,23 @@ Pinky 做得比旧脚本好的地方：helper 启动时设 `USE_IP=127.0.0.1`，
 |---|---|---|---|
 | 点元素 | ✅ | ✅ | |
 | 点坐标 | ✅ | ✅ | Pinky 用截图像素，Swipt 用点 |
-| 按文字点击 | ✅ | ➖ | Swipt 要自己组合 `find` 与 `tap` |
+| 按文字点击 | ✅ | ✅ | 2026-11-15 复测：Swipt 用 `snapshot().find` 取元素再 `accessibility.tap`。它点击前检查遮挡：元素被键盘盖住，或点击会落到包住它的单元格时拒绝，并说明会点到谁；单元格的情况改用 `input.tap(element.point)` |
 | 输入文字到原生输入框 | ✅ | ✅ | |
 | 输入文字到网页输入框 | ✅ | ✅ | 2026-11-15 复测：Pinky 先 `tap <ref>` 再不带 `--ref` 输入；直接 `type --ref` 返回 `uncertain`，输入框没拿到焦点 |
 | 滑动或滚动 | ✅ | ✅ | |
-| 拖拽 | ✅ | ❓ | Swipt 只测了 `swipe` 与 `touch` |
+| 拖拽 | ✅ | ✅ | 2026-11-15：Swipt 的 `input.drag([x, y], [x, y])`（坐标是数组）拖动「设置」列表，同一元素的 y 从 651 变为 502 |
 | 多指手势 | ➖ | ✅ | `input.pinch`、`input.touch` |
 | 回车键 | ✅ | ✅ | |
 | 回主屏 | ✅ | ✅ | |
 | 打开应用切换器 | ❓ | ✅ | |
-| 电源键、音量键 | ❓ | ❓ | 会锁屏或改音量，没测 |
+| 电源键、音量键 | ❓ | ✅ | 2026-11-15：Swipt 的 `pressPower` 后 `device.locked` 变为 true；`pressVolumeUp` 后截图里出现音量浮层，读屏读不到它。Pinky 会锁屏或改音量，没测 |
 
 ### App
 
 | 项目 | Pinky | Swipt | 备注 |
 |---|---|---|---|
 | 按 bundle id 启动 | ✅ | ✅ | |
-| 按显示名启动 | ❓ | ➖ | Pinky 文档支持，本轮只用了 bundle id |
+| 按显示名启动 | ❓ | ➖ | Pinky 文档支持，本轮只用了 bundle id。Swipt 的 `launchApplication` 只收 bundle id，传显示名报 `NotFoundError`（已实测），先用 `installedApplications()` 按 `name` 换成 bundle id |
 | 用 URL 打开链接 | ✅ | ✅ | 2026-11-15 复测：`iphone launch https://…` 在 Safari 打开该页（DIYgod/pinky#3，2026.1108.21 起）；Swipt 用 `launchApplication(id, {url})` |
 | 强制重启式启动 | ➖ | ✅ | `restart: true` |
 | 列出已装 App | ✅ | ✅ | Swipt 返回 310 个，带版本 |
@@ -135,25 +135,26 @@ Pinky 做得比旧脚本好的地方：helper 启动时设 `USE_IP=127.0.0.1`，
 | SQLite | ➖ | ✅ | |
 | 录屏 | ❓ | ✅ | Swipt 录 2 秒，返回时长与帧事件；Pinky 文档称有录像，未测 |
 | 常驻自动化（Swiplet） | ➖ | ✅ | 只验证了 `swiplet list`，当前没有安装 |
-| 读剪贴板 | ❓ | ❌ | 系统拒绝：条目含受保护内容 |
-| 写剪贴板 | ❓ | ❓ | 会覆盖你的剪贴板，没测 |
-| 自动解锁 | ❓ | ❓ | 要先在 Swipt 保存锁屏密码，没测 |
+| 读剪贴板 | ❓ | ⚠️ | 2026-11-15：Swipt 自己写入的文字能读回；2026-11-08 读到含受保护内容的条目时系统拒绝 |
+| 写剪贴板 | ❓ | ✅ | 2026-11-15：Swipt 的 `setPasteboard` 覆盖手机剪贴板，`pasteboard()` 读回一致。Pinky 会覆盖剪贴板，没测 |
+| 自动解锁 | ❓ | ✅ | 2026-11-15：Swipt 里保存锁屏密码后，`device.unlock()` 2.3 秒解开电源键锁上的手机，全程不用用户。Pinky 没测 |
 
 ### 安全与管控
 
 | 项目 | Pinky | Swipt | 备注 |
 |---|---|---|---|
-| 敏感动作需要用户批准 | ❓ | ❌ | Swipt 全程无任何请示；Pinky 没找到安全的触发场景 |
+| 敏感动作需要用户批准 | ❓ | ❌ | Swipt 全程无任何请示，2026-11-15 复测仍是；源码（69bb1cf）没有审批、App 范围、只读机制，访问控制只有 API token。Pinky 没找到安全的触发场景 |
 | 限定可用 App | ✅ | ❌ | Pinky 对范围外 App 返回 `scope_denied`；Swipt 能启动任意 App |
 | 只读模式 | ⚠️ | ❌ | Pinky 只读下点击、启动、回主屏仍然通过，只拦会请示的动作 |
 | 拦截网页密码框输入 | ❌ | ❌ | 两者都把假数据写进了网页密码框，Swipt 能看到 `secure` 标记但不拦 |
-| 拦截原生密码框输入 | ❓ | ❓ | 没找到安全的测试页面 |
-| 请用户接管、提问 | ❓ | ❓ | 要用户在手机或 Pinky 上操作，没测 |
+| 拦截原生密码框输入 | ❓ | ❌ | 2026-11-15：Swipt 把假数据写进了「加入无线局域网」面板的 `secureTextField`，测完取消。Pinky 没测 |
+| 请用户接管、提问 | ❓ | ⚠️ | 2026-11-15：Swipt 的 `appIntents.requestConfirmation` 在手机上弹确认框，用户确认后 7.9 秒返回，拒绝时抛 `AbortError`；另有 `requestChoice`、`requestValue`。没有「交给用户、做完自动收回」的接管，只能用确认框代替。Pinky 没测 |
 
 ### 结论
 
 - 界面操作两者都能完成，包括 URL 打开、网页输入框和不插 USB；差别在管控：只有 Pinky 有范围限制与请示，且两者都没拦网页密码框
-- Swipt 的独有能力集中在手机侧：HTTP、文件、SQLite、前后台事件、录屏、多指手势、Swiplet
+- Swipt 的独有能力集中在手机侧：HTTP、文件、SQLite、前后台事件、录屏、多指手势、剪贴板、电源与音量键、Swiplet
+- Swipt 保存了锁屏密码时能自行解锁手机：拿到它的 API 就能解锁并操作手机，且没有任何请示
 - 所以两者平级：要范围限制或请示的操作走 Pinky，手机侧能力走 Swipt，其余看哪边已连上
 - 同时连着没有冲突，但同一块屏幕仍建议一次只由一边驱动
 

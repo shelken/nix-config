@@ -27,7 +27,7 @@ description: Start here for any task on the user's real iPhone (open apps or lin
 按顺序取第一条命中的：
 
 1. 会发送、支付、删除，或用户要求限定 App、只读 → Pinky
-2. 手机侧 HTTP 请求、文件、SQLite、App 前后台事件、录屏、多指手势、强制重启 App、Swiplet → Swipt
+2. 手机侧 HTTP 请求、文件、SQLite、剪贴板、App 前后台事件、录屏、多指手势、电源与音量键、强制重启 App、Swiplet → Swipt
 3. 其余（打开 App 或链接、点击、输入、滚动、读屏）→ 按第 3 步查两边状态，用已连上的；都连上时，只读用 Swipt，会改动手机的用 Pinky
 
 第 1、2 条指定的通道连不上时，请用户按第 3 步修好它，不换另一边。
@@ -125,13 +125,20 @@ iphone down --summary "已查看电池健康"   # 释放手机，写入用户的
 ## 5. 用 Swipt
 
 ```bash
-swipt repl run -d <名称> 'return (await device.info()).name'   # 在手机上执行一段 JS，打印 return 的值
-swipt repl api                                                  # 全部全局变量与模块的声明
+swipt repl run -d <名称> '(await device.info()).name'   # 表达式：打印它的值
+swipt repl run -d <名称> <文件>.js                     # 程序：只打印 console 输出，结果用 console.log
+swipt repl run -d <名称> --output <目录> 'show(await device.screenshot())'   # 截图存到目录
+swipt repl api                                            # 全部全局变量与模块的声明
 ```
 
 - 写法与 API 读 `swipt` skill
-- 坐标单位是**点**，与 Pinky 的截图像素不同，两边的坐标不能混用
-- 按文字找元素用 `(await accessibility.snapshot()).find(...)`；Safari 页面里 `accessibility.find` 找不到
+- 坐标是 `[x, y]` 数组，单位是**点**，与 Pinky 的截图像素不同，两边的坐标不能混用
+- 找元素并等它出现：原生 App 用 `accessibility.find(selector, { timeoutMs })`；Safari 网页里它找不到，改用 `(await accessibility.snapshot({ full: true })).find(selector)` 并自己轮询
+- 系统弹出的面板（如加入 Wi-Fi）不在前台 App 的树里，用 `snapshot({ scope: "fullScreen", full: true })`
+- 点元素用 `accessibility.tap(element)`，它先检查遮挡。报「would reach the element …」时：被键盘挡住就先收起键盘；会点到包住它的单元格就改用 `input.tap(element.point)`
+- `device.launchApplication` 只收 bundle id；显示名先用 `device.installedApplications()` 换成 bundle id
+- 问用户：`appIntents.requestConfirmation("<问题>")` 在手机上弹确认框，用户拒绝时抛 `AbortError`
+- 手机锁屏时，`device.unlock()` 用 Swipt 里保存的锁屏密码解锁；没保存时请用户解锁
 - `screen.find` 识别中文时不传 `languages`，传了找不到
 - 空闲后的第一次调用可能报 `ECONNRESET`，重试一次
 
