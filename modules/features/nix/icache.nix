@@ -51,6 +51,8 @@ in
       };
       nix-icache = pkgs.writeShellApplication {
         name = "nix-icache";
+        # install -D 是 GNU 语义；SSH 非交互登录的 PATH 只有系统路径，会用到 macOS 的 BSD install
+        runtimeInputs = [ pkgs.coreutils ];
         text = ''
           conf="$HOME/.config/nix/icache.conf"
           miseConf="$HOME/.config/mise/conf.d/icache.toml"
