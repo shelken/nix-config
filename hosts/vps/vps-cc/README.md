@@ -177,9 +177,11 @@ just deploy vps-cc
 
 业务容器由本仓库声明，部署时自己拉取约 3.6GB 镜像
 
+数据也可以从 kopia 快照恢复，入口在 home-ops：`task kopia:list` 选快照，`task kopia:full SNAPSHOT_ID=<id>` 经 sakamoto 的 `kopia` 容器取出并推到 vps-cc 的 `/data/docker`
+
 ### 7. 逐项核对
 
-- [ ] `docker ps` 16 个容器都在
+- [ ] `docker ps` 14 个容器都在
 - [ ] 对外端口：443（tcp、udp）、8666、3478/udp、10357/udp、5444、60223 能从外部连通
 - [ ] tailscale 上绑定的端口（node-exporter、caddy 管理口、kopia、openlist）可从 tailnet 访问
 - [ ] crowdsec-firewall-bouncer 在 `INPUT`、`FORWARD`、`DOCKER-USER` 里确实加了规则：`iptables -S | grep -i crowdsec`；若没有，说明它的 iptables 与 NixOS 防火墙不兼容，需要处理
@@ -191,10 +193,10 @@ just deploy vps-cc
 
 ## 回滚
 
-| 时机                   | 做法                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| kexec 之后、disko 之前 | VNC 控制台强制重启，回到 Ubuntu，磁盘没动                                                                                                                                                                                                                                                                                                                                                              |
-| disko 之后             | 服务商控制台重装 Ubuntu（地址不变）；加回 SSH 公钥后，用迁移前的 home-ops commit 跑 `ansible/site-others.yml`（该 playbook、`host_vars/vps-cc.yaml` 与 `task compose:deploy:vps` 都已随迁移删除，`git show <迁移前 commit>:<路径>` 取回），把 `~/vps-cc-backup` 里的 `data-docker.tgz` 解回 `/data`，`tailscaled.state` 放回 `/var/lib/tailscale/` 再启动 tailscaled，最后跑 `task compose:deploy:vps` |
+| 时机                   | 做法                                                                                                                                                                                                                                                                                                                                                                                    |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| kexec 之后、disko 之前 | VNC 控制台强制重启，回到 Ubuntu，磁盘没动                                                                                                                                                                                                                                                                                                                                               |
+| disko 之后             | 服务商控制台重装 Ubuntu（地址不变）；加回 SSH 公钥后，在 home-ops 检出迁移前的提交 `9cdfe6ef^`，跑其中的 `ansible/site-others.yml`（该 playbook、`host_vars/vps-cc.yaml` 与 `task compose:deploy:vps` 都已从当前主干删除），把 `~/vps-cc-backup` 里的 `data-docker.tgz` 解回 `/data`，`tailscaled.state` 放回 `/var/lib/tailscale/` 再启动 tailscaled，最后跑 `task compose:deploy:vps` |
 
 ## 日常更新
 

@@ -139,10 +139,11 @@ virtualisation.oci-containers.containers.openlist = {
 - [ ] 求值：`nix eval .#nixosConfigurations.<主机>.config.system.build.toplevel.drvPath`
 - [ ] 部署：`just deploy vps-cc`
 - [ ] 验收：`systemctl status docker-<名字>`、`journalctl -u docker-<名字>`、`docker ps`，再从 tailnet 侧试一次端口
+- [ ] 监控：在 home-ops 的 `k8s/infra/common/observability/gatus/app/resources/outside/` 补 Gatus 检查，探测方式见 home-ops 的 `gatus-compose-checks` skill
 - [ ] 回退：**顺序不能反**，否则容器会被前后两次清掉
-  - 取回 home-ops 迁移前的 `compose/vps/`、`.env.tpl` 与被删的 task/ansible，备好凭据
+  - 在 home-ops 检出迁移前的提交 `9cdfe6ef^`（含 `compose/vps/`、`.env.tpl` 与 task/ansible），备好凭据
   - 本仓库去掉该服务（或整套）声明并 `just deploy vps-cc`：nix 单元的停止与清理会 `docker rm -f` 同名容器，这一步结束时容器是停的
-  - 在 home-ops 跑 `task compose:deploy:vps` 把 Compose 容器起回来（反序做的话，nix 单元的清理会把刚起的同名容器删掉）
+  - 在该检出里跑 `task compose:deploy:vps` 把 Compose 容器起回来（反序做的话，nix 单元的清理会把刚起的同名容器删掉）
 
 ## 当前已纳管的服务
 
@@ -167,7 +168,7 @@ virtualisation.oci-containers.containers.openlist = {
 
 只有 dnsmasq 试过走原生 module 但落不下来（`services.dnsmasq.configFile` 是 readOnly，配置只能由 `settings` 生成，而它含 sops 值）；其余服务各自的阻碍写在对应服务文件的头部注释里。判断标准是「原生 module 能否原样覆盖配置与进程语义」，不是「有没有 module」：`services.tailscale.derper`、`services.sing-box`、`services.fluent-bit` 都存在，但分别把 nginx、证书目录、单位硬化写死在 module 里，搬过去要改的就不只是声明了
 
-旧声明（home-ops 的 `compose/vps/`）已随这次迁移整体删除，回退步骤见「加一个服务的步骤」最后一条（先撤本仓库声明，再起 Compose，顺序反了容器会被删两次）
+旧声明（home-ops 的 `compose/vps/`，取回点是提交 `9cdfe6ef^`）已随这次迁移整体删除，回退步骤见「加一个服务的步骤」最后一条（先撤本仓库声明，再起 Compose，顺序反了容器会被删两次）
 
 ## sakamoto（macOS）：声明在仓库里，运行时仍是 Compose
 
@@ -194,11 +195,11 @@ sakamoto-compose logs
 sakamoto-compose recreate   # 无条件重建全部容器，排障用
 ```
 
-agent 日志在 `~/Library/Logs/sakamoto-compose.log`；切换与回退见 `hosts/sakamoto/apps/README.md`
+agent 日志在 `~/Library/Logs/sakamoto-compose.log`；组成与日常操作见 `hosts/sakamoto/apps/README.md`
 
 ## 相关
 
-- 旧声明：home-ops 的 `compose/vps/docker-compose.yml`、`compose/sakamoto/`（都已删除，历史里可查）
-- 服务目录：`hosts/sakamoto/apps/`（`README.md` 是切换与回退手册）
+- 旧声明：home-ops 的 `compose/vps/docker-compose.yml`（取回点 `9cdfe6ef^`）、`compose/sakamoto/`（取回点 `32964f39^`），当前主干都已删除
+- 服务目录：`hosts/sakamoto/apps/`（`README.md` 是组成与日常操作手册）
 - 官方实现：nixpkgs 的 `nixos/modules/virtualisation/oci-containers.nix`
 - 系统侧：`hosts/vps/common.nix`（tailscale、docker）、`05-vps.md`（接管与部署）
