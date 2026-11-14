@@ -66,7 +66,7 @@ Pinky 做得比旧脚本好的地方：helper 启动时设 `USE_IP=127.0.0.1`，
 
 ## Pinky 与 Swipt 的对比
 
-日期: 2026-11-08。Swipt 是另一个控制 iPhone 的工具，`iphone` 不使用它。以下全部在同一台 iPhone 17（iOS 27.0.1）上实测，Swipt 为 0.1.0 (59)。除「没有 USB 时可用」一行外，测试时手机插着 USB，Swipt 的 Mac 到手机链路始终是局域网 HTTP。判断是否插线用 `xcrun devicectl list devices --json-output <文件>` 里的 `transportType`（`wired` 或 `localNetwork`），不要靠 `iphone status` 的 CONNECTION 列，它始终写 usb
+日期: 2026-11-08，标「2026-11-15 复测」的行用 Pinky 2026.1115.1 重测。Swipt 是另一个控制 iPhone 的工具，`scripts/iphone` 不调用它；skill 里两者的分工见 SKILL.md 的「选通道」。以下在 iPhone 17（iOS 27）上实测，Swipt 为 0.1.0 (59)。除「没有 USB 时可用」一行外，2026-11-08 的测试手机插着 USB，Swipt 的 Mac 到手机链路始终是局域网 HTTP。判断是否插线用 `xcrun devicectl list devices --json-output <文件>` 里的 `transportType`（`wired` 或 `localNetwork`）；`iphone status` 的 CONNECTION 列显示 Pinky 实际用的连接（`usb` 或 `wifi`）
 
 图例
 
@@ -80,7 +80,8 @@ Pinky 做得比旧脚本好的地方：helper 启动时设 `USE_IP=127.0.0.1`，
 
 | 项目 | Pinky | Swipt | 备注 |
 |---|---|---|---|
-| 没有 USB 时可用 | ❌ | ✅ | 拔线后 `transportType` 变为 `localNetwork`：Pinky 显示 Offline，`iphone up` 返回 `device_offline`，与 setup.md 的「必须 USB」一致；Swipt 的读树、回主屏照常成功 |
+| 没有 USB 时可用 | ✅ | ✅ | 2026-11-15 复测：`transportType` 为 `localNetwork` 时，Pinky 的 `up`、`snapshot`、`launch`、`type` 照常成功。Pinky 从 2026.1113.17 起默认经 Wi-Fi 连接，要求手机与 Mac 同一网络；Wi-Fi 下锁屏的手机返回 `device_needs_setup` 等用户解锁 |
+| 空闲后自动重连 | ✅ | ✅ | 2026-11-15：Swipt 的「已停止」是连接空闲（源码 `internal/device/connection.go`，没有调用者时超时断开），下一次调用自动重连；空闲后的第一次调用实测报过一次 `ECONNRESET`，重试成功 |
 | 两者同时连着互不影响（插着 USB） | ✅ | ✅ | Pinky 租约保持，两边交替截图、读树、回主屏、点击，3 轮共 24 次调用全部成功，没有复现上文第 11 条 |
 | 需要在手机上侧载 App | ➖ | ✅ | Swipt 要侧载并续期。Pinky 在 iOS 27 上是否需要 helper 未单独验证 |
 
@@ -89,7 +90,7 @@ Pinky 做得比旧脚本好的地方：helper 启动时设 `USE_IP=127.0.0.1`，
 | 项目 | Pinky | Swipt | 备注 |
 |---|---|---|---|
 | 读原生 App 界面 | ✅ | ✅ | 主屏、设置、Safari 外壳都能读 |
-| 读网页里的输入框 | ❌ | ✅ | Pinky 只给 OCR 行，没有 ref；Swipt 给出 `textField`、`webContent` 和 `secure` 标记 |
+| 读网页里的输入框 | ✅ | ✅ | 2026-11-15 复测：Pinky 给出带 ref 的 `input ... editable`，密码框另带 `password`（DIYgod/pinky#4，2026.1108.21 起）；Swipt 给出 `textField`、`webContent` 和 `secure` 标记 |
 | 屏幕文字识别 | ✅ | ✅ | Pinky 是 `ocr` 行；Swipt 用 `screen.find`，中文不要传 `languages`，传了找不到 |
 | 按文字查找 | ✅ | ⚠️ | Swipt 的 `accessibility.find` 在 Safari 页面上找不到元素，改用 `snapshot().find` 才命中 |
 | 截图 | ✅ | ✅ | Pinky 存 JPEG；Swipt 存 PNG，能写到手机文件再拉回 Mac |
@@ -104,7 +105,7 @@ Pinky 做得比旧脚本好的地方：helper 启动时设 `USE_IP=127.0.0.1`，
 | 点坐标 | ✅ | ✅ | Pinky 用截图像素，Swipt 用点 |
 | 按文字点击 | ✅ | ➖ | Swipt 要自己组合 `find` 与 `tap` |
 | 输入文字到原生输入框 | ✅ | ✅ | |
-| 输入文字到网页输入框 | ✅ | ✅ | Pinky 要先点坐标再不带 `--ref` 输入 |
+| 输入文字到网页输入框 | ✅ | ✅ | 2026-11-15 复测：Pinky 先 `tap <ref>` 再不带 `--ref` 输入；直接 `type --ref` 返回 `uncertain`，输入框没拿到焦点 |
 | 滑动或滚动 | ✅ | ✅ | |
 | 拖拽 | ✅ | ❓ | Swipt 只测了 `swipe` 与 `touch` |
 | 多指手势 | ➖ | ✅ | `input.pinch`、`input.touch` |
@@ -119,7 +120,7 @@ Pinky 做得比旧脚本好的地方：helper 启动时设 `USE_IP=127.0.0.1`，
 |---|---|---|---|
 | 按 bundle id 启动 | ✅ | ✅ | |
 | 按显示名启动 | ❓ | ➖ | Pinky 文档支持，本轮只用了 bundle id |
-| 用 URL 打开链接 | ❌ | ✅ | Pinky 的 `phone_launch` 只收名称、包名、bundle id，传 URL 返回 `not_found`，`iphone` 不再提供 `open`；Swipt 用 `launchApplication(id, {url})` |
+| 用 URL 打开链接 | ✅ | ✅ | 2026-11-15 复测：`iphone launch https://…` 在 Safari 打开该页（DIYgod/pinky#3，2026.1108.21 起）；Swipt 用 `launchApplication(id, {url})` |
 | 强制重启式启动 | ➖ | ✅ | `restart: true` |
 | 列出已装 App | ✅ | ✅ | Swipt 返回 310 个，带版本 |
 | App 前后台事件 | ➖ | ✅ | `device.applicationEvents` |
@@ -151,11 +152,9 @@ Pinky 做得比旧脚本好的地方：helper 启动时设 `USE_IP=127.0.0.1`，
 
 ### 结论
 
-- 界面操作两者都能完成，差别在管控：只有 Pinky 有范围限制与请示，且两者都没拦网页密码框
-- Pinky 的两个缺口：不能用 URL 打开链接，读不到网页里的输入框。这两项 Swipt 都能做
-- Swipt 的独有能力集中在手机侧：HTTP、文件、SQLite、前后台事件、录屏、Swiplet
-- `iphone` 继续走 Pinky，凡要范围限制或请示的操作必须走它
-- 只有 Swipt 提供的能力走 `swipt`，不要用它绕开 Pinky 的范围限制
+- 界面操作两者都能完成，包括 URL 打开、网页输入框和不插 USB；差别在管控：只有 Pinky 有范围限制与请示，且两者都没拦网页密码框
+- Swipt 的独有能力集中在手机侧：HTTP、文件、SQLite、前后台事件、录屏、多指手势、Swiplet
+- 所以两者平级：要范围限制或请示的操作走 Pinky，手机侧能力走 Swipt，其余看哪边已连上
 - 同时连着没有冲突，但同一块屏幕仍建议一次只由一边驱动
 
 ### 复现
