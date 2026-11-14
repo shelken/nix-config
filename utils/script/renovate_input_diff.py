@@ -2,7 +2,7 @@
 """对比 base / head 的 flake.lock，把变化的 input 渲染成一条 PR 评论。
 
 - 每个变化的 input 一段；skill 类静态资源只内联「已启用目录」里的文件改动，
-  目录集合由 `nix eval --json .#skillSourceDirs` 生成（单一事实来源见 _skill-sources.nix）
+  目录集合由 utils/script/skill_source_dirs.py 从各主机的 flake.skillUpstreams 求出
 - 目录取 base 与 head 两侧的并集：`discover = true` 的分组在上游删掉 skill 后，
   旧目录只会出现在 base 侧，只用 head 会把删除记录全部过滤掉
 - 重命名记录只要新旧路径任一落在启用目录内就保留
@@ -249,8 +249,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-lock", required=True, help="base 一侧的 flake.lock")
     parser.add_argument("--head-lock", required=True, help="head 一侧的 flake.lock")
-    parser.add_argument("--base-skill-dirs", required=True, help="base 一侧的 flake.skillSourceDirs JSON")
-    parser.add_argument("--head-skill-dirs", required=True, help="head 一侧的 flake.skillSourceDirs JSON")
+    parser.add_argument("--base-skill-dirs", required=True, help="base 一侧的 skill 目录 JSON（skill_source_dirs.py 输出）")
+    parser.add_argument("--head-skill-dirs", required=True, help="head 一侧的 skill 目录 JSON（skill_source_dirs.py 输出）")
     parser.add_argument("--pull-request", help="PR 号；给了才会更新评论")
     parser.add_argument("--summary", help="溢出内容写到这个文件（CI 传 $GITHUB_STEP_SUMMARY）")
     parser.add_argument("--run-url", help="运行链接，溢出时写进评论")
