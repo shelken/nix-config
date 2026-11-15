@@ -2,7 +2,7 @@
 // spawn-subagent.ts — 在 Herdr.app(hc 终端)、旧 Herdr 窗格或 Kitty 窗口中启动/关闭 pi 子代理
 // agent 真相源: ~/.pi/agent/agents/<profile>.md（nix 按 omp 的 modelRoles 生成）: tools 与正文来自 md，
 // model/thinking 每次派发实时读 ~/.omp/agent/config.yml，读不到才回退 md 的静态值。
-// 用法: spawn-subagent <profile> <slug> -- <task> | close <id> | list | --check | -h
+// 用法: spawn-subagent <profile> <slug> -- <task> | batch | resume | close | list | ps | --check | -h
 import { execFileSync, execSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
@@ -168,6 +168,9 @@ function usage() {
                                               -v 加 description 行；--json 输出数组（含 tools 与 description）
   spawn-subagent --check                      派生 settings + 打印所有 agent 生效值，不启动
   spawn-subagent close <id>                   关闭子代理（含已结束的）；旧 Herdr 另聚焦回主 pane
+  spawn-subagent close --finished | --all     批量关闭当前终端派发的子代理：仅已结束的 / 全部（仅 Herdr.app(hc)）
+  spawn-subagent ps [--json]                  列出当前终端派发的子代理（含已结束）：
+                                              ID|PROFILE|STATE|AGE，末行 N running, M finished（仅 Herdr.app(hc)）
   spawn-subagent -h | --help                  显示本帮助
 
 命令选择:
@@ -214,6 +217,8 @@ manifest (batch，文件路径，不支持内联 JSON 或 stdin):
 终端后端（按环境变量择一，派发前验证，失效即 context-error，不回退到其他后端或聚焦 pane）:
   1. Herdr.app（HC_TERMINAL_ID，hc 0.1.x）: 后台启动，不分屏不聚焦，在 Agents 列表可见且挂在当前终端下；
      ID 为 hc 终端地址（如 t7）；close 对 hc 终端执行 kill + rm，只清理当前终端的子终端；
+     派发时给终端打标签 spawned-by=spawn-subagent 与 profile=<profile>，ps/close --finished/--all 靠标签与
+     parent 找回本终端派发的子代理，状态只来自 hc，不写派发记录；
      窗口展示由用户或 herdr-app 决定。hc/herdr-app 的权威说明见 hc --skill、herdr-app --skill
   2. 旧 Herdr（HERDR_PANE_ID）: 右列分屏，ID 为 pane ID（如 w1A:p3）
   3. Kitty（KITTY_WINDOW_ID）: 右列分屏，ID 为窗口 ID；需 allow_remote_control=socket-only + listen_on，tab 布局为 splits
@@ -560,6 +565,25 @@ function hcGet(id: string): any | null {
   }
 }
 
+// 派发时打标签，ps / close --finished / close --all 靠它与 parent 找回本终端的子代理，不在本地记录派发状态
+const HC_SPAWN_LABEL = "spawned-by=spawn-subagent";
+
+type HcSubagent = { id: string; name: string; profile: string; state: "running" | "finished"; ageMs: number };
+
+// 当前终端启动、带派发标签的子代理（含已结束）。hc ls 不返回 parent，逐个 get 过滤
+function hcSubagents(): HcSubagent[] {
+  const { terminals } = hcOut(["ls", "--all", "--json", "--label", HC_SPAWN_LABEL]);
+  const now = Date.now();
+  return terminals.flatMap((x: any) => {
+    const t = hcGet(x.address);
+    if (!t || t.parent !== process.env.HC_TERMINAL_ID) return [];
+    return [{
+      id: t.address, name: t.name, profile: t.labels?.profile ?? "-",
+      state: t.state === "live" ? "running" : "finished", ageMs: now - t.created_ms,
+    }];
+  });
+}
+
 // hc send 是“粘贴并回车”，传错 ID 指到非子代理终端（如用户的 shell）会把任务文本当命令执行，
 // 所以 send/close 都只允许操作当前终端自己启动的子终端
 function requireHcChild(pane: string) {
@@ -584,6 +608,7 @@ const hcTerm: Term = {
     try {
       const out = hcOut([
         "run", "--bg", "--json", "--name", agentName, "--parent", process.env.HC_TERMINAL_ID!, "--cwd", process.cwd(),
+        "--label", HC_SPAWN_LABEL, "--label", `profile=${g.name.toLowerCase()}`,
         // hc run 继承 hc 守护进程的环境，其 PATH 可能没有 mise 安装的 pi；传入主窗口 PATH
         "env", `PI_CODING_AGENT_DIR=${subHome}`, `PATH=${process.env.PATH}`,
         ...PI_CMD, "--session-id", sessionId, "--model", g.model, "--thinking", g.thinking, "--tools", g.tools,
@@ -670,6 +695,58 @@ function resume(paneId: string, task: string) {
     process.exit(1);
   }
   console.log(paneId);
+}
+
+// ps / close --finished / close --all 只支持 hc 后端
+function requireHcOrExit(cmd: string): void {
+  if (termOrExit() !== hcTerm) {
+    console.error(`spawn-subagent: ${cmd} 仅支持 Herdr.app(hc)`);
+    process.exit(1);
+  }
+}
+
+function formatAge(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}d`;
+}
+
+function psAgents(json: boolean) {
+  requireHcOrExit("ps");
+  const agents = hcSubagents();
+  const running = agents.filter((a) => a.state === "running").length;
+  if (json) {
+    console.log(JSON.stringify(agents.map((a) => ({
+      id: a.id, name: a.name, profile: a.profile, state: a.state, ageSeconds: Math.floor(a.ageMs / 1000),
+    })), null, 2));
+    return;
+  }
+  const wId = Math.max(2, ...agents.map((a) => a.id.length));
+  const wProfile = Math.max(7, ...agents.map((a) => a.profile.length));
+  const line = (...c: string[]) => `${c[0].padEnd(wId)}  ${c[1].padEnd(wProfile)}  ${c[2].padEnd(8)}  ${c[3]}`;
+  console.log(line("ID", "PROFILE", "STATE", "AGE"));
+  for (const a of agents) console.log(line(a.id, a.profile, a.state, formatAge(a.ageMs)));
+  console.log(`${running} running, ${agents.length - running} finished`);
+}
+
+// 批量关闭：只动当前终端启动且带派发标签的终端
+function closeAgents(scope: "finished" | "all") {
+  requireHcOrExit(`close --${scope}`);
+  const targets = hcSubagents().filter((a) => scope === "all" || a.state === "finished");
+  let failed = 0;
+  for (const a of targets) {
+    try {
+      hcTerm.close(a.id);
+      console.log(`closed ${a.id} (${a.profile}, ${a.state})`);
+    } catch (e: any) {
+      failed++;
+      console.error(`spawn-subagent: 关闭失败（${cliError(e)}）: ${a.id}`);
+    }
+  }
+  console.log(`${targets.length - failed} closed`);
+  if (failed) process.exit(1);
 }
 
 // ---------- 健康门 ----------
@@ -929,19 +1006,25 @@ if (!c0 || c0 === "-h" || c0 === "--help") {
   console.log(`派生 settings.json 就绪: ${join(homedir(), ".pi", "agent-subagent", "settings.json")}`);
   console.log(`全局排除 exclude(subagent-config.json 统一生效): ${JSON.stringify(config.exclude ?? [])}\n`);
   listAgents();
+} else if (c0 === "ps") {
+  psAgents(process.argv.slice(3).includes("--json"));
 } else if (c0 === "close") {
   if (!c1) {
-    console.error("spawn-subagent: close 需要 id 参数");
+    console.error("spawn-subagent: close 需要 id、--finished 或 --all");
     process.exit(1);
   }
-  try {
-    const term = termOrExit();
-    term.close(c1);
-    term.focusMain?.();
-    console.log(`closed ${c1}`);
-  } catch (e: any) {
-    console.error(`spawn-subagent: 关闭失败（${cliError(e)}）: ${c1}`);
-    process.exit(1);
+  if (c1 === "--finished" || c1 === "--all") {
+    closeAgents(c1 === "--all" ? "all" : "finished");
+  } else {
+    try {
+      const term = termOrExit();
+      term.close(c1);
+      term.focusMain?.();
+      console.log(`closed ${c1}`);
+    } catch (e: any) {
+      console.error(`spawn-subagent: 关闭失败（${cliError(e)}）: ${c1}`);
+      process.exit(1);
+    }
   }
 } else if (c0 === "resume") {
   const sep = process.argv.indexOf("--");
