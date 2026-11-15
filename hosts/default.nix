@@ -33,6 +33,15 @@ in
     nixos-modules = [ ./k8s/yuuko-k8s ];
   };
 
+  sakamoto-k8s = {
+    type = "nixos";
+    system = "aarch64-linux";
+    deploy = rootDeploy // {
+      remoteBuild = true;
+    };
+    nixos-modules = [ ./k8s/sakamoto-k8s ];
+  };
+
   vps-test = {
     type = "nixos";
     system = "x86_64-linux";
