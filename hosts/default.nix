@@ -42,6 +42,15 @@ in
     nixos-modules = [ ./k8s/sakamoto-k8s ];
   };
 
+  homelab-1 = {
+    type = "nixos";
+    system = "x86_64-linux";
+    deploy = rootDeploy // {
+      remoteBuild = true;
+    };
+    nixos-modules = [ ./k8s/homelab-1 ];
+  };
+
   vps-test = {
     type = "nixos";
     system = "x86_64-linux";
