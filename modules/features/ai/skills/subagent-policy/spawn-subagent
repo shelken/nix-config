@@ -704,8 +704,11 @@ function checkHealthParser() {
   if (observeHealth(msg("error", "404")).status !== "error") throw new Error("失效签名自检失败");
 }
 
-// 配置/认证/额度类错误（含 429 额度用尽），重试无意义，健康门立即失败
-const CONFIG_ERROR = /400|401|403|404|429|auth|unauthorized|forbidden|not_found/i;
+// 配置/认证/额度类错误（含 429 额度用尽），重试无意义，健康门立即失败。
+// 状态码前后不能紧挨字母或数字，否则 request id（req_4012）、耗时（1403ms）会被误判、让可重试的故障直接失败；
+// 但下划线要算边界，pi 透传的 `${code}: ${message}` 里 model_not_found、invalid_auth、HTTP_401 都是真实配置错误。
+// auth 类词只认 auth/authentication/authorization 等，避开 author；forbidden/not_found 保持前缀匹配，不漏 not_found_error。
+const CONFIG_ERROR = /(?<![a-z0-9])(?:400|401|403|404|429)(?![a-z0-9])|(?<![a-z])(?:un)?auth(?:entic[a-z]*|oriz[a-z]*)?(?![a-z])|(?<![a-z])(?:forbidden|not_found)/i;
 
 // pi 自己负责瞬时错误重试。健康门只观察同一会话，避免脚本重启 session 造成双重重试。
 // 4xx 配置/认证错误立即失败；其他错误等到总期限，期间出现新健康 assistant 即恢复。
