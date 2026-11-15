@@ -7,10 +7,10 @@ import { execFileSync, execSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
   existsSync, lstatSync, mkdirSync, readdirSync, readFileSync,
-  rmSync, symlinkSync, writeFileSync,
+  readlinkSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -259,16 +259,30 @@ function listAgents(opts: { verbose?: boolean; json?: boolean } = {}) {
 
 // 子代理环境: ~/.pi/agent-subagent 只隔离 settings/sessions/tmp, 其余链接回主目录;
 // packages 里命中 exclude 的包加 "-" 前缀禁用。
+// 已有子代理在运行时也会再次派发，所以软链已正确就不动，settings.json 内容相同就不写、需要写时原子替换，
+// 避免运行中的 pi 短暂看不到这些条目。
 function prepareEnv(exclude: string[]) {
   const main = join(homedir(), ".pi", "agent");
   const sub = join(homedir(), ".pi", "agent-subagent");
   mkdirSync(join(sub, "sessions"), { recursive: true });
   mkdirSync(join(sub, "tmp"), { recursive: true });
-  for (const ent of readdirSync(main)) {
-    if (["settings.json", "sessions", "tmp"].includes(ent)) continue;
+  const own = ["settings.json", "sessions", "tmp"];
+  const linked = readdirSync(main).filter((ent) => !own.includes(ent));
+  for (const ent of linked) {
     const src = join(main, ent), dst = join(sub, ent);
-    try { rmSync(dst, { recursive: true, force: true }); } catch { /* 首次无 dst */ }
+    let cur: string | null = null;
+    try { cur = readlinkSync(dst); } catch { /* dst 不存在或不是软链 */ }
+    if (cur === src) continue;
+    rmSync(dst, { recursive: true, force: true });
     symlinkSync(src, dst, lstatSync(src).isDirectory() ? "dir" : "file");
+  }
+  for (const ent of readdirSync(sub)) {
+    if (own.includes(ent) || linked.includes(ent)) continue;
+    const dst = join(sub, ent);
+    if (!lstatSync(dst).isSymbolicLink()) continue;
+    // 只清理指向主目录同名条目且已失效的软链，用户自建的软链（哪怕暂时悬空）一律保留
+    const target = resolve(sub, readlinkSync(dst));
+    if (target === join(main, ent) && !existsSync(target)) unlinkSync(dst);
   }
   const pkgName = (p: any): string | null => {
     if (p && typeof p === "object") p = p.source;
@@ -289,7 +303,12 @@ function prepareEnv(exclude: string[]) {
     }
     return p;
   });
-  writeFileSync(join(sub, "settings.json"), JSON.stringify(settings, null, 2) + "\n");
+  const file = join(sub, "settings.json");
+  const next = JSON.stringify(settings, null, 2) + "\n";
+  if (existsSync(file) && readFileSync(file, "utf8") === next) return;
+  const tmp = `${file}.${process.pid}.tmp`;
+  writeFileSync(tmp, next);
+  renameSync(tmp, file);
 }
 
 // 布局: 首个右侧分列(55%), 后续右列内向下堆叠并均分等高
