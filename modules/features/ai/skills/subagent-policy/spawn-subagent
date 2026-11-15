@@ -161,7 +161,7 @@ function usage() {
 
 用法:
   spawn-subagent <profile> <slug> -- <task>   启动单个子代理，输出终端 ID
-  spawn-subagent batch <manifest.json>        按 manifest 文件并发编排多个子代理（共享 task + 可选专项 task）
+  spawn-subagent batch <manifest.json> [--json]  按 manifest 文件并发编排多个子代理（共享 task + 可选专项 task）
   spawn-subagent resume <id> -- <task>        复用已有子代理，注入新任务（不重启；hc 后端仅允许当前终端启动的子终端）
   spawn-subagent list [-v] [--json]           列出所有 agent（表头 NAME|ACCESS|MODEL|THINK|SRC，末行总数）
                                               ACCESS: tools 含 edit/write 为 rw，否则 ro；SRC: live=取自 config.yml，md=回退 md 静态值
@@ -188,12 +188,15 @@ task:    子代理任务描述，支持多行；结论经 intercom 回传，不�
 
 退出码与输出:
   exit 0: 派发成功。单发输出 ID；batch 每 agent 一行 profile\tid\tok
-  exit 1: 失败。失败原因输出在 stderr，reason 带分类前缀:
+  exit 1: 失败（batch 为全部失败，或 manifest 校验失败/上下文无效，此时零派发）。失败原因输出在 stderr，reason 带分类前缀:
       context-error: 当前终端上下文无效（派发前检查，整体零派发，与模型无关，修环境后重试）
       config-error: 模型/认证配置错/额度用尽（400/401/403/404/429）
       transient:    pi 在同一会话内重试后仍未恢复
       launch-error: pane/session/prompt 启动失败
   后三类直接跳过该模型；失败的 pane/终端已由脚本自动关闭，不残留
+  exit 2: 仅 batch，部分失败——健康的 agent 已在运行，只需对失败项重新派发，不要整体重试（会重复派发）
+  batch --json: stdout 只输出一个数组 [{profile, id, status: "ok"|"failed", reason?}]（失败项 id 为 null），
+      进度与逐行结果走 stderr；派发前失败（exit 1）时 stdout 无输出，原因在 stderr
   派发命令阻塞至健康判定完成（最长约 1 分钟），返回 ≠ 任务完成:
   结论经 intercom 回传，派发成功后应结束回合等待
 
@@ -207,7 +210,7 @@ manifest (batch，文件路径，不支持内联 JSON 或 stdin):
   }
   reviewer-ds 收到顶层 task；reviewer-gemini 收到顶层 task + 专项 task。
   agents 为字符串时 slug 自动取 profile 去掉 reviewer- 前缀。
-  任一 profile/slug/task 无效则整体拒绝、零派发；任一 agent 失败则 exit 1（健康者照常运行）
+  任一 profile/slug/task 无效则整体拒绝、零派发；部分 agent 失败则 exit 2（健康者照常运行），全部失败 exit 1
 
 示例:
   spawn-subagent reviewer-ds review-auth -- "审查 src/auth 的安全问题"
@@ -923,7 +926,9 @@ function checkTaskComposition() {
 
 // ---------- batch 编排 ----------
 
-async function batch(manifestPath: string) {
+// json: stdout 只输出一个 JSON 数组，进度与逐行结果走 stderr
+// 退出码: 0 全部成功；1 全部失败或派发前失败；2 部分失败（健康的仍在运行，调用方不可整体重试，否则会重复派发）
+async function batch(manifestPath: string, json: boolean) {
   let manifest: any;
   try {
     manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
@@ -964,7 +969,8 @@ async function batch(manifestPath: string) {
   const ctx = requireContext();
 
   // 两阶段：串行 launchAgent（布局是累积操作必须串行），再并发健康门（互不阻塞）
-  console.log(`spawn-subagent: 派发 ${entries.length} 个 agent...`);
+  const progress = json ? console.error : console.log;
+  progress(`spawn-subagent: 派发 ${entries.length} 个 agent...`);
   const launched: { entry: { profile: string; slug: string; task: string }; result: Launched | null; error?: string }[] = [];
   for (const entry of entries) {
     try {
@@ -979,10 +985,15 @@ async function batch(manifestPath: string) {
   }));
   for (const r of results) {
     const line = `${r.profile}\t${r.pane}\t${r.healthy ? "ok" : "failed"}${r.reason ? `  (${r.reason})` : ""}`;
-    (r.healthy ? console.log : console.error)(line);
+    (r.healthy ? progress : console.error)(line);
   }
-  const anyFailed = results.some((r) => !r.healthy);
-  process.exit(anyFailed ? 1 : 0);
+  if (json) {
+    console.log(JSON.stringify(results.map((r) => r.healthy
+      ? { profile: r.profile, id: r.pane, status: "ok" }
+      : { profile: r.profile, id: null, status: "failed", reason: r.reason }), null, 2));
+  }
+  const failed = results.filter((r) => !r.healthy).length;
+  process.exit(failed === 0 ? 0 : failed === results.length ? 1 : 2);
 }
 
 // ---------- main ----------
@@ -990,11 +1001,13 @@ const [c0, c1, ...rest] = process.argv.slice(2);
 if (!c0 || c0 === "-h" || c0 === "--help") {
   usage();
 } else if (c0 === "batch") {
-  if (!c1) {
+  const args = process.argv.slice(3);
+  const manifest = args.find((a) => !a.startsWith("--"));
+  if (!manifest) {
     console.error("spawn-subagent: batch 需要 manifest 文件路径");
     process.exit(1);
   }
-  await batch(c1);
+  await batch(manifest, args.includes("--json"));
 } else if (c0 === "list") {
   const flags = process.argv.slice(3);
   listAgents({ verbose: flags.includes("-v"), json: flags.includes("--json") });
