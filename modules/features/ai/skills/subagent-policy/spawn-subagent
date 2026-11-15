@@ -162,7 +162,7 @@ function usage() {
 用法:
   spawn-subagent <profile> <slug> -- <task>   启动单个子代理，输出终端 ID
   spawn-subagent batch <manifest.json>        按 manifest 文件并发编排多个子代理（共享 task + 可选专项 task）
-  spawn-subagent resume <id> -- <task>        复用已有子代理，注入新任务（不重启）
+  spawn-subagent resume <id> -- <task>        复用已有子代理，注入新任务（不重启；hc 后端仅允许当前终端启动的子终端）
   spawn-subagent list [-v] [--json]           列出所有 agent（表头 NAME|ACCESS|MODEL|THINK|SRC，末行总数）
                                               ACCESS: tools 含 edit/write 为 rw，否则 ro；SRC: live=取自 config.yml，md=回退 md 静态值
                                               -v 加 description 行；--json 输出数组（含 tools 与 description）
@@ -560,6 +560,14 @@ function hcGet(id: string): any | null {
   }
 }
 
+// hc send 是“粘贴并回车”，传错 ID 指到非子代理终端（如用户的 shell）会把任务文本当命令执行，
+// 所以 send/close 都只允许操作当前终端自己启动的子终端
+function requireHcChild(pane: string) {
+  const t = hcGet(pane);
+  if (!t) throw new Error(`终端 ${pane} 不存在`);
+  if (t.parent !== process.env.HC_TERMINAL_ID) throw new Error(`终端 ${pane} 不是当前终端启动的子终端`);
+}
+
 const hcTerm: Term = {
   validate() {
     const id = process.env.HC_TERMINAL_ID!;
@@ -595,13 +603,12 @@ const hcTerm: Term = {
     };
   },
   send(pane, text) {
+    requireHcChild(pane);
     try { execFileSync("hc", ["send", "--json", pane, text], { stdio: "ignore" }); return true; } catch { return false; }
   },
-  // kill 同步返回，对已 finished 的终端也成功，再 rm 清理；只动当前终端自己启动的子终端
+  // kill 同步返回，对已 finished 的终端也成功，再 rm 清理
   close(pane) {
-    const t = hcGet(pane);
-    if (!t) throw new Error(`终端 ${pane} 不存在`);
-    if (t.parent !== process.env.HC_TERMINAL_ID) throw new Error(`终端 ${pane} 不是当前终端启动的子终端`);
+    requireHcChild(pane);
     execFileSync("hc", ["kill", "--json", pane], { stdio: "ignore" });
     execFileSync("hc", ["rm", "--json", pane], { stdio: "ignore" });
   },
@@ -653,7 +660,12 @@ function resume(paneId: string, task: string) {
     process.exit(1);
   }
   const prompt = `（会话延续）新任务，完成后用 intercom 向主代理 session 回传结论（${intercom}），结论第一行标注 [${paneId}] 供对账:\n---\n${task}`;
-  if (!termOrExit().send(paneId, prompt)) {
+  let sent: boolean;
+  try { sent = termOrExit().send(paneId, prompt); } catch (e: any) {
+    console.error(`spawn-subagent: resume 被拒绝（${cliError(e)}）: ${paneId}`);
+    process.exit(1);
+  }
+  if (!sent) {
     console.error(`spawn-subagent: resume 注入失败（pane '${paneId}' 未就绪或已关闭）`);
     process.exit(1);
   }
