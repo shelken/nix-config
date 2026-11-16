@@ -94,14 +94,20 @@ in
     fi
   '';
 
-  # installation.yaml 由 rime 自己读写，不能整份接管：只在缺 sync_dir 时补上。
-  # 没有它 rime 会同步到本机的 ~/Library/Rime/sync，设备之间互相看不到
-  home.activation.rimeSyncDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  # installation.yaml 由 rime 自己读写，不能整份接管：只补上缺失的键，已有的值不改。
+  # sync_dir：没有它 rime 会同步到本机的 ~/Library/Rime/sync，设备之间互相看不到
+  # backup_config_files：配置是 nix store 的只读软链，备份到同步目录后目标也是只读，
+  # 下次内容变化时覆盖失败，整次同步报失败；配置本来就在仓库里，不需要备份
+  home.activation.rimeInstallation = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     rimeInstallation="$HOME/${rimeDir}/installation.yaml"
-    if [ -f "$rimeInstallation" ] && ! /usr/bin/grep -q '^sync_dir:' "$rimeInstallation"; then
-      if [[ ! -v DRY_RUN ]]; then
-        printf '\nsync_dir: "%s"\n' "${syncDir}" >> "$rimeInstallation"
+    rimeEnsureKey() {
+      if ! /usr/bin/grep -q "^$1:" "$rimeInstallation"; then
+        printf '\n%s: %s\n' "$1" "$2" >> "$rimeInstallation"
       fi
+    }
+    if [ -f "$rimeInstallation" ] && [[ ! -v DRY_RUN ]]; then
+      rimeEnsureKey sync_dir '"${syncDir}"'
+      rimeEnsureKey backup_config_files false
     fi
   '';
 
