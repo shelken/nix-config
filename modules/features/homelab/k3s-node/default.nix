@@ -151,22 +151,18 @@
             "nls_utf8" # cifs 的 iocharset=utf8 依赖
           ];
           boot.kernel.sysctl = {
+            # 默认 128 个实例；kubelet 与各容器里的文件监视会用尽，报 too many open files
             "fs.inotify.max_user_instances" = 8192;
             "fs.inotify.max_user_watches" = 1048576;
+            # QUIC（cloudflare-tunnel、tailscale）要至少 7.5MB 的 UDP 缓冲，默认只有 208KB
             "net.core.rmem_max" = 67108864;
             "net.core.wmem_max" = 67108864;
-            # 邻居表（ARP/NDP）调大，避免大量 Pod 网卡把表挤满
-            "net.ipv4.neigh.default.gc_thresh1" = 4096;
-            "net.ipv4.neigh.default.gc_thresh2" = 8192;
-            "net.ipv4.neigh.default.gc_thresh3" = 16384;
+            # 出公网的长连接（备份上传、下载）：更大的 TCP 窗口与 bbr
             "net.ipv4.tcp_congestion_control" = "bbr";
-            "net.ipv4.tcp_fastopen" = 3;
-            # 路径 MTU 黑洞时自动探测
-            "net.ipv4.tcp_mtu_probing" = 1;
             "net.ipv4.tcp_rmem" = "4096 87380 33554432";
             "net.ipv4.tcp_wmem" = "4096 65536 33554432";
-            "net.ipv4.tcp_window_scaling" = 1;
-            "user.max_user_namespaces" = 55334;
+            # 经隧道（tailscale、代理）遇到路径 MTU 黑洞时自动探测
+            "net.ipv4.tcp_mtu_probing" = 1;
           };
 
           # kubelet 在有 swap 时默认拒绝启动，覆盖 server 角色的 zram
