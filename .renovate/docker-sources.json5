@@ -1,0 +1,47 @@
+{
+  description: "容器镜像 sourceUrl 补充：镜像无 OCI source 标签时 Renovate 拿不到上游，这里手动补",
+  packageRules: [
+    {
+      description: "kopia/kopia：上游有 GitHub Releases，补 sourceUrl 后能出 release notes",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["kopia/kopia"],
+      sourceUrl: "https://github.com/kopia/kopia",
+    },
+    {
+      description: "rustfs/rustfs：上游有 GitHub Releases",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["rustfs/rustfs"],
+      sourceUrl: "https://github.com/rustfs/rustfs",
+    },
+    {
+      description: "tobyxdd/hysteria：上游 release tag 是 app/v2.x，镜像 tag 是 v2.x，Renovate 匹配不到 → 只有 source 链接，没有 notes",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["tobyxdd/hysteria"],
+      sourceUrl: "https://github.com/HyNetworks/hysteria",
+    },
+    {
+      description: "fredliang/derper：上游仓库无 release/tag → 只有 source 链接",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["fredliang/derper"],
+      sourceUrl: "https://github.com/fredliang44/derper-docker",
+    },
+    {
+      description: "collinwebdesigns/fastapi-dls：自建 GitLab（git.collinwebdesigns.de），未被 changelog 平台识别 → 只有 source 链接",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["collinwebdesigns/fastapi-dls"],
+      sourceUrl: "https://git.collinwebdesigns.de/oscar.krause/fastapi-dls",
+    },
+    {
+      description: "ghcr.io/shelken/proxy/sbtools-server：自建镜像无 OCI 标签，上游 proxy 仓库有对应 release，补后能出 notes",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["ghcr.io/shelken/proxy/sbtools-server"],
+      sourceUrl: "https://github.com/shelken/proxy",
+    },
+    {
+      description: "ghcr.io/shelken/openlist：自建镜像无 OCI 标签，上游 OpenList 仓库无匹配 tag（镜像 v4.2.9-patch.1）→ 只有 source 链接",
+      matchDatasources: ["docker"],
+      matchPackageNames: ["ghcr.io/shelken/openlist"],
+      sourceUrl: "https://github.com/shelken/OpenList",
+    },
+  ],
+}
