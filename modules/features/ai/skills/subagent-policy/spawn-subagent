@@ -36,6 +36,8 @@ function resolveAgent(profile: string, cfg: ModelConfig = loadModelConfig()): Re
     ? readdirSync(agentsDir).find((f) => basename(f, ".md").toLowerCase() === profile.toLowerCase())
     : undefined;
   if (!mdName) return { error: "agents 目录无对应 md" };
+  // 文件名大小写不敏感匹配；override 按 config.yml 里的精确键查，所以统一用 md 的规范名
+  const name = basename(mdName, ".md");
   const text = readFileSync(join(agentsDir, mdName), "utf8");
   const block = text.match(/^---\n([\s\S]*?)\n---/);
   if (!block) return { error: "md 缺少 frontmatter" };
@@ -56,12 +58,12 @@ function resolveAgent(profile: string, cfg: ModelConfig = loadModelConfig()): Re
   }
   if (!s.tools) return { error: "md 缺少 tools 字段" };
   if (!s.role) return { error: "md 缺少 role 字段（请先重新生成 agents：just hm）" };
-  const resolved = resolveModel(profile, cfg, s.role);
+  const resolved = resolveModel(name, cfg, s.role);
   if ("error" in resolved) return resolved;
   // 插件排除全局统一：所有子代理共用一份派生 settings.json，per-md 无法生效
   return {
     agent: {
-      name: profile, model: resolved.model, thinking: resolved.thinking, tools: s.tools,
+      name, model: resolved.model, thinking: resolved.thinking, tools: s.tools,
       exclude: (config.exclude ?? []) as string[], description: s.description,
       body: text.replace(/^---\n[\s\S]*?\n---\n?/, "").trim(),
     },
