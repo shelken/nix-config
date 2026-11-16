@@ -204,7 +204,9 @@
           [ (piProviderAlias.${builtins.head parts} or (builtins.head parts)) ] ++ builtins.tail parts
         );
 
-      # pi 的 frontmatter 只有这四个字段；description 与正文对每个 profile 都必须是独立文件。
+      # pi 的 frontmatter 只有 description、role、model、thinking、tools 五个字段，description 与正文对每个 profile 都必须是独立文件。
+      # description 用 JSON 字符串输出（合法的 YAML 双引号串）：值里的 ": " 否则会让 YAML 解析失败。
+      # role 是 roleOf 的结果，spawn-subagent 热加载 config.yml 时直接读它，不再自己推算角色。
       mkPiAgent =
         name: a:
         let
@@ -215,7 +217,8 @@
           path = pkgs.writeText "${name}.md" (
             lib.concatStringsSep "\n" [
               "---"
-              "description: ${a.description}"
+              "description: ${builtins.toJSON a.description}"
+              "role: ${roleOf name}"
               "model: ${toPiModel resolved.model}"
               "thinking: ${
                 if resolved.thinking == null then
