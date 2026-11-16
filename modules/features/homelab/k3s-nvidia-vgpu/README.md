@@ -1,6 +1,6 @@
 # k3s-nvidia-vgpu
 
-PVE 虚拟机里的 NVIDIA vGPU guest 驱动（GRID 17.6，经 [vgpu4nixos](https://github.com/mrzenc/vgpu4nixos)）加 k3s 的 `nvidia` 容器运行时。可选功能，只有 homelab-1 导入
+PVE 虚拟机里的 NVIDIA vGPU guest 驱动（GRID 17.6，经 [vgpu4nixos](https://github.com/shelken/vgpu4nixos)，自己 fork 的 mrzenc/vgpu4nixos）加 k3s 的 `nvidia` 容器运行时。可选功能，只有 homelab-1 导入
 
 ## 取舍
 

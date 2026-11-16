@@ -118,7 +118,7 @@
 
     # homelab-1 的 vGPU guest 驱动（GRID），见 modules/features/homelab/k3s-nvidia-vgpu
     vgpu4nixos = {
-      url = "github:mrzenc/vgpu4nixos";
+      url = "github:shelken/vgpu4nixos";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
