@@ -27,6 +27,12 @@
               env = (old.env or { }) // {
                 NIX_CFLAGS_COMPILE = "-std=gnu11";
               };
+              # nixpkgs 聚合内核模块时要求每个外部模块带 kmodigest 生成的 <模块>.ko.cer，
+              # 通常由内核的 modules_install 顺带生成；驱动的 builder 直接拷 .ko，跳过了这一步
+              nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkgs.buildPackages.kmodigest ];
+              postInstall = toString (old.postInstall or "") + ''
+                find "$bin/lib/modules" -name '*.ko' -exec kmodigest {} \;
+              '';
             });
           in
           grid // { mod = grid.bin; };
