@@ -15,6 +15,8 @@ extra="${3:-}"
 
 command -v nixos-anywhere >/dev/null || { echo "PATH 里没有 nixos-anywhere：先 nix develop" >&2; exit 1; }
 [[ -z "$extra" || -d "$extra" ]] || { echo "extra-files 目录不存在: $extra" >&2; exit 1; }
+# Finder 打开过的目录会冒出 .DS_Store，不清就被拷进目标的 /、/etc 等处
+[[ -z "$extra" ]] || find "$extra" -name .DS_Store -delete
 
 eval_setting() {
     nix eval --raw ".#nixosConfigurations.${host}.config.nix.settings.$1" --apply 'builtins.concatStringsSep " "'
