@@ -51,13 +51,6 @@ type = "plugin_action"
 command = "shelken.pi-float.pick-preset"
 description = "pi-float: pick preset"
 
-# herdr-plus: Projects 浏览器（一键按模板开 workspace）
-[[keys.command]]
-key = "prefix+p"
-type = "plugin_action"
-command = "cloudmanic.herdr-plus.projects"
-description = "herdr-plus: projects"
-
 # herdr-file-viewer：只读文件树
 [[keys.command]]
 key = "prefix+f"
