@@ -86,6 +86,28 @@ in
 
     # plain 模式下 limactl start 用 Lima 自己的密钥做 SSH 就绪检查
     users.users.${myvars.username}.openssh.authorizedKeys.keys = [ cfg.hostKey ];
+    # 就绪检查的脚本写死 #!/bin/bash，NixOS 没有它时 limactl start 会等到超时（做法同 nixos-lima 的 lima-init）
+    systemd.tmpfiles.rules = [ "L+ /bin/bash - - - - /run/current-system/sw/bin/bash" ];
+
+    # limactl start 最后等 /run/lima-boot-done 等于本次启动的 instance-id（每次 start 都变），
+    # 原本由 cloud-init 跑的 boot 脚本写入；NixOS 不跑它们，只补这一项（做法同 nixos-lima 的 lima-init）
+    fileSystems."/mnt/lima-cidata" = {
+      device = "/dev/disk/by-label/cidata";
+      fsType = "iso9660";
+      options = [
+        "ro"
+        "nofail"
+      ];
+    };
+    systemd.services.lima-boot-done = {
+      wantedBy = [ "multi-user.target" ];
+      unitConfig.RequiresMountsFor = "/mnt/lima-cidata";
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+      script = "sed -n 's/^LIMA_CIDATA_IID=//p' /mnt/lima-cidata/lima.env > /run/lima-boot-done";
+    };
 
     system.build.limaYaml = (pkgs.formats.yaml { }).generate "lima.yaml" (
       {
