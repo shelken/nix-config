@@ -21,7 +21,13 @@
         # 它把模块装在 bin 输出的 lib/modules 下
         package =
           let
-            grid = config.boot.kernelPackages.nvidiaPackages.grid_17_6;
+            grid = config.boot.kernelPackages.nvidiaPackages.grid_17_6.overrideAttrs (old: {
+              # 驱动的 conftest 不带 -std，gcc 15 起默认 gnu23，内核头文件在 gnu23 下编不过，
+              # 探测全部失败、模块误判成不支持这个内核；内核自己用 gnu11
+              env = (old.env or { }) // {
+                NIX_CFLAGS_COMPILE = "-std=gnu11";
+              };
+            });
           in
           grid // { mod = grid.bin; };
         open = false;
