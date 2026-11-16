@@ -10,6 +10,7 @@
 - `lima.nix`：两台 Lima（vz）节点共有：引导、usernet 网卡 `eth0`、`shelken.lima.*` 选项与 `system.build.limaYaml`（Lima 实例声明）
 - `<节点>/default.nix`：主机名、磁盘设备、k3s 角色与标签；`sakamoto-k8s` 另有 Longhorn 数据盘的挂载；`homelab-1` 另有 qemu 驱动与 Intel 核显
 - `modules/features/homelab/k3s-node/`：k3s 配置、Longhorn 所需的 iSCSI/NFS、sysctl、chrony，见该目录 README
+- `modules/features/homelab/socket-vmnet/`：Lima 宿主（`sakamoto`、`yuuko`）上常驻的桥接 socket_vmnet，见下文「宿主的 socket_vmnet」
 - `modules/features/homelab/k3s-nvidia-vgpu/`：`homelab-1` 的 vGPU 驱动与 nvidia 运行时，内核固定 6.12 的原因见该目录 README
 - 私有 `secrets` 仓库两类文件：`hosts/<节点>/network.nix`（网卡 MAC，明文，求值期读取）、`sops/secrets/hosts/<节点>.yaml`（`k3s-token`；`homelab-1` 另有 `nvidia-client-token`），只有管理员和该节点自己的 age 密钥能解
 
@@ -56,7 +57,7 @@
    rm -r "$EXTRA"
    ```
    阶段一之后核对：`lsblk` 里要抹的盘是 `disko.device` 那块、没有别的盘混入；`ip -br link` 里的 MAC 与 `network.nix` 一致。**这一步之后、disko 之前，重启会回到原系统。**
-5. **换上新的 Lima 实例声明**（仅 Lima 节点，见下一节）
+5. **换上新的 Lima 实例声明**（仅 Lima 节点，见下一节；宿主的 socket_vmnet 须已生效，见「宿主的 socket_vmnet」）
 6. **验证**：`nixos-version`、`systemctl is-system-running`、`ip -br a` 里 `eth0`/`eth1`/两个 VLAN 子接口都在且 `eth1` 拿到保留地址、`systemctl status k3s`、`kubectl get node`
 7. **首次 `just deploy <节点>`**，不改任何配置：nixos-anywhere 装的那一代没有 deploy-rs 的激活器，不先部署一次，之后配置变坏时无法自动回滚
 8. **uncordon**：`kubectl uncordon <节点>`，核对 Longhorn 副本重建完成
@@ -80,6 +81,19 @@ ssh <宿主> 'limactl start --tty=false <节点>'
 ```
 
 实例名与节点名相同。`images` 只在新建实例时用，已装好的实例不受影响
+
+## 宿主的 socket_vmnet
+
+桥接网卡走 Lima 的非托管模式：`limaYaml` 里是 `socket: /var/run/socket_vmnet.bridged.en0`，socket 由宿主（`sakamoto`、`yuuko`）上 `modules/features/homelab/socket-vmnet/` 的 launchd 守护进程提供。Lima 托管模式要求二进制整条路径归 root、组不可写，Nix store 满足不了
+
+- **生效顺序**：先让宿主的 darwin 配置生效，再换上新的 `lima.yaml`；socket 不存在时 `limactl start` 失败。确认：`ls -l /var/run/socket_vmnet.bridged.en0` 是 socket（`s` 开头），`sudo launchctl print system/io.github.lima-vm.socket_vmnet.bridged.en0` 在运行
+- 节点切换完成后，宿主上旧的手工配置可以删除：
+  ```bash
+  sudo rm -r /opt/socket_vmnet
+  sudo rm /etc/sudoers.d/lima
+  $EDITOR ~/.lima/_config/networks.yaml   # 删掉 networks 下的 bridged 段
+  ```
+- 改桥接网卡：改 `vars/default.nix` 里的 `socketVmnet.interface`，宿主与 `limaYaml` 一起变；只在某台宿主上用 `shelken.socketVmnet.interface` 覆盖时，`limaYaml` 不会跟着变
 
 ## 整集群关机与开机
 

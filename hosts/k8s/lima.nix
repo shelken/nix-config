@@ -97,7 +97,8 @@ in
         hostResolver.enabled = false;
         networks = [
           {
-            lima = "bridged";
+            # 非托管：宿主的 socket-vmnet 功能常驻守护进程；它的 interface 选项改了，这里要同步
+            socket = myvars.socketVmnet.socketFor myvars.socketVmnet.interface;
             interface = "eth1";
             macAddress = net.lanMac;
             metric = 100;

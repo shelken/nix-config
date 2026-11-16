@@ -7,6 +7,7 @@ in
     desktop
     homelab
     virts
+    socket-vmnet
   ];
 
   networking.hostName = hostname;
