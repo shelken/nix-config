@@ -58,7 +58,17 @@
         mode = "0744";
       };
 
-      hardware.nvidia-container-toolkit.enable = true;
+      hardware.nvidia-container-toolkit = {
+        enable = true;
+        # device plugin 经 NVIDIA_VISIBLE_DEVICES 传 GPU UUID，cdi 模式按名字在规格里找设备
+        device-name-strategy = "uuid";
+      };
+      # 默认 auto 模式在创建容器时现场生成 CDI 规格，靠 ldcache 找驱动库，NixOS 上找不到；
+      # 改用 cdi-generator 预先生成的 /var/run/cdi 规格。nixpkgs 只在启用 docker 时写这份配置
+      environment.etc."nvidia-container-runtime/config.toml".text = ''
+        [nvidia-container-runtime]
+        mode = "cdi"
+      '';
       # k3s 发现 PATH 里的 nvidia-container-runtime 时，自动加一个名为 nvidia 的 containerd runtime，
       # 与集群 RuntimeClass 的 handler 同名，集群清单不用改
       systemd.services.k3s.path = [
