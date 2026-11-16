@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# nixos-anywhere 阶段二（disko、install、reboot）的唯一入口：先把目标主机声明的 substituters
+# 以覆盖语义写进安装环境，再装机。
+#
+# 为什么要先写：nixos-anywhere 自带的 use-machine-substituters 用 extra-substituters 追加到末尾，
+# 而 icache 与原站 Priority 相同、同级按列表顺序试源，追加等于 icache 永不命中（见 modules/features/nix/icache.nix）。
+# 所以关掉它（--no-use-machine-substituters），由这里写入。写在 root 的用户级 nix.conf：
+# --build-on remote 经 ssh-ng 起的 nix-daemon 以 root 运行，会读它；安装环境在内存里，重启即消失。
+#
+# 用法: anywhere-install <主机> <目标地址> [extra-files 目录]；目标须已 kexec 进安装环境，SSH 用 root
+set -euo pipefail
+host="${1:?用法: anywhere-install <主机> <目标地址> [extra-files 目录]}"
+target="${2:?用法: anywhere-install <主机> <目标地址> [extra-files 目录]}"
+extra="${3:-}"
+
+command -v nixos-anywhere >/dev/null || { echo "PATH 里没有 nixos-anywhere：先 nix develop" >&2; exit 1; }
+[[ -z "$extra" || -d "$extra" ]] || { echo "extra-files 目录不存在: $extra" >&2; exit 1; }
+
+eval_setting() {
+    nix eval --raw ".#nixosConfigurations.${host}.config.nix.settings.$1" --apply 'builtins.concatStringsSep " "'
+}
+substituters=$(eval_setting substituters)
+keys=$(eval_setting trusted-public-keys)
+timeout=$(nix eval ".#nixosConfigurations.${host}.config.nix.settings.connect-timeout" 2>/dev/null || echo 5)
+
+ssh_opts=(-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR)
+ssh "${ssh_opts[@]}" "root@${target}" '[ "$(hostname)" = nixos-installer ]' ||
+    { echo "$target 不在 nixos-anywhere 安装环境里：先跑阶段一 kexec" >&2; exit 1; }
+ssh "${ssh_opts[@]}" "root@${target}" "mkdir -p ~/.config/nix && cat > ~/.config/nix/nix.conf" <<EOF
+# 由 anywhere-install 写入：覆盖语义，按 ${host} 的声明排序
+substituters = ${substituters}
+trusted-public-keys = ${keys}
+connect-timeout = ${timeout}
+EOF
+echo "安装环境 substituters: $(ssh "${ssh_opts[@]}" "root@${target}" 'nix config show substituters')" >&2
+
+args=(-f ".#${host}" --target-host "root@${target}" --build-on remote
+    --no-use-machine-substituters --phases disko,install,reboot)
+[[ -n "$extra" ]] && args+=(--extra-files "$extra")
+exec nixos-anywhere "${args[@]}"

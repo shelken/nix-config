@@ -45,17 +45,16 @@
    install -m 600 ~/k8s-<节点>-age.txt "$EXTRA/var/lib/sops-nix/key.txt"
    # SSH 主机密钥与 /etc/rancher/node/password：从旧系统取（sudo cat）
    ```
-4. **nixos-anywhere 两阶段**（kexec 的版本坑与端口见 `hosts/vps/vps-cc/README.md`）：
+4. **nixos-anywhere 两阶段**，只用这两个配方（在 `nix develop` 里），不要手写 nixos-anywhere 参数：
    ```bash
-   KEXEC=$(just anywhere::kexec-cache <aarch64|x86_64> nixos-26.05)   # 与 flake 的 systemd 同一发布线
-   # 阶段一：kexec，磁盘不动；之后安装环境的 sshd 在 22 端口
-   nixos-anywhere -f .#<节点> --target-host <登录名>@<节点> --build-on remote \
-     --kexec "$KEXEC" --kexec-extra-flags '-c' --phases kexec
+   # 阶段一：kexec，磁盘不动。安装环境版本、架构、-c 都在配方里；之后若卡在重连就 Ctrl-C
+   just anywhere::kexec <节点> <节点 IP>
    # 确认盘与网卡再继续（见下）
-   nixos-anywhere -f .#<节点> --target-host root@<节点> --build-on remote --ssh-port 22 \
-     --phases disko,install,reboot --extra-files "$EXTRA"
+   # 阶段二：先把主机声明的 substituters 以覆盖语义写进安装环境（icache 在前），再 disko、install、reboot
+   just anywhere::install <节点> <节点 IP> "$EXTRA"
    rm -r "$EXTRA"
    ```
+   为什么要配方：nixos-anywhere 自己传 substituters 时只会 `extra-` 追加到末尾，icache 与原站同级，永远轮不到；安装环境太旧时 disko 等不到分区链接（见 `hosts/vps/vps-cc/README.md`）。见 `utils/script/just/anywhere-install`
    阶段一之后核对：`lsblk` 里要抹的盘是 `disko.device` 那块、没有别的盘混入；`ip -br link` 里的 MAC 与 `network.nix` 一致。**这一步之后、disko 之前，重启会回到原系统。**
 5. **换上新的 Lima 实例声明**（仅 Lima 节点，见下一节；宿主的 socket_vmnet 须已生效，见「宿主的 socket_vmnet」）
 6. **验证**：`nixos-version`、`systemctl is-system-running`、`ip -br a` 里 `eth0`/`eth1`/两个 VLAN 子接口都在且 `eth1` 拿到保留地址、`systemctl status k3s`、`kubectl get node`
