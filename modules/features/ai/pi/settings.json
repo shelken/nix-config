@@ -5,6 +5,9 @@
   "compaction": {
     "reserveTokens": 22000,
     "modelOverrides": {
+      "cpa/workbuddy/glm-5.2": {
+        "reserveTokens": 650000
+      },
       "anthropic/claude-opus-5-5": {
         "reserveTokens": 650000
       },
@@ -42,6 +45,7 @@
     "+codemode"
   ],
   "enabledModels": [
+    "cpa/workbuddy/glm-5.2:high",
     "anthropic/claude-opus-5-5:medium",
     "mp/antigravity/gemini-3.8-flash:high",
     "anthropic/claude-fable-5-2:low",
@@ -134,5 +138,8 @@
   "transport": "auto",
   "tuiMode": "fullscreen",
   "defaultProvider": "mp",
-  "defaultModel": "loomy/DeepSeek-V4.1-Flash"
+  "defaultModel": "loomy/DeepSeek-V4.1-Flash",
+  "extensionChangelogVersions": {
+    "{\"source\":\"npm:pi-better@0.2.0\",\"scope\":\"user\"}": "0.2.0"
+  }
 }

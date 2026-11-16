@@ -214,10 +214,7 @@
           source = "${inputs.anti-slop}/skills/install-anti-slop";
           frontmatter.disable-model-invocation = true;
         }
-        {
-          source = "${inputs.improve}/skills/improve";
-          frontmatter.disable-model-invocation = true;
-        }
+        "${inputs.improve}/skills/improve"
         {
           source = "${inputs.security-audit-skill}/skills/security-audit";
           frontmatter.disable-model-invocation = true;
