@@ -24,7 +24,7 @@ Run `spawn-subagent -h` once; its help owns the syntax, and this table only maps
 | `poteto-agent` | `spawn-subagent poteto-agent`. Nix generates the profile from pstack's `agents/poteto-agent.md`; it models `@task` and its first act is reading `~/.agents/skills/poteto-mode/SKILL.md`. Resume an existing pane with `spawn-subagent resume <pane-id>` rather than spawning a sibling. |
 | `comment-sicko` | `spawn-subagent comment-sicko`. Nix generates the profile from pstack's `agents/comment-sicko.md` as a read-only comment reviewer; it reports `MUST KILL` targets and never edits code. The `no-comments` skill spells the type `"Comment Sicko"`; that is the upstream display name, and the profile name here is the lowercase slug. |
 | `subagent_type: "Comment Sicko"` | `spawn-subagent comment-sicko`. Same profile, lowercase slug; the loader keys profiles by filename and only the slug exists. |
-| `model: <slug>` | **Not accepted.** `spawn-subagent` takes a profile. It reads `model` and `thinking` from `~/.omp/agent/config.yml` (`task.agentModelOverrides` plus `modelRoles`) on every dispatch; the profile frontmatter is the fallback when that file is missing or unparseable. See Models. |
+| `model: <slug>` | **Not accepted.** `spawn-subagent` takes a profile. It reads `model` and `thinking` from `~/.omp/agent/config.yml` (`task.agentModelOverrides` plus `modelRoles`) on every dispatch and fails with an error when that file is missing or unparseable; the profile has no static fallback. See Models. |
 | `environment: "cloud"` | Drop it. The agent runs in this checkout. |
 | `environment: "local"` | Drop it; that is the only mode. |
 | `cloud_base_branch: <b>` | Drop it, and put the branch or commit to check out in the brief. |

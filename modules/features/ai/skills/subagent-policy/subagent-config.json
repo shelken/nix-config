@@ -7,7 +7,7 @@
     "pi-recap",
     "pi-preferred-thinking"
   ],
-  "//providerAlias": "omp config.yml 的 provider 前缀 -> pi 的 provider 名。nix 生成 profile 与 spawn-subagent 热加载共用这一份映射，避免两边各写一份。",
+  "//providerAlias": "omp config.yml 的 provider 前缀 -> pi 的 provider 名。spawn-subagent 把解析出的模型名换成 pi 的 provider 名时使用。",
   "providerAlias": {
     "google-antigravity": "antigravity"
   }
