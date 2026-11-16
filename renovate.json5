@@ -1,6 +1,10 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  extends: ["config:recommended", ":dependencyDashboard"],
+  extends: [
+    "config:recommended",
+    ":dependencyDashboard",
+    "local>shelken/nix-config//.renovate/docker-sources.json5",
+  ],
   timezone: "Asia/Shanghai",
   schedule: ["* 0-3 * * *"], // 每天 0:00–3:59
   labels: ["dependencies", "renovate"],
