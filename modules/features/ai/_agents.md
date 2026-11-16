@@ -37,7 +37,8 @@
 - `~/nix-config`：用 nix 管理所有 dot-config、全局 skills/AGENTS.md 和各机器的持久化配置
 - `~/Code/kaiyuan`：别人的开源项目，研究用
 - `~/Code/active`：本地开发的项目
-- `~/Code/wiki`：跨项目技术知识库。问题若不属于当前项目专属（换个目录也照样会问），先读 `~/Code/wiki/index.md`，按分组摘要定位页面再读页面；会话/研究中的可复用结论存这里，遵守其 AGENTS.md
+- `~/Code/home`：私有的跨项目工作入口，其 AGENTS.md 指向各活跃仓库
+- `~/Code/home/wiki`：跨项目技术知识库。问题若不属于当前项目专属（换个目录也照样会问），先读 `~/Code/home/wiki/index.md`，按分组摘要定位页面再读页面；会话/研究中的可复用结论存这里，遵守其 AGENTS.md
 - `~/Code/worktrees`: 当需要创建工作区时, 放这; 实际路径为 `<directory>/<仓库名>/<分支 slug>`
 
 ## 项目记忆
