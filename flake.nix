@@ -116,6 +116,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # homelab-1 的 vGPU guest 驱动（GRID），见 modules/features/homelab/k3s-nvidia-vgpu
+    vgpu4nixos = {
+      url = "github:shelken/vgpu4nixos";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     secrets = {
       url = "git+https://github.com/shelken/secrets.nix.git?shallow=1";
       flake = false;

@@ -577,16 +577,17 @@
         "secrets": "secrets",
         "security-audit-skill": "security-audit-skill",
         "sops-nix": "sops-nix",
-        "swipt-skills": "swipt-skills"
+        "swipt-skills": "swipt-skills",
+        "vgpu4nixos": "vgpu4nixos"
       }
     },
     "secrets": {
       "flake": false,
       "locked": {
-        "lastModified": 1794812348,
-        "narHash": "sha256-PBiIv1XEspKLrd//+9juYcYQAD8iPpT/QTtO7eqsGe8=",
+        "lastModified": 1794829120,
+        "narHash": "sha256-kvSA5mUVPUWR3jKIam4+rGQh07ddpFPInv4hz6ST+xI=",
         "ref": "refs/heads/main",
-        "rev": "db3d0cec14562e8bc8759161331a8f9ed0293a2d",
+        "rev": "3ec1f84325fac6f893e43c637b48b995a49178f0",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/shelken/secrets.nix.git"
@@ -700,6 +701,26 @@
       "original": {
         "owner": "numtide",
         "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "vgpu4nixos": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1752922034,
+        "narHash": "sha256-TEnXV2H4sc3Liav+uC5/Fao6M5QDSaRlRhycyXBtwd0=",
+        "owner": "shelken",
+        "repo": "vgpu4nixos",
+        "rev": "fd1fe577e07e76d97a33a845f3b751dcb984a3d3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "shelken",
+        "repo": "vgpu4nixos",
         "type": "github"
       }
     },

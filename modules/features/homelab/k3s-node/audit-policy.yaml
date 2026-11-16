@@ -1,0 +1,50 @@
+---
+# References:
+# - https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/
+# - https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+apiVersion: audit.k8s.io/v1
+kind: Policy
+omitStages:
+  - RequestReceived
+rules:
+  - level: None
+    verbs:
+      - get
+      - list
+      - watch
+
+  - level: None
+    resources:
+      - group: coordination.k8s.io
+        resources:
+          - leases
+      - group: ""
+        resources:
+          - events
+      - group: events.k8s.io
+        resources:
+          - events
+      - group: authorization.k8s.io
+        resources:
+          - subjectaccessreviews
+          - selfsubjectaccessreviews
+      - group: authentication.k8s.io
+        resources:
+          - tokenreviews
+
+  - level: None
+    users:
+      - system:apiserver
+      - system:k3s-supervisor
+
+  - level: Metadata
+    userGroups:
+      - system:masters
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+
+  - level: None

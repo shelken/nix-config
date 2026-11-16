@@ -71,7 +71,7 @@ git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-con
 
 # 4. 选择 hosts/default.nix 中登记的机器配置
 # Darwin: mio / sakamoto / yuuko / ling
-# NixOS: vps-cc / hk1box / lima-test / work-test
+# NixOS: vps-cc / hk1box / yuuko-k8s / sakamoto-k8s / homelab-1 / lima-test / work-test
 PROFILE=mio
 printf 'PROFILE=%s\n' "$PROFILE" > .host-profile
 
