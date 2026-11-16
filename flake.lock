@@ -84,17 +84,17 @@
     "cursor-plugins": {
       "flake": false,
       "locked": {
-        "lastModified": 1794026470,
-        "narHash": "sha256-TDuZ1v+taPdqyvvCs1VHUjtpSy8zHxhQKJv/kIPTpK8=",
+        "lastModified": 1794713777,
+        "narHash": "sha256-fXXJRZnQZlTfOemfJgC0zSMxsfcvxRhGo21T09/6xic=",
         "ref": "main",
-        "rev": "6b0300214a09fd6029cfb7077043125758cd1fd2",
+        "rev": "bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/cursor/plugins"
       },
       "original": {
         "ref": "main",
-        "rev": "6b0300214a09fd6029cfb7077043125758cd1fd2",
+        "rev": "bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/cursor/plugins"
@@ -125,17 +125,17 @@
     "diagram-design": {
       "flake": false,
       "locked": {
-        "lastModified": 1793978423,
-        "narHash": "sha256-QmERJUiJd8S85te6lBytY9OJXmnUZgTNB3gbtrEpRII=",
+        "lastModified": 1794518058,
+        "narHash": "sha256-7xbAUnrgUYdWLGuPFGJBsaKXSwRaimIB19X7R4gR8Ds=",
         "ref": "main",
-        "rev": "e57eda6102a19444538ebd611d39534fad65b663",
+        "rev": "f6db0decea96de66b901331a0f79a8d4b147ebae",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/cathrynlavery/diagram-design"
       },
       "original": {
         "ref": "main",
-        "rev": "e57eda6102a19444538ebd611d39534fad65b663",
+        "rev": "f6db0decea96de66b901331a0f79a8d4b147ebae",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/cathrynlavery/diagram-design"
@@ -371,17 +371,17 @@
     "mattpocock-skills": {
       "flake": false,
       "locked": {
-        "lastModified": 1793456610,
-        "narHash": "sha256-3vhd77xfZjKUYJsIwPFevIZPUAzUgZXr0RYj5NQrBwk=",
+        "lastModified": 1794472958,
+        "narHash": "sha256-AYSRCvBL8TDDdW3rgKu2T7gl4YYDoDId0jYbabEFyfs=",
         "ref": "main",
-        "rev": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+        "rev": "5863806dd4e15c63174bee4e7515a4256792ecfa",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/mattpocock/skills"
       },
       "original": {
         "ref": "main",
-        "rev": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+        "rev": "5863806dd4e15c63174bee4e7515a4256792ecfa",
         "shallow": true,
         "type": "git",
         "url": "https://github.com/mattpocock/skills"
