@@ -23,6 +23,8 @@ in
     self.modules.nixos.disko
     self.modules.nixos.sops
     self.modules.nixos.k3s-node
+    # 常驻家里、没有 Home Manager：在系统层走内网 icache
+    self.modules.nixos.nix-icache-system
   ];
 
   sops.defaultSopsFile = inputs.secrets + "/sops/secrets/hosts/${config.networking.hostName}.yaml";
