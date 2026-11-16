@@ -82,6 +82,8 @@ ssh <宿主> 'limactl start --tty=false <节点>'
 
 实例名与节点名相同。`images` 只在新建实例时用，已装好的实例不受影响
 
+`limactl start` 用宿主上 Lima 自己生成的密钥（`~/.lima/_config/user`）登录 guest 确认就绪，对应的公钥记在 `vars.limaUserKeys`。删掉 `~/.lima`、重装 Lima 或换宿主后密钥会重新生成：把新的 `user.pub` 写进 `vars.limaUserKeys`，再 `just deploy <节点>`。没更新时只是 `limactl start` 等 SSH 超时、`limactl shell` 不可用，虚拟机与节点照常运行
+
 ## 宿主的 socket_vmnet
 
 桥接网卡走 Lima 的非托管模式：`limaYaml` 里是 `socket: /var/run/socket_vmnet.bridged.en0`，socket 由宿主（`sakamoto`、`yuuko`）上 `modules/features/homelab/socket-vmnet/` 的 launchd 守护进程提供。Lima 托管模式要求二进制整条路径归 root、组不可写，Nix store 满足不了
