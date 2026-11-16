@@ -1,6 +1,6 @@
 { pkgs, ... }:
 {
-  every = 18000; # 5h
+  every = 3600 * 5 + 1; # 5小时1秒
   packages = [
     pkgs.nodejs
     pkgs.mise
@@ -16,7 +16,7 @@
     --model mp/codex/gpt-6-luna \
     --thinking low \
     --cwd /tmp \
-    -p "hi" \
+    -p "say hi" \
     --config <(cat <<'EOF'
     disabledProviders:
       - native

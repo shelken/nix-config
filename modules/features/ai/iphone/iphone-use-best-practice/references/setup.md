@@ -5,7 +5,7 @@
 ## 首次配置
 
 1. 安装 Pinky 并打开（macOS 12 及以上）。`iphone` 在 `PINKY_BIN`、PATH 里的 `pinkyctl`、`/Applications/Pinky.app`、`~/Applications/Pinky.app` 里按序找它
-2. iPhone 用 USB 连接、解锁、信任此电脑。Pinky 的 Add phone 页会检查开发者模式与开发者磁盘镜像，缺什么它会说
+2. iPhone 首次用 USB 连接、解锁、信任此电脑。Pinky 的 Add phone 页会检查开发者模式与开发者磁盘镜像，缺什么它会说。之后手机与 Mac 在同一网络时，不插线也能用（Pinky 的 Settings › Phones › Use iPhones and iPads over Wi-Fi，默认开）
 3. 在 Pinky 的 设置 › 智能体 › 远程智能体（Settings › Agents › Remote agents）打开开关「允许智能体通过 HTTP 连接」，`iphone` 才能连上它的 HTTP 端点（默认 `http://127.0.0.1:7465/mcp`）
 4. `iphone status` 确认手机在列表里、HTTP 可达，再 `iphone up`。首次连接要用户在 Pinky 里批准这个远程 agent，并选范围
 
@@ -54,14 +54,15 @@ iOS 17.3 及以下不支持。
 | `No phone is connected in this session` | 租约空闲 10 分钟已结束。`iphone up` |
 | `approval_pending` | 用户还在 Pinky 里决定。用 `--approval-id` 原样重发 |
 | `lease_held` | 别的 agent 在用这台手机，结果里写了是谁 |
-| `device_offline` | 手机没连上。重启后的 iPhone 要用户解锁一次；租约在断线 60 秒内保留 |
+| `device_offline` | 手机没插线，也不在 Mac 所在的网络。重启后的 iPhone 要用户解锁一次；租约在断线 60 秒内保留 |
+| `device_needs_setup` | 手机在等用户做一步，返回说明里写了是哪一步：Wi-Fi 下锁屏时要解锁；Mac 的设备服务（usbmuxd）丢了手机时要重启它，Pinky 会提示 |
 | `device_locked` | `iphone handoff "请解锁手机"` |
 | `unsupported` 且提到 helper | iOS 27 以下没装 helper，见上 |
 | `blocked_by_policy` 的 `credentials` | 密码和验证码字段只能用户本人输入，用 `handoff` |
 
 ## 已知限制
 
-- iPhone 通过 Wi-Fi 连接时 Pinky 会关掉它（截图 3 到 5 秒，视频丢帧），必须 USB
+- 经 Wi-Fi 比 USB 慢，截图要几秒，视频偶尔丢帧；插着线时 Pinky 走 USB
 - iPhone 的屏幕流开着时，部分银行 App 会警告或拒绝运行；Pinky 在手机页打开、agent 工作时与之后 30 秒会开流。需要用这类 App 时在 Pinky 的 Settings › Phones 把该手机的连接改成 WebDriverAgent helper
 - 通过 helper 读一次主屏约 7 秒，点击 0.5 到 0.8 秒；iOS 27 的 CoreDevice 路径读屏不到 0.5 秒
 - 用 helper 时，iOS 偶尔会在手机上要密码来允许自动化，此时 Pinky 会提示用户在手机上输入

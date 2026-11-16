@@ -20,10 +20,10 @@
     # 需要保留的会定死版本
     # "npm:droid" = "latest";
     # renovate: datasource=github-releases depName=google-antigravity/antigravity-cli
-    antigravity-cli = "1.1.24";
+    antigravity-cli = "1.5.9";
     # renovate: datasource=github-releases depName=openai/codex extractVersion=^rust-v(?<version>.+)$
-    codex = "0.160.1";
+    codex = "0.169.0";
     # renovate: datasource=npm depName=@anthropic-ai/claude-code
-    claude-code = "2.1.304";
+    claude-code = "2.1.325";
   };
 }

@@ -40,12 +40,6 @@
       # 可编辑：软链到仓库源文件
       xdg.configFile."herdr/config.toml" = mylib.mkConfigFile config ./config.toml;
 
-      # herdr-plus Projects：整目录软链
-      # 源：modules/features/dev/herdr/projects/*.toml
-      # 目标：~/.config/herdr/plugins/config/cloudmanic.herdr-plus/projects
-      xdg.configFile."herdr/plugins/config/cloudmanic.herdr-plus/projects" =
-        mylib.mkConfigFile config ./projects;
-
       # herdr-lazy：list/lock 软链到插件 config-dir（立即生效，不靠 sessionVariables）
       # 源：modules/features/dev/herdr/plugins.{list,lock}
       # 目标：~/.config/herdr/plugins/config/herdr-lazy/

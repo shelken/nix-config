@@ -5,6 +5,9 @@
   "compaction": {
     "reserveTokens": 22000,
     "modelOverrides": {
+      "cpa/workbuddy/glm-5.2": {
+        "reserveTokens": 650000
+      },
       "anthropic/claude-opus-5-5": {
         "reserveTokens": 650000
       },
@@ -42,6 +45,7 @@
     "+codemode"
   ],
   "enabledModels": [
+    "cpa/workbuddy/glm-5.2:high",
     "anthropic/claude-opus-5-5:medium",
     "mp/antigravity/gemini-3.8-flash:high",
     "anthropic/claude-fable-5-2:low",
@@ -76,12 +80,12 @@
   "packages": [
     "npm:pi-posthorse@0.10.31",
     "npm:@shelken/pi-status-bar@0.2.0",
-    "npm:pi-token-speed@0.12.0",
+    "npm:pi-token-speed@0.13.0",
     "npm:@tifan/pi-preferred-thinking@1.0.2",
     "npm:@tifan/pi-recap@0.4.8",
     "npm:@tifan/pi-titlebar-spinner@1.1.0",
     "npm:@tifan/pi-rename@0.6.0",
-    "npm:pi-vision-handoff@0.10.12",
+    "npm:pi-vision-handoff@0.10.13",
     "npm:@shelken/pi-auto-model-prompts@0.3.1",
     "npm:@shelken/pi-dynamic-models@0.2.8",
     "npm:@shelken/pi-guard@0.7.1",
@@ -117,7 +121,7 @@
         "-./src/features/google-search.ts",
         "-./src/features/generate-image.ts"
       ],
-      "source": "npm:pi-antigravity@0.11.0"
+      "source": "npm:pi-antigravity@0.14.0"
     },
     "npm:pi-better@0.2.0",
     "-npm:pi-rewind",
@@ -134,5 +138,8 @@
   "transport": "auto",
   "tuiMode": "fullscreen",
   "defaultProvider": "mp",
-  "defaultModel": "loomy/DeepSeek-V4.1-Flash"
+  "defaultModel": "loomy/DeepSeek-V4.1-Flash",
+  "extensionChangelogVersions": {
+    "{\"source\":\"npm:pi-better@0.2.0\",\"scope\":\"user\"}": "0.2.0"
+  }
 }
