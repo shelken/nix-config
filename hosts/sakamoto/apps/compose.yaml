@@ -108,7 +108,7 @@ services:
     restart: always
     environment:
       TZ: Asia/Shanghai
-      DLS_URL: nvidia-dls.${MAIN_DOMAIN}
+      DLS_URL: nvidia-dls.int.${MAIN_DOMAIN}
       DLS_PORT: 443
       LEASE_EXPIRE_DAYS: 90
       DATABASE: sqlite:////app/database/db.sqlite
