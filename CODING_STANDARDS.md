@@ -11,6 +11,7 @@
 ## 验证
 
 - 修改配置后，只有本机情况（检查 `.host-profile` 对应的 PROFILE）才使用 `just bd`（nix-darwin 范围验证）/ `just hm-build`（home-manager 范围验证）等命令进行验证；其他机器的情况仅使用轻量化的命令进行校验
+- 求值期不得依赖构建（IFD），也不得读 YAML：提交前跑 `just check-ifd`；原因与替代做法见 `docs/adr/0010-no-ifd-at-eval-time.md`
 
 ## 工具
 

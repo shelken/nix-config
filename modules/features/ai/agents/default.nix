@@ -3,12 +3,10 @@
     {
       lib,
       pkgs,
-      mylib,
       ...
     }:
     let
-      # omp 与 pi 共用的 agent 定义：正文只有一份，模型只来自 config.yml 的角色。
-      # omp 侧输出 frontmatter 头 + 正文；pi 侧额外解析 @role 成 provider/model + thinking。
+      # omp 与 pi 共用的 agent 定义：正文只有一份，模型只来自 config.yml 的角色，Nix 只写角色名。
       readOnlyOmpTools = "read, find, grep, glob, web_search";
       readOnlyPiTools = "read,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom";
 
@@ -126,14 +124,12 @@
 
       agentsCommon = baseAgents // generatedVariants;
 
-      # ---------- 模型角色解析（omp 与 pi 共用）----------
+      # ---------- 模型角色（omp 与 pi 共用）----------
 
-      ompConfig = mylib.readYaml pkgs ../omp/config.yml;
-      roles = ompConfig.modelRoles;
-      agentModelOverrides = ompConfig.task.agentModelOverrides or { };
-
-      # judge 不在 task.agentModelOverrides 里也能工作：它自己的 modelRoles 条目就是真相源。
-      # 变体角色的解析顺序：显式 modelRole > 同名角色 > 变体后缀回退到 reviewer-<后缀>/<后缀> > 名字本身。
+      # Nix 只声明 agent 用哪个角色名；角色对应的模型只在运行时读 config.yml：
+      # omp 解析 frontmatter 的 @role，pi 由 spawn-subagent 每次派发时读（见 docs/adr/0010）。
+      # 变体的角色是静态规则：显式 modelRole > 生成的变体用 reviewer-<后缀> > 名字本身。
+      # 新增 modelRoles 角色不会自动生效，需要在这里声明。
       roleOf =
         name:
         let
@@ -141,99 +137,30 @@
         in
         if a ? modelRole then
           a.modelRole
-        else if roles ? ${name} then
-          name
         else if generatedVariants ? ${name} then
-          let
-            parts = lib.splitString "-" name;
-            v = builtins.elemAt parts (builtins.length parts - 1);
-          in
-          if roles ? "reviewer-${v}" then
-            "reviewer-${v}"
-          else if roles ? ${v} then
-            v
-          else
-            name
+          "reviewer-${lib.last (lib.splitString "-" name)}"
         else
           name;
-      modelOf = name: agentModelOverrides.${name} or "@${roleOf name}";
 
-      # omp 与 pi 对同一服务的 provider 命名不同；映射与 spawn-subagent 热加载共用一份。
-      piProviderAlias =
-        (builtins.fromJSON (builtins.readFile ../skills/subagent-policy/subagent-config.json)).providerAlias
-          or { };
-
-      # "provider/model:level" 或 "@role[:level]" -> { model, thinking }；:level 覆盖被引用角色的 level
-      parseSpec =
-        spec:
-        let
-          m = builtins.match "(.*):(off|minimal|low|medium|high|xhigh|max)" spec;
-        in
-        if m == null then
-          {
-            ref = spec;
-            level = null;
-          }
-        else
-          {
-            ref = builtins.elemAt m 0;
-            level = builtins.elemAt m 1;
-          };
-
-      resolveSpec =
-        spec:
-        let
-          p = parseSpec spec;
-          base =
-            if lib.hasPrefix "@" p.ref then
-              resolveSpec roles.${lib.removePrefix "@" p.ref}
-            else
-              {
-                model = p.ref;
-                thinking = null;
-              };
-        in
-        base // lib.optionalAttrs (p.level != null) { thinking = p.level; };
-
-      toPiModel =
-        model:
-        let
-          parts = lib.splitString "/" model;
-        in
-        lib.concatStringsSep "/" (
-          [ (piProviderAlias.${builtins.head parts} or (builtins.head parts)) ] ++ builtins.tail parts
-        );
-
-      # pi 的 frontmatter 只有 description、role、model、thinking、tools 五个字段，description 与正文对每个 profile 都必须是独立文件。
+      # pi 的 frontmatter 只有 description、role、tools 三个字段，description 与正文对每个 profile 都必须是独立文件。
+      # 模型与 thinking 不写进 md：spawn-subagent 每次派发按 role 读 config.yml。
       # description 用 JSON 字符串输出（合法的 YAML 双引号串）：值里的 ": " 否则会让 YAML 解析失败。
-      # role 是 roleOf 的结果，spawn-subagent 热加载 config.yml 时直接读它，不再自己推算角色。
-      mkPiAgent =
-        name: a:
-        let
-          resolved = resolveSpec (modelOf name);
-        in
-        {
-          name = "${name}.md";
-          path = pkgs.writeText "${name}.md" (
-            lib.concatStringsSep "\n" [
-              "---"
-              "description: ${builtins.toJSON a.description}"
-              "role: ${roleOf name}"
-              "model: ${toPiModel resolved.model}"
-              "thinking: ${
-                if resolved.thinking == null then
-                  throw "agent ${name} 的模型角色未带 thinking 级别（config.yml 的 modelRoles）"
-                else
-                  resolved.thinking
-              }"
-              "tools: ${a.piTools}"
-              "---"
-              ""
-              (builtins.readFile a.body)
-            ]
-            + "\n"
-          );
-        };
+      # role 是 roleOf 的结果，spawn-subagent 直接读它，不再自己推算角色。
+      mkPiAgent = name: a: {
+        name = "${name}.md";
+        path = pkgs.writeText "${name}.md" (
+          lib.concatStringsSep "\n" [
+            "---"
+            "description: ${builtins.toJSON a.description}"
+            "role: ${roleOf name}"
+            "tools: ${a.piTools}"
+            "---"
+            ""
+            (builtins.readFile a.body)
+          ]
+          + "\n"
+        );
+      };
 
       # pi 没有内置 agent：每个 profile 都是独立 md，缺一个 spawn-subagent 就找不到它。
       piAgentsDir = pkgs.linkFarm "pi-agents" (lib.mapAttrsToList mkPiAgent agentsCommon);
@@ -254,7 +181,7 @@
               "tools: ${a.ompTools}"
             ]
             ++ lib.optional ((a.ompSpawns or null) != null) "spawns: ${a.ompSpawns}"
-            ++ [ "model: ${modelOf name}" ]
+            ++ [ "model: @${roleOf name}" ]
             ++ (a.extraFrontmatter or [ ])
             ++ [
               "---"
