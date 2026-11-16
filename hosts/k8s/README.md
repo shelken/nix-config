@@ -59,7 +59,7 @@
    为什么要配方：nixos-anywhere 自己传 substituters 时只会 `extra-` 追加到末尾，icache 与原站同级，永远轮不到；安装环境太旧时 disko 等不到分区链接（见 `hosts/vps/vps-cc/README.md`）。见 `utils/script/just/anywhere-install`
    阶段一之后核对：`lsblk` 里要抹的盘是 `disko.device` 那块、没有别的盘混入；`ip -br link` 里的 MAC 与 `network.nix` 一致。**这一步之后、disko 之前，重启会回到原系统。**
 5. **换上新的 Lima 实例声明**（仅 Lima 节点，见下一节；宿主的 socket_vmnet 须已生效，见「宿主的 socket_vmnet」）
-6. **验证**：`nixos-version`、`systemctl is-system-running`、`ip -br a` 里 `eth0`/`eth1`/两个 VLAN 子接口都在且 `eth1` 拿到保留地址、`systemctl status k3s`、`kubectl get node`
+6. **验证**：`nixos-version`、`systemctl is-system-running`、`ip -br a` 里 `eth0`/`eth1`/VLAN 子接口 `eth1.50` 都在且 `eth1` 拿到保留地址、`systemctl status k3s`、`kubectl get node`
 7. **首次 `just deploy <节点>`**，不改任何配置：nixos-anywhere 装的那一代没有 deploy-rs 的激活器，不先部署一次，之后配置变坏时无法自动回滚
 8. **uncordon**：`kubectl uncordon <节点>`，核对 Longhorn 副本重建完成
 
