@@ -31,6 +31,9 @@
       services.xserver.videoDrivers = [ "nvidia" ];
       boot.blacklistedKernelModules = [ "nouveau" ];
 
+      # nvidia-gridd 由 vgpu4nixos 提供；授权令牌由 fastapi-dls 签发，启动时从这个固定路径读取
+      sops.secrets.nvidia-client-token.path = "/etc/nvidia/ClientConfigToken/client_configuration_token.tok";
+
       hardware.nvidia-container-toolkit.enable = true;
       # k3s 发现 PATH 里的 nvidia-container-runtime 时，自动加一个名为 nvidia 的 containerd runtime，
       # 与集群 RuntimeClass 的 handler 同名，集群清单不用改

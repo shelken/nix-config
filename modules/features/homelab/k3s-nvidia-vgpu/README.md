@@ -11,7 +11,7 @@ PVE 虚拟机里的 NVIDIA vGPU guest 驱动（GRID 17.6，经 [vgpu4nixos](http
 ## 依赖
 
 - 宿主 vGPU 版本必须是 17.x；guest 驱动由 vgpu4nixos 从 Google Cloud 公开下载
-- 授权由 sakamoto 上的 fastapi-dls 签发；guest 的 `nvidia-gridd` 从 `/etc/nvidia/ClientConfigToken/` 读取令牌
+- 授权由 sakamoto 上的 fastapi-dls 签发；令牌存在主机的 sops 文件里，键名 `nvidia-client-token`，部署到 `/etc/nvidia/ClientConfigToken/client_configuration_token.tok`
 - 集群的 `RuntimeClass nvidia` 的 handler 是 `nvidia`，对应 k3s 在 PATH 里发现 `nvidia-container-runtime` 时生成的 runtime
 
 vgpu4nixos 对 17.6 没有 vGPU-Unlock-patcher 支持（`vgpuPatcher = null`），无法用补丁适配新内核

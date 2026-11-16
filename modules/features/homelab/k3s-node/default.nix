@@ -185,7 +185,9 @@
         (lib.mkIf (!isServer) {
           services.k3s = {
             serverAddr = "https://${myvars.networking.hostAddress."sakamoto-k8s".address}:6443";
+            tokenFile = config.sops.secrets.k3s-token.path;
           };
+          sops.secrets.k3s-token = { };
         })
       ];
     };

@@ -21,8 +21,11 @@ in
   imports = [
     self.modules.nixos.server
     self.modules.nixos.disko
+    self.modules.nixos.sops
     self.modules.nixos.k3s-node
   ];
+
+  sops.defaultSopsFile = inputs.secrets + "/sops/secrets/hosts/${config.networking.hostName}.yaml";
 
   shelken.disko.layout = "ext4";
 
