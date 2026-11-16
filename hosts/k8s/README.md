@@ -41,7 +41,9 @@
 3. **准备随装目录**：按上表建目录，目录结构即目标路径：
    ```bash
    EXTRA=$(mktemp -d)
-   install -d -m 700 "$EXTRA/var/lib/sops-nix" "$EXTRA/etc/ssh" "$EXTRA/etc/rancher/node"
+   # 随装目录经 tar -p 拷贝，每层目录的权限会覆盖目标系统：系统目录用 755，只有放密钥的末级目录用 700
+   install -d -m 700 "$EXTRA/var/lib/sops-nix"
+   install -d -m 755 "$EXTRA/etc/ssh" "$EXTRA/etc/rancher/node"
    install -m 600 ~/k8s-<节点>-age.txt "$EXTRA/var/lib/sops-nix/key.txt"
    # SSH 主机密钥与 /etc/rancher/node/password：从旧系统取（sudo cat）
    ```
