@@ -54,7 +54,7 @@ in
   };
 
   virtualisation.oci-containers.containers.hysteria2 = {
-    image = "tobyxdd/hysteria:v2.13.0@sha256:92b06917b2abb940e90ea6dc9215c1b1ceea69fa7edc1374daf3cde36e422740";
+    image = "tobyxdd/hysteria:v2.14.0@sha256:b15cedc3de200ae7a4f177908a83ef23ed3de2935458b22b7d46a7a8697038a9";
     autoStart = true;
     cmd = [
       "server"
