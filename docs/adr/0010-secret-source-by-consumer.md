@@ -26,6 +26,6 @@
 ## 后果
 
 - 路由器（`hosts/router-mine`）部署时经 `op inject` 读取的 Wi-Fi、DHCP MAC、ZeroTier、防火墙等值属于第一、二类，要搬到 secrets.nix。之后 DHCP 保留与 k8s 节点的 `network.nix` 读同一份 MAC。
-- singbox-config 的模板经 `sec-run` 填充，生成的配置由机器无人值守运行，按本规则同样应搬到 secrets.nix。
+- singbox-config 留在 1Password：模板里的值只在用户手动运行生成器时读取；机器无人值守时要读的只有生成结果（旁路由的订阅 URL），它已在 sops 里。
 - 凭据基座（`opSecretMap`）只服务交互工具，范围不变。
 - sops-nix 是否是主机侧解密的最佳实现另行评估；本规则只决定值的来源，不依赖具体的解密工具。
