@@ -2,7 +2,7 @@
 { config, ... }:
 let
   # renovate: datasource=github-releases depName=rust-lang/rust
-  rustVersion = "1.99";
+  rustVersion = "1.100";
 in
 {
   # 原属 gui 全覆盖，跨平台无 darwin 专属
