@@ -17,17 +17,6 @@ rec {
   mkHomeConfigurations = import ./homeConfigurations.nix { inherit lib myvars; };
   relativeToRoot = lib.path.append ../.;
 
-  # 先用 yj 转成 json 再读入（构建期 IFD）
-  readYaml =
-    pkgs: file:
-    builtins.fromJSON (
-      builtins.readFile (
-        pkgs.runCommand "converted.json" { } ''
-          ${pkgs.yj}/bin/yj < ${file} > $out
-        ''
-      )
-    );
-
   mkBoolOpt =
     default: description:
     mkOption {
