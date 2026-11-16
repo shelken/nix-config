@@ -8,7 +8,7 @@
 
 - `common.nix`：三台共有：`server` 角色、disko（ext4）、sops、网络（networkd 按 MAC 命名网卡、`eth1` DHCP、VLAN 子接口 `eth1.50`）、`k3s-node` 功能
 - `lima.nix`：两台 Lima（vz）节点共有：引导、usernet 网卡 `eth0`、`shelken.lima.*` 选项与 `system.build.limaYaml`（Lima 实例声明）
-- `<节点>/default.nix`：主机名、磁盘设备、k3s 角色与标签；`sakamoto-k8s` 另有 Longhorn 数据盘的挂载；`homelab-1` 另有 qemu 驱动与 Intel 核显
+- `<节点>/default.nix`：主机名、磁盘设备、k3s 角色与标签；`sakamoto-k8s` 另有 Longhorn 数据盘的挂载；`homelab-1` 另有 Longhorn 数据分区（与系统同盘）、qemu 驱动与 Intel 核显
 - `modules/features/homelab/k3s-node/`：k3s 配置、Longhorn 所需的 iSCSI/NFS、sysctl、chrony，见该目录 README
 - `modules/features/homelab/socket-vmnet/`：Lima 宿主（`sakamoto`、`yuuko`）上常驻的桥接 socket_vmnet，见下文「宿主的 socket_vmnet」
 - `modules/features/homelab/k3s-nvidia-vgpu/`：`homelab-1` 的 vGPU 驱动与 nvidia 运行时，内核固定 6.12 的原因见该目录 README
@@ -18,26 +18,26 @@
 
 装机抹盘。不在 Nix 配置里、又要保留的东西，自己带过去：
 
-| 状态                         | 节点           | 目标路径                                        | 怎么带                    |
-| ---------------------------- | -------------- | ----------------------------------------------- | ------------------------- |
-| 解密钥匙：该节点的 age 私钥  | 全部           | `/var/lib/sops-nix/key.txt`                     | `--extra-files`           |
-| SSH 主机密钥                 | 全部           | `/etc/ssh/ssh_host_*_key{,.pub}`                | `--extra-files`           |
-| 节点口令                     | 全部           | `/etc/rancher/node/password`                    | `--extra-files`           |
-| etcd、CA、加密密钥           | `sakamoto-k8s` | `/var/lib/rancher/k3s/server`                   | `--extra-files`           |
-| Longhorn 数据盘              | `sakamoto-k8s` | `/mnt/lima-longhorn`                            | Lima 附加盘，装机时不接触 |
-| Longhorn 与 OpenEBS 本地数据 | `homelab-1`    | `/mnt/lima-longhorn`、`/var/mnt/local-hostpath` | 装机前打包，装好后恢复    |
+| 状态                         | 节点           | 目标路径                                        | 怎么带                                             |
+| ---------------------------- | -------------- | ----------------------------------------------- | -------------------------------------------------- |
+| 解密钥匙：该节点的 age 私钥  | 全部           | `/var/lib/sops-nix/key.txt`                     | `--extra-files`                                    |
+| SSH 主机密钥                 | 全部           | `/etc/ssh/ssh_host_*_key{,.pub}`                | `--extra-files`                                    |
+| 节点口令                     | 全部           | `/etc/rancher/node/password`                    | `--extra-files`                                    |
+| etcd、CA、加密密钥           | `sakamoto-k8s` | `/var/lib/rancher/k3s/server`                   | `--extra-files`                                    |
+| Longhorn 数据盘              | `sakamoto-k8s` | `/mnt/lima-longhorn`                            | Lima 附加盘，装机时不接触                          |
+| Longhorn 与 OpenEBS 本地数据 | `homelab-1`    | `/mnt/lima-longhorn`、`/var/mnt/local-hostpath` | 与系统同盘，整盘重装会擦掉：装机前打包，装好后恢复 |
 
 - k3s 在集群里为每个节点存一个 `<节点名>.node-password.k3s` Secret，口令不匹配会拒绝同名节点加入，所以 `/etc/rancher/node/password` 必须带过去
 - `--extra-files <目录>` 把目录原样复制到新系统根目录，目录结构就是目标路径，只在安装时单向复制一次
 - age 私钥丢了不丢数据：密文同时写给了管理员公钥，换一把新的、`sops updatekeys`、刷新 `secrets` 输入即可
-- `homelab-1` 的 SSH 与 `node/password` 同理；它的本地数据体量大，用 rsync 打包到管理机，不进随装目录
+- `homelab-1` 的 SSH 与 `node/password` 同理；它的本地数据体量大，经 PVE 上的临时卷中转（GNU tar `--sparse`），不进随装目录
 
 ## 重装一台节点
 
 1. **drain**：`kubectl drain <节点> --ignore-daemonsets --delete-emptydir-data`。控制面重装期间集群没有 API，worker 上已有的 Pod 继续运行，但不能调度、不能变更，开始前确认 Flux 没有进行中的变更
 2. **回滚点**，两条路二选一：
    - Lima：节点停机后，在宿主上用 `cp -c`（APFS 克隆，瞬间完成、几乎不占空间）克隆实例目录里的 `diffdisk`、`datadisk` 与 `lima.yaml`；`sakamoto-k8s` 的 Longhorn 数据盘（`~/.lima/_disks/longhorn/datadisk`）同样克隆
-   - PVE：`qm snapshot <vmid> <名字>`
+   - PVE：先 `qm shutdown <vmid>`，关机状态下 `qm snapshot <vmid> <名字>`，再 `qm start`。运行中快照会经 guest agent 冻结文件系统，Longhorn 卷的副本在同一台机器的根分区上，冻结顺序不对就互相等待，整机写入卡死
 3. **准备随装目录**：按上表建目录，目录结构即目标路径：
    ```bash
    EXTRA=$(mktemp -d)

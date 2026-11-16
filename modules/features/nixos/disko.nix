@@ -4,7 +4,7 @@
 # 分区表都是 GPT，引导分区随 shelken.disko.boot：
 #   - uefi：1G ESP(/boot, vfat)，引导程序由主机自己选（如 systemd-boot）
 #   - bios：1M EF02 分区，不格式化，只给 GRUB 放 core.img；GRUB 直接读根分区，不单独分 /boot
-# 根分区占剩余全部空间：
+# 根分区默认占剩余全部空间（shelken.disko.rootSize 可限定大小，主机再自己往 partitions 里加分区）：
 #   - ext4 ：一个根分区，最简单，适合测试机与小 VPS
 #   - btrfs：根分区里分 @root @home @nix @log 子卷，zstd 压缩，可选 swapfile 子卷
 #
@@ -35,7 +35,7 @@
       };
 
       ext4Root = {
-        size = "100%";
+        size = cfg.rootSize;
         content = {
           type = "filesystem";
           format = "ext4";
@@ -48,7 +48,7 @@
         "noatime"
       ];
       btrfsRoot = {
-        size = "100%";
+        size = cfg.rootSize;
         content = {
           type = "btrfs";
           extraArgs = [ "-f" ];
@@ -109,6 +109,12 @@
             固件引导方式。目标机里 `ls /sys/firmware/efi` 存在就是 uefi，不存在就是 bios。
             bios 会建 EF02 分区并启用 GRUB（安装到 device）；uefi 的引导程序由主机自己配置。
           '';
+        };
+        rootSize = lib.mkOption {
+          type = lib.types.str;
+          default = "100%";
+          example = "80G";
+          description = "根分区大小；不占满时，剩余空间留给主机自己声明的分区";
         };
         espSize = lib.mkOption {
           type = lib.types.str;
