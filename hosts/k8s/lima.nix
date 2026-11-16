@@ -97,8 +97,8 @@ in
         hostResolver.enabled = false;
         networks = [
           {
-            # 非托管：宿主的 socket-vmnet 功能常驻守护进程；它的 interface 选项改了，这里要同步
-            socket = myvars.socketVmnet.socketFor myvars.socketVmnet.interface;
+            # 非托管：socket 由宿主的 socket-vmnet 功能常驻提供
+            inherit (myvars.socketVmnet) socket;
             interface = "eth1";
             macAddress = net.lanMac;
             metric = 100;

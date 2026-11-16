@@ -93,7 +93,7 @@ ssh <宿主> 'limactl start --tty=false <节点>'
   sudo rm /etc/sudoers.d/lima
   $EDITOR ~/.lima/_config/networks.yaml   # 删掉 networks 下的 bridged 段
   ```
-- 改桥接网卡：改 `vars/default.nix` 里的 `socketVmnet.interface`，宿主与 `limaYaml` 一起变；只在某台宿主上用 `shelken.socketVmnet.interface` 覆盖时，`limaYaml` 不会跟着变
+- 改桥接网卡：改 `vars/default.nix` 里的 `socketVmnet.interface`，宿主与 `limaYaml` 一起变
 
 ## 整集群关机与开机
 

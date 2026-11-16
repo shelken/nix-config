@@ -5,31 +5,23 @@
 {
   flake.modules.darwin.socket-vmnet =
     {
-      config,
       pkgs,
-      lib,
       myvars,
       ...
     }:
     let
-      cfg = config.shelken.socketVmnet;
+      inherit (myvars.socketVmnet) interface socket;
       # 与上游 launchd/io.github.lima-vm.socket_vmnet.bridged.en0.plist 的命名一致
-      name = "socket_vmnet.bridged.${cfg.interface}";
+      name = "socket_vmnet.bridged.${interface}";
     in
     {
-      options.shelken.socketVmnet.interface = lib.mkOption {
-        type = lib.types.str;
-        default = myvars.socketVmnet.interface;
-        description = "桥接到的宿主网卡；改它时 hosts/k8s/lima.nix 的 socket 路径要同步";
-      };
-
-      config.launchd.daemons.socket-vmnet.serviceConfig = {
+      launchd.daemons.socket-vmnet.serviceConfig = {
         Label = "io.github.lima-vm.${name}";
         ProgramArguments = [
           "${pkgs.socket-vmnet}/bin/socket_vmnet"
           "--vmnet-mode=bridged"
-          "--vmnet-interface=${cfg.interface}"
-          (myvars.socketVmnet.socketFor cfg.interface)
+          "--vmnet-interface=${interface}"
+          socket
         ];
         UserName = "root";
         RunAtLoad = true;

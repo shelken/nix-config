@@ -16,9 +16,9 @@
   };
   networking = import ./networking.nix { inherit lib; };
   # Lima 节点的桥接网卡：宿主的 socket-vmnet 功能创建 socket，hosts/k8s/lima.nix 连接它
-  socketVmnet = {
+  socketVmnet = rec {
     interface = "en0";
-    socketFor = interface: "/var/run/socket_vmnet.bridged.${interface}";
+    socket = "/var/run/socket_vmnet.bridged.${interface}";
   };
   mainSshAuthorizedKeys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINfTmo7KkKR3PFxUQ8mKx8lmJ3ykwaeOfkpOxsFgdaRH shelken@sakamoto"
