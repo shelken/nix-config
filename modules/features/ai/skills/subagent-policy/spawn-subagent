@@ -31,25 +31,8 @@ type Resolved = { agent: Agent } | { error: string };
 
 // ---------- 解析 ----------
 
-// 轻量 frontmatter 解析: key: value 与缩进 "- item" 块, 注释/其余行忽略值保留在 md。
-function parseFrontmatter(text: string): Record<string, string | string[]> {
-  const m = text.match(/^---\n([\s\S]*?)\n---/);
-  if (!m) return {};
-  const f: Record<string, string | string[]> = {};
-  let cur: string | null = null;
-  for (const raw of m[1].split("\n")) {
-    const line = raw.trimEnd();
-    const kv = line.match(/^([A-Za-z0-9_-]+):(.*)$/);
-    if (kv) { cur = kv[1]; f[cur] = kv[2].trim(); }
-    else if (cur && /^\s+-\s+/.test(line)) {
-      const item = line.trim().slice(2);
-      f[cur] = Array.isArray(f[cur]) ? [...f[cur], item] : [item];
-    }
-  }
-  return f;
-}
-
-// md 缺 tools 即视为无法解析；model/thinking 优先用实时 config.yml，缺失才回退 md 的静态值。
+// md 的 frontmatter 不是合法 YAML 或缺 tools 即视为无法解析；
+// model/thinking 优先用实时 config.yml，缺失才回退 md 的静态值。
 // live 由调用方传入，避免每个 profile 重读 config.yml。
 function resolveAgent(profile: string, live: LiveConfig | null = loadLiveConfig()): Resolved {
   const mdName = existsSync(agentsDir)
@@ -57,18 +40,33 @@ function resolveAgent(profile: string, live: LiveConfig | null = loadLiveConfig(
     : undefined;
   if (!mdName) return { error: "agents 目录无对应 md" };
   const text = readFileSync(join(agentsDir, mdName), "utf8");
-  const f = parseFrontmatter(text);
-  const tools = String(f.tools ?? "");
-  if (!tools) return { error: "md 缺少 tools 字段" };
+  const block = text.match(/^---\n([\s\S]*?)\n---/);
+  if (!block) return { error: "md 缺少 frontmatter" };
+  let f: Record<string, unknown>;
+  try {
+    f = Bun.YAML.parse(block[1]) ?? {};
+  } catch (e: any) {
+    return { error: `md frontmatter 不是合法 YAML（${e.message}）` };
+  }
+  // YAML 值可能是对象、数组、数字等：只收字符串（tools 另收字符串数组，逗号连接），
+  // 类型不对按字段报错，避免 String() 把对象静默转成 "[object Object]" 或抛 TypeError
+  const s: Record<string, string> = {};
+  for (const key of ["description", "model", "thinking", "tools"]) {
+    const v = f[key] ?? "";
+    if (typeof v === "string") s[key] = v;
+    else if (key === "tools" && Array.isArray(v) && v.every((x) => typeof x === "string")) s[key] = v.join(",");
+    else return { error: `md 的 ${key} 字段必须是${key === "tools" ? "字符串或字符串数组" : "字符串"}` };
+  }
+  if (!s.tools) return { error: "md 缺少 tools 字段" };
   const resolved = liveModel(profile, live);
-  const model = resolved?.model ?? String(f.model ?? "");
-  const thinking = resolved?.thinking ?? String(f.thinking ?? "");
+  const model = resolved?.model ?? s.model;
+  const thinking = resolved?.thinking ?? s.thinking;
   if (!model || !thinking) return { error: "model/thinking 无法解析（config.yml 与 md 均无有效值）" };
   // 插件排除全局统一：所有子代理共用一份派生 settings.json，per-md 无法生效
   return {
     agent: {
-      name: profile, model, thinking, tools,
-      exclude: (config.exclude ?? []) as string[], description: String(f.description ?? ""),
+      name: profile, model, thinking, tools: s.tools,
+      exclude: (config.exclude ?? []) as string[], description: s.description,
       body: text.replace(/^---\n[\s\S]*?\n---\n?/, "").trim(),
       src: resolved ? "live" : "md",
     },
