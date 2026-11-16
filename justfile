@@ -170,7 +170,7 @@ hm-timing *args:
 # 并行求值所有主机并禁用 IFD；读私有 secrets 失败等非 IFD 错误只给 warning
 [group('flake')]
 check-ifd *args:
-    @{{ justfile_directory() }}/utils/script/check_ifd.py {{ args }}
+    @{{ justfile_directory() }}/utils/script/just/check_ifd.py {{ args }}
 
 # 更新整个输入
 [group('flake')]

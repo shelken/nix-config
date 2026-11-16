@@ -18,7 +18,7 @@ Nix 只声明结构：有哪些 agent、各自用哪个 role 名。role 对应�
 
 - 求值期不得读取构建产物（`import`、`readFile`、`fromJSON` 等作用于 derivation 输出），也不得读 YAML
 - 需要 YAML 内容的产物放到构建期（`runCommand`）或运行时生成
-- 提交前跑 `just check-ifd`（`utils/script/check_ifd.py`）：并行求值所有主机的 toplevel 或 system drvPath 并禁用 IFD。只有 IFD 被禁用的报错才算失败；其他求值错误（读私有 secrets 失败、测试主机缺根文件系统的断言）提示后跳过
+- 提交前跑 `just check-ifd`（`utils/script/just/check_ifd.py`）：并行求值所有主机的 toplevel 或 system drvPath 并禁用 IFD。只有 IFD 被禁用的报错才算失败；其他求值错误（读私有 secrets 失败、测试主机缺根文件系统的断言）提示后跳过
 
 ## 考虑过的替代方案
 
