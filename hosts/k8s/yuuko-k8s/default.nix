@@ -20,7 +20,8 @@
     hostKey = myvars.limaUserKeys.yuuko;
     sshPort = 60123;
     cpus = 6;
-    memory = "8G";
+    # 宿主 16G 只跑这台虚拟机，给 macOS 留 4G；控制面重装时要接住它腾出的 Pod
+    memory = "12G";
     disk = "40G";
   };
 
