@@ -1,4 +1,4 @@
-{ ... }:
+{ myvars, ... }:
 #############################################################
 #
 #  yuuko-k8s：yuuko 上 Lima 里的 k3s worker，轻量弹性节点
@@ -17,7 +17,7 @@
   shelken.disko.device = "/dev/vda";
 
   shelken.lima = {
-    hostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIvvmHR3yD9rV5bStEdkjzLtr4pGdtJBOKzcq8DkRvA3 lima";
+    hostKey = myvars.limaUserKeys.yuuko;
     sshPort = 60123;
     cpus = 6;
     memory = "8G";

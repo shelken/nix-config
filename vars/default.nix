@@ -20,6 +20,11 @@
     interface = "en0";
     socket = "/var/run/socket_vmnet.bridged.${interface}";
   };
+  # 各 Mac 上 Lima 自己的 SSH 公钥（~/.lima/_config/user.pub）；limactl start 用它确认 guest 就绪
+  limaUserKeys = {
+    yuuko = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIvvmHR3yD9rV5bStEdkjzLtr4pGdtJBOKzcq8DkRvA3 lima";
+    sakamoto = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBeElTQ7wsNp6jg50I+QCCrbHIK4A2JxLRHyR6YA3CdH lima";
+  };
   mainSshAuthorizedKeys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINfTmo7KkKR3PFxUQ8mKx8lmJ3ykwaeOfkpOxsFgdaRH shelken@sakamoto"
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN9sMBAahOZKZ5QXBEsu6ACfgX8TSt5EgD+E1h6mtzG2 shelken@mio"

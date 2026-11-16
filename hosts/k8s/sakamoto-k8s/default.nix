@@ -1,4 +1,4 @@
-{ ... }:
+{ myvars, ... }:
 #############################################################
 #
 #  sakamoto-k8s：sakamoto 上 Lima 里的 k3s 控制面（唯一的 etcd 成员）
@@ -17,7 +17,7 @@
   shelken.disko.device = "/dev/vda";
 
   shelken.lima = {
-    hostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBeElTQ7wsNp6jg50I+QCCrbHIK4A2JxLRHyR6YA3CdH lima";
+    hostKey = myvars.limaUserKeys.sakamoto;
     sshPort = 60122;
     cpus = 8;
     # 宿主仅 16GiB，再多会与宿主上的其他进程叠加触发 macOS 内存压缩，拖垮 etcd 延迟导致控制器集体重启
