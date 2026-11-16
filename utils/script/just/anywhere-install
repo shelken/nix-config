@@ -8,6 +8,8 @@
 # --build-on remote 经 ssh-ng 起的 nix-daemon 以 root 运行，会读它；安装环境在内存里，重启即消失。
 #
 # 用法: anywhere-install <主机> <目标地址> [extra-files 目录]；目标须已 kexec 进安装环境，SSH 用 root
+# PHASES=disko,install 时装完不重启：大体积、稀疏的数据不走 extra-files（经 macOS tar 不保证保留稀疏），
+# 此时自行写入目标的 /mnt，再 ssh root@<目标> reboot
 set -euo pipefail
 host="${1:?用法: anywhere-install <主机> <目标地址> [extra-files 目录]}"
 target="${2:?用法: anywhere-install <主机> <目标地址> [extra-files 目录]}"
@@ -37,6 +39,6 @@ EOF
 echo "安装环境 substituters: $(ssh "${ssh_opts[@]}" "root@${target}" 'nix config show substituters')" >&2
 
 args=(-f ".#${host}" --target-host "root@${target}" --build-on remote
-    --no-use-machine-substituters --phases disko,install,reboot)
+    --no-use-machine-substituters --phases "${PHASES:-disko,install,reboot}")
 [[ -n "$extra" ]] && args+=(--extra-files "$extra")
 exec nixos-anywhere "${args[@]}"
