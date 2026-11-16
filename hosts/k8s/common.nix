@@ -2,6 +2,7 @@
   config,
   lib,
   inputs,
+  myvars,
   self,
   ...
 }:
@@ -54,11 +55,8 @@ in
         matchConfig.Name = "eth1";
         DHCP = "ipv4";
         vlan = [ "eth1.50" ];
-        # home-ops ADR-0004：DNS 固定，不用 DHCP 下发的
-        dns = [
-          "1.1.1.1"
-          "8.8.8.8"
-        ];
+        # home-ops ADR-0012：DNS 直接指向旁路由，不用 DHCP 下发的（主路由的查询不经旁路由分流）
+        dns = [ myvars.networking.hostAddress.hk1box.address ];
         networkConfig = {
           DNSDefaultRoute = true;
           IPv6AcceptRA = true;
