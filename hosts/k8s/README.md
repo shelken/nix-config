@@ -6,7 +6,7 @@
 
 ## 组成
 
-- `common.nix`：三台共有：`server` 角色、disko（ext4）、sops、网络（networkd 按 MAC 命名网卡、`eth1` DHCP、VLAN 子接口 `eth1.50`/`eth1.70`）、`k3s-node` 功能
+- `common.nix`：三台共有：`server` 角色、disko（ext4）、sops、网络（networkd 按 MAC 命名网卡、`eth1` DHCP、VLAN 子接口 `eth1.50`）、`k3s-node` 功能
 - `lima.nix`：两台 Lima（vz）节点共有：引导、usernet 网卡 `eth0`、`shelken.lima.*` 选项与 `system.build.limaYaml`（Lima 实例声明）
 - `<节点>/default.nix`：主机名、磁盘设备、k3s 角色与标签；`sakamoto-k8s` 另有 Longhorn 数据盘的挂载；`homelab-1` 另有 qemu 驱动与 Intel 核显
 - `modules/features/homelab/k3s-node/`：k3s 配置、Longhorn 所需的 iSCSI/NFS、sysctl、chrony，见该目录 README

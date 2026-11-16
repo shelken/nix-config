@@ -39,8 +39,8 @@ in
       matchConfig.PermanentMACAddress = net.lanMac;
       linkConfig.Name = "eth1";
     };
-    # Multus 的 macvlan 以这两个子接口为父接口；它们自己不配地址
-    netdevs = lib.genAttrs [ "eth1.50" "eth1.70" ] (name: {
+    # Multus 的 macvlan 以这个子接口为父接口；它自己不配地址
+    netdevs = lib.genAttrs [ "eth1.50" ] (name: {
       netdevConfig = {
         Kind = "vlan";
         Name = name;
@@ -51,10 +51,7 @@ in
       "10-eth1" = {
         matchConfig.Name = "eth1";
         DHCP = "ipv4";
-        vlan = [
-          "eth1.50"
-          "eth1.70"
-        ];
+        vlan = [ "eth1.50" ];
         # home-ops ADR-0004：DNS 固定，不用 DHCP 下发的
         dns = [
           "1.1.1.1"
