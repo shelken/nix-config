@@ -1,10 +1,13 @@
-# DNS 与 DHCP。IP 优先取自 vars/networking.nix；静态租约的 MAC 在 1Password（router-mine 条目的 dhcp 分组）。
+# DNS 与 DHCP。IP 优先取自 vars/networking.nix；静态租约的 MAC 取自 secrets.nix：
+# k8s 节点读各自 hosts/<节点>/network.nix 的 lanMac，其余实体设备读 hosts/router-mine/network.nix 的 dhcpMacs。
 # lan、viot 的网关与 DNS 选项（指向 hk1box）在 hk1box/dhcp.nix，viot 的基础段在 home-ops/iot.nix
-{ lib, ... }:
+{ inputs, lib, ... }:
 let
   net = import ../../../vars/networking.nix { inherit lib; };
   ip = name: net.hostAddress.${name}.address;
-  mac = name: "{{ op://Personal/router-mine/dhcp/${name} }}";
+  secretNet = host: import (inputs.secrets + "/hosts/${host}/network.nix");
+  nodeMac = name: (secretNet name).lanMac;
+  deviceMac = (secretNet "router-mine").dhcpMacs;
 in
 {
   uci.settings.dhcp = {
@@ -88,7 +91,7 @@ in
         name = "pve";
         ip = ip "pve";
         leasetime = "infinite";
-        mac = [ (mac "pve") ];
+        mac = [ deviceMac.pve ];
       }
       {
         _type = "host";
@@ -96,52 +99,52 @@ in
         ip = ip "mio";
         leasetime = "12h";
         mac = [
-          (mac "mio-1")
-          (mac "mio-2")
+          deviceMac.mio-1
+          deviceMac.mio-2
         ];
       }
       {
         _type = "host";
         name = "K2P-Mine";
         ip = "192.168.6.2";
-        mac = [ (mac "k2p-mine") ];
+        mac = [ deviceMac.k2p-mine ];
       }
       {
         _type = "host";
         name = "sakamoto-k8s";
         ip = ip "sakamoto-k8s";
-        mac = [ (mac "sakamoto-k8s") ];
+        mac = [ (nodeMac "sakamoto-k8s") ];
       }
       {
         _type = "host";
         name = "mercury-1";
         ip = "192.168.50.40";
         leasetime = "infinite";
-        mac = [ (mac "mercury-1") ];
+        mac = [ deviceMac.mercury-1 ];
       }
       {
         _type = "host";
         name = "yuuko-wifi";
         ip = "192.168.6.10";
-        mac = [ (mac "yuuko-wifi") ];
+        mac = [ deviceMac.yuuko-wifi ];
       }
       {
         _type = "host";
         name = "homelab-1";
         ip = ip "homelab-1";
-        mac = mac "homelab-1";
+        mac = nodeMac "homelab-1";
       }
       {
         _type = "host";
         name = "yuuko-k8s";
         ip = ip "yuuko-k8s";
-        mac = [ (mac "yuuko-k8s") ];
+        mac = [ (nodeMac "yuuko-k8s") ];
       }
       {
         _type = "host";
         name = "yuuko";
         ip = ip "yuuko";
-        mac = [ (mac "yuuko") ];
+        mac = [ deviceMac.yuuko ];
       }
     ];
 

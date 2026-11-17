@@ -13,8 +13,8 @@
 | `just router::push`          | 下发声明，会改路由器；回滚范围见「已知问题」           |
 
 - `preview` 与 `push` 每次按最新声明重新编译，改完声明不用单独构建
-- 声明里的 1Password 引用在临时目录展开，需要 `op` 已授权（Touch ID），未授权时超时失败
-- 输出经打码：规则由 `mask.jq` 从声明里的引用位置生成，另对 MAC 与由 MAC 推出的 IPv6 后缀兜底。`uci.files` 的 `content` 里的引用不在打码范围
+- 声明里的 `{{ sops.… }}` 占位符由 `sops -d` 解密后在临时目录展开，需要 `SOPS_AGE_KEY_FILE` 指向 admin_mio 的 age 密钥；解不开，或占位符在 sops 里没有值时报错退出，不会把占位符下发
+- 输出经打码：规则由 `mask.jq` 从声明里的占位符位置生成，另对 MAC 与由 MAC 推出的 IPv6 后缀兜底。`uci.files` 的 `content` 里的占位符不在打码范围
 - 末尾是 `0 to add, 0 to remove, 0 to change` 说明路由器与声明一致。匿名段按位置对比，列表里新增或移动条目会让 `preview` 出现一次序号噪声，下发后消失；要核对内容是否一致，按段内容对比，不看序号
 - `push` 在下发后补做 nuci 不做的事：`bird -p` 通过才 `birdc configure`，Avahi 配置变化才重启。热点中继（`wifinet7`）在 LuCI 里开启时拒绝下发，否则声明里它是关闭的，下发会把它关掉并让路由器断网
 
@@ -50,13 +50,15 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 
 本仓库公开，设备运行环境数据不能进来
 
-| 内容                                                   | 位置                                                                                             |
-| :----------------------------------------------------- | :----------------------------------------------------------------------------------------------- |
-| 结构与通用选项                                         | `hosts/router-mine/`                                                                             |
-| 网段与已登记主机的 IP                                  | `vars/networking.nix`，声明里用 `net.hostAddress.<名>.address` 引用                              |
-| MAC、IPv6 后缀、SSID、WiFi 密码、ZeroTier 密钥与设备名 | 1Password `Personal` 的 `router-mine` 条目，按功能分组（`zerotier`、`dhcp`、`firewall`、`wifi`） |
+| 内容                                                     | 位置                                                                                                                                                                     |
+| :------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 结构与通用选项                                           | `hosts/router-mine/`                                                                                                                                                     |
+| 网段与已登记主机的 IP                                    | `vars/networking.nix`，声明里用 `net.hostAddress.<名>.address` 引用                                                                                                      |
+| 实体设备的 MAC（DHCP 静态租约）                          | secrets.nix 的明文 nix：k8s 节点读 `hosts/<节点>/network.nix` 的 `lanMac`，其余读 `hosts/router-mine/network.nix` 的 `dhcpMacs`，声明里 `import (inputs.secrets + "/…")` |
+| SSID、WiFi 密码、ZeroTier 的 secret、network-id 与设备名 | secrets.nix 的 sops 密文 `sops/secrets/hosts/router-mine.yaml`（`wifi`、`zerotier`），声明里写 `{{ sops.<路径> }}` 占位符                                                |
+| 对外放行规则的 IPv6 后缀                                 | `hosts/router-mine/home-ops/firewall.nix`：后缀由 home-ops 里服务的 Multus 固定 MAC 推出，是手动随机生成的服务配置，不算私密，明文写在声明里                             |
 
-声明里写 `{{ op://Personal/router-mine/<分组>/<字段> }}`，`just router::*` 用 `op inject` 展开到临时目录，退出即删；仓库与 Nix store 里只有引用。往条目里新增字段时，用脚本从路由器直接读值写入，不要经过会话输出
+划分规则见 `docs/adr/0011-secret-source-by-consumer.md`。占位符 `{{ sops.wifi.main.ssid }}` 取 yaml 里的 `.wifi.main.ssid`，必须是整个值；`just router::*` 用 `sops -d` 解密到临时目录，由 `render.jq` 展开，退出即删；仓库与 Nix store 里只有占位符。sops 文件路径取自 uci 包的 `passthru.sopsFile`（`nix eval --raw .#<机器>-uci.sopsFile`，即 flake.lock 里 secrets 输入的 `sops/secrets/hosts/<机器>.yaml`）。往 yaml 里新增值时用 `sops` 直接编辑，不要经过会话输出
 
 ## 非 UCI 文件
 
@@ -85,7 +87,8 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 
 - `default.nix`：用 mise 安装 nuci，版本读自 flake 输入 `openwrt-nix` 的 `Cargo.toml`，编译声明的 Nix 模块与执行它的二进制同版本；为每台 `type = "openwrt"` 的机器产出 `<机器>-uci` 包
 - `uci2nix`：经 `ubus call uci get` 取 JSON，jq 转成 nuci 结构，由 `nix eval` 打印成 Nix
-- `mask.jq`：从未展开的声明里找出写了 `{{ op://… }}` 的位置，生成输出打码规则
+- `mask.jq`：从未展开的声明里找出写了 `{{ sops.… }}` 的位置，生成输出打码规则
+- `render.jq`：把 `{{ sops.<路径> }}` 展开成 sops 解密出的值，缺值或格式不对时报错
 - 升级 nuci：改 `flake.nix` 里 `openwrt-nix` 的 tag，再 `nix flake lock --update-input openwrt-nix`
 - `hosts/router-mine/` 不是 Nix 系统，`lib/default.nix` 的 `calcUniformSchedule` 把它排除在备份排程之外
 
@@ -102,8 +105,9 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 - **LuCI 手工加脚本**：无法审查，也无法在换设备时复现
 - **配置分在 home-ops 与本仓库两处下发**：同一台路由器有两个所有者，换设备要两处重建
 
-### 秘密与设备标识走 1Password 引用
+### 机密值走 sops 占位符，由部署机渲染
 
-声明里只写 `op://` 引用，下发时在临时目录展开，见「数据放哪」
+声明里只写 `{{ sops.<路径> }}` 占位符，下发时在临时目录展开，见「数据放哪」。值放哪由 ADR 0011 决定：路由器无人值守时需要这些值，所以放 secrets.nix 而不是 1Password
 
-- **nuci 自带的 sops 支持**：每台操作机都要带 age 密钥；本仓库的其他外部秘密（如 singbox 配置）已经用 `op://` 引用，沿用同一套
+- **nuci 自带的 sops 支持**：未采用。渲染与失败路径、`preview` 的打码都在本仓库的 `just/router.just`、`render.jq`、`mask.jq`，一处可查
+- **继续用 `op inject`**：路由器的配置在无人值守的部署路径上依赖 1Password 会话，违背 ADR 0011
