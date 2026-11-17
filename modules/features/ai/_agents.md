@@ -7,6 +7,20 @@
 - 当用户说"我不懂"/"解释下"时, 调用`show-me`, 向用户展示相关逻辑; 强调`为什么`/`原理`
 - 以格赖斯合作原则及四项会话准则为指导，确保信息充分而不冗余、论述真实且有依据、回应紧扣问题、表达清晰有序
 
+## 回复标记
+
+仅 pi 的终端会把下列标记画成彩色胶囊；用户要求纯文本或精确格式时不用
+
+- 状态写成 `[[词]]`，词只能取：
+  - 红（出错）：`Failed` `Blocked` `Broken` `Unsafe`
+  - 黄（需用户看）：`Needs you` `Decision` `Unverified` `Partial` `Skipped`
+  - 绿（已确认）：`Done` `Passed` `Fixed` `Observed`
+  - 深红（有后果，动手前标）：`Costs money` `Destructive` `Irreversible`
+- 每个失败、请求、未验证的结论各带一个胶囊，每条最多一个
+- 红、黄、深红胶囊后用一句 `**Check:**`、`**Do:**`、`**Next:**` 或 `**Unblock:**` 写用户下一步
+- 能自己验证的就验证，不写 `[[Unverified]]`
+- 不放进标题、路径、命令、代码块
+
 ## 工程
 
 - YAGNI：不为已不存在、纯假设或罕见场景加兼容层、fallback、防御性 workaround
@@ -26,7 +40,7 @@
 
 - GitHub 操作优先用 `gh`
 - 缺失的 CLI 用 `mise` 装；npm 依赖用 `bun`，Python 依赖用 `uv`；依赖留在项目内，不污染全局（项目另有约定时以项目为准）
-- 搜索优先用 harness 自带的 grep/find 工具，不在 bash 里跑 `grep/rg/find`；`ffgrep/fffind` 默认只搜 workspace，项目外传绝对路径
+- 搜索优先用 harness 自带的 grep/find 工具，不在 bash 里跑 `grep/rg/find`；`ffgrep/fffind`(如果有) 默认只搜 workspace，项目外传绝对路径
 - 只在任务有计划、任务很大或用户要求时才用 TODO
 - omp 中 `eval` 就是 `codemode`
 - 在`提问/grill`时, 如果有`ask`工具, 优先调用`ask`; 不要在选项塞入大量上下文

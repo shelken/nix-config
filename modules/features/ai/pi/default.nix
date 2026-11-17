@@ -69,6 +69,8 @@
       # 插件读的环境变量写在登记表 env：宿主与沙箱同源（沙箱不继承宿主 shell 的环境）
       shelken.dev.tools.pi.env = {
         ANTIGRAVITY_NO_EXTRA_TOOLS = "1";
+        # 关掉 pi-emphasis 自带的 ~1500 token 英文规则，改用 _agents.md 里的简版
+        PI_EMPHASIS_GUIDANCE = "0";
       };
       home.shellAliases.pi = import ../agent-gh/_launch.nix { inherit pkgs myvars; } "pi";
 
@@ -107,9 +109,6 @@
         # 整个目录软链：新增模板直接放进 prompts/，免改本文件
         ".pi/agent/prompts" = linkPi "prompts";
 
-        # pi-caveman 读 $XDG_CONFIG_HOME/pi/agent/caveman.json（宿主、沙箱都是这个分支），
-        # 写在 .pi/agent 下的那份从没被读过
-        ".config/pi/agent/caveman.json" = linkPiConfig "caveman.json";
         ".pi/agent/extensions/pi-rename.json" = linkPiConfig "pi-rename.json";
         ".pi/agent/extensions/pi-vision-handoff.json" = linkPiConfig "pi-vision-handoff.json";
         ".pi/agent/extensions/trae/config.json" = linkPiConfig "trae.json";

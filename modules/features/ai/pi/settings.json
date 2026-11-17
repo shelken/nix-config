@@ -101,7 +101,6 @@
         "-skills/ask-user/SKILL.md"
       ]
     },
-    "npm:pi-caveman@1.0.12",
     "npm:@ff-labs/pi-fff@0.11.0",
     "npm:pi-intercom@0.18.1",
     "npm:@juicesharp/rpiv-web-tools@2.15.0",
@@ -123,6 +122,7 @@
       "source": "npm:pi-antigravity@0.14.0"
     },
     "npm:pi-better@0.2.0",
+    "git:github.com/johnlindquist/pi-emphasis@f884b736c489944ee778ab951c7f78580f137b02",
     "-npm:pi-rewind",
     "-npm:pi-observational-memory",
     "-/Users/shelken/Code/active/pi-balance",
