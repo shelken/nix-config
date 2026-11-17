@@ -4,7 +4,6 @@
     "pi-context-prune",
     "rpiv-todo",
     "pi-observational-memory",
-    "pi-recap",
     "pi-preferred-thinking"
   ],
   "//providerAlias": "omp config.yml 的 provider 前缀 -> pi 的 provider 名。spawn-subagent 把解析出的模型名换成 pi 的 provider 名时使用。",
@@ -12,4 +11,3 @@
     "google-antigravity": "antigravity"
   }
 }
-

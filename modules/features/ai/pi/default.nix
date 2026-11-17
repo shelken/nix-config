@@ -110,7 +110,6 @@
         # pi-caveman 读 $XDG_CONFIG_HOME/pi/agent/caveman.json（宿主、沙箱都是这个分支），
         # 写在 .pi/agent 下的那份从没被读过
         ".config/pi/agent/caveman.json" = linkPiConfig "caveman.json";
-        ".pi/agent/extensions/pi-recap.json" = linkPiConfig "pi-recap.json";
         ".pi/agent/extensions/pi-rename.json" = linkPiConfig "pi-rename.json";
         ".pi/agent/extensions/pi-vision-handoff.json" = linkPiConfig "pi-vision-handoff.json";
         ".pi/agent/extensions/trae/config.json" = linkPiConfig "trae.json";

@@ -167,6 +167,6 @@ glob:
 todo:
   reminders: false
 recap:
-  enabled: true
+  enabled: false
 update:
   auto: false
