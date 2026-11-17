@@ -15,6 +15,8 @@
     # 重装手册的首启验收用它，只是一个小脚本
     system.tools.nixos-version.enable = true;
     documentation.enable = false;
+    # 不受上一行控制，默认仍装 man-db 与 groff（约 11 MiB），而手册页已不存在
+    documentation.man.enable = false;
   };
 
   flake.modules.homeManager.server-minimal = {
