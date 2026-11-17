@@ -16,7 +16,7 @@
 # off 删掉文件即回落到系统层的 true，家外 builder 自己下载。
 # 这里被 darwin / nixos 的 HM 模块共用，NixOS 主机没有 builder 时该设置无副作用。
 #
-# 系统层默认不带 icache（darwin: features/darwin/nix/_module.nix，nixos: features/nix/nix-settings.nix）；
+# 系统层默认不带 icache（nix-settings.nix 的 darwin 与 nixos 两部分）；
 # 常驻家里、又没装 Home Manager 的主机（如 hk1box、lima-test）改用下面的 nix-icache-system 在系统层吃 icache。
 # daemon 不重读系统 nix.conf，首次 switch 后用 `sudo launchctl kickstart -k system/systems.determinate.nix-daemon`
 # 重启一次，之后 on/off 即时生效。root 跑的 nix（sudo / nixos-rebuild）读不到用户级配置，仍走系统列表。

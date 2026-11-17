@@ -92,7 +92,7 @@ git add hosts/vps/<主机>
 nix build .#nixosConfigurations.<主机>.config.system.build.toplevel
 ```
 
-在 `~/.ssh/specific` 里加一条与主机同名的 `Host`，写地址与端口。`~/.ssh/config` 由 Nix 生成并 `Include` 这个文件（`modules/features/shell/ssh.nix`），不要直接改
+在 `~/.ssh/specific` 里加一条与主机同名的 `Host`，写地址与端口。`~/.ssh/config` 由 Nix 生成并 `Include` 这个文件（`modules/features/network/ssh.nix`），不要直接改
 
 ### 5. 先演练（可选，换了固件或架构时强烈建议）
 
@@ -180,9 +180,9 @@ nix build -L --no-link .#nixosConfigurations.<主机>.config.system.build.toplev
 
 ```text
 modules/profiles/server.nix            # server 角色：只写 core 之上的角色链
-modules/features/nixos/{journald,zram}.nix  # 加入 server 的日志上限与 zramSwap
-modules/features/nixos/disko.nix       # shelken.disko 选项与两种布局
-modules/features/nixos/sops.nix        # 系统层 sops，age 私钥固定在 /var/lib/sops-nix/key.txt
+modules/features/system/{journald,zram}.nix  # 加入 server 的日志上限与 zramSwap
+modules/features/system/disko.nix       # shelken.disko 选项与两种布局
+modules/features/secrets/sops.nix        # 系统层 sops，age 私钥固定在 /var/lib/sops-nix/key.txt
 lib/deployNode.nix                     # deploy-rs 节点：hostname 即主机名
 lib/deployRsLib.nix                    # deploy-rs 的 lib，激活器换成 nixpkgs 的缓存包
 hosts/vps/common.nix                   # VPS 共有配置

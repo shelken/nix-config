@@ -10,7 +10,7 @@ Nix 只声明结构：有哪些 agent、各自用哪个 role 名。role 对应�
 
 ## 三处的处理
 
-- **catppuccin 取源码**：starship 主题与 `palette.json` 用 `builtins.fetchTree` 取上游仓库，rev 与 hash 取自 catppuccin 自己的 `pkgs/sources.json`，不单独锁版本（见 `modules/features/shell/catppuccin-theme.nix`）
+- **catppuccin 取源码**：starship 主题与 `palette.json` 用 `builtins.fetchTree` 取上游仓库，rev 与 hash 取自 catppuccin 自己的 `pkgs/sources.json`，不单独锁版本（见 `modules/features/system/catppuccin.nix`）
 - **agent 只声明 role**：`modules/features/ai/agents/default.nix` 的 `roleOf` 是静态规则：显式 `modelRole`，其次生成的变体用 `reviewer-<后缀>`，其次是 agent 名本身。pi 的 md 只写 `role`、`tools` 与正文；omp 的 md 一律写 `model: @<role>`。omp 自己解析 `@role` 且 `task.agentModelOverrides` 优先；pi 的 `spawn-subagent` 每次派发读 `~/.omp/agent/config.yml`，按 override 或 role 解析出 model 与 thinking
 - **`pi-models.json` 构建期生成**：`modules/features/ai/pi/default.nix` 在 `runCommand` 里用 yj 把 `omp/models.yml` 与 `pi/models.yml` 转 JSON，再由 `modules/features/ai/pi/models.jq` 完成合并与 omp 到 pi 的字段适配。Nix 不读这两个 YAML
 
@@ -24,7 +24,7 @@ Nix 只声明结构：有哪些 agent、各自用哪个 role 名。role 对应�
 
 - **#335 原方案，把 catppuccin 的 port 源码加为 flake input**：版本会和 catppuccin 漂移。`fetchTree` 直接读 catppuccin 锁定的 rev 与 hash，自动跟随
 - **`dontCatppuccinBuild`**：`palette` 已经开着它，但 port 仍是 derivation，求值期读它依然是 IFD
-- **catppuccin 官方缓存**：`catppuccin-theme.nix` 为绕开 catppuccin/nix#927 用 `overrideScope` 替换了 whiskers，路径哈希与上游不同，缓存里没有
+- **catppuccin 官方缓存**：`catppuccin.nix` 为绕开 catppuccin/nix#927 用 `overrideScope` 替换了 whiskers，路径哈希与上游不同，缓存里没有
 - **纯 Nix 的 YAML 解析库**：实测 milahu/nix-yaml 把行内列表 `[low, medium]` 和 `[]` 解析成字符串，不报错，数据静默出错
 - **入库 JSON 镜像**：生成物进 git，要靠哈希护栏、钩子与构建配方防止与源 YAML 不同步，维护成本高于收益
 - **由 Nix 生成 YAML**：omp 的 `omp config set/reset` 会写 `config.yml`，liveEdit 主机上它是指回仓库的链接，生成与回写互相覆盖

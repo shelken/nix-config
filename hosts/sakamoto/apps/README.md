@@ -16,7 +16,7 @@
 - 域名、数据目录、口令与 token（来自 sops），外接盘的两个固定路径（明文，`default.nix` 的 `externalDisks`）
 - `CADDYFILE`、`MIRROR_CONFIG` 等变量：`configs/` 里每个文件各自的 store 路径，`compose.yaml` 用 `volumes:` 把它们挂进容器
 
-入口脚本 `modules/features/backup/_kopia-server/entrypoint.sh` 在 git 里是 100755，进 store 后保留执行位，容器可以直接执行。
+入口脚本 `modules/features/backup/kopia/server/entrypoint.sh` 在 git 里是 100755，进 store 后保留执行位，容器可以直接执行。
 
 `configs/caddy/Caddyfile` 里 `internal-access` 的站点要与路由器 `hosts/router-mine/home-ops/dns.nix` 的自举名一一对应：这里加一个站点，那边加一个名字。
 
@@ -28,7 +28,7 @@ Compose 的服务 hash 不包含 `configs:` 的文件路径与内容，所以配
 - 路径写进 env 文件，`compose.yaml` 用 `volumes: - ${CADDYFILE}:...:ro` 引用
 - 改哪个文件，只重建用到它的服务（改 `mirror-config.yaml` 重建四个 mirror，改共用的 `entrypoint.sh` 重建两个 kopia）
 
-kopia 的 `entrypoint.sh` 与云端仓库的 `policy.json` 和 vps-cc 共用同一份（`modules/features/backup/_kopia-server/`），改动两台主机一起生效；`configs/kopia/local/` 是只有 sakamoto 用的本地仓库配置。本地仓库就在外接盘上，缓存只是把它再复制一份到内置盘，所以内容与元数据缓存都压到 500M（硬上限 1G）；容器的 `KOPIA_CACHE_DIRECTORY` 优先于配置里的 `cacheDirectory`，配置里不写。
+kopia 的 `entrypoint.sh` 与云端仓库的 `policy.json` 和 vps-cc 共用同一份（`modules/features/backup/kopia/server/`），改动两台主机一起生效；`configs/kopia/local/` 是只有 sakamoto 用的本地仓库配置。本地仓库就在外接盘上，缓存只是把它再复制一份到内置盘，所以内容与元数据缓存都压到 500M（硬上限 1G）；容器的 `KOPIA_CACHE_DIRECTORY` 优先于配置里的 `cacheDirectory`，配置里不写。
 
 含机密的内容不挂文件：kopia 云端仓库的 WebDAV 地址与凭据以环境变量交给容器，`entrypoint.sh` 启动时生成 `repository.config`。原因是 sops 渲染文件在符号链接下面，密钥轮换换代后，运行中的容器挂着旧目录，读文件会得到 `Operation not permitted`。
 

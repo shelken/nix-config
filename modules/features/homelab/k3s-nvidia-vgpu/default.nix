@@ -1,5 +1,5 @@
 # k3s-nvidia-vgpu：NVIDIA vGPU（GRID）guest 驱动与 k3s 的 nvidia 容器运行时，只给 PVE 上分到 mdev 的 worker 用
-# 可选功能：homelab-1 主机直接导入；不要与桌面用的 features/nixos/nvidia.nix 同时导入
+# 可选功能：homelab-1 主机直接导入；不要与桌面用的 features/system/nvidia.nix 同时导入
 # 取舍与期限见 ./README.md
 { inputs, ... }:
 {

@@ -1,4 +1,9 @@
-# Zed 编辑器的 HM 配置：同名挂接到 darwin.zed（dev/zed.nix 的 cask，加入 desktop），配置跟随应用本体
+# Zed 编辑器：cask 加入 desktop；HM 配置在 _hm.nix
+{ config, ... }:
 {
-  flake.modules.homeManager.zed = import ./_zed-hm.nix;
+  flake.modules.darwin.desktop.imports = [ config.flake.modules.darwin.zed ];
+
+  flake.modules.darwin.zed.homebrew.casks = [ "zed" ];
+
+  flake.modules.homeManager.zed = import ./_hm.nix;
 }

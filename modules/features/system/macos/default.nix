@@ -1,0 +1,16 @@
+# macOS 系统基础：PAM/sudo、时区、system defaults、键盘、快捷键禁用
+# 所有 darwin 主机都需要 → darwin.core
+{ config, ... }:
+{
+  flake.modules.darwin.core.imports = [ config.flake.modules.darwin.macos ];
+
+  flake.modules.darwin.macos = {
+    imports = [
+      ./_settings.nix
+      ./_hotkeys.nix
+    ];
+    system.stateVersion = 5;
+  };
+
+  flake.modules.homeManager.macos.home.shellAliases.deq = "sudo xattr -r -d com.apple.quarantine";
+}

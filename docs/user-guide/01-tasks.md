@@ -32,7 +32,7 @@
 
 ## 在模块里声明任务
 
-功能模块可在自身配置旁声明任务，`_kopia` 的实现如下：
+功能模块可在自身配置旁声明任务，`backup/kopia/` 的实现如下：
 
 ```nix
 shelken.tasks.kopia-backup = {
@@ -124,7 +124,7 @@ notify = {
 
 `task run` 的输出同时写入上述日志文件；直接执行 `task-<名>` 只在终端输出，不写日志
 
-日志由 macOS newsyslog 轮转：超过 1MB 轮转，保留 5 份 gzip 旧档（`task-<名>.log.0.gz` 最新），更早的自动删除；配置在 `/etc/newsyslog.d/space.ooooo.tasks.conf`，由 `modules/features/darwin/tasks/_framework.nix` 生成，需 `just sw` 生效
+日志由 macOS newsyslog 轮转：超过 1MB 轮转，保留 5 份 gzip 旧档（`task-<名>.log.0.gz` 最新），更早的自动删除；配置在 `/etc/newsyslog.d/space.ooooo.tasks.conf`，由 `modules/features/system/tasks/_framework.nix` 生成，需 `just sw` 生效
 
 手动验证轮转：`sudo newsyslog -nvf /etc/newsyslog.d/space.ooooo.tasks.conf`（`-n` 只打印将要执行的动作）
 
@@ -156,8 +156,8 @@ task-<名>         # 绕过 task CLI 直接执行底层脚本
 
 ```text
 lib/tasks.nix                                  # 字段契约与脚本包装：mkTaskType、taskDefaults、mkPackage
-modules/features/darwin/tasks/_framework.nix   # root 任务转 LaunchDaemon
-modules/features/darwin/tasks/_user-tasks.nix  # 用户任务转 LaunchAgent，并构建 task CLI
-modules/features/darwin/tasks/_cli/            # task CLI（Python）与 zsh 补全
-modules/features/darwin/tasks/_notify.nix      # 通知组件 terminal-notifier
+modules/features/system/tasks/_framework.nix   # root 任务转 LaunchDaemon
+modules/features/system/tasks/_user-tasks.nix  # 用户任务转 LaunchAgent，并构建 task CLI
+modules/features/system/tasks/_cli/            # task CLI（Python）与 zsh 补全
+modules/features/system/tasks/_notify.nix      # 通知组件 terminal-notifier
 ```

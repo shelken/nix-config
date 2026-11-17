@@ -16,7 +16,7 @@ kopia 每天两次把主机上的重要目录快照到自己的 139 WebDAV 仓�
 | 项   | 默认值                                                                                                             |
 | ---- | ------------------------------------------------------------------------------------------------------------------ |
 | 压缩 | `zstd-fastest`                                                                                                     |
-| 忽略 | `node_modules`、`target`、`.build`、`*.log`、`kaiyuan` 等，见 `modules/features/backup/_kopia/policy-defaults.nix` |
+| 忽略 | `node_modules`、`target`、`.build`、`*.log`、`kaiyuan` 等，见 `modules/features/backup/kopia/_policy-defaults.nix` |
 | 保留 | `latest 48`、`daily 30`、`weekly 12`、`monthly 12`                                                                 |
 
 ## 加一条要备份的路径
@@ -86,7 +86,7 @@ kopia 一个仓库只有一个维护所有者。共享的 `main` 仓库由 sakam
 | 本地缓存 | `~/.cache/kopia/main`，内容与元数据各 1 GiB                                       |
 | sops 键  | `kopia/password`、`main-domain`、`drive/webdav/username`、`drive/webdav/password` |
 
-`main-domain` 只存裸域名，URL 与 `/dav/backup/kopia/main` 前缀在 `_kopia/secrets.nix` 的模板里拼。仓库口令与连接配置由 sops 渲染到本机文件，路径见 `_kopia/secrets.nix`
+`main-domain` 只存裸域名，URL 与 `/dav/backup/kopia/main` 前缀在 `kopia/_secrets.nix` 的模板里拼。仓库口令与连接配置由 sops 渲染到本机文件，路径见 `kopia/_secrets.nix`
 
 ## 看状态与恢复数据
 
@@ -94,7 +94,7 @@ kopia 一个仓库只有一个维护所有者。共享的 `main` 仓库由 sakam
 kopia-ui                   # 本地打开 kopia 界面，已带好口令与仓库配置
 ```
 
-浏览快照与恢复文件在界面里做。要在命令行直接调 `kopia`，需要先按 `modules/features/backup/_kopia/service.nix` 里 `cliPrelude` 的两行导出 `KOPIA_PASSWORD` 与 `KOPIA_CONFIG_PATH`，这两个变量平时由手动入口和定时任务注入
+浏览快照与恢复文件在界面里做。要在命令行直接调 `kopia`，需要先按 `modules/features/backup/kopia/_service.nix` 里 `cliPrelude` 的两行导出 `KOPIA_PASSWORD` 与 `KOPIA_CONFIG_PATH`，这两个变量平时由手动入口和定时任务注入
 
 ## 换存储后端
 
@@ -103,7 +103,7 @@ kopia-ui                   # 本地打开 kopia 界面，已带好口令与仓�
 1. 停掉备份任务，避免切换过程中写入
 2. `rm -rf ~/.cache/kopia/main` 清掉旧缓存。kopia 的内容缓存按仓库隔离，但格式 blob 缓存只按 900 秒 TTL 判断新旧，旧缓存可能让新仓库按旧格式写入
 3. 用 `kopia repository sync-to` 从旧库复制到新库，或直接连新库从头建
-4. 改 `modules/features/backup/_kopia/secrets.nix` 的模板与 sops 键，`just sw` 后 `kopia-policy-sync` 收敛一次策略
+4. 改 `modules/features/backup/kopia/_secrets.nix` 的模板与 sops 键，`just sw` 后 `kopia-policy-sync` 收敛一次策略
 
 另外，`hosts/` 下新增或删除目录会改变所有机器的备份时段，因为默认时段按 `hosts/` 里目录名的哈希顺序分配（`mylib.calcUniformSchedule`）
 
@@ -112,10 +112,10 @@ kopia-ui                   # 本地打开 kopia 界面，已带好口令与仓�
 ```text
 modules/features/backup/default.nix            # 挂到 workstation 角色
 modules/features/backup/_options.nix           # backupPaths / app / ignores 接口
-modules/features/backup/_kopia/default.nix     # calendarInterval / policySyncWhen / policy
-modules/features/backup/_kopia/secrets.nix     # sops 键与仓库连接模板
-modules/features/backup/_kopia/service.nix     # 两个任务、手动维护、备份与预估入口
-modules/features/backup/_kopia/policy-defaults.nix  # 默认策略
+modules/features/backup/kopia/_hm.nix          # calendarInterval / policySyncWhen / policy
+modules/features/backup/kopia/_secrets.nix     # sops 键与仓库连接模板
+modules/features/backup/kopia/_service.nix     # 两个任务、手动维护、备份与预估入口
+modules/features/backup/kopia/_policy-defaults.nix  # 默认策略
 ```
 
 定时如何生成、日志落在哪、通知的行为见 [声明式定时任务](01-tasks.md)

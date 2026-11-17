@@ -11,8 +11,8 @@
 #  VPS 共有配置：真机 vps-cc 与它的演练机 vps-test 共用
 #  网络、主机名、硬件报告是各主机自己的事，写在各自目录里
 #
-#  磁盘：BIOS + GPT + ext4，见 modules/features/nixos/disko.nix
-#  登录：root 与 shelken 仅密钥登录；口令哈希由 sops 在开机时解出（modules/features/nixos/sops.nix）
+#  磁盘：BIOS + GPT + ext4，见 modules/features/system/disko.nix
+#  登录：root 与 shelken 仅密钥登录；口令哈希由 sops 在开机时解出（modules/features/secrets/sops.nix）
 #  容器：docker compose 由 home-ops 部署，这里只提供 docker 守护进程
 #
 #############################################################

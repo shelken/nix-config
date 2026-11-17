@@ -6,7 +6,7 @@ in
   imports = with self.modules.darwin; [
     desktop
     homelab
-    virts
+    utm
     lima-host
   ];
 

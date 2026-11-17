@@ -9,7 +9,7 @@ let
   cacheVolume = "homelab-compose_kopia_cache";
 
   # 入口脚本与策略与 sakamoto 的 kopia 共用，不在本目录放副本
-  shared = ../../../../../modules/features/backup/_kopia-server;
+  shared = ../../../../../modules/features/backup/kopia/server;
 in
 {
   systemd.tmpfiles.rules = [
