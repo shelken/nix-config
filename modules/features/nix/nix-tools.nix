@@ -1,7 +1,7 @@
 # nix 周边工具：nix-melt、nix-tree、nix-output-monitor；comma、nix-search-tv 只在 darwin 上装
 { config, ... }:
 {
-  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.nix-tools ];
+  flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.nix-tools ];
 
   flake.modules.homeManager.nix-tools =
     { lib, pkgs, ... }:

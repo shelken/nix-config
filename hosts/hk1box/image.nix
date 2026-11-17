@@ -59,5 +59,8 @@ in
       systemd.services.sing-box-sub-update.enable = lib.mkForce false;
       systemd.timers.sing-box-sub-update.enable = lib.mkForce false;
       sops.secrets = lib.mkForce { };
+
+      # server 角色关了安装工具，但 U 盘系统要靠 nixos-enter 救 eMMC（见 README）
+      system.disableInstallerTools = lib.mkForce false;
     };
 }

@@ -1,7 +1,7 @@
 # yazi：文件管理器
 { config, ... }:
 {
-  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.yazi ];
+  flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.yazi ];
 
   flake.modules.homeManager.yazi =
     {

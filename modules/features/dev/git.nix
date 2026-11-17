@@ -1,14 +1,15 @@
-# git：git/delta/lazygit/tig 配置
+# git（core，含服务器）：git 本体与配置
+# git-tools（tui 及以上）：delta、lazygit、tig 等交互与历史工具
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.git ];
+  flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.git-tools ];
 
   flake.modules.homeManager.git =
     {
       config,
       lib,
       myvars,
-      pkgs,
       ...
     }:
     {
@@ -71,12 +72,6 @@
           };
           # GitHub HTTPS 保持原样，开启 secrets 的机器通过 gh credential helper 使用 GH_TOKEN。
           # 旧的 SSH rewrite 是为 memex 插件服务；插件弃用后，token 认证作为默认路径。
-          delta = {
-            navigate = true;
-            # side-by-side = true;
-            hyperlinks = true;
-            dark = true;
-          };
           alias = {
             # git change-commits GIT_COMMITTER_NAME "old name" "new name"
             change-commits = "!f() { VAR=$1; OLD=$2; NEW=$3; shift 3; git filter-branch --env-filter \"if [[ \\\"$`echo $VAR`\\\" = '$OLD' ]]; then export $VAR='$NEW'; fi\" $@; }; f ";
@@ -85,6 +80,17 @@
           };
         };
         signing.format = null;
+      };
+    };
+
+  flake.modules.homeManager.git-tools =
+    { pkgs, ... }:
+    {
+      programs.git.settings.delta = {
+        navigate = true;
+        # side-by-side = true;
+        hyperlinks = true;
+        dark = true;
       };
 
       programs.delta = {
@@ -114,13 +120,6 @@
             }
           ];
         };
-      };
-
-      home.sessionVariables = {
-        # COMOJI_EMOJI_FORMAT = "true";
-      };
-
-      home.shellAliases = {
       };
     };
 }

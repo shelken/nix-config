@@ -1,17 +1,17 @@
-# fastfetch：mise 安装 + 配置软链
+# fastfetch：nix 安装 + 配置软链
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.fastfetch ];
 
   flake.modules.homeManager.fastfetch =
-    { config, mylib, ... }:
+    { pkgs, ... }:
     {
-      # 编译太久
-      # programs.fastfetch = {
-      #   enable = true;
-      # };
-      # renovate: datasource=github-releases depName=fastfetch-cli/fastfetch
-      programs.mise.globalConfig.tools.fastfetch = "2.71";
+      programs.fastfetch = {
+        enable = true;
+        # 完整版只是多包一层 vulkan 等图形库：darwin 上带进 apple-sdk 与 MoltenVK（约 450 MiB），
+        # Linux 上带进 libglvnd、ddcutil、xfconf 等；服务器与终端里用不到
+        package = pkgs.fastfetch-unwrapped;
+      };
       xdg.configFile = {
         "fastfetch/config.jsonc" = {
           source = ./config.jsonc;
