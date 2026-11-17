@@ -12,25 +12,25 @@
     };
   };
 
-  # IoT 的两个 SSID，SSID 与密码在 1Password（router-mine 条目的 wifi 分组）
+  # IoT 的两个 SSID，SSID 与密码在 secrets.nix 的 sops（router-mine.yaml 的 wifi）
   uci.settings.wireless = {
     wifinet4 = {
       _type = "wifi-iface";
       device = "radio0";
       encryption = "psk-mixed";
-      key = "{{ op://Personal/router-mine/wifi/iot-key }}";
+      key = "{{ sops.wifi.iot.key }}";
       mode = "ap";
       network = "viot";
-      ssid = "{{ op://Personal/router-mine/wifi/iot-ssid }}";
+      ssid = "{{ sops.wifi.iot.ssid }}";
     };
     wifinet6 = {
       _type = "wifi-iface";
       device = "radio0";
       encryption = "psk-mixed";
-      key = "{{ op://Personal/router-mine/wifi/iot2-key }}";
+      key = "{{ sops.wifi.iot2.key }}";
       mode = "ap";
       network = "viot";
-      ssid = "{{ op://Personal/router-mine/wifi/iot2-ssid }}";
+      ssid = "{{ sops.wifi.iot2.ssid }}";
     };
   };
 

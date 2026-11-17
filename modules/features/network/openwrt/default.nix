@@ -17,6 +17,11 @@ in
   flake.modules.homeManager.openwrt.programs.mise.globalConfig.tools."github:lonerOrz/openwrt-nix" =
     nuciVersion;
 
+  # 部署机渲染时解密的 sops 文件，路径跟随 flake.lock 里的 secrets 输入（just router::*）
+  flake.openwrt.sopsFiles = lib.mapAttrs (
+    name: _: inputs.secrets + "/sops/secrets/hosts/${name}.yaml"
+  ) openwrtHosts;
+
   perSystem =
     { pkgs, ... }:
     let

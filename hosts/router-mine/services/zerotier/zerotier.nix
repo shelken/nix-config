@@ -1,4 +1,4 @@
-# 节点身份与网络 ID 取自 1Password（router-mine 条目的 zerotier 分组）
+# 节点身份与网络 ID 在 secrets.nix 的 sops（router-mine.yaml 的 zerotier）
 {
   uci.packages = [ "luci-app-zerotier" ];
 
@@ -6,11 +6,11 @@
     global = {
       _type = "zerotier";
       enabled = "0";
-      secret = "{{ op://Personal/router-mine/zerotier/secret }}";
+      secret = "{{ sops.zerotier.secret }}";
     };
     main = {
       _type = "network";
-      id = "{{ op://Personal/router-mine/zerotier/network-id }}";
+      id = "{{ sops.zerotier.network-id }}";
       allow_default = "1";
       allow_global = "1";
     };
