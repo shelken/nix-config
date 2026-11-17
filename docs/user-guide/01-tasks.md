@@ -32,7 +32,7 @@
 
 ## 在模块里声明任务
 
-功能模块可在自身配置旁声明任务，`_kopia` 的实现如下：
+功能模块可在自身配置旁声明任务，`backup/kopia/` 的实现如下：
 
 ```nix
 shelken.tasks.kopia-backup = {

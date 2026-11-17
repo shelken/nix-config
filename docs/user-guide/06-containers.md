@@ -25,7 +25,7 @@ hosts/vps/vps-cc/
     ├── default.nix            聚合：后端、共享网络、统一重启策略、绑定地址
     ├── node-exporter.nix      服务文件，没有附带文件时
     └── kopia/
-        └── default.nix        服务文件；入口脚本与策略与 sakamoto 共用，在 modules/features/backup/_kopia-server/
+        └── default.nix        服务文件；入口脚本与策略与 sakamoto 共用，在 modules/features/backup/kopia/server/
 ```
 
 | 规则         | 说明                                                                                             |

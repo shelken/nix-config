@@ -19,7 +19,7 @@ let
 in
 {
   config = lib.mkIf config.shelken.secrets.enable {
-    # 订阅服务地址：sops 里只存裸域名，scheme 在脚本里拼（同 backup/_kopia 的用法）
+    # 订阅服务地址：sops 里只存裸域名，scheme 在脚本里拼（同 backup/kopia 的用法）
     sops.secrets.singbox-main-domain = mylib.mkDefaultSecret { key = "main-domain"; };
 
     # sbtools 由 mise 提供；只在用得上它的主机上声明，不占全局工具表

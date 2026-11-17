@@ -41,7 +41,7 @@ let
   # 必须是 volumes 而不是 configs:：Compose 的服务 hash 不含 configs 的路径与内容，改了配置 up 不会重建容器；
   # volumes 的源路径在 hash 里，每个文件单独进 store、路径随内容变，所以改哪个文件只重建用到它的服务
   # 与 vps-cc 共用的 kopia 入口脚本与策略
-  kopiaShared = ../../../modules/features/backup/_kopia-server;
+  kopiaShared = ../../../modules/features/backup/kopia/server;
 
   configFiles = {
     CADDYFILE = ./configs/caddy/Caddyfile;

@@ -5,7 +5,7 @@ set -e
 
 CURRENT_HOST=$(hostname)
 
-# vps-cc 与 sakamoto 的云端 kopia 共用本脚本（modules/features/backup/_kopia-server/），改这里两边一起生效。
+# vps-cc 与 sakamoto 的云端 kopia 共用本脚本（modules/features/backup/kopia/server/），改这里两边一起生效。
 # 云端仓库的配置含 WebDAV 凭据，由 env 在启动时生成，所以仓库配置的字段只在这里写一份；
 # 本地仓库的配置是挂进来的静态文件，不设 KOPIA_WEBDAV_*。
 # 不挂 sops 渲染的文件：macOS 上它在符号链接下面，密钥轮换换代后，运行中的容器会读到 Operation not permitted
