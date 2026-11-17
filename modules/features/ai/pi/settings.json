@@ -35,7 +35,7 @@
       "mp/loomy/DeepSeek-V4.1-Flash": {
         "reserveTokens": 698576
       },
-      "mp/codex/gpt-6.1-sol": {
+      "mp/codex/gpt-6.2-sol": {
         "reserveTokens": 150000
       }
     }
@@ -55,7 +55,7 @@
     "mp/loomy/GLM-5.3-Flash:high",
     "anthropic/claude-sonnet-5-5:high",
     "mp/loomy/DeepSeek-V4.1-Flash:high",
-    "mp/codex/gpt-6.1-sol:high"
+    "mp/codex/gpt-6.2-sol:high"
   ],
   "extensions": [],
   "fullscreenScrollbar": "auto",
