@@ -62,6 +62,14 @@
             files = "^modules/features/.*/(darwin|home|nixos)\\.nix$";
             entry = "三端写在同一个文件（ADR 0012）；繁杂时拆出 _ 开头的私有片段";
           };
+          feature-layout = {
+            enable = true;
+            name = "feature-layout";
+            description = "功能的文件形式与模块名（ADR 0012）";
+            files = "^(modules/features/|modules/profiles/|lint/feature-layout\\.py$)";
+            pass_filenames = false;
+            entry = "${pkgs.python3}/bin/python3 lint/feature-layout.py";
+          };
           # 被平台属性禁用的 mod（如 macOS 上的 linux 模块）不会被 just 解析，错误要到另一个平台才暴露，
           # 所以对每个模块文件单独解析。模块引用根变量也会在这里报错
           just-modules = {

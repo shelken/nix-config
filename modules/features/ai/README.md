@@ -21,7 +21,7 @@ Agent 相关配置，按能力组织（ADR 0008）。`ai` 是跑 agent 的机器
 |---|---|---|
 | `iphone/` | `iphone` | 控制 USB 连接的 iPhone：skill、`iphone` 命令、swipt |
 | `computer-use/` | `computer-use` | 控制宿主桌面：skill、cua-driver cask |
-| `ai-apps/` | `ai-apps` | AI 桌面 App（openusage、alma）与宿主专用客户端（codex、claude-code、antigravity-cli） |
+| `ai-apps.nix` | `ai-apps` | AI 桌面 App（openusage、alma）与宿主专用客户端（codex、claude-code、antigravity-cli） |
 | `scrub-words/` | `scrub-words` | 按本地字典替换会话里的脏话 |
 | `orca/` | `orca` | Orca 键位 |
 | `session-archive/` | `session-archive` | 归档冷会话，设计见其 README |
