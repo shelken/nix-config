@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# 逐台部署 k3s 节点：agent 在前、控制面最后；每台部署后等它健康再继续，任一台不健康就停。
+# 用法: k8s-deploy [节点...]   不带参数时部署全部启用 k3s 的主机
+# 健康检查不用 sudo：k3s 在运行、系统不是 degraded、kubelet 的 healthz 返回 ok
+set -euo pipefail
+
+timeout=${K8S_DEPLOY_TIMEOUT:-180}
+
+# 一次求值拿到全部 k3s 主机与角色，按 agent 在前排序
+# shellcheck disable=SC2016  # 单引号里的 ${} 是 Nix 语法
+mapfile -t all < <(nix eval --raw .#nixosConfigurations --apply '
+  cs: let
+    names = builtins.filter (n: cs.${n}.config.services.k3s.enable) (builtins.attrNames cs);
+    role = n: cs.${n}.config.services.k3s.role;
+    sorted = builtins.filter (n: role n == "agent") names ++ builtins.filter (n: role n != "agent") names;
+  in builtins.concatStringsSep "\n" sorted' 2>/dev/null)
+
+if (($#)); then
+  nodes=()
+  for n in "${all[@]}"; do
+    for a in "$@"; do [[ $a == "$n" ]] && nodes+=("$n"); done
+  done
+  for a in "$@"; do
+    [[ " ${all[*]} " == *" $a "* ]] || { echo "不是 k3s 节点: $a（可选: ${all[*]}）" >&2; exit 1; }
+  done
+else
+  nodes=("${all[@]}")
+fi
+
+healthy() {
+  ssh -o ConnectTimeout=5 "$1" '
+    [ "$(systemctl is-active k3s)" = active ] &&
+    [ "$(systemctl is-system-running)" = running ] &&
+    [ "$(curl -s -m 3 localhost:10248/healthz)" = ok ]' 2>/dev/null
+}
+
+echo "部署顺序: ${nodes[*]}"
+for n in "${nodes[@]}"; do
+  echo "==> $n: 部署"
+  deploy --skip-checks ".#$n"
+  echo "==> $n: 等待健康（最多 ${timeout}s）"
+  deadline=$((SECONDS + timeout))
+  until healthy "$n"; do
+    if ((SECONDS >= deadline)); then
+      echo "$n 不健康，停止。排查: ssh $n 'systemctl --failed; systemctl status k3s'" >&2
+      exit 1
+    fi
+    sleep 5
+  done
+  echo "==> $n: 健康"
+done
+echo "全部完成: ${nodes[*]}"

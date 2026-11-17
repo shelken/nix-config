@@ -114,7 +114,7 @@ ssh root@sakamoto-k8s cat /etc/rancher/k3s/k3s.yaml | sed 's#https://127.0.0.1:6
 
 ## 日常
 
-- 更新：`just deploy <节点>`（deploy-rs，30 秒内新 SSH 连不上自动回滚；构建在节点上）
+- 更新：`just k8s::deploy [节点...]`，不带参数部署全部。agent 在前、控制面最后，每台健康（k3s 在运行、系统不是 degraded、kubelet healthz 为 ok）后再继续，否则停下。单台底层是 `just deploy <节点>`（deploy-rs，30 秒内新 SSH 连不上自动回滚；构建在节点上；每台输一次 sudo 密码）
 - k3s 升级：`k3s-node` 里的 `package` 写死了 minor，升 minor 要有意修改；先 `sakamoto-k8s` 后 worker
 - `homelab-1` 的内核固定在 6.12：原因与期限见 `k3s-nvidia-vgpu/README.md`
 - 加节点：secrets 仓库建 age 密钥、`network.nix`、密文；`hosts/k8s/<节点>/`；`hosts/default.nix` 加一条
