@@ -137,12 +137,12 @@ virtualisation.oci-containers.containers.openlist = {
 - [ ] 核对数据目录与命名卷的实际名字
 - [ ] 新目录时，在主机 `default.nix` 的 `imports` 加一次
 - [ ] 求值：`nix eval .#nixosConfigurations.<主机>.config.system.build.toplevel.drvPath`
-- [ ] 部署：`just deploy::run vps-cc`
+- [ ] 部署：`just deploy vps-cc`
 - [ ] 验收：`systemctl status docker-<名字>`、`journalctl -u docker-<名字>`、`docker ps`，再从 tailnet 侧试一次端口
 - [ ] 监控：在 home-ops 的 `k8s/infra/common/observability/gatus/app/resources/outside/` 补 Gatus 检查，探测方式见 home-ops 的 `gatus-compose-checks` skill
 - [ ] 回退：**顺序不能反**，否则容器会被前后两次清掉
   - 在 home-ops 检出迁移前的提交 `9cdfe6ef^`（含 `compose/vps/`、`.env.tpl` 与 task/ansible），备好凭据
-  - 本仓库去掉该服务（或整套）声明并 `just deploy::run vps-cc`：nix 单元的停止与清理会 `docker rm -f` 同名容器，这一步结束时容器是停的
+  - 本仓库去掉该服务（或整套）声明并 `just deploy vps-cc`：nix 单元的停止与清理会 `docker rm -f` 同名容器，这一步结束时容器是停的
   - 在该检出里跑 `task compose:deploy:vps` 把 Compose 容器起回来（反序做的话，nix 单元的清理会把刚起的同名容器删掉）
 
 ## 当前已纳管的服务

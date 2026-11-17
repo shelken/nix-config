@@ -16,7 +16,7 @@ flowchart LR
   B --> C[disko + install + reboot<br/>抹盘]
   C --> D[不改配置的 deploy 一次]
   D --> E[恢复业务数据]
-  E --> F[日常 just deploy::run]
+  E --> F[日常 just deploy]
 ```
 
 日常部署的构建位置由 `hosts/default.nix` 的 `<主机>.deploy.remoteBuild` 决定。当前 VPS 设置为 `true`：Mac 求值配置，VPS 构建并获取二进制缓存，再激活系统，不需要本机 Linux 构建器
@@ -139,7 +139,7 @@ nixos-anywhere -f .#<主机> --target-host root@<主机> --build-on local --ssh-
 ### 装好之后
 
 1. 用原别名登录，确认 `nixos-version`、地址、`tailscale status`
-2. 做一次**不改任何配置**的 `just deploy::run <主机>`。nixos-anywhere 装的那一代没有 deploy-rs 的激活器，第一次 deploy 配置变坏时回滚会失败
+2. 做一次**不改任何配置**的 `just deploy <主机>`。nixos-anywhere 装的那一代没有 deploy-rs 的激活器，第一次 deploy 配置变坏时回滚会失败
 3. 恢复业务数据，再部署容器（vps-cc 的业务容器由本仓库的 `hosts/vps/vps-cc/apps/` 声明，见 [容器服务](06-containers.md)）
 4. 稳定后删掉本机的随装目录，它含私钥
 
@@ -147,8 +147,8 @@ nixos-anywhere -f .#<主机> --target-host root@<主机> --build-on local --ssh-
 
 ```bash
 just plan <主机> deploy             # 先看这次要编译、下载什么
-just deploy::run <主机>                  # 构建、推送、激活，30 秒内确认不了就回滚
-just deploy::run <主机> --dry-activate   # 只看激活会改什么
+just deploy <主机>                  # 构建、推送、激活，30 秒内确认不了就回滚
+just deploy <主机> --dry-activate   # 只看激活会改什么
 ```
 
 查看生效的构建模式，返回 `true` 表示在目标机构建；执行日志中的 `on remote host` 可确认本次使用远程构建
@@ -163,7 +163,7 @@ nix eval --json .#deploy.nodes.<主机>.profiles.system.remoteBuild
 nix build -L --no-link .#nixosConfigurations.<主机>.config.system.build.toplevel
 ```
 
-这条命令不改变 deploy-rs 的构建模式。要让 `just deploy::run` 在本地构建后上传，临时将该主机的 `deploy.remoteBuild` 改为 `false`，部署后恢复
+这条命令不改变 deploy-rs 的构建模式。要让 `just deploy` 在本地构建后上传，临时将该主机的 `deploy.remoteBuild` 改为 `false`，部署后恢复
 
 - 防火墙、网络、sshd 的改动尤其依赖自动回滚，不要绕过 deploy-rs 直接 `nixos-rebuild`
 - 构建之后不要再改已跟踪文件，否则部署时会重建一串小派生（nix-config #181）
