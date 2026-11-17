@@ -26,22 +26,6 @@ add:
 plan host=profile kind="system":
     @utils/script/just/nix-plan {{ host }} {{ kind }}
 
-# nixos deploy
-[group('build')]
-[linux]
-deploy host mach:
-    @nixos-rebuild switch --flake .#{{ host }} --target-host {{ mach }} --use-remote-sudo --verbose
-
-# 远程部署 darwin 主机: just deploy sakamoto [--dry-activate --verbose ...]
-# 默认 --skip-checks: deploy-rs 的 check 阶段会对整个 flake 跑 nix flake check,
-# 求值所有主机（含 linux 的 IFD/assertion 问题），与目标节点无关也会失败。
-# schema 校验单独跑: nix build .#checks.aarch64-darwin.deploy-schema
-[doc('远程部署 darwin 主机，用法: just deploy <主机> [--dry-activate ...]')]
-[group('build')]
-[macos]
-deploy host *args:
-    @deploy --skip-checks .#{{ host }} {{ args }}
-
 # 格式化
 [group('flake')]
 fmt:
@@ -217,6 +201,10 @@ mod dns 'just/dns.just'
 # OpenWrt 路由器：导入现状、看差异、下发（just router::<配方>）
 [group('modules')]
 mod router 'just/router.just'
+
+# 远程部署与部署状态（just deploy::run <主机>、just deploy::status）
+[group('modules')]
+mod deploy 'just/deploy.just'
 
 # k3s 节点：逐台滚动部署（just k8s::deploy [节点...]）
 [group('modules')]

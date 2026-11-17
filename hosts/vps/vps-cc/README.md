@@ -80,7 +80,7 @@ limactl delete --force nixos-anywhere-vps
 | kexec 报 `PEFILE: Unsigned PE binary`                                     | Ubuntu 内核拒绝 `kexec_file_load` 加载未签名内核                                                                                         | `--kexec-extra-flags '-c'` 走旧的 `kexec_load`                                                                                                                                                                         |
 | disko 报 `/dev/disk/by-partlabel/disk-main-root does not exist`，每次必现 | disko 脚本用 nixpkgs 的 systemd 262 的 `udevadm settle`，而默认 kexec 安装环境是 25.05（systemd 257），settle 提前返回，符号链接还没出现 | 用 `nixos-26.05` 的 kexec 安装环境：`just anywhere::kexec-cache x86_64 nixos-26.05`。选版本前用 `nix eval --raw .#nixosConfigurations.<主机>.config.systemd.package.version` 查 flake 的 systemd，安装环境取同一发布线 |
 | 装好后 `/etc/resolv.conf` 只有 `127.0.0.1`，整机解析不了域名              | openresolv 默认只写本机解析器；而 127.0.0.1 要等 docker 里的 dnsmasq 起来才有人应答，首次拉镜像就死锁                                    | `networking.resolvconf.extraConfig = "resolv_conf_local_only=NO"`（已在 `common.nix`）                                                                                                                                 |
-| 第一次 `deploy` 后配置变坏，自动回滚报 `No such file or directory`        | nixos-anywhere 装的那一代没有 deploy-rs 的激活器，回滚找不到目标                                                                         | 装好后先用**不改任何配置**的 `just deploy vps-cc` 部署一次，再做真实改动                                                                                                                                               |
+| 第一次 `deploy` 后配置变坏，自动回滚报 `No such file or directory`        | nixos-anywhere 装的那一代没有 deploy-rs 的激活器，回滚找不到目标                                                                         | 装好后先用**不改任何配置**的 `just deploy::run vps-cc` 部署一次，再做真实改动                                                                                                                                          |
 | `deploy` 时「Connection reset by peer」                                   | 防火墙规则重载的瞬间，慢速模拟让 SSH 等待连接被拒；真机上这个窗口只有毫秒                                                                | 仅演练环境的现象；真机若遇到，重跑一次                                                                                                                                                                                 |
 | kexec 之后 nixos-anywhere 重连默认的 22 端口                              | 安装环境的 sshd 在 22，旧系统在 60223                                                                                                    | 真机上正好；演练里 Lima 只转发了一个端口，所以卡住                                                                                                                                                                     |
 
@@ -165,7 +165,7 @@ ssh vps-cc 'stat -c "%U %a %n" /var/lib/sops-nix/key.txt /var/lib/tailscale/tail
 ### 5. 先做一次「不改配置」的 deploy
 
 ```bash
-just deploy vps-cc
+just deploy::run vps-cc
 ```
 
 这一步为的是让系统里出现一代由 deploy-rs 激活的配置，之后每次 `deploy` 配置变坏时才能自动回滚。
@@ -174,7 +174,7 @@ just deploy vps-cc
 
 ```bash
 ssh vps-cc 'tar -C /data -xzf -' < ~/vps-cc-backup/data-docker.tgz
-just deploy vps-cc
+just deploy::run vps-cc
 ```
 
 业务容器由本仓库声明，部署时自己拉取约 3.6GB 镜像
@@ -203,7 +203,7 @@ just deploy vps-cc
 ## 日常更新
 
 ```bash
-just deploy vps-cc
+just deploy::run vps-cc
 ```
 
 deploy-rs 用 root + 密钥推送，激活后新开一个 SSH 连接确认，30 秒内连不上就自动回滚。防火墙、网络、sshd 的改动尤其要依赖它
