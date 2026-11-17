@@ -1,28 +1,30 @@
 #!/usr/bin/env python3
-"""并发探测各主机是否落后于 origin/main（只读）。
+"""并发探测各主机是否落后于当前工作区（只读）。
 
 对每台主机比较两个系统路径：
-- 期望：origin/main 下求值出的系统 outPath（只求值，不构建）
+- 期望：当前工作区（与 just deploy::run 部署的是同一份）求值出的系统 outPath（只求值，不构建）
 - 实际：主机上 /run/current-system 指向的路径（SSH 读取；本机直接读本地）
 
-判定语义是「部署 origin/main 会不会改变这台机器」：路径相同为最新，不同为待部署。
+判定语义是「现在部署会不会改变这台机器」：路径相同为最新，不同为待部署。
 因此不能给系统加 configurationRevision，否则每次提交都会让所有主机的路径变化。
 
-主机名单取自 flake 的 deploy.nodes，再加上本机（.host-profile 里的 PROFILE）。
-离线或过慢的主机在 --timeout 秒内标为不可达，不拖住其他主机。
-退出码：全部最新为 0，否则为 1，参数错误为 2。
+主机名单取自 flake 的 deploy.nodes，再加上本机（just 从 .host-profile 读入的 PROFILE）。
+离线或过慢的主机在 10 秒内标为不可达，不拖住其他主机。
 """
 import argparse
 import json
 import os
-import re
 import subprocess
 import sys
 import time
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from pathlib import Path
+
+# just 在仓库根执行配方
+FLAKE = "."
+# 单台 SSH 探测的总超时（秒），离线主机不拖住整体
+PROBE_TIMEOUT = 10
 
 # 配置类别 → 每台主机要求值的属性路径
 KINDS = {
@@ -79,36 +81,6 @@ def run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True, **kwargs)
 
 
-def git(*args: str) -> str:
-    result = run(["git", *args])
-    if result.returncode != 0:
-        raise RuntimeError(f"git {' '.join(args)} 失败：{result.stderr.strip()}")
-    return result.stdout.strip()
-
-
-def resolve_flake(args: argparse.Namespace) -> tuple[str, str]:
-    """返回 (flake ref, 基准说明)；固定到 origin/main 的 rev，不混入工作区里未提交的改动"""
-    if args.flake:
-        return args.flake, f"基准: {args.flake}"
-    if not args.no_fetch:
-        fetched = run(["git", "fetch", "--quiet", "origin", "main"])
-        if fetched.returncode != 0:
-            print(f"警告：git fetch 失败，使用本地已有的 origin/main：{error_summary(fetched.stderr)}", file=sys.stderr)
-    rev = git("rev-parse", "origin/main")
-    root = git("rev-parse", "--show-toplevel")
-    return f"git+file://{root}?rev={rev}", f"基准: origin/main {rev[:8]}"
-
-
-def local_profile() -> str | None:
-    if os.environ.get("PROFILE"):
-        return os.environ["PROFILE"]
-    profile_file = Path(git("rev-parse", "--show-toplevel")) / ".host-profile"
-    if profile_file.is_file():
-        match = re.search(r"^PROFILE=(\S+)", profile_file.read_text(), re.M)
-        return match.group(1) if match else None
-    return None
-
-
 def nix_json(flake: str, attr: str, apply: str):
     result = run(["nix", "eval", "--json", f"{flake}#{attr}", "--apply", apply])
     if result.returncode != 0:
@@ -120,7 +92,7 @@ def list_hosts(flake: str) -> tuple[dict[str, str | None], dict[str, str]]:
     """返回 (主机 → SSH 别名，本机为 None; 主机 → 配置类别)"""
     aliases = nix_json(flake, "deploy.nodes", "ns: builtins.mapAttrs (n: v: v.hostname) ns")
     kinds = {name: kind for kind in KINDS for name in nix_json(flake, kind, "builtins.attrNames")}
-    local = local_profile()
+    local = os.environ.get("PROFILE")
     if local and local not in aliases and local in kinds:
         aliases[local] = None
     return aliases, kinds
@@ -168,20 +140,14 @@ def format_table(rows: list[tuple[str, ...]]) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("hosts", nargs="*", help="要检查的主机名，默认全部")
-    parser.add_argument("--flake", default="", help="直接使用该 flake ref（例如 .），默认固定到 origin/main")
-    parser.add_argument("--no-fetch", action="store_true", help="不执行 git fetch")
-    parser.add_argument("--jobs", type=int, default=6, help="并发求值的主机数，默认 6")
-    parser.add_argument("--timeout", type=int, default=10, help="单台 SSH 探测的总超时秒数，默认 10")
     args = parser.parse_args()
 
     start = time.monotonic()
     try:
-        flake, base = resolve_flake(args)
-        aliases, kinds = list_hosts(flake)
+        aliases, kinds = list_hosts(FLAKE)
     except RuntimeError as error:
         print(error, file=sys.stderr)
         sys.exit(1)
-    print(base)
 
     unknown = [host for host in args.hosts if host not in aliases]
     if unknown:
@@ -190,9 +156,9 @@ def main() -> None:
     names = sorted(args.hosts or aliases)
 
     # 求值与探测同时提交，总耗时取决于较慢的一方
-    with ThreadPoolExecutor(max_workers=args.jobs) as eval_pool, ThreadPoolExecutor(max_workers=len(names)) as probe_pool:
-        evals = {h: eval_pool.submit(eval_expected, flake, kinds[h], h) for h in names}
-        probes = {h: probe_pool.submit(probe_host, aliases[h], args.timeout) for h in names}
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as eval_pool, ThreadPoolExecutor(max_workers=len(names)) as probe_pool:
+        evals = {h: eval_pool.submit(eval_expected, FLAKE, kinds[h], h) for h in names}
+        probes = {h: probe_pool.submit(probe_host, aliases[h], PROBE_TIMEOUT) for h in names}
         results = {h: (*evals[h].result(), *probes[h].result()) for h in names}
 
     rows = [HEADER]
@@ -211,7 +177,6 @@ def main() -> None:
 
     summary = "，".join(f"{state} {counts[state]}" for state in STATES)
     print(f"共 {len(names)} 台：{summary}；耗时 {time.monotonic() - start:.0f} 秒")
-    sys.exit(0 if counts[UP_TO_DATE] == len(names) else 1)
 
 
 if __name__ == "__main__":
