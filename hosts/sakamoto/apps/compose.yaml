@@ -225,9 +225,9 @@ services:
     hostname: sakamoto
     networks:
       - homelab
-    # 入口脚本连不上仓库就 exit 1；无上限重启时每次都重跑一遍策略对账。
-    # 停住后由 sakamoto-compose 的 up 每 15 分钟再拉起一次
-    restart: "on-failure:10"
+    # 不用 on-failure：OrbStack 关闭时容器被杀、退出码非 0，下次 Docker 启动会绕过挂载检查把它拉起。
+    # 入口脚本连不上仓库就 exit 1，由 sakamoto-compose 的 up 每 15 分钟再拉起一次
+    restart: "no"
     labels:
       - homepage.group=sakamoto
       - homepage.name=kopia
@@ -269,9 +269,9 @@ services:
     hostname: sakamoto-local
     networks:
       - homelab
-    # 入口脚本连不上仓库就 exit 1；无上限重启时每次都重跑一遍策略对账。
-    # 停住后由 sakamoto-compose 的 up 每 15 分钟再拉起一次
-    restart: "on-failure:10"
+    # 不用 on-failure：OrbStack 关闭时容器被杀、退出码非 0，下次 Docker 启动会绕过挂载检查把它拉起。
+    # 入口脚本连不上仓库就 exit 1，由 sakamoto-compose 的 up 每 15 分钟再拉起一次
+    restart: "no"
     labels:
       - homepage.group=sakamoto
       - homepage.name=kopia-local
