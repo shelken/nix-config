@@ -42,6 +42,11 @@ deploy host mach:
 deploy host *args:
     @deploy --skip-checks .#{{ host }} {{ args }}
 
+[doc('各主机部署当前工作区后会变什么（只求值不构建），用法: just deploy-diff [主机...]')]
+[group('build')]
+deploy-diff *hosts:
+    @{{ justfile_directory() }}/utils/script/just/deploy_diff.py {{ hosts }}
+
 # 格式化
 [group('flake')]
 fmt:

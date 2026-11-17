@@ -5,6 +5,7 @@ let
     interactiveSudo = false;
   };
 in
+# deployDiff = false：just deploy-diff 不检查这台（测试机、不常用的机器）
 {
   vps-cc = {
     type = "nixos";
@@ -55,6 +56,7 @@ in
     type = "nixos";
     system = "x86_64-linux";
     deploy = rootDeploy;
+    deployDiff = false;
     nixos-modules = [ ./vm/vps-test ];
   };
 
@@ -98,6 +100,7 @@ in
     type = "darwin";
     system = "aarch64-darwin";
     deploy = { };
+    deployDiff = false;
     darwin-modules = [ ./ling ];
     home-modules = [ ./ling/home.nix ];
   };
