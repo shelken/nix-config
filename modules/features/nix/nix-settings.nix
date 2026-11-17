@@ -55,7 +55,7 @@
       # 会覆盖此处的 extra-substituters（nix #9487）。所以 substituters 必须用
       # 覆盖语义写全完整列表（主文件不设基础 substituters，覆盖不破坏默认）；
       # trusted-public-keys 主文件用 extra- 追加，这里也用 extra- 追加即可。
-      # 用户级只有 icache 开关会覆盖 substituters，见 icache.nix
+      # 用户级只有 icache 开关会覆盖 substituters，见 nix-icache.nix
       # 调整这个时先确保这个和lock分离, 先让这个switch,再更新
       # 包突然开始本地编译时，先确认缓存里有目标路径（`nix path-info --store <缓存> <路径>`）、
       # 当前配置信任该缓存，不要先回退 flake.lock。改完用 `nix config show substituters`、

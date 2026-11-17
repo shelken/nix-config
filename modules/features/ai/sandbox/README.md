@@ -178,7 +178,7 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 | `sandboxCommand` | harness 在沙箱内的可执行名（omp、pi）；宿主据此生成 `<可执行名>-sb`，不写则不生成 |
 | `postInstall` | 宿主激活时与 `sb sync` 时各运行一次 |
 
-条目在 [dev/tools-base.nix](../../dev/tools-base.nix)（rg、fd、jq、gh、node、python3、uv 走 Nix；prek 走 mise）与 [ai/tools.nix](../tools.nix)（omp、pi、bun，走 mise）。宿主独有的工具不登记，如 codex、claude-code 在 [ai/ai-apps](../ai-apps/default.nix) 按宿主独有声明，沙箱里不装
+条目在 [dev/tools-base.nix](../../dev/tools-base.nix)（rg、fd、jq、gh、node、python3、uv 走 Nix；prek 走 mise）与 [ai/tools.nix](../tools.nix)（omp、pi、bun，走 mise）。宿主独有的工具不登记，如 codex、claude-code 在 [ai/ai-apps.nix](../ai-apps.nix) 按宿主独有声明，沙箱里不装
 
 `agent-common` 不对应可执行程序，只放 omp 与 pi 共用的配置：`.agents/` 下的 skills 与模型提示词，以及不专属某个 harness 的插件配置（如 `.config/ponytail`、`.config/rpiv-web-tools`）
 
@@ -192,7 +192,7 @@ mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-l
 
 上下文对共用层可写：在上下文里 `mise trust`、`mise install` 即可装项目工具，产物落在宿主目录，重建 VM 后和其他 VM 都复用。launcher 设 `MISE_PREFER_OFFLINE=1` 而不是 `MISE_OFFLINE=1`：后者连安装下载也拒绝，前者让已装的 `latest` 工具直接用本地版本，不必每次联网等版本列表
 
-宿主 `nix-icache on` 时，沙箱里 mise 的 GitHub Releases 下载也经内网 icache：`sb run`、`sb sync` 每次进入 VM 前读宿主的 mise 改写配置（路径经 `sb-config.json` 的 `mise.url_replacements_file` 给出，来自 [icache.nix](../../nix/icache.nix)），存在就以 `MISE_URL_REPLACEMENTS` 传给 guest，`off` 后下一个上下文直连原站。用环境变量而不是 guest 内的配置文件：VM 看不到宿主文件，而上下文和 sync 都由宿主现启动。已在运行的上下文保留启动时的状态。上下文能连 icache，是因为它和模型服务在同一个内网入口后面，由 `network.default_grant` 放行
+宿主 `nix-icache on` 时，沙箱里 mise 的 GitHub Releases 下载也经内网 icache：`sb run`、`sb sync` 每次进入 VM 前读宿主的 mise 改写配置（路径经 `sb-config.json` 的 `mise.url_replacements_file` 给出，来自 [nix-icache.nix](../../nix/nix-icache.nix)），存在就以 `MISE_URL_REPLACEMENTS` 传给 guest，`off` 后下一个上下文直连原站。用环境变量而不是 guest 内的配置文件：VM 看不到宿主文件，而上下文和 sync 都由宿主现启动。已在运行的上下文保留启动时的状态。上下文能连 icache，是因为它和模型服务在同一个内网入口后面，由 `network.default_grant` 放行
 
 ### `sb sync`
 
