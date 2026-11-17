@@ -14,10 +14,10 @@
 # 关闭 builders-use-substitutes：置 true 时 builder 自己去 substitute 输入，碰不到内网 icache；
 # 置 false 则本机经 icache 取输入，再推给 builder。
 # off 删掉文件即回落到系统层的 true，家外 builder 自己下载。
-# 这里被 darwin / nixos 的 HM 模块共用，NixOS 主机没有 builder 时该设置无副作用。
 #
 # 系统层默认不带 icache（nix-settings.nix 的 darwin 与 nixos 两部分）；
-# 常驻家里、又没装 Home Manager 的主机（如 hk1box、lima-test）改用下面的 nix-icache-system 在系统层吃 icache。
+# 用户级开关只给会带出门的 Mac：常驻家里的 NixOS 主机（hk1box、k8s 节点、lima-test）用下面的 nix-icache-system
+# 在系统层吃 icache；VPS 不在内网，两者都不装（它经 Tailscale 子网路由其实连得上 icache，不能给它留开关）。
 # daemon 不重读系统 nix.conf，首次 switch 后用 `sudo launchctl kickstart -k system/systems.determinate.nix-daemon`
 # 重启一次，之后 on/off 即时生效。root 跑的 nix（sudo / nixos-rebuild）读不到用户级配置，仍走系统列表。
 { config, ... }:
@@ -35,7 +35,6 @@ let
 in
 {
   flake.modules.darwin.core.imports = [ config.flake.modules.darwin.nix-icache ];
-  flake.modules.nixos.core.imports = [ config.flake.modules.nixos.nix-icache ];
 
   flake.modules.homeManager.nix-icache =
     {
@@ -108,7 +107,7 @@ in
       };
     };
 
-  # 常驻家里的主机（没装 Home Manager，用不了用户级开关）在系统层直接吃 icache。
+  # 常驻家里的 NixOS 主机在系统层直接吃 icache，由主机显式导入。
   # 列表与用户级开关共用同一份 mirrors；只给不会出门的机器用，笔记本继续走用户级开关。
   flake.modules.nixos.nix-icache-system =
     { lib, ... }:
