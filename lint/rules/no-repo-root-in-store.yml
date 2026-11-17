@@ -1,0 +1,16 @@
+id: no-repo-root-in-store
+language: nix
+severity: error
+message: 仓库根被插值进字符串，会把整仓拷进闭包
+note: |
+  整仓进闭包后，任何提交（哪怕只改 README）都会改变所有远端主机的系统路径。
+  改用具体文件的路径字面量，如 "${./x.toml}"。文件名含 * 等 store 不接受的字符时，改文件名
+rule:
+  inside:
+    kind: interpolation
+  any:
+    - pattern: relativeToRoot "."
+    - pattern: relativeToRoot ""
+    - pattern: inputs.self
+    - kind: variable_expression
+      regex: ^self$

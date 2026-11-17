@@ -180,7 +180,7 @@ rec {
   # - liveEdit = true（本机开发环境）：使用 mkOutOfStoreSymlink 软链至本地 ~/nix-config/<相对路径>，支持免 rebuild 热加载
   # - liveEdit = false（远程部署节点/默认）：只把该文件或目录拷进 store，保证闭包自包含与原子回滚。
   #   不能拼成「仓库根/相对路径」：那会把整仓拷进闭包，任何提交都会改变所有远端主机的系统路径。
-  #   文件名含 * 等 store 不接受的字符时求值报错，应改文件名（pre-commit 的 no-repo-root-in-store 防止回退）
+  #   文件名含 * 等 store 不接受的字符时求值报错，应改文件名（lint 规则 no-repo-root-in-store 防止回退）
   # 参数是 Nix 路径字面量（如 ./settings.toml）：文件挪动后求值即报错，而非在 liveEdit 下留下悬空软链
   mkConfigLink =
     config: path:
