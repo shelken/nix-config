@@ -5,6 +5,9 @@
 # 配置文件一律写成 volumes 而不是 configs:：Compose 的服务 hash 不含 configs 的路径与内容，
 # 改了配置 up 不会重建容器；volumes 的源路径在 hash 里，store 路径随文件内容变，只有用到它的服务会重建
 #
+# 容器一律 restart: "no"：开机后由 sakamoto-compose 的 agent 在外接盘就绪时拉起，
+# 不能让 Docker 在盘没挂上时自己把容器带起来
+#
 # 项目名固定：命名卷带项目名前缀（homelab-compose_kopia_cache），
 # 不写它时项目名会跟着目录名变，等于新建两个空卷并丢掉 kopia 的对账缓存
 name: homelab-compose
@@ -30,7 +33,7 @@ services:
       - homepage.widget.type=caddy
       - homepage.widget.url=http://sakamoto.lan:2019
     network_mode: host
-    restart: always
+    restart: "no"
     environment:
       TZ: Asia/Shanghai
       MAIN_DOMAIN: ${MAIN_DOMAIN}
@@ -47,7 +50,7 @@ services:
   dockerproxy:
     image: tecnativa/docker-socket-proxy:v0.5.0
     container_name: dockerproxy
-    restart: always
+    restart: "no"
     labels:
       - homepage.group=sakamoto
       - homepage.name=docker-proxy
@@ -78,7 +81,7 @@ services:
     user: "10001:10001"
     networks:
       - homelab
-    restart: always
+    restart: "no"
     environment:
       TZ: Asia/Shanghai
       RUSTFS_ACCESS_KEY: ${MINIO_ROOT_USER}
@@ -105,7 +108,7 @@ services:
       - homepage.description=
     networks:
       - homelab
-    restart: always
+    restart: "no"
     environment:
       TZ: Asia/Shanghai
       DLS_URL: nvidia-dls.int.${MAIN_DOMAIN}
@@ -128,7 +131,7 @@ services:
       - homepage.name=mirror-ghcr
       - homepage.icon=docker-moby.svg
       - homepage.description=
-    restart: always
+    restart: "no"
     networks:
       - homelab
     environment:
@@ -152,7 +155,7 @@ services:
       - homepage.name=mirror-quay
       - homepage.icon=docker-moby.svg
       - homepage.description=
-    restart: always
+    restart: "no"
     networks:
       - homelab
     environment:
@@ -176,7 +179,7 @@ services:
       - homepage.name=mirror-gcr
       - homepage.icon=docker-moby.svg
       - homepage.description=
-    restart: always
+    restart: "no"
     networks:
       - homelab
     environment:
@@ -200,7 +203,7 @@ services:
       - homepage.name=mirror-k8s
       - homepage.icon=docker-moby.svg
       - homepage.description=
-    restart: always
+    restart: "no"
     networks:
       - homelab
     environment:
@@ -222,9 +225,9 @@ services:
     hostname: sakamoto
     networks:
       - homelab
-    # 入口脚本连不上仓库就 exit 1；无上限重启时每次都重跑一遍策略对账。
-    # 停住后由 sakamoto-compose 的 up 每 15 分钟再拉起一次
-    restart: "on-failure:10"
+    # 不用 on-failure：OrbStack 关闭时容器被杀、退出码非 0，下次 Docker 启动会绕过挂载检查把它拉起。
+    # 入口脚本连不上仓库就 exit 1，由 sakamoto-compose 的 up 每 15 分钟再拉起一次
+    restart: "no"
     labels:
       - homepage.group=sakamoto
       - homepage.name=kopia
@@ -266,9 +269,9 @@ services:
     hostname: sakamoto-local
     networks:
       - homelab
-    # 入口脚本连不上仓库就 exit 1；无上限重启时每次都重跑一遍策略对账。
-    # 停住后由 sakamoto-compose 的 up 每 15 分钟再拉起一次
-    restart: "on-failure:10"
+    # 不用 on-failure：OrbStack 关闭时容器被杀、退出码非 0，下次 Docker 启动会绕过挂载检查把它拉起。
+    # 入口脚本连不上仓库就 exit 1，由 sakamoto-compose 的 up 每 15 分钟再拉起一次
+    restart: "no"
     labels:
       - homepage.group=sakamoto
       - homepage.name=kopia-local

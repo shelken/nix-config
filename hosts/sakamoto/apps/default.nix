@@ -7,7 +7,9 @@
 # 这个目录管三件事：
 # 1. compose.yaml 与 configs/：服务声明与静态配置；每个文件单独进 Nix store，容器挂 store 路径
 # 2. sops 模板：env 文件（口令、数据目录，以及上面各文件的 store 路径），激活时解密渲染，明文不进 store
-# 3. launchd agent：GUI 登录（OrbStack 就绪）后拉起，之后每 15 分钟对账一次
+# 3. launchd agent：登录后与外接盘挂载时先检查数据目录，通过才拉起 OrbStack 与容器，之后每 15 分钟对账一次；
+#    容器一律 restart: "no"，OrbStack 的「登录时启动」由 agent 关掉，OrbStack 与容器都只由这个 agent 启动，
+#    外接盘没挂上时什么都不起
 #
 # 切换、验收与回退步骤见同目录 README.md
 {
@@ -95,13 +97,13 @@ let
         cat <<'USAGE'
       sakamoto-compose —— sakamoto 上 Compose 服务的统一入口
 
-        up       等 OrbStack 与密钥就绪、检查数据目录，然后 docker compose up -d
+        up       等密钥就绪、检查数据目录，通过后拉起 OrbStack、等它就绪，然后 docker compose up -d
         recreate 同上，但无条件重建全部容器（排障用；配置与密钥变化时 up 本身就会重建对应容器）
         status   容器状态
         logs     跟随日志
         check    只做语法与插值校验，不动容器
 
-      launchd agent 每 15 分钟跑一次 up，日志在 ~/Library/Logs/sakamoto-compose.log
+      launchd agent 在登录、外接盘挂载时与每 15 分钟各跑一次 up，日志在 ~/Library/Logs/sakamoto-compose.log
       USAGE
       }
 
@@ -137,15 +139,9 @@ let
         docker ps --filter "label=com.docker.compose.project=$project" --format '{{.Names}}' | wc -l | tr -d ' '
       }
 
-      preflight() {
-        command -v docker >/dev/null 2>&1 ||
-          die "PATH 里没有 docker：OrbStack 未装或命令行工具不在 /usr/local/bin"
-        wait_for 120 docker info ||
-          die "OrbStack 的 docker 守护进程 120 秒内没就绪"
-        need_env
-
-        # 外接盘没挂载时必须停手：bind mount 的源目录不存在时 Docker 会以 root 新建空目录，
-        # 备份与镜像缓存会静默落到本地盘，事后很难分辨
+      # 外接盘没挂载时必须停手：bind mount 的源目录不存在时 Docker 会以 root 新建空目录，
+      # 备份与镜像缓存会静默落到本地盘，事后很难分辨
+      check_data_dirs() {
         local key dir missing=""
         for key in "''${required_keys[@]}"; do
           dir=$(sed -n "s/^$key=//p" "$env_file" | head -n 1)
@@ -153,6 +149,24 @@ let
           [ -d "$dir" ] || missing="$missing $key=$dir"
         done
         [ -z "$missing" ] || die "这些数据目录不存在，挂好外接盘再重试：$missing"
+      }
+
+      # 容器不自启，OrbStack 也不自启：数据目录检查通过后才在这里拉起。open 对已运行的 OrbStack 没有副作用
+      start_orbstack() {
+        command -v docker >/dev/null 2>&1 ||
+          die "PATH 里没有 docker：OrbStack 未装或命令行工具不在 /usr/local/bin"
+        open -ga OrbStack || die "无法启动 OrbStack"
+        wait_for 120 docker info ||
+          die "OrbStack 的 docker 守护进程 120 秒内没就绪"
+        # 只能由本 agent 启动 OrbStack；它升级或被手动改回「登录时启动」时，下一轮 up 改回来
+        orbctl config set app.start_at_login false ||
+          echo "警告：关不掉 OrbStack 的「登录时启动」，盘没挂上时它可能自己启动" >&2
+      }
+
+      preflight() {
+        need_env
+        check_data_dirs
+        start_orbstack
       }
 
       up() {
@@ -232,7 +246,8 @@ in
       };
 
       # 不写 domain：默认 gui，配 OrbStack 所在的 Aqua 会话；
-      # 登录后 RunAtLoad 跑一次，StartInterval 负责补漏（开机时外接盘还没挂上、容器被手工删掉），
+      # 登录后 RunAtLoad 跑一次，外接盘挂载时 StartOnMount 立刻再跑一次（盘晚于登录挂上），
+      # StartInterval 负责补漏（容器被手工删掉、StartOnMount 漏触发），
       # 也是密钥值轮换后的收敛路径：env 变了，下一轮 up 会重建受影响的容器。
       # 不用 WatchPaths：渲染目录在符号链接下面，sops 换代后 launchd 的监视时灵时不灵（实测三轮只触发一轮）；
       # compose.yaml、配置文件或密钥变了时 plist 都不变，等下一轮，或手动 sakamoto-compose up；
@@ -246,9 +261,10 @@ in
             "up"
           ];
           RunAtLoad = true;
+          StartOnMount = true;
           KeepAlive = false;
           StartInterval = 900;
-          # launchd 的默认 PATH 只有 /usr/bin:/bin:/usr/sbin:/sbin，docker 在 /usr/local/bin
+          # launchd 的默认 PATH 只有 /usr/bin:/bin:/usr/sbin:/sbin，docker 在 /usr/local/bin；open 在 /usr/bin
           EnvironmentVariables.PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
           StandardOutPath = "${config.home.homeDirectory}/Library/Logs/sakamoto-compose.log";
           StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/sakamoto-compose.err.log";

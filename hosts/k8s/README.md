@@ -7,10 +7,10 @@
 ## 组成
 
 - `common.nix`：三台共有：`server` 角色、disko（ext4）、sops、网络（networkd 按 MAC 命名网卡、`eth1` DHCP、VLAN 子接口 `eth1.50`）、`k3s-node` 功能
-- `lima.nix`：两台 Lima（vz）节点共有：引导、usernet 网卡 `eth0`、`shelken.lima.*` 选项与 `system.build.limaYaml`（Lima 实例声明）
+- `lima.nix`：两台 Lima（vz）节点共有：引导、usernet 网卡 `eth0`、`shelken.lima.*` 选项与 `system.build.limaConfig`（Lima 实例声明的数据，宿主据此生成 `lima.yaml`）
 - `<节点>/default.nix`：主机名、磁盘设备、k3s 角色与标签；`sakamoto-k8s` 另有 Longhorn 数据盘的挂载；`homelab-1` 另有 Longhorn 数据分区（与系统同盘）、qemu 驱动与 Intel 核显
 - `modules/features/homelab/k3s-node/`：k3s 配置、Longhorn 所需的 iSCSI/NFS、sysctl、chrony，见该目录 README
-- `modules/features/homelab/socket-vmnet/`：Lima 宿主（`sakamoto`、`yuuko`）上常驻的桥接 socket_vmnet，见下文「宿主的 socket_vmnet」
+- `modules/features/homelab/lima-host/`：Lima 宿主（`sakamoto`、`yuuko`）的功能：常驻的桥接 socket_vmnet、`lima.yaml` 与附加盘软链、实例自启动，见该目录 README 与下文「宿主的 socket_vmnet」
 - `modules/features/homelab/k3s-nvidia-vgpu/`：`homelab-1` 的 vGPU 驱动与 nvidia 运行时，内核固定 6.12 的原因见该目录 README
 - 私有 `secrets` 仓库两类文件：`hosts/<节点>/network.nix`（网卡 MAC，明文，求值期读取）、`sops/secrets/hosts/<节点>.yaml`（`k3s-token`；`homelab-1` 另有 `nvidia-client-token`），只有管理员和该节点自己的 age 密钥能解
 
@@ -36,7 +36,7 @@
 
 1. **drain**：`kubectl drain <节点> --ignore-daemonsets --delete-emptydir-data`。控制面重装期间集群没有 API，worker 上已有的 Pod 继续运行，但不能调度、不能变更，开始前确认 Flux 没有进行中的变更
 2. **回滚点**，两条路二选一：
-   - Lima：节点停机后，在宿主上用 `cp -c`（APFS 克隆，瞬间完成、几乎不占空间）克隆实例目录里的 `diffdisk`、`datadisk` 与 `lima.yaml`；`sakamoto-k8s` 的 Longhorn 数据盘（`~/.lima/_disks/longhorn/datadisk`）同样克隆
+   - Lima：先在宿主上 `touch ~/.lima/<节点>/no-autostart`（自启动 agent 见到它就不启动，否则 deploy 或任意卷挂载都可能把停着的虚拟机拉起来），再停机；节点停机后，在宿主上用 `cp -c`（APFS 克隆，瞬间完成、几乎不占空间）克隆实例目录里的 `diffdisk`、`datadisk` 与 `lima.yaml`；`sakamoto-k8s` 的 Longhorn 数据盘（`~/.lima/_disks/longhorn/datadisk`）同样克隆
    - PVE：先 `qm shutdown <vmid>`，关机状态下 `qm snapshot <vmid> <名字>`，再 `qm start`。运行中快照会经 guest agent 冻结文件系统，Longhorn 卷的副本在同一台机器的根分区上，冻结顺序不对就互相等待，整机写入卡死
 3. **准备随装目录**：按上表建目录，目录结构即目标路径：
    ```bash
@@ -62,32 +62,32 @@
 6. **验证**：`nixos-version`、`systemctl is-system-running`、`ip -br a` 里 `eth0`/`eth1`/VLAN 子接口 `eth1.50` 都在且 `eth1` 拿到保留地址、`systemctl status k3s`、`kubectl get node`
 7. **首次 `just deploy <节点>`**，不改任何配置：nixos-anywhere 装的那一代没有 deploy-rs 的激活器，不先部署一次，之后配置变坏时无法自动回滚
 8. **uncordon**：`kubectl uncordon <节点>`，核对 Longhorn 副本重建完成
+9. **删维护标记**（仅 Lima 节点）：`rm ~/.lima/<节点>/no-autostart`，恢复自启动
 
 ### 控制面的额外要点
 
-- 取 `/var/lib/rancher/k3s/server` 前，**不带数据盘**启动原系统：Lima 里先 `limactl stop`，再编辑实例的 `lima.yaml` 去掉 `additionalDisks` 后启动，用 `sudo tar` 打包 server 目录并校验
-- 装机时 disko 绝不能看到数据盘：Lima 实例此时仍不挂 `longhorn` 盘，装完、换上 `limaYaml` 后再挂
+- 取 `/var/lib/rancher/k3s/server` 前，**不带数据盘**启动原系统：Lima 里先 `limactl stop`，再把 `~/.lima/<节点>/lima.yaml` 临时换成去掉 `additionalDisks` 的普通文件（先 `cp` 一份到别处，`rm` 掉软链，再放回编辑过的副本）后启动，用 `sudo tar` 打包 server 目录并校验；打完删掉这个普通文件，`just deploy <宿主>` 重新链回声明
+- 装机时 disko 绝不能看到数据盘：Lima 实例此时仍不挂 `longhorn` 盘，装完、换上声明的 `lima.yaml` 后再挂
 - `k3s` 的 server 配置不含令牌：令牌在恢复的 server 目录里；`secrets` 仓库里的 `k3s-token` 只为灾难恢复保存
 - k3s 版本不低于集群当前版本：k3s 不支持降级 server
 
 ## 更新 Lima 实例配置
 
-实例声明是 `system.build.limaYaml`，改 `hosts/k8s/lima.nix` 或节点的 `shelken.lima.*` 后：
+实例声明由宿主的 Home Manager 生成：`~/.lima/<节点>/lima.yaml` 是指向 Nix store 的只读符号链接，内容来自 `system.build.limaConfig`。改 `hosts/k8s/lima.nix` 或节点的 `shelken.lima.*` 后：
 
 ```bash
-nix build .#nixosConfigurations.<节点>.config.system.build.limaYaml -o lima-<节点>
+just deploy <宿主>                              # 宿主的 Home Manager 换上新的 lima.yaml；agent 不会动运行中的虚拟机
 ssh <宿主> 'limactl stop <节点>'                 # 不强停；失败再 --force，并 limactl disk unlock longhorn
-scp lima-<节点> <宿主>:.lima/<节点>/lima.yaml
-ssh <宿主> 'limactl start --tty=false <节点>'
+ssh <宿主> 'limactl start --tty=false <节点>'    # 新配置在这次启动时生效；agent 只在登录、deploy 重载或（有外接盘时）挂载时才会启动
 ```
 
-实例名与节点名相同。`images` 只在新建实例时用，已装好的实例不受影响
+实例名与节点名相同。`images` 只在新建实例时用，已装好的实例不受影响。`lima.yaml` 只读：`limactl edit` 之类会改配置的命令会被拒，改配置只改 Nix
 
 `limactl start` 用宿主上 Lima 自己生成的密钥（`~/.lima/_config/user`）登录 guest 确认就绪，对应的公钥记在 `vars.limaUserKeys`。删掉 `~/.lima`、重装 Lima 或换宿主后密钥会重新生成：把新的 `user.pub` 写进 `vars.limaUserKeys`，再 `just deploy <节点>`。没更新时只是 `limactl start` 等 SSH 超时、`limactl shell` 不可用，虚拟机与节点照常运行
 
 ## 宿主的 socket_vmnet
 
-桥接网卡走 Lima 的非托管模式：`limaYaml` 里是 `socket: /var/run/socket_vmnet.bridged.en0`，socket 由宿主（`sakamoto`、`yuuko`）上 `modules/features/homelab/socket-vmnet/` 的 launchd 守护进程提供。Lima 托管模式要求二进制整条路径归 root、组不可写，Nix store 满足不了
+桥接网卡走 Lima 的非托管模式：`limaConfig` 里是 `socket: /var/run/socket_vmnet.bridged.en0`，socket 由宿主（`sakamoto`、`yuuko`）上 `modules/features/homelab/lima-host/` 的 launchd 守护进程提供。Lima 托管模式要求二进制整条路径归 root、组不可写，Nix store 满足不了
 
 - **生效顺序**：先让宿主的 darwin 配置生效，再换上新的 `lima.yaml`；socket 不存在时 `limactl start` 失败。确认：`ls -l /var/run/socket_vmnet.bridged.en0` 是 socket（`s` 开头），`sudo launchctl print system/io.github.lima-vm.socket_vmnet.bridged.en0` 在运行
 - 节点切换完成后，宿主上旧的手工配置可以删除：
@@ -96,7 +96,7 @@ ssh <宿主> 'limactl start --tty=false <节点>'
   sudo rm /etc/sudoers.d/lima
   $EDITOR ~/.lima/_config/networks.yaml   # 删掉 networks 下的 bridged 段
   ```
-- 改桥接网卡：改 `vars/default.nix` 里的 `socketVmnet.interface`，宿主与 `limaYaml` 一起变
+- 改桥接网卡：改 `vars/default.nix` 里的 `socketVmnet.interface`，宿主与 `limaConfig` 一起变
 
 ## 整集群关机与开机
 
