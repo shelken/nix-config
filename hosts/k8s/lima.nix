@@ -1,7 +1,6 @@
 {
   config,
   lib,
-  pkgs,
   inputs,
   myvars,
   ...
@@ -10,8 +9,8 @@
 #
 #  Lima（vz）节点共有配置：yuuko-k8s、sakamoto-k8s
 #
-#  引导、usernet 网卡、Lima 实例声明（system.build.limaYaml，替代 home-ops 的 lima/<宿主>.yaml）
-#  实例声明的更新流程见 ./README.md
+#  引导、usernet 网卡、Lima 实例声明（system.build.limaConfig，替代 home-ops 的 lima/<宿主>.yaml）
+#  limaConfig 只是数据：宿主的 lima-host 功能用自己的 pkgs 生成 lima.yaml，更新流程见 ./README.md
 #
 #############################################################
 let
@@ -109,38 +108,36 @@ in
       script = "sed -n 's/^LIMA_CIDATA_IID=//p' /mnt/lima-cidata/lima.env > /run/lima-boot-done";
     };
 
-    system.build.limaYaml = (pkgs.formats.yaml { }).generate "lima.yaml" (
-      {
-        vmType = "vz";
-        inherit (cfg) cpus memory disk;
-        # guest 是 NixOS，没有 Lima guest agent，只留 SSH
-        plain = true;
-        ssh.localPort = cfg.sshPort;
-        hostResolver.enabled = false;
-        networks = [
-          {
-            # 非托管：socket 由宿主的 socket-vmnet 功能常驻提供
-            inherit (myvars.socketVmnet) socket;
-            interface = "eth1";
-            macAddress = net.lanMac;
-            metric = 100;
-          }
-        ];
-        # 只在新建实例时使用；已装好的实例不会因这里变化而重装
-        images = [
-          {
-            location = "https://github.com/nixos-lima/nixos-lima/releases/download/v0.2.2/nixos-lima-v0.2.2-aarch64.qcow2";
-            arch = "aarch64";
-            digest = "sha256:dc40482a45929e4cf86ad57425e1c6ac1b376fd81111cc93ba3c9b34e7f900b6";
-          }
-        ];
-      }
-      // lib.optionalAttrs (cfg.additionalDisks != [ ]) {
-        additionalDisks = map (name: {
-          inherit name;
-          format = false;
-        }) cfg.additionalDisks;
-      }
-    );
+    system.build.limaConfig = {
+      vmType = "vz";
+      inherit (cfg) cpus memory disk;
+      # guest 是 NixOS，没有 Lima guest agent，只留 SSH
+      plain = true;
+      ssh.localPort = cfg.sshPort;
+      hostResolver.enabled = false;
+      networks = [
+        {
+          # 非托管：socket 由宿主的 lima-host 功能常驻提供
+          inherit (myvars.socketVmnet) socket;
+          interface = "eth1";
+          macAddress = net.lanMac;
+          metric = 100;
+        }
+      ];
+      # 只在新建实例时使用；已装好的实例不会因这里变化而重装
+      images = [
+        {
+          location = "https://github.com/nixos-lima/nixos-lima/releases/download/v0.2.2/nixos-lima-v0.2.2-aarch64.qcow2";
+          arch = "aarch64";
+          digest = "sha256:dc40482a45929e4cf86ad57425e1c6ac1b376fd81111cc93ba3c9b34e7f900b6";
+        }
+      ];
+    }
+    // lib.optionalAttrs (cfg.additionalDisks != [ ]) {
+      additionalDisks = map (name: {
+        inherit name;
+        format = false;
+      }) cfg.additionalDisks;
+    };
   };
 }

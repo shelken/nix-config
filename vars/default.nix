@@ -15,7 +15,7 @@
     cjkMonospace = "Maple Mono NF CN";
   };
   networking = import ./networking.nix { inherit lib; };
-  # Lima 节点的桥接网卡：宿主的 socket-vmnet 功能创建 socket，hosts/k8s/lima.nix 连接它
+  # Lima 节点的桥接网卡：宿主的 lima-host 功能创建 socket，hosts/k8s/lima.nix 连接它
   socketVmnet = rec {
     interface = "en0";
     socket = "/var/run/socket_vmnet.bridged.${interface}";

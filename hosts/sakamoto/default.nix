@@ -7,7 +7,7 @@ in
     desktop
     homelab
     virts
-    socket-vmnet
+    lima-host
   ];
 
   networking.hostName = hostname;
@@ -15,6 +15,11 @@ in
   system.defaults.smb.NetBIOSName = hostname;
   shelken = {
     secrets.enable = true;
+    limaHost = {
+      node = "sakamoto-k8s";
+      # Lima 的附加盘（Longhorn 数据盘）在外接盘上
+      externalDisk = "/Volumes/sakamoto-data";
+    };
   };
   # homebrew = {
   #   onActivation = {
