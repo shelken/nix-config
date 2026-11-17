@@ -1,0 +1,11 @@
+id: no-repo-root-in-store
+valid:
+  - 'toString (relativeToRoot ".")'
+  - '"${./x.toml}"'
+  - '"${relativeToRoot "modules/x.toml"}"'
+  - '"${config.home.homeDirectory}/nix-config"'
+invalid:
+  - '"${relativeToRoot "."}/${relPath}"'
+  - '"${self}/modules/x.toml"'
+  - '"${inputs.self}/modules/x.toml"'
+  - '''''${relativeToRoot "."}/x'''''

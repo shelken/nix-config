@@ -1,0 +1,12 @@
+id: feature-private-imports
+language: nix
+severity: error
+message: 引用了其他功能的私有文件（路径含 /_）
+note: |
+  /_ 是功能私有片段（docs/adr/0004-dendritic-feature-modules.md）。别的功能要用它，说明接线放错了地方：
+  该把它做成登记表条目或本功能的公开选项，而不是跨目录 import
+files:
+  - modules/features/**/*.nix
+rule:
+  kind: path_expression
+  regex: ^\.\./.*/_[^/]+

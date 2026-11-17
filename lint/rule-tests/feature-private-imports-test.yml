@@ -1,0 +1,9 @@
+id: feature-private-imports
+valid:
+  - "./_hm.nix"
+  - "../other/default.nix"
+  - '"../other/_hm.nix"'
+invalid:
+  - "../other/_hm.nix"
+  - "../../ai/sandbox/_guest.nix"
+  - "../other/_dir/x.nix"

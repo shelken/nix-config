@@ -29,19 +29,21 @@
               configPath = "./.prettierrc.yaml";
             };
           };
-          # `/_` 是功能私有片段（ADR 0004）。别的功能要用它，说明接线放错了地方：
-          # 该把它做成登记表条目或本功能的公开选项，而不是跨目录 import
-          feature-private-imports = {
+          # 仓库自定义规则按语法树匹配，规则与正反样例见 lint/README.md
+          ast-grep = {
             enable = true;
-            name = "feature-private-imports";
-            description = "功能之间不 import 对方的私有文件";
-            files = "^modules/features/.*\\.nix$";
-            entry = "${pkgs.writeShellScript "check-feature-private-imports" ''
-              if ${pkgs.gnugrep}/bin/grep -nE '\.\./[^"; ]*/_[^/"; ]+' "$@"; then
-                echo '以上引用了其他功能的私有文件（路径含 /_），见 docs/adr/0004-dendritic-feature-modules.md' >&2
-                exit 1
-              fi
-            ''}";
+            name = "ast-grep";
+            description = "仓库自定义 lint 规则";
+            files = "\\.nix$";
+            entry = "${pkgs.ast-grep}/bin/ast-grep scan";
+          };
+          ast-grep-test = {
+            enable = true;
+            name = "ast-grep-test";
+            description = "lint 规则的正反样例";
+            files = "^(sgconfig\\.yml|lint/.*\\.yml)$";
+            pass_filenames = false;
+            entry = "${pkgs.ast-grep}/bin/ast-grep test --skip-snapshot-tests";
           };
           # 被平台属性禁用的 mod（如 macOS 上的 linux 模块）不会被 just 解析，错误要到另一个平台才暴露，
           # 所以对每个模块文件单独解析。模块引用根变量也会在这里报错

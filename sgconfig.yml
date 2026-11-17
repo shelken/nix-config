@@ -1,0 +1,5 @@
+# ast-grep 项目配置：仓库自定义 lint 规则与规则测试，说明见 lint/README.md
+ruleDirs:
+  - lint/rules
+testConfigs:
+  - testDir: lint/rule-tests
