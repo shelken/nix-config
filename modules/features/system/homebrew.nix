@@ -78,4 +78,22 @@
         ];
       };
     };
+
+  # Homebrew 装在 /opt/homebrew（Apple Silicon）或 /usr/local（Intel），两处都加进 PATH
+  flake.modules.homeManager.homebrew =
+    let
+      envExtra = ''
+        export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
+      '';
+    in
+    {
+      programs.bash = {
+        enable = true;
+        bashrcExtra = envExtra;
+      };
+      programs.zsh = {
+        enable = true;
+        inherit envExtra;
+      };
+    };
 }

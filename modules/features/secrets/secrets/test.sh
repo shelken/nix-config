@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # sec-run.zsh 的表驱动测试：假 op 按环境文件解析引用，不联网、不碰真实凭据。
-# 用法: bash modules/features/secrets/test.sh
+# 用法: bash modules/features/secrets/secrets/test.sh
 set -euo pipefail
 
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)

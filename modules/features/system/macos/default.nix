@@ -11,4 +11,6 @@
     ];
     system.stateVersion = 5;
   };
+
+  flake.modules.homeManager.macos.home.shellAliases.deq = "sudo xattr -r -d com.apple.quarantine";
 }

@@ -5,6 +5,7 @@
 { config, ... }:
 {
   flake.modules.darwin.core.imports = [ config.flake.modules.darwin.secrets ];
+  flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.secrets-cli ];
   flake.modules.nixos.core.imports = [ config.flake.modules.nixos.secrets ];
 
   flake.modules.darwin.secrets =
@@ -250,5 +251,16 @@
           secEnv
         ];
       };
+    };
+
+  # 手工加解密、给新主机生成 age 公钥用的 CLI，开发机才需要 → tui
+  flake.modules.homeManager.secrets-cli =
+    { pkgs, ... }:
+    {
+      home.packages = with pkgs; [
+        age
+        sops
+        ssh-to-age
+      ];
     };
 }
