@@ -24,7 +24,12 @@ in
     in
     {
       packages = lib.mapAttrs' (
-        name: host: lib.nameValuePair "${name}-uci" (uci.writeUci { imports = host.uci-modules; }).json
+        name: host:
+        lib.nameValuePair "${name}-uci"
+          (uci.writeUci {
+            # 声明里读 secrets.nix 的明文 nix（MAC 等）要用到 inputs
+            imports = host.uci-modules ++ [ { _module.args = { inherit inputs; }; } ];
+          }).json
       ) openwrtHosts;
     };
 }
