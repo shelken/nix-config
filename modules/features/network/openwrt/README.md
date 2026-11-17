@@ -58,7 +58,7 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 | SSID、WiFi 密码、ZeroTier 的 secret、network-id 与设备名 | secrets.nix 的 sops 密文 `sops/secrets/hosts/router-mine.yaml`（`wifi`、`zerotier`），声明里写 `{{ sops.<路径> }}` 占位符                                                |
 | 对外放行规则的 IPv6 后缀                                 | `hosts/router-mine/home-ops/firewall.nix`：后缀由 home-ops 里服务的 Multus 固定 MAC 推出，是手动随机生成的服务配置，不算私密，明文写在声明里                             |
 
-划分规则见 `docs/adr/0011-secret-source-by-consumer.md`。占位符 `{{ sops.wifi.main.ssid }}` 取 yaml 里的 `.wifi.main.ssid`，必须是整个值；`just router::*` 用 `sops -d` 解密到临时目录，由 `render.jq` 展开，退出即删；仓库与 Nix store 里只有占位符。sops 文件路径取自 flake 输出 `openwrt.sopsFiles.<机器>`（即 flake.lock 里 secrets 输入的 `sops/secrets/hosts/<机器>.yaml`）。往 yaml 里新增值时用 `sops` 直接编辑，不要经过会话输出
+划分规则见 `docs/adr/0011-secret-source-by-consumer.md`。占位符 `{{ sops.wifi.main.ssid }}` 取 yaml 里的 `.wifi.main.ssid`，必须是整个值；`just router::*` 用 `sops -d` 解密到临时目录，由 `render.jq` 展开，退出即删；仓库与 Nix store 里只有占位符。sops 文件路径取自 uci 包的 `passthru.sopsFile`（`nix eval --raw .#<机器>-uci.sopsFile`，即 flake.lock 里 secrets 输入的 `sops/secrets/hosts/<机器>.yaml`）。往 yaml 里新增值时用 `sops` 直接编辑，不要经过会话输出
 
 ## 非 UCI 文件
 

@@ -17,11 +17,6 @@ in
   flake.modules.homeManager.openwrt.programs.mise.globalConfig.tools."github:lonerOrz/openwrt-nix" =
     nuciVersion;
 
-  # 部署机渲染时解密的 sops 文件，路径跟随 flake.lock 里的 secrets 输入（just router::*）
-  flake.openwrt.sopsFiles = lib.mapAttrs (
-    name: _: inputs.secrets + "/sops/secrets/hosts/${name}.yaml"
-  ) openwrtHosts;
-
   perSystem =
     { pkgs, ... }:
     let
@@ -30,11 +25,18 @@ in
     {
       packages = lib.mapAttrs' (
         name: host:
-        lib.nameValuePair "${name}-uci"
+        lib.nameValuePair "${name}-uci" (
           (uci.writeUci {
             # 声明里读 secrets.nix 的明文 nix（MAC 等）要用到 inputs
             imports = host.uci-modules ++ [ { _module.args = { inherit inputs; }; } ];
-          }).json
+          }).json.overrideAttrs
+            (old: {
+              passthru = (old.passthru or { }) // {
+                # 部署机渲染时解密的 sops 文件，路径跟随 flake.lock 里的 secrets 输入（just router::*）
+                sopsFile = inputs.secrets + "/sops/secrets/hosts/${name}.yaml";
+              };
+            })
+        )
       ) openwrtHosts;
     };
 }

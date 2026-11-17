@@ -8,13 +8,13 @@ target := 'root@router-mine'
 uci := 'nix build .#router-mine-uci --no-link --print-out-paths'
 # 声明里的 {{ sops.<路径> }} 由 sops -d 解密 secrets.nix 的 router-mine.yaml 后展开成明文（规则见 render.jq），
 # 只落在临时目录，退出即删；编译产物在 nix store 里只含占位符。sops 解不开、占位符在 yaml 里没有值时报错退出。
-# sops 文件路径取自 flake 的 secrets 输入；解密需要 SOPS_AGE_KEY_FILE 指向 admin_mio 的 age 密钥。
+# sops 文件路径取自 uci 包的 passthru.sopsFile（flake 的 secrets 输入）；解密需要 SOPS_AGE_KEY_FILE 指向 admin_mio 的 age 密钥。
 # nuci 的 diff 会原样打印路由器上现有的值（删除行也会），所以输出必须经 mask：
 # 从未展开的声明里找出写了 {{ sops.… }} 的 文件.段.选项，把输出中这些键的值打码（规则见 mask.jq）
 nuci := '''
 esc=$'\033'
 src=$(''' + uci + ''')
-sops_file=$(nix eval --raw .#openwrt.sopsFiles.router-mine)
+sops_file=$(nix eval --raw .#router-mine-uci.sopsFile)
 mask_expr=$(jq -r --arg esc "$esc" -f modules/features/network/openwrt/mask.jq "$src")
 # 兜底：被删除的条目声明里没有占位符，规则覆盖不到，MAC 与由 MAC 推出的 IPv6 后缀（EUI-64）一律打码
 mask() { sed -E -e "$mask_expr" -e 's/([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}/<MAC>/g' -e 's/[0-9A-Fa-f:]*ff:fe[0-9A-Fa-f:]*/<EUI64>/g'; }
