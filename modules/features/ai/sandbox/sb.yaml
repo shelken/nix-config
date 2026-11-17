@@ -44,7 +44,7 @@ secrets:
       - "api.github.com"
     passthrough:
       - "*"
-  # agent 专属身份：ai/agent-gh 的 gh 包装在 issue/评论命中时用它
+  # agent 专属身份：dev/gh 的 gh 包装在 issue/评论命中时用它
   AGENT_GITHUB_TOKEN:
     allow:
       - "github.com"

@@ -4,7 +4,6 @@
       config,
       lib,
       mylib,
-      myvars,
       pkgs,
       inputs,
       ...
@@ -19,7 +18,6 @@
           lib
           manifest
           ;
-        agentOwner = myvars.username;
       };
 
       sandboxConfig = import ./_config.nix {

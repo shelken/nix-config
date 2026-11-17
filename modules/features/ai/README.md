@@ -13,7 +13,6 @@ Agent 相关配置，按能力组织（ADR 0008）。`ai` 是跑 agent 的机器
 | `tools.nix` | 共享工具登记表中 omp、pi、bun 的条目（ADR 0003） |
 | `plugins.nix`、`auto-model-prompts/` | omp 与 pi 共用的插件配置、按模型注入的提示词 |
 | `cli.nix` | skill 与 harness 依赖的 CLI（ctx7、deepwiki、lit、agent-browser、herdr、rtk 等） |
-| `agent-gh/` | agent 专属 GitHub 身份的 gh 包装 |
 | `sandbox/` | Agent 沙箱（sb），设计见其 README |
 | `darwin.nix` | 让 `ai` 加入 workstation |
 

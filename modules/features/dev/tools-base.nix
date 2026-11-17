@@ -9,7 +9,6 @@
     rg.package = "ripgrep";
     fd = { };
     jq = { };
-    gh = { };
     node.package = "nodejs";
     python3 = { };
     uv = { };

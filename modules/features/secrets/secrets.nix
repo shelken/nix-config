@@ -80,7 +80,7 @@
       # 环境变量会随 agent 的 env 输出进入对话；gh、git、mise 从 gh 的 hosts.yml 取它，
       # 定时任务与沙箱各自读 sops 文件
       secretEnvMap = {
-        AGENT_GITHUB_TOKEN = "github/agent-token"; # agent 专属身份，由 ai/agent-gh 的 gh 包装读取
+        AGENT_GITHUB_TOKEN = "github/agent-token"; # agent 专属身份，由 dev/gh 的 gh 包装读取
       };
 
       enabledSecrets = lib.unique (lib.attrValues secretEnvMap);
@@ -97,7 +97,7 @@
       );
       # 脚本正文在 sec-run.zsh，这里只写入 Nix 侧才知道的路径；测试见 test.sh
       # -f：不读启动文件。调用者环境里没有 __NIX_DARWIN_SET_ENVIRONMENT_DONE 时（hc 守护进程启动的子代理），
-      # /etc/zshenv 会把 PATH 重置成系统默认，mise 装的目标命令和 agent-gh 包装就找不到了
+      # /etc/zshenv 会把 PATH 重置成系统默认，mise 装的目标命令就找不到了
       secRun = pkgs.writeScriptBin "sec-run" ''
         #!${pkgs.zsh}/bin/zsh -f
         # sops 凭据直接进本进程环境，目标命令继承

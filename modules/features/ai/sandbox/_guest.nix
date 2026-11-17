@@ -3,7 +3,6 @@
   lib,
   nixpkgs,
   manifest,
-  agentOwner,
 }:
 let
   linuxSystem = "${pkgs.stdenv.hostPlatform.parsed.cpu.name}-linux";
@@ -37,9 +36,12 @@ let
     dig
   ];
 
-  sharedTools = lib.concatMap (tool: lib.optional (tool.package != null) linuxPkgs.${tool.package}) (
-    builtins.attrValues toolsCfg
-  );
+  sharedTools = lib.concatMap (
+    tool:
+    lib.optional (tool.package != null) (
+      if lib.isFunction tool.package then tool.package linuxPkgs else linuxPkgs.${tool.package}
+    )
+  ) (builtins.attrValues toolsCfg);
 
   hostCommandStubs = pkgs.runCommand "sandbox-host-command-stubs" { } (
     ''
@@ -63,13 +65,7 @@ let
     paths = baseTools ++ sharedTools ++ [ hostCommandStubs ];
   };
 
-  # agent-gh 排在 guestEnv 之前，gh 先经过包装（整台 VM 都是 agent 环境，不需要再区分身份）
-  agentGh = import ../agent-gh/_package.nix {
-    pkgs = linuxPkgs;
-    owner = agentOwner;
-  };
-
-  guestBinPath = "${agentGh}/bin:${guestEnv}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+  guestBinPath = "${guestEnv}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
 
   postInstallHook = linuxPkgs.writeShellScript "sandbox-guest-postinstall-hook" (
     ''
