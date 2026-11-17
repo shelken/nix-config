@@ -2,16 +2,15 @@
 """列出各主机部署当前工作区后会变什么（只求值、只读远端，不构建）。
 
 - 新系统：求值得到系统 drv，它的全部依赖 drv 的输出就是新系统会用到的路径
-- 旧系统：远端 /run/current-system 及其依赖图（本机读本地）
+- 旧系统：远端 /run/current-system 及其依赖图
 - 旧闭包里在新系统中不再出现的路径就是变化；只列「自己的依赖都没变」的那些，
   外层的 etc、system-units 等只是被它们连带改变
 - 包清单取自 system-path / home-manager-path 两个 buildEnv drv 的 chosenOutputs，新旧都读 drv
 
-主机名单：hosts/default.nix 里可部署的主机加本机，排除 deployDiff = false 的
+主机名单：hosts/default.nix 里带 deploy 的主机，排除 deployDiff = false 的
 """
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
@@ -74,23 +73,18 @@ def list_hosts(only):
     if r.returncode:
         sys.exit(f"读取 hosts/default.nix 失败：{error_tail(r.stderr)}")
     hosts = json.loads(r.stdout)
-    local = os.environ.get("PROFILE")
-    picked = {
-        n: h["type"]
-        for n, h in hosts.items()
-        if h["type"] in ATTRS and h["diff"] and (h["deploy"] or n == local)
-    }
+    picked = {n: h["type"] for n, h in hosts.items() if h["type"] in ATTRS and h["deploy"] and h["diff"]}
     if only:
         unknown = [n for n in only if n not in picked]
         if unknown:
             sys.exit(f"不检查的主机：{' '.join(unknown)}；可选：{' '.join(sorted(picked))}")
         picked = {n: picked[n] for n in only}
-    return picked, local
+    return picked
 
 
-def probe(host, local):
+def probe(host):
     """返回 (当前系统路径, {路径: 它引用的路径集合})"""
-    first, _, graph = remote(host, local, PROBE).partition("\n")
+    first, _, graph = remote(host, PROBE).partition("\n")
     refs = {}
     for line in graph.splitlines():
         if m := EDGE.match(line):
@@ -119,8 +113,9 @@ def chosen_outputs(shown_json):
     return packages
 
 
-def remote(host, local, script, timeout=PROBE_TIMEOUT):
-    cmd = ["sh", "-c", script] if host == local else [
+def remote(host, script, timeout=PROBE_TIMEOUT):
+    """host 为 None 时在本机执行"""
+    cmd = ["sh", "-c", script] if host is None else [
         "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", host, script]
     try:
         r = run(cmd, timeout=timeout)
@@ -131,21 +126,21 @@ def remote(host, local, script, timeout=PROBE_TIMEOUT):
     return r.stdout
 
 
-def old_packages(host, local, old_refs):
+def old_packages(host, old_refs):
     """旧系统各包环境的包清单 {环境名: 路径集合，同名合并}，以及旧 drv 已被清理的环境名。
     读旧 buildEnv drv 的 chosenOutputs：被同名文件盖住的包、空包不会出现在引用里，只看引用会误报新增。
     NixOS 远端构建，drv 在远端；darwin 在本机构建，drv 在本机。都没有时退回读引用，只用来判断升级"""
     envs = [p for p in old_refs if name_of(p) in PACKAGE_ENVS]
     if not envs:
         return {}, []
-    derivers = remote(host, local, "nix-store -q --deriver " + " ".join(envs)).split()
+    derivers = remote(host, "nix-store -q --deriver " + " ".join(envs)).split()
     packages, missing = {}, []
     for env, deriver in zip(envs, derivers):
         name = name_of(env)
-        for where in dict.fromkeys((host, local)):
+        for where in (host, None):
             try:
                 packages.setdefault(name, set()).update(
-                    chosen_outputs(remote(where, local, "nix derivation show " + deriver))
+                    chosen_outputs(remote(where, "nix derivation show " + deriver))
                 )
                 break
             except RuntimeError:
@@ -241,13 +236,13 @@ def fold(items):
     return "、".join(items[:SHOW]) + f" 等 {len(items)} 项"
 
 
-def check(host, kind, local, probe_future):
+def check(host, kind, probe_future):
     start = time.monotonic()
     top, new_paths, new_packages = evaluate(host, kind)
     current, old_refs = probe_future.result()
     if top == current:
         return "最新", [], time.monotonic() - start
-    old_pkgs, missing = old_packages(host, local, old_refs)
+    old_pkgs, missing = old_packages(host, old_refs)
     upgraded, rebuilt, added, removed = set(), set(), set(), set()
     for env in old_pkgs.keys() | new_packages.keys():
         up, rb, add, rm = package_changes(old_pkgs.get(env, set()), new_packages.get(env, set()))
@@ -273,13 +268,13 @@ def main():
     args = parser.parse_args()
 
     start = time.monotonic()
-    hosts, local = list_hosts(args.hosts)
+    hosts = list_hosts(args.hosts)
     total, done, counts = len(hosts), 0, {}
     print(f"检查 {total} 台：{' '.join(sorted(hosts))}", flush=True)
 
     with ThreadPoolExecutor(max_workers=total) as probe_pool, ThreadPoolExecutor(max_workers=EVAL_JOBS) as eval_pool:
-        probes = {h: probe_pool.submit(probe, h, local) for h in hosts}
-        futures = {eval_pool.submit(check, h, k, local, probes[h]): h for h, k in hosts.items()}
+        probes = {h: probe_pool.submit(probe, h) for h in hosts}
+        futures = {eval_pool.submit(check, h, k, probes[h]): h for h, k in hosts.items()}
         for future in as_completed(futures):
             host = futures[future]
             done += 1
