@@ -48,6 +48,13 @@
         add-zsh-hook precmd _starship_transient_restore
       '';
 
+      # 与上面 zsh 的 transient prompt 同效果；nu 原生支持，不需要钩子
+      programs.nushell.extraConfig = ''
+        $env.TRANSIENT_PROMPT_COMMAND = {|| "\n" + (^starship module character $"--status=($env.LAST_EXIT_CODE)") }
+        $env.TRANSIENT_PROMPT_COMMAND_RIGHT = ""
+        $env.TRANSIENT_PROMPT_INDICATOR = ""
+      '';
+
       # 色板与 palette 由 catppuccin.starship（autoEnable）注入，这里只引用颜色名。
       programs.starship = {
         enable = true;
