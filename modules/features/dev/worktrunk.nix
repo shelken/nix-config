@@ -29,6 +29,17 @@
             eval "$(wt config shell init zsh)"
           fi
         '';
+
+        # wt 由 mise 安装、nu 没有 eval：每次启动在 env.nu 里生成脚本，放进随后加载的 vendor autoload 目录
+        programs.nushell.extraEnv = ''
+          let wt_init = ($nu.data-dir | path join vendor autoload worktrunk.nu)
+          if (which wt | is-not-empty) {
+            mkdir ($wt_init | path dirname)
+            ^wt config shell init nu | save --force $wt_init
+          } else if ($wt_init | path exists) {
+            rm $wt_init
+          }
+        '';
       };
     };
 }
