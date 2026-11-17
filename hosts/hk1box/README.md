@@ -130,7 +130,7 @@ ssh hk1box 'chmod 400 /mnt/var/lib/sops-nix/key.txt'
 
 ### 别在 U 盘系统上跑 deploy / nixos-rebuild
 
-试机镜像的 `/boot` 沿用主机配置指向 eMMC 的 p1（`image.nix` 没覆盖 loader 那侧的 `fileSystems`），应挂 U 盘自己的 `sda1`。所以在**U 盘系统**上激活一次带 sops 的主机配置（`just deploy::run hk1box`、`nixos-rebuild switch`），就会：
+试机镜像的 `/boot` 沿用主机配置指向 eMMC 的 p1（`image.nix` 没覆盖 loader 那侧的 `fileSystems`），应挂 U 盘自己的 `sda1`。所以在**U 盘系统**上激活一次带 sops 的主机配置（`just deploy hk1box`、`nixos-rebuild switch`），就会：
 
 - 按 **U 盘 store** 的路径重写 eMMC 的 `/boot/extlinux/extlinux.conf`
 - 删掉 eMMC 自己系统的 initrd（它判定「不再需要」）
@@ -175,7 +175,7 @@ ssh root@hk1box systemctl status sing-box --no-pager | head -12
 **只在 eMMC 系统上 deploy**（先 `findmnt -no SOURCE /` 确认是 `/dev/mmcblk1p2`；跑在 U 盘系统上会写坏 eMMC 的 `/boot`，见 §4）：
 
 ```bash
-just deploy::run hk1box
+just deploy hk1box
 ```
 
 deploy-rs 有自动回滚：新配置把网络弄断、30 秒内确认不了就退回上一代。重启后回不来时，插 U 盘救援，或接串口在 extlinux 菜单选上一代

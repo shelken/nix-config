@@ -60,13 +60,13 @@
    阶段一之后核对：`lsblk` 里要抹的盘是 `disko.device` 那块、没有别的盘混入；`ip -br link` 里的 MAC 与 `network.nix` 一致。**这一步之后、disko 之前，重启会回到原系统。**
 5. **换上新的 Lima 实例声明**（仅 Lima 节点，见下一节；宿主的 socket_vmnet 须已生效，见「宿主的 socket_vmnet」）
 6. **验证**：`nixos-version`、`systemctl is-system-running`、`ip -br a` 里 `eth0`/`eth1`/VLAN 子接口 `eth1.50` 都在且 `eth1` 拿到保留地址、`systemctl status k3s`、`kubectl get node`
-7. **首次 `just deploy::run <节点>`**，不改任何配置：nixos-anywhere 装的那一代没有 deploy-rs 的激活器，不先部署一次，之后配置变坏时无法自动回滚
+7. **首次 `just deploy <节点>`**，不改任何配置：nixos-anywhere 装的那一代没有 deploy-rs 的激活器，不先部署一次，之后配置变坏时无法自动回滚
 8. **uncordon**：`kubectl uncordon <节点>`，核对 Longhorn 副本重建完成
 9. **删维护标记**（仅 Lima 节点）：`rm ~/.lima/<节点>/no-autostart`，恢复自启动
 
 ### 控制面的额外要点
 
-- 取 `/var/lib/rancher/k3s/server` 前，**不带数据盘**启动原系统：Lima 里先 `limactl stop`，再把 `~/.lima/<节点>/lima.yaml` 临时换成去掉 `additionalDisks` 的普通文件（先 `cp` 一份到别处，`rm` 掉软链，再放回编辑过的副本）后启动，用 `sudo tar` 打包 server 目录并校验；打完删掉这个普通文件，`just deploy::run <宿主>` 重新链回声明
+- 取 `/var/lib/rancher/k3s/server` 前，**不带数据盘**启动原系统：Lima 里先 `limactl stop`，再把 `~/.lima/<节点>/lima.yaml` 临时换成去掉 `additionalDisks` 的普通文件（先 `cp` 一份到别处，`rm` 掉软链，再放回编辑过的副本）后启动，用 `sudo tar` 打包 server 目录并校验；打完删掉这个普通文件，`just deploy <宿主>` 重新链回声明
 - 装机时 disko 绝不能看到数据盘：Lima 实例此时仍不挂 `longhorn` 盘，装完、换上声明的 `lima.yaml` 后再挂
 - `k3s` 的 server 配置不含令牌：令牌在恢复的 server 目录里；`secrets` 仓库里的 `k3s-token` 只为灾难恢复保存
 - k3s 版本不低于集群当前版本：k3s 不支持降级 server
@@ -76,14 +76,14 @@
 实例声明由宿主的 Home Manager 生成：`~/.lima/<节点>/lima.yaml` 是指向 Nix store 的只读符号链接，内容来自 `system.build.limaConfig`。改 `hosts/k8s/lima.nix` 或节点的 `shelken.lima.*` 后：
 
 ```bash
-just deploy::run <宿主>                              # 宿主的 Home Manager 换上新的 lima.yaml；agent 不会动运行中的虚拟机
+just deploy <宿主>                              # 宿主的 Home Manager 换上新的 lima.yaml；agent 不会动运行中的虚拟机
 ssh <宿主> 'limactl stop <节点>'                 # 不强停；失败再 --force，并 limactl disk unlock longhorn
 ssh <宿主> 'limactl start --tty=false <节点>'    # 新配置在这次启动时生效；agent 只在登录、deploy 重载或（有外接盘时）挂载时才会启动
 ```
 
 实例名与节点名相同。`images` 只在新建实例时用，已装好的实例不受影响。`lima.yaml` 只读：`limactl edit` 之类会改配置的命令会被拒，改配置只改 Nix
 
-`limactl start` 用宿主上 Lima 自己生成的密钥（`~/.lima/_config/user`）登录 guest 确认就绪，对应的公钥记在 `vars.limaUserKeys`。删掉 `~/.lima`、重装 Lima 或换宿主后密钥会重新生成：把新的 `user.pub` 写进 `vars.limaUserKeys`，再 `just deploy::run <节点>`。没更新时只是 `limactl start` 等 SSH 超时、`limactl shell` 不可用，虚拟机与节点照常运行
+`limactl start` 用宿主上 Lima 自己生成的密钥（`~/.lima/_config/user`）登录 guest 确认就绪，对应的公钥记在 `vars.limaUserKeys`。删掉 `~/.lima`、重装 Lima 或换宿主后密钥会重新生成：把新的 `user.pub` 写进 `vars.limaUserKeys`，再 `just deploy <节点>`。没更新时只是 `limactl start` 等 SSH 超时、`limactl shell` 不可用，虚拟机与节点照常运行
 
 ## 宿主的 socket_vmnet
 
@@ -114,7 +114,7 @@ ssh root@sakamoto-k8s cat /etc/rancher/k3s/k3s.yaml | sed 's#https://127.0.0.1:6
 
 ## 日常
 
-- 更新：`just k8s::deploy [节点...]`，不带参数部署全部。agent 在前、控制面最后，每台健康（k3s 在运行、系统不是 degraded、kubelet healthz 为 ok）后再继续，否则停下。单台底层是 `just deploy::run <节点>`（deploy-rs，30 秒内新 SSH 连不上自动回滚；构建在节点上；每台输一次 sudo 密码）
+- 更新：`just k8s::deploy [节点...]`，不带参数部署全部。agent 在前、控制面最后，每台健康（k3s 在运行、系统不是 degraded、kubelet healthz 为 ok）后再继续，否则停下。单台底层是 `just deploy <节点>`（deploy-rs，30 秒内新 SSH 连不上自动回滚；构建在节点上；每台输一次 sudo 密码）
 - k3s 升级：`k3s-node` 里的 `package` 写死了 minor，升 minor 要有意修改；先 `sakamoto-k8s` 后 worker
 - `homelab-1` 的内核固定在 6.12：原因与期限见 `k3s-nvidia-vgpu/README.md`
 - 加节点：secrets 仓库建 age 密钥、`network.nix`、密文；`hosts/k8s/<节点>/`；`hosts/default.nix` 加一条
