@@ -66,13 +66,13 @@
         };
 
         extraConfigFiles = {
-          "symbols.ron".source = ./anyrun/conf/symbols.ron;
-          "applications.ron".source = ./anyrun/conf/applications.ron;
+          "symbols.ron".source = ./conf/symbols.ron;
+          "applications.ron".source = ./conf/applications.ron;
         };
       };
 
       # https://github.com/anyrun-org/anyrun/discussions/179
-      xdg.configFile."anyrun/style.css".source = pkgs.replaceVars ./anyrun/conf/style.css {
+      xdg.configFile."anyrun/style.css".source = pkgs.replaceVars ./conf/style.css {
         inherit (myvars.fontFamilies) cjkMonospace monospace;
         background = palette.surface0.hex;
         foreground = palette.text.hex;

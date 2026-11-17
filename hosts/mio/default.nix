@@ -14,7 +14,7 @@ in
   networking.computerName = hostname;
   system.defaults.smb.NetBIOSName = hostname;
   shelken.secrets.enable = true;
-  # 可选功能按需加入 imports，例如录屏 cap（OBS）
+  # 可选功能按需加入 imports，例如录屏 obs
 
   homebrew = {
     onActivation = {

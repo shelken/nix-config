@@ -12,7 +12,7 @@
     let
       inherit (osConfig.shelken.limaHost) node externalDisk;
 
-      # limactl 由 Homebrew 安装（modules/features/dev/lima.nix），沿用它，不再引入第二份 Lima
+      # limactl 由 Homebrew 安装（modules/features/virt/lima.nix），沿用它，不再引入第二份 Lima
       brewBin = "${osConfig.homebrew.prefix}/bin";
 
       # 节点只给数据，YAML 在宿主上用 darwin 的 pkgs 生成：直接用节点的 build 产物要 aarch64-linux 的 builder

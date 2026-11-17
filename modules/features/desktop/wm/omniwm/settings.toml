@@ -198,7 +198,7 @@ allowed = ["127.0.0.1"]
 denied = []
 name = "openusage"
 role = "bar"
-source = "/Users/shelken/nix-config/modules/features/wm/omniwm/shell/widgets/openusage"
+source = "/Users/shelken/nix-config/modules/features/desktop/wm/omniwm/shell/widgets/openusage"
 
 [statusBar]
 showAppNames = false

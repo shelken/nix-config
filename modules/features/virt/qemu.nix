@@ -1,10 +1,10 @@
-# 容器与虚拟化：podman（docker 兼容）、flatpak、oci-containers、qemu、vfio-pci
+# QEMU/KVM 与 vfio-pci 直通
 # NixOS 桌面机 → nixos.gui
 { config, ... }:
 {
-  flake.modules.nixos.gui.imports = [ config.flake.modules.nixos.desktop-virt ];
+  flake.modules.nixos.gui.imports = [ config.flake.modules.nixos.qemu ];
 
-  flake.modules.nixos.desktop-virt =
+  flake.modules.nixos.qemu =
     { lib, pkgs, ... }:
     {
       # Enable nested virtualization, required by security containers and nested vm.
@@ -17,39 +17,6 @@
       ## For Intel CPU, add "kvm-intel" to kernelModules.
       # boot.extraModprobeConfig = "options kvm_intel nested=1"; # for intel cpu
       boot.kernelModules = [ "vfio-pci" ];
-
-      services.flatpak.enable = true;
-
-      virtualisation = {
-        docker.enable = false;
-        podman = {
-          enable = true;
-          # Create a `docker` alias for podman, to use it as a drop-in replacement
-          dockerCompat = true;
-          # Required for containers under podman-compose to be able to talk to each other.
-          defaultNetwork.settings.dns_enabled = true;
-          # Periodically prune Podman resources
-          autoPrune = {
-            enable = true;
-            dates = "weekly";
-            flags = [ "--all" ];
-          };
-        };
-
-        oci-containers.backend = "podman";
-
-        # Usage: https://wiki.nixos.org/wiki/Waydroid
-        # waydroid.enable = true;
-
-        # libvirtd = {
-        #   enable = true;
-        #   # hanging this option to false may cause file permission issues for existing guests.
-        #   # To fix these, manually change ownership of affected files in /var/lib/libvirt/qemu to qemu-libvirtd.
-        #   qemu.runAsRoot = true;
-        # };
-
-        # lxd.enable = true;
-      };
 
       # mkOrder：保持迁移前 qemu 在 moonlight/fhs/桌面包之前（见 system-path 的 ignoreCollisions）
       environment.systemPackages = lib.mkOrder 610 (

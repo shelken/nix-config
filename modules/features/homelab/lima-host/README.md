@@ -26,7 +26,7 @@ Lima 宿主（sakamoto、yuuko）的功能：桥接网卡 `socket_vmnet`、实�
   - 实例已在运行：`limactl` 提示并以 0 退出，不做任何事
   - 设了 `externalDisk`：先检查它已挂载，没挂上就记日志、以 0 退出，并配 `StartOnMount`，盘挂上时再来一次
   - 不设 `KeepAlive`：失败不反复重试
-- `limactl` 用 Homebrew 装的那份（`modules/features/dev/lima.nix`，路径取 `homebrew.prefix`），不引入第二份 Lima
+- `limactl` 用 Homebrew 装的那份（`modules/features/virt/lima.nix`，路径取 `homebrew.prefix`），不引入第二份 Lima
 
 ### 为什么 agent 重载不会杀掉虚拟机
 
