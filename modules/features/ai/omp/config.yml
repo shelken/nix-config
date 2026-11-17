@@ -25,6 +25,7 @@ modelRoles:
   reviewer-glm: "@glm-flash"
   reviewer-gpt: "@gpt:xhigh"
   reviewer-cc: "@claude"
+  reviewer-agy: agy/gemini-4-carbon:high
   judge: "@claude"
   vision: cpa/gpt-5.6-luna:high
   commit: cpa/workbuddy/hy3:high
@@ -83,6 +84,8 @@ task:
     reviewer-glm: "@reviewer-glm"
     reviewer-gpt: "@reviewer-gpt"
     reviewer-cc: "@reviewer-cc"
+    reviewer-agy: "@reviewer-agy"
+    task-agy: agy/gemini-4-hydrogen:high
     judge: "@judge"
     poteto-agent: "@task"
     comment-sicko: "@reviewer-gpt"

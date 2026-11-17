@@ -42,6 +42,7 @@
         "glm"
         "gpt"
         "cc"
+        "agy"
       ];
 
       variantCategories = [
@@ -193,7 +194,10 @@
         );
       };
 
-      ompAgents = lib.filterAttrs (name: _: !(builtins.elem name ompBundledAgents)) agentsCommon;
+      # -agy 走外部 agy CLI，由 spawn-subagent 派发；写进 omp agents 目录会被内置 task 工具当 HTTP provider 报错
+      ompAgents = lib.filterAttrs (
+        name: _: !(builtins.elem name ompBundledAgents) && !(lib.hasSuffix "-agy" name)
+      ) agentsCommon;
       ompAgentsDir = pkgs.linkFarm "omp-agents" (lib.mapAttrsToList mkOmpAgent ompAgents);
     in
     {

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
-// spawn-subagent.ts — 在 Herdr.app(hc 终端)、旧 Herdr 窗格或 Kitty 窗口中启动/关闭 pi 子代理
+// spawn-subagent.ts — 在 Herdr.app(hc 终端)、旧 Herdr 窗格或 Kitty 窗口中启动/关闭 pi 或 agy 子代理
 // agent 真相源: ~/.pi/agent/agents/<profile>.md（nix 生成，只声明 role）: tools 与正文来自 md，
-// model/thinking 每次派发按 md 的 role 实时读 ~/.omp/agent/config.yml，读不到或解析不出就报错。
+// model/thinking 每次派发按 md 的 role 实时读 ~/.omp/agent/config.yml（agy/<model>:<level> 走 agy，其余走 pi）。
 // 用法: spawn-subagent <profile> <slug> -- <task> | batch | resume | close | list | ps | --check | -h
 import { execFileSync, execSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -13,7 +13,8 @@ import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const scriptDir = dirname(fileURLToPath(import.meta.url));
+const selfPath = fileURLToPath(import.meta.url);
+const scriptDir = dirname(selfPath);
 const agentsDir = join(homedir(), ".pi", "agent", "agents");
 const config = JSON.parse(readFileSync(join(scriptDir, "subagent-config.json"), "utf8"));
 const subHome = join(homedir(), ".pi", "agent-subagent");
@@ -21,8 +22,9 @@ const subHome = join(homedir(), ".pi", "agent-subagent");
 // kitty --copy-env 复制的窗口环境里都没有 provider 凭据。每次派发现场解析，不依赖调用者可能过期的环境
 const PI_CMD = ["sec-run", "pi"];
 
+type RunnerKind = "pi" | "agy";
 type Agent = {
-  name: string; model: string; thinking: string; tools: string;
+  name: string; runner: RunnerKind; model: string; cliModel: string; thinking: string; tools: string;
   exclude: string[]; description: string; body: string;
 };
 type Resolved = { agent: Agent } | { error: string };
@@ -63,7 +65,8 @@ function resolveAgent(profile: string, cfg: ModelConfig = loadModelConfig()): Re
   // 插件排除全局统一：所有子代理共用一份派生 settings.json，per-md 无法生效
   return {
     agent: {
-      name, model: resolved.model, thinking: resolved.thinking, tools: s.tools,
+      name, runner: resolved.runner, model: resolved.model, cliModel: resolved.cliModel,
+      thinking: resolved.thinking, tools: s.tools,
       exclude: (config.exclude ?? []) as string[], description: s.description,
       body: text.replace(/^---\n[\s\S]*?\n---\n?/, "").trim(),
     },
@@ -128,19 +131,67 @@ function toPiModel(model: string): string {
   return (alias[model.slice(0, i)] ?? model.slice(0, i)) + model.slice(i);
 }
 
+const AGY_ALIASES: Record<string, string> = {
+  carbon: "gemini-4-carbon",
+  argon: "gemini-4-argon",
+  hydrogen: "gemini-4-hydrogen",
+  flash: "gemini-3.8-flash",
+  pro: "gemini-3.1-pro",
+};
+const AGY_FAMILY_EFFORTS: Record<string, string[]> = {
+  "gemini-4-carbon": ["low", "medium", "high"],
+  "gemini-4-argon": ["low", "medium", "high"],
+  "gemini-4-hydrogen": ["low", "medium", "high", "xhigh"],
+  "gemini-3.8-flash": ["low", "medium", "high"],
+  "gemini-3.1-pro": ["low", "high"],
+};
+const AGY_FIXED_MODELS = new Set([
+  "claude-sonnet-4-6",
+  "claude-opus-4-6-thinking",
+  "gemini-pro-orchestrator",
+  "gemini-pro-orchestrator-argon",
+]);
+const AGY_VALID_EFFORTS = new Set(["low", "medium", "high", "xhigh"]);
+
+// agy --model 只接受拼好 effort 后缀的 ID（裸家族名会被 agy 直接拒掉）
+function resolveAgyModel(raw: string, thinking: string): { cliModel: string } | { error: string } {
+  if (!raw) return { error: "agy 模型名不能为空" };
+  const name = AGY_ALIASES[raw] ?? raw;
+  if (AGY_FIXED_MODELS.has(name) || /-(low|medium|high|xhigh|thinking)$/.test(name)) {
+    return { cliModel: name };
+  }
+  const allowed = AGY_FAMILY_EFFORTS[name];
+  if (allowed) {
+    if (!allowed.includes(thinking)) {
+      return { error: `agy 模型 '${name}' 不支持档位 '${thinking}'（可选: ${allowed.join("|")}）` };
+    }
+    return { cliModel: `${name}-${thinking}` };
+  }
+  if (!AGY_VALID_EFFORTS.has(thinking)) {
+    return { error: `agy 不支持 thinking 档位 '${thinking}'（可选: low|medium|high|xhigh）` };
+  }
+  return { cliModel: `${name}-${thinking}` };
+}
+
 function resolveModel(
   profile: string,
   cfg: ModelConfig,
   role: string,
-): { model: string; thinking: string } | { error: string } {
+): { runner: RunnerKind; model: string; cliModel: string; thinking: string } | { error: string } {
   const spec = cfg.overrides[profile] ?? `@${role}`;
   const resolved = resolveSpec(spec, cfg.roles);
   if (!resolved) {
     return { error: `config.yml 无法解析 '${spec}'（role '${role}' 不在 modelRoles、引用成环或缺 provider/model）` };
   }
-  // pi 必须拿到 thinking 档位；角色没写 level 时报错，避免把空值传给 --thinking。
+  // pi 与 agy 都需要 thinking 档位；角色没写 level 时报错，避免传出残缺模型规格。
   if (!resolved.thinking) return { error: `config.yml 的 '${spec}' 没有 thinking 档位` };
-  return { model: toPiModel(resolved.model), thinking: resolved.thinking };
+  if (resolved.model.startsWith("agy/")) {
+    const agy = resolveAgyModel(resolved.model.slice(4), resolved.thinking);
+    if ("error" in agy) return agy;
+    return { runner: "agy", model: `agy/${agy.cliModel}`, cliModel: agy.cliModel, thinking: resolved.thinking };
+  }
+  const piModel = toPiModel(resolved.model);
+  return { runner: "pi", model: piModel, cliModel: piModel, thinking: resolved.thinking };
 }
 
 // ---------- 命令 ----------
@@ -149,7 +200,7 @@ function herdr(args: string[]): any {
   return JSON.parse(execFileSync("herdr", args, { encoding: "utf8" }));
 }
 function usage() {
-  console.log(`spawn-subagent - 在 Herdr.app(hc)、旧 Herdr 或 Kitty 中启动/关闭 pi 子代理
+  console.log(`spawn-subagent - 在 Herdr.app(hc)、旧 Herdr 或 Kitty 中启动/关闭 pi 或 agy 子代理
 
 用法:
   spawn-subagent <profile> <slug> -- <task>   启动单个子代理，输出终端 ID
@@ -157,7 +208,7 @@ function usage() {
   spawn-subagent resume <id> -- <task>        复用已有子代理，注入新任务（不重启；hc 后端仅允许当前终端启动的子终端）
   spawn-subagent list [-v] [--json]           列出所有 agent（表头 NAME|ACCESS|MODEL|THINK，末行总数）
                                               ACCESS: tools 含 edit/write 为 rw，否则 ro；config.yml 读不到则报错退出
-                                              -v 加 description 行；--json 输出数组（含 tools 与 description）
+                                              -v 加 description 行；--json 输出数组（含 runner、tools 与 description）
   spawn-subagent --check                      派生 settings + 打印所有 agent 生效值，不启动
   spawn-subagent close <id>                   关闭子代理（含已结束的）；旧 Herdr 另聚焦回主 pane
   spawn-subagent close --finished | --all     批量关闭当前终端派发的子代理：仅已结束的 / 全部（仅 Herdr.app(hc)）
@@ -171,10 +222,11 @@ function usage() {
 profile: 对应 ~/.pi/agent/agents/<profile>.md（文件名匹配大小写不敏感，agent 名统一小写）；
          md 由 nix 生成：frontmatter 的 role、tools 与正文生效，缺 role 即无法解析（重新生成 agents：just hm）；
          model/thinking 每次派发实时取自 ~/.omp/agent/config.yml：task.agentModelOverrides 里的同名条目优先，
-         否则按 md 的 role 字段取 modelRoles（角色名由 nix 算好写入，如 task-cc 的 role 是 reviewer-cc），
-         该文件缺失/损坏或解析不出 model/thinking 时直接报错，没有静态兜底；
-         正文作为系统提示追加（--append-system-prompt）。
-         插件排除由 subagent-config.json 的 exclude 全局统一，md 不支持单独声明。
+         否则按 md 的 role 字段取 modelRoles（角色名由 nix 算好写入，如 task-cc 的 role 是 reviewer-cc）；
+         模型前缀为 agy/（如 agy/carbon:high、agy/hydrogen:high）时使用原生交互式 agy CLI（ro 自动启用 --mode plan，
+         正文经 SessionStart 钩子注入，回合结束由 Stop 钩子自动经 intercom 回传），其余模型使用 pi；
+         该文件缺失/损坏或解析不出 model/thinking 时直接报错，没有静态兜底。
+         pi 插件排除由 subagent-config.json 的 exclude 全局统一，md 不支持单独声明。
 slug:    任务语义标识（小写字母/数字/连字符；agent 名 profile-slug-时间戳上限 32，
          超长自动截断，无需调用者计算）
 task:    子代理任务描述，支持多行；结论经 intercom 回传，不写文件
@@ -222,6 +274,9 @@ manifest (batch，文件路径，不支持内联 JSON 或 stdin):
 env: HC_TERMINAL_ID | HERDR_PANE_ID | KITTY_WINDOW_ID, PI_INTERCOM_SESSION_ID`);
 }
 
+const accessOf = (tools: string): "rw" | "ro" => (/(^|,)(edit|write)(,|$)/.test(tools) ? "rw" : "ro");
+const shellQuote = (s: string) => `'${s.replaceAll("'", "'\\''")}'`;
+
 // opts: -v 每个 agent 下加一行缩进 description；--json 输出数组。无法解析的 md 仍占一行并说明原因
 function listAgents(opts: { verbose?: boolean; json?: boolean } = {}) {
   if (!existsSync(agentsDir)) return console.error(`agents 目录不存在: ${agentsDir}`);
@@ -234,13 +289,12 @@ function listAgents(opts: { verbose?: boolean; json?: boolean } = {}) {
   }
   const names = readdirSync(agentsDir).filter((x) => x.endsWith(".md")).map((x) => basename(x, ".md")).sort();
   const rows = names.map((name) => ({ name, r: resolveAgent(name, cfg) }));
-  const access = (tools: string) => (/(^|,)(edit|write)(,|$)/.test(tools) ? "rw" : "ro");
 
   if (opts.json) {
     console.log(JSON.stringify(rows.map(({ name, r }) => "error" in r
       ? { name, error: r.error }
       : {
-        name, access: access(r.agent.tools), model: r.agent.model, thinking: r.agent.thinking,
+        name, runner: r.agent.runner, access: accessOf(r.agent.tools), model: r.agent.model, thinking: r.agent.thinking,
         tools: r.agent.tools.split(","), description: r.agent.description,
       }), null, 2));
     return;
@@ -256,7 +310,7 @@ function listAgents(opts: { verbose?: boolean; json?: boolean } = {}) {
     if ("error" in r) console.log(`${name.padEnd(wName)}  <无法解析: ${r.error}>`);
     else {
       const g = r.agent;
-      console.log(line(g.name, access(g.tools), g.model, g.thinking));
+      console.log(line(g.name, accessOf(g.tools), g.model, g.thinking));
     }
     if (opts.verbose && "agent" in r) console.log(`  ${r.agent.description}`);
   }
@@ -365,18 +419,44 @@ function writeAgentBody(name: string, body: string): string | undefined {
   return file;
 }
 
-// ---------- 终端后端 ----------
+// ---------- 终端后端与运行器规格 ----------
 
-// 会话文件定位与存活检测：健康门只依赖这两个能力
-type Session = { locate: () => string | null; alive?: () => boolean };
+type HealthObservation = { status: "none" | "healthy" | "error"; reason?: string };
+type Session = {
+  observe: () => HealthObservation;
+  alive?: () => boolean;
+  exitError?: () => string | undefined;
+};
+
+type LaunchSpec = {
+  agentName: string;
+  profileLower: string;
+  runner: RunnerKind;
+  env: Record<string, string>;
+  // hc / kitty 直接 exec 携带首轮任务
+  execCmd: (sessionId: string) => string[];
+  // 旧 herdr 先启动就绪，再由 herdrPrompt 注入任务
+  herdrArgs: string[];
+  prompt: string;
+  makeSession: (o: { sessionId?: string; herdrStartOut?: any; alive?: () => boolean }) => Session;
+  onStarted?: (pane: string) => void;
+};
+
 type Term = {
   // 派发前验证当前终端；失效抛错，由调用方报 context-error
   validate(): void;
-  start(o: { agentName: string; g: Agent; prompt: string; promptFile?: string }): { pane: string; session: Session };
+  start(spec: LaunchSpec): { pane: string; session: Session };
   send(pane: string, text: string): boolean;
   close(pane: string): void;
   focusMain?(): void;
 };
+
+function currentTermScope(): string {
+  if (process.env.HC_TERMINAL_ID) return `hc:${process.env.HC_TERMINAL_ID}`;
+  if (process.env.HERDR_PANE_ID) return "herdr";
+  if (process.env.KITTY_WINDOW_ID) return "kitty";
+  return "none";
+}
 
 function herdrPrompt(pane: string, prompt: string): boolean {
   for (let i = 0; i < 20; i++) {
@@ -402,11 +482,11 @@ function paneShellAlive(pane: string): boolean | undefined {
   } catch { return undefined; } // 查不到状态时不作终止依据，交给期限兜底
 }
 
-function herdrAgentStart(agentName: string, newPane: string, args: string[]): any {
+function herdrAgentStart(agentName: string, newPane: string, kind: RunnerKind, args: string[]): any {
   const deadline = Date.now() + HERDR_START_READY_MS;
   for (;;) {
     try {
-      return herdr(["agent", "start", agentName, "--kind", "pi", "--pane", newPane, "--", ...args]);
+      return herdr(["agent", "start", agentName, "--kind", kind, "--pane", newPane, "--", ...args]);
     } catch (e: any) {
       let code: string | undefined;
       try { code = JSON.parse(String(e.stderr || e.stdout || ""))?.error?.code; } catch { /* 非结构化错误 */ }
@@ -423,31 +503,27 @@ const herdrTerm: Term = {
       throw new Error(`HERDR_PANE_ID='${pane}' 对应的旧 Herdr pane 不存在或不可用（${cliError(e)}）`);
     }
   },
-  start({ agentName, g, prompt, promptFile }) {
+  start(spec) {
     const newPane = layoutPane(process.env.HERDR_PANE_ID!);
     const closeNew = () => { try { execFileSync("herdr", ["pane", "close", newPane]); } catch { /* 已关闭 */ } };
-    // 会话文件：agent_session.value 形如 ~/.pi/agent/sessions/--cwd--/ts.jsonl；
-    // 子代理实际写入 ~/.pi/agent-subagent/sessions/ 同相对段
-    let sessionFile: string | null = null;
+    let session: Session;
     try {
-      execFileSync("herdr", ["pane", "run", newPane, `export PI_CODING_AGENT_DIR=${subHome}`]);
-      const startOut = herdrAgentStart(agentName, newPane, ["--model", g.model, "--thinking", g.thinking, "--tools", g.tools, ...(promptFile ? ["--append-system-prompt", promptFile] : [])]);
-      const sf = startOut?.result?.agent?.agent_session?.value;
-      const m = typeof sf === "string" ? sf.match(/(sessions\/--[^/]+\/[^/]+\.jsonl)/) : null;
-      if (m) sessionFile = join(subHome, m[1]);
+      const exports = Object.entries(spec.env).map(([k, v]) => `${k}=${shellQuote(v)}`).join(" ");
+      if (exports) execFileSync("herdr", ["pane", "run", newPane, `export ${exports}`]);
+      const startOut = herdrAgentStart(spec.agentName, newPane, spec.runner, spec.herdrArgs);
+      session = spec.makeSession({ herdrStartOut: startOut });
     } catch (e: any) {
       closeNew();
-      throw new Error(`启动失败: ${String(e.message ?? e)}`);
+      throw e instanceof Error && e.message.startsWith("健康门不可用:")
+        ? e
+        : new Error(`启动失败: ${String(e.message ?? e)}`);
     }
-    if (!sessionFile) {
-      closeNew();
-      throw new Error("健康门不可用: herdr 未返回可解析的 agent session 路径");
-    }
-    if (!herdrPrompt(newPane, prompt)) {
+    if (!herdrPrompt(newPane, spec.prompt)) {
       closeNew();
       throw new Error("prompt 注入失败（20 次重试后 pane 未就绪）");
     }
-    return { pane: newPane, session: { locate: () => sessionFile } };
+    spec.onStarted?.(newPane);
+    return { pane: newPane, session };
   },
   send: herdrPrompt,
   close: (pane) => { execFileSync("herdr", ["pane", "close", pane]); },
@@ -515,22 +591,29 @@ const kittyTerm: Term = {
     }
     if (layout !== "splits") throw new Error(`kitty 当前 tab 布局为 '${layout}'，需要 splits`);
   },
-  start({ agentName, g, prompt, promptFile }) {
+  start(spec) {
     const main = process.env.KITTY_WINDOW_ID!;
     const anchor = kittyRight(main).at(-1)?.id;
     const placement = anchor
       ? ["--location=hsplit", "--bias=50", "--next-to", `id:${anchor}`]
       : ["--location=vsplit", "--bias=45", "--next-to", `id:${main}`];
+    // OMP 的 bash 工具会注入 TERM=dumb、NO_COLOR=1、CI=true；--copy-env 会把它们带进新窗口弄坏 TUI，这里显式净化
+    const envArgs = [
+      "--env", "TERM=xterm-kitty",
+      "--env", "COLORTERM=truecolor",
+      "--env", "NO_COLOR=",
+      "--env", "CI=",
+      ...Object.entries(spec.env).flatMap(([k, v]) => ["--env", `${k}=${v}`]),
+    ];
     let pane: string;
     try {
       // --match window_id 把窗口钉在主窗口所在 tab（否则会落进当前活动 tab）；
       // --copy-env 复制主窗口环境（API key、PATH 等），直接 exec 不经 shell，prompt 原样传入
       pane = kitten([
         "launch", "--match", `window_id:${main}`, "--copy-env", "--keep-focus",
-        "--cwd", process.cwd(), "--var", "subagent=1", "--env", `PI_CODING_AGENT_DIR=${subHome}`,
+        "--cwd", process.cwd(), "--var", "subagent=1", ...envArgs,
         ...placement, "--",
-        ...PI_CMD, "--session-id", agentName, "--model", g.model, "--thinking", g.thinking, "--tools", g.tools,
-        ...(promptFile ? ["--append-system-prompt", promptFile] : []), "--", prompt,
+        ...spec.execCmd(spec.agentName),
       ]).trim();
     } catch (e: any) {
       throw new Error(`启动失败: ${String(e.message ?? e)}`);
@@ -541,7 +624,8 @@ const kittyTerm: Term = {
       try { kitten(["close-window", "--match", `id:${pane}`]); } catch { /* 已关闭 */ }
       throw new Error(`布局调整失败: ${String(e.message ?? e)}`);
     }
-    return { pane, session: { locate: sessionLocator(agentName), alive: () => kittyAlive(pane) } };
+    spec.onStarted?.(pane);
+    return { pane, session: spec.makeSession({ sessionId: spec.agentName, alive: () => kittyAlive(pane) }) };
   },
   send(pane, text) {
     if (!kittyAlive(pane)) return false;
@@ -555,7 +639,7 @@ const kittyTerm: Term = {
 };
 
 // Herdr.app 的 hc 终端。HC_TERMINAL_ID 是当前终端地址；hc 不返回 agent_session，
-// 用显式 --session-id 定位 pi JSONL。首条任务随交互式 pi 的 argv 传入（启动期 send 会丢失）。
+// pi 用显式 --session-id 定位 JSONL，agy 用 SessionStart 钩子写回的 transcriptPath。
 // 后台启动，不调用 herdr-app 分屏/聚焦，用户在 Agents 列表查看。
 const hcOut = (args: string[]): any => JSON.parse(execFileSync("hc", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
 
@@ -603,29 +687,33 @@ const hcTerm: Term = {
     if (!t) throw new Error(`HC_TERMINAL_ID='${id}' 不存在`);
     if (t.state !== "live") throw new Error(`HC_TERMINAL_ID='${id}' 已结束`);
   },
-  start({ agentName, g, prompt, promptFile }) {
+  start(spec) {
     const sessionId = randomUUID();
     let pane: string;
     try {
+      const envPairs = [
+        ...Object.entries(spec.env).map(([k, v]) => `${k}=${v}`),
+        `PATH=${process.env.PATH}`,
+      ];
       const out = hcOut([
-        "run", "--bg", "--json", "--name", agentName, "--parent", process.env.HC_TERMINAL_ID!, "--cwd", process.cwd(),
-        "--label", HC_SPAWN_LABEL, "--label", `profile=${g.name.toLowerCase()}`,
-        // hc run 继承 hc 守护进程的环境，其 PATH 可能没有 mise 安装的 pi；传入主窗口 PATH
-        "env", `PI_CODING_AGENT_DIR=${subHome}`, `PATH=${process.env.PATH}`,
-        ...PI_CMD, "--session-id", sessionId, "--model", g.model, "--thinking", g.thinking, "--tools", g.tools,
-        ...(promptFile ? ["--append-system-prompt", promptFile] : []), "--", prompt,
+        "run", "--bg", "--json", "--name", spec.agentName, "--parent", process.env.HC_TERMINAL_ID!, "--cwd", process.cwd(),
+        "--label", HC_SPAWN_LABEL, "--label", `profile=${spec.profileLower}`, "--label", `runner=${spec.runner}`,
+        // hc run 继承 hc 守护进程的环境，其 PATH 可能没有 mise 安装的 pi/agy；传入主窗口 PATH
+        "--", "env", ...envPairs,
+        ...spec.execCmd(sessionId),
       ]);
       if (typeof out?.address !== "string") throw new Error("hc run 未返回 address");
       pane = out.address;
     } catch (e: any) {
       throw new Error(`启动失败: ${cliError(e)}`);
     }
+    spec.onStarted?.(pane);
     return {
       pane,
-      session: {
-        locate: sessionLocator(sessionId),
+      session: spec.makeSession({
+        sessionId,
         alive: () => { try { return hcGet(pane)?.state === "live"; } catch { return true; } },
-      },
+      }),
     };
   },
   send(pane, text) {
@@ -677,17 +765,50 @@ function requireContext(): Context {
   return { term, intercom };
 }
 
+const agySessionsDir = join(subHome, "tmp", "agy-sessions");
+
+function clearStaleAgyPane(termScope: string, pane: string) {
+  if (!existsSync(agySessionsDir)) return;
+  for (const f of readdirSync(agySessionsDir).filter((x) => x.endsWith(".json"))) {
+    const p = join(agySessionsDir, f);
+    const m = readAgyMeta(p);
+    if (m && m.termScope === termScope && m.pane === pane) {
+      delete m.pane;
+      writeAtomicJson(p, m);
+    }
+  }
+}
+
+function isAgyPane(term: Term, paneId: string): boolean {
+  if (term === hcTerm) {
+    const runner = hcGet(paneId)?.labels?.runner;
+    if (runner) return runner === "agy";
+  }
+  if (!existsSync(agySessionsDir)) return false;
+  const scope = currentTermScope();
+  for (const f of readdirSync(agySessionsDir).filter((x) => x.endsWith(".json"))) {
+    const m = readAgyMeta(join(agySessionsDir, f));
+    if (m?.termScope === scope && m.pane === paneId) return true;
+  }
+  return false;
+}
+
 // 复用已有 agent（指定 pane/终端 ID）：注入新任务，不重启、不新建 pane。
-// 首次 spawn 已注入回传协议；此处仅提醒回传给主代理 session
+// pi 需提醒调 intercom 工具；agy 由 Stop 钩子自动提取末条回复回传，不注入虚假工具名
 function resume(paneId: string, task: string) {
   const intercom = process.env.PI_INTERCOM_SESSION_ID;
   if (!intercom) {
     console.error("spawn-subagent: resume 需要 PI_INTERCOM_SESSION_ID");
     process.exit(1);
   }
-  const prompt = `（会话延续）新任务，完成后用 intercom 向主代理 session 回传结论（${intercom}），结论第一行标注 [${paneId}] 供对账:\n---\n${task}`;
+  const term = termOrExit();
+  let agy = false;
+  try { agy = isAgyPane(term, paneId); } catch { /* 交给 send 统一报归属或不存在错误 */ }
+  const prompt = agy
+    ? `（会话延续）新任务（完成后直接在最终回复中输出结论，宿主 Stop 钩子会自动经 intercom 回传主代理）:\n---\n${task}`
+    : `（会话延续）新任务，完成后用 intercom 向主代理 session 回传结论（${intercom}），结论第一行标注 [${paneId}] 供对账:\n---\n${task}`;
   let sent: boolean;
-  try { sent = termOrExit().send(paneId, prompt); } catch (e: any) {
+  try { sent = term.send(paneId, prompt); } catch (e: any) {
     console.error(`spawn-subagent: resume 被拒绝（${cliError(e)}）: ${paneId}`);
     process.exit(1);
   }
@@ -760,7 +881,6 @@ type SessionEvent = {
   type?: string;
   message?: { role?: string; stopReason?: string; errorMessage?: string };
 };
-type HealthObservation = { status: "none" | "healthy" | "error"; reason?: string };
 
 function observeHealth(text: string): HealthObservation {
   let reason = "";
@@ -775,38 +895,81 @@ function observeHealth(text: string): HealthObservation {
   return reason ? { status: "error", reason } : { status: "none" };
 }
 
+// agy transcript 中普通工具报错记为 GENERIC + ERROR，不能误判为模型失效；只看 PLANNER_RESPONSE
+function observeAgyHealth(text: string): HealthObservation {
+  let reason = "";
+  for (const line of text.trim().split("\n")) {
+    let ev: any;
+    try { ev = JSON.parse(line); } catch { continue; }
+    if (ev?.type !== "PLANNER_RESPONSE") continue;
+    if (ev.status === "DONE") return { status: "healthy" };
+    if (ev.status === "ERROR") reason = String(ev.error || ev.content || "agy model error");
+  }
+  return reason ? { status: "error", reason } : { status: "none" };
+}
+
+function extractAgyLogError(logFile: string): string | undefined {
+  if (!existsSync(logFile)) return undefined;
+  let tail = "";
+  try {
+    tail = readFileSync(logFile, "utf8").slice(-16384).trim();
+  } catch {
+    return undefined;
+  }
+  if (!tail) return undefined;
+  const lines = tail.split("\n").map((l) => l.trim()).filter(Boolean);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const m = /^AGY_ERROR:\s*(\{.*\})$/.exec(lines[i]);
+    if (m) {
+      try {
+        const obj = JSON.parse(m[1]);
+        const parts = [obj.status, obj.error_code !== undefined ? `code=${obj.error_code}` : ""].filter(Boolean);
+        if (parts.length) return `AGY_ERROR ${parts.join(" ")}`;
+      } catch { /* 保留原始行 */ }
+      return lines[i];
+    }
+  }
+  return lines.at(-1);
+}
+
+// 配置/认证/额度类错误（含 429 额度用尽与 agy 结构化状态），重试无意义，健康门立即失败。
+// 状态码前后不能紧挨字母或数字，否则 request id（req_4012）、耗时（1403ms）会被误判、让可重试的故障直接失败；
+// 但下划线要算边界，pi 透传的 `${code}: ${message}` 里 model_not_found、invalid_auth、HTTP_401 都是真实配置错误。
+// auth 类词只认 auth/authentication/authorization/unauthenticated 等，避开 author；forbidden/not_found 保持前缀匹配。
+const CONFIG_ERROR = /(?<![a-z0-9])(?:400|401|403|404|429)(?![a-z0-9])|(?<![a-z])(?:un)?auth(?:entic[a-z]*|oriz[a-z]*)?(?![a-z])|(?<![a-z])(?:forbidden|not_found|permission_denied|resource_exhausted|quota|rate[_ -]?limit)/i;
+const AGY_MODEL_ERROR = /invalid model selection|unsupported model|not recognized as a known model/i;
+const isConfigError = (s: string) => CONFIG_ERROR.test(s) || AGY_MODEL_ERROR.test(s);
+
 function checkHealthParser() {
   const msg = (stopReason: string, errorMessage?: string) => JSON.stringify({ type: "message", message: { role: "assistant", stopReason, errorMessage } });
   if (observeHealth(msg("stop")).status !== "healthy") throw new Error("健康签名自检失败");
   if (observeHealth(`${msg("error", "503")}\n${msg("toolUse")}`).status !== "healthy") throw new Error("恢复签名自检失败");
   if (observeHealth(msg("error", "404")).status !== "error") throw new Error("失效签名自检失败");
+  const agyToolErr = JSON.stringify({ step_index: 1, type: "GENERIC", status: "ERROR", error: "denied" });
+  const agyOk = JSON.stringify({ step_index: 2, type: "PLANNER_RESPONSE", status: "DONE", content: "ok" });
+  const agyFail = JSON.stringify({ step_index: 2, type: "PLANNER_RESPONSE", status: "ERROR", error: "429" });
+  if (observeAgyHealth(`${agyToolErr}\n${agyOk}`).status !== "healthy") throw new Error("agy 健康签名自检失败");
+  if (observeAgyHealth(agyFail).status !== "error") throw new Error("agy 失效签名自检失败");
+  if (isConfigError("req_4012 took 1403ms by author")) throw new Error("CONFIG_ERROR 误报自检失败");
+  if (!isConfigError("AGY_ERROR RESOURCE_EXHAUSTED code=429")) throw new Error("CONFIG_ERROR agy 命中自检失败");
 }
 
-// 配置/认证/额度类错误（含 429 额度用尽），重试无意义，健康门立即失败。
-// 状态码前后不能紧挨字母或数字，否则 request id（req_4012）、耗时（1403ms）会被误判、让可重试的故障直接失败；
-// 但下划线要算边界，pi 透传的 `${code}: ${message}` 里 model_not_found、invalid_auth、HTTP_401 都是真实配置错误。
-// auth 类词只认 auth/authentication/authorization 等，避开 author；forbidden/not_found 保持前缀匹配，不漏 not_found_error。
-const CONFIG_ERROR = /(?<![a-z0-9])(?:400|401|403|404|429)(?![a-z0-9])|(?<![a-z])(?:un)?auth(?:entic[a-z]*|oriz[a-z]*)?(?![a-z])|(?<![a-z])(?:forbidden|not_found)/i;
-
-// pi 自己负责瞬时错误重试。健康门只观察同一会话，避免脚本重启 session 造成双重重试。
-// 4xx 配置/认证错误立即失败；其他错误等到总期限，期间出现新健康 assistant 即恢复。
+// pi / agy 各自负责瞬时错误重试。健康门只观察同一会话，避免脚本重启 session 造成双重重试。
+// 4xx/认证/额度配置错误立即失败；其他错误等到总期限，期间出现新健康响应即恢复。
 async function healthGate(session: Session, timeoutMs: number): Promise<{ healthy: boolean; reason?: string } | null> {
   const deadline = Date.now() + timeoutMs;
   let lastErrorText = "";
   while (Date.now() < deadline) {
-    const sessionFile = session.locate();
-    if (sessionFile && existsSync(sessionFile)) {
-      const observation = observeHealth(readFileSync(sessionFile, "utf-8"));
-      if (observation.status === "healthy") return { healthy: true };
-      if (observation.status === "error") {
-        lastErrorText = observation.reason ?? "model error";
-        if (CONFIG_ERROR.test(lastErrorText)) {
-          return { healthy: false, reason: lastErrorText };
-        }
+    const observation = session.observe();
+    if (observation.status === "healthy") return { healthy: true };
+    if (observation.status === "error") {
+      lastErrorText = observation.reason ?? "model error";
+      if (isConfigError(lastErrorText)) {
+        return { healthy: false, reason: lastErrorText };
       }
     }
     if (session.alive && !session.alive()) {
-      return { healthy: false, reason: lastErrorText || "pane exited before model response" };
+      return { healthy: false, reason: lastErrorText || session.exitError?.() || "pane exited before model response" };
     }
     await sleep(1000);
   }
@@ -831,6 +994,120 @@ type Launched = {
   session: Session;
 };
 
+function buildLaunchSpec(agentName: string, profile: string, g: Agent, intercom: string, task: string): LaunchSpec {
+  const p = profile.toLowerCase();
+  const promptFile = writeAgentBody(p, g.body);
+  const scope = currentTermScope();
+
+  if (g.runner === "agy") {
+    const metaFile = join(agySessionsDir, `${agentName}.json`);
+    const logFile = join(agySessionsDir, `${agentName}.log`);
+    writeAtomicJson(metaFile, {
+      agentName,
+      to: intercom,
+      termScope: scope,
+      systemFile: promptFile,
+      logFile,
+    } satisfies AgyMeta);
+
+    const ro = accessOf(g.tools) === "ro";
+    const baseArgs = [
+      "--model", g.cliModel,
+      ...(ro ? ["--mode", "plan"] : []),
+      "--dangerously-skip-permissions",
+      "--add-dir", process.cwd(),
+      "--log-file", logFile,
+    ];
+    const prompt = `你是通过 spawn-subagent 启动的 agy 子代理（profile: ${profile}，agent: ${agentName}）。
+
+回传协议:
+- 完成后直接在最终回复中输出完整结论，宿主 Stop 钩子会自动将你的最终回复加上 [${agentName}] 前缀经 intercom 回传给主代理，无需手动运行任何回传命令。
+- 子代理不再派生外部子代理。
+- 阻塞或失败时在最终回复中说明原因并停下，保留当前终端供主代理检查。
+
+任务原文:
+---
+${task}
+---`;
+    return {
+      agentName,
+      profileLower: p,
+      runner: "agy",
+      env: {
+        SPAWN_SUBAGENT_META: metaFile,
+        SPAWN_SUBAGENT_BUN: process.execPath,
+        SPAWN_SUBAGENT_BIN: selfPath,
+      },
+      execCmd: () => ["agy", ...baseArgs, "-i", prompt],
+      herdrArgs: baseArgs,
+      prompt,
+      onStarted: (pane) => {
+        clearStaleAgyPane(scope, pane);
+        const m = readAgyMeta(metaFile);
+        if (m) writeAtomicJson(metaFile, { ...m, pane });
+      },
+      makeSession: ({ alive }) => ({
+        observe: () => {
+          const tx = readAgyMeta(metaFile)?.transcriptPath;
+          return tx && existsSync(tx) ? observeAgyHealth(readFileSync(tx, "utf8")) : { status: "none" };
+        },
+        alive,
+        exitError: () => extractAgyLogError(logFile),
+      }),
+    };
+  }
+
+  prepareEnv(g.exclude);
+  const baseArgs = [
+    "--model", g.cliModel, "--thinking", g.thinking, "--tools", g.tools,
+    ...(promptFile ? ["--append-system-prompt", promptFile] : []),
+  ];
+  const prompt = `你是通过 spawn-subagent 启动的 pi 子代理（profile: ${profile}）。
+
+回传协议:
+- 完成或受阻时，用 intercom 工具向主代理 session 发送一条结论消息:
+  intercom({ action: "send", to: "${intercom}", message: "<结论>" })
+- 结论消息第一行必须是 [${agentName}]（你的 agent 名），供主代理对账。
+- 消息格式由下方任务描述，不设固定字段。
+- 阻塞或失败时保留当前 pane 供主代理检查，不要自行关闭。
+
+任务原文:
+---
+${task}
+---`;
+  return {
+    agentName,
+    profileLower: p,
+    runner: "pi",
+    env: { PI_CODING_AGENT_DIR: subHome },
+    execCmd: (sessionId) => [...PI_CMD, "--session-id", sessionId, ...baseArgs, "--", prompt],
+    herdrArgs: baseArgs,
+    prompt,
+    onStarted: (pane) => clearStaleAgyPane(scope, pane),
+    makeSession: ({ sessionId, herdrStartOut, alive }) => {
+      let locate: () => string | null;
+      if (herdrStartOut !== undefined) {
+        // 会话文件：agent_session.value 形如 ~/.pi/agent/sessions/--cwd--/ts.jsonl；
+        // 子代理实际写入 ~/.pi/agent-subagent/sessions/ 同相对段
+        const sf = herdrStartOut?.result?.agent?.agent_session?.value;
+        const m = typeof sf === "string" ? sf.match(/(sessions\/--[^/]+\/[^/]+\.jsonl)/) : null;
+        if (!m) throw new Error("健康门不可用: herdr 未返回可解析的 agent session 路径");
+        const file = join(subHome, m[1]);
+        locate = () => file;
+      } else {
+        locate = sessionLocator(sessionId!);
+      }
+      return {
+        observe: () => {
+          const f = locate();
+          return f && existsSync(f) ? observeHealth(readFileSync(f, "utf8")) : { status: "none" };
+        },
+        alive,
+      };
+    },
+  };
+}
+
 // 阶段一（同步串行）：布局 + 环境 + 启动 + 注入。返回派发信息，不等待模型响应
 function launchAgent({ term, intercom }: Context, profile: string, slug: string, task: string): Launched {
   const resolved = resolveAgent(profile);
@@ -850,27 +1127,14 @@ function launchAgent({ term, intercom }: Context, profile: string, slug: string,
   }
   if (agentName.length > 32) throw new Error(`无法构造 32 字符内的 agent 名（profile='${profile}' slug='${slug}'）`);
 
-  const prompt = `你是通过 spawn-subagent 启动的 pi 子代理（profile: ${profile}）。
-
-回传协议:
-- 完成或受阻时，用 intercom 工具向主代理 session 发送一条结论消息:
-  intercom({ action: "send", to: "${intercom}", message: "<结论>" })
-- 结论消息第一行必须是 [${agentName}]（你的 agent 名），供主代理对账。
-- 消息格式由下方任务描述，不设固定字段。
-- 阻塞或失败时保留当前 pane 供主代理检查，不要自行关闭。
-
-任务原文:
----
-${task}
----`;
-  prepareEnv(g.exclude);
-  const { pane, session } = term.start({ agentName, g, prompt, promptFile: writeAgentBody(p, g.body) });
+  const spec = buildLaunchSpec(agentName, profile, g, intercom, task);
+  const { pane, session } = term.start(spec);
   return { term, profile, pane, agentName, session };
 }
 
-// 失效分类: 404/401/403/认证属配置错误（重试无意义），其余（503/超时等）为瞬时故障（可重试）
+// 失效分类: 404/401/403/认证/额度/不支持模型属配置错误（重试无意义），其余（503/超时等）为瞬时故障（可重试）
 function classifyFailure(reason: string): string {
-  return CONFIG_ERROR.test(reason)
+  return isConfigError(reason)
     ? `config-error: ${reason}`
     : `transient: ${reason}`;
 }
@@ -1000,9 +1264,165 @@ async function batch(manifestPath: string, json: boolean) {
   process.exit(failed === 0 ? 0 : failed === results.length ? 1 : 2);
 }
 
+// ---------- agy 生命周期钩子（SessionStart / Stop）----------
+
+type AgyMeta = {
+  agentName: string;
+  to: string;
+  termScope?: string;
+  pane?: string;
+  systemFile?: string;
+  logFile?: string;
+  rootConversationId?: string;
+  transcriptPath?: string;
+  lastDeliveredKey?: string;
+};
+
+function writeAtomicJson(file: string, data: unknown) {
+  mkdirSync(dirname(file), { recursive: true });
+  const tmp = `${file}.${process.pid}.${randomUUID().slice(0, 6)}.tmp`;
+  writeFileSync(tmp, JSON.stringify(data, null, 2) + "\n");
+  renameSync(tmp, file);
+}
+
+function readAgyMeta(file: string): AgyMeta | null {
+  try {
+    const m = JSON.parse(readFileSync(file, "utf8"));
+    return m && typeof m === "object" ? m : null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveIntercomCli(): string | null {
+  const home = homedir();
+  const xdg = process.env.XDG_DATA_HOME?.trim();
+  const candidates = [
+    join(home, ".pi/agent/npm/node_modules/pi-intercom/cli.ts"),
+    ...(xdg && existsSync(join(xdg, "omp")) ? [join(xdg, "omp/plugins/node_modules/pi-intercom/cli.ts")] : []),
+    join(home, ".omp/plugins/node_modules/pi-intercom/cli.ts"),
+  ];
+  return candidates.find((p) => existsSync(p)) ?? null;
+}
+
+function runAgyHook(kind: string) {
+  let raw = "";
+  try { raw = readFileSync(0, "utf8"); } catch { /* stdin 已关闭 */ }
+  const metaFile = process.env.SPAWN_SUBAGENT_META?.trim();
+  if (!metaFile || !existsSync(metaFile)) {
+    console.log("{}");
+    return;
+  }
+  let input: any = {};
+  try { input = raw.trim() ? JSON.parse(raw) : {}; } catch {
+    console.log("{}");
+    return;
+  }
+  const meta = readAgyMeta(metaFile);
+  if (!meta) {
+    console.log("{}");
+    return;
+  }
+
+  if (kind === "session-start") {
+    // 锁定首个会话为根会话：agy 内部若再派生子代理会继承环境变量，但 conversationId 不同，不能覆盖根会话或重复注入
+    if (!meta.rootConversationId && typeof input.conversationId === "string" && input.conversationId) {
+      meta.rootConversationId = input.conversationId;
+      if (typeof input.transcriptPath === "string") meta.transcriptPath = input.transcriptPath;
+      writeAtomicJson(metaFile, meta);
+      if (meta.systemFile && existsSync(meta.systemFile)) {
+        const sys = readFileSync(meta.systemFile, "utf8").trim();
+        if (sys) {
+          console.log(JSON.stringify({ injectSteps: [{ systemMessage: { systemMessage: sys } }] }));
+          return;
+        }
+      }
+    }
+    console.log("{}");
+    return;
+  }
+
+  if (kind === "stop") {
+    if (
+      !meta.rootConversationId
+      || input.conversationId !== meta.rootConversationId
+      || !input.fullyIdle
+      || input.terminationReason === "USER_CANCELED"
+    ) {
+      console.log("{}");
+      return;
+    }
+    const txCompact = typeof input.transcriptPath === "string" && input.transcriptPath
+      ? input.transcriptPath
+      : meta.transcriptPath;
+    if (!txCompact) {
+      console.log("{}");
+      return;
+    }
+    // transcript.jsonl 会截断长字段，同目录 transcript_full.jsonl 保存完整正文
+    const txFull = txCompact.replace(/transcript\.jsonl$/, "transcript_full.jsonl");
+    const txFile = existsSync(txFull) ? txFull : txCompact;
+    if (!existsSync(txFile)) {
+      console.log("{}");
+      return;
+    }
+
+    let lastUserStep = -1;
+    let finalStep: { idx: number; content: string } | null = null;
+    for (const line of readFileSync(txFile, "utf8").trim().split("\n")) {
+      let ev: any;
+      try { ev = JSON.parse(line); } catch { continue; }
+      const idx = typeof ev?.step_index === "number" ? ev.step_index : -1;
+      if (ev?.type === "USER_INPUT" && idx > lastUserStep) {
+        lastUserStep = idx;
+        finalStep = null;
+      } else if (ev?.type === "PLANNER_RESPONSE" && idx > lastUserStep && typeof ev.content === "string" && ev.content.trim()) {
+        finalStep = { idx, content: ev.content.trim() };
+      }
+    }
+
+    let dedupKey: string;
+    let body: string;
+    if (finalStep) {
+      dedupKey = `${meta.rootConversationId}:step:${finalStep.idx}`;
+      body = input.terminationReason === "ERROR" && input.error
+        ? `${finalStep.content}\n\n[AGY ERROR: ${String(input.error)}]`
+        : finalStep.content;
+    } else if (input.terminationReason && input.terminationReason !== "NO_TOOL_CALL") {
+      dedupKey = `${meta.rootConversationId}:err:${lastUserStep}:${String(input.terminationReason)}`;
+      body = `[STOPPED: ${String(input.terminationReason)}] ${String(input.error || "(no assistant response)")}`;
+    } else {
+      console.log("{}");
+      return;
+    }
+
+    if (meta.lastDeliveredKey === dedupKey) {
+      console.log("{}");
+      return;
+    }
+
+    const cli = resolveIntercomCli();
+    if (cli && meta.to) {
+      try {
+        execFileSync(process.execPath, [
+          cli, "send", "--to", meta.to, "--name", meta.agentName, "--text", `[${meta.agentName}]\n${body}`,
+        ], { stdio: "ignore" });
+        meta.lastDeliveredKey = dedupKey;
+        writeAtomicJson(metaFile, meta);
+      } catch { /* 主会话已退出或 broker 不可达时不阻断 agy 退出 */ }
+    }
+    console.log("{}");
+    return;
+  }
+
+  console.log("{}");
+}
+
 // ---------- main ----------
 const [c0, c1, ...rest] = process.argv.slice(2);
-if (!c0 || c0 === "-h" || c0 === "--help") {
+if (c0 === "_agy-hook") {
+  runAgyHook(c1 ?? "");
+} else if (!c0 || c0 === "-h" || c0 === "--help") {
   usage();
 } else if (c0 === "batch") {
   const args = process.argv.slice(3);

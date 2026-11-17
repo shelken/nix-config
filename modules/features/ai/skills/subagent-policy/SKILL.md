@@ -1,6 +1,6 @@
 ---
 name: subagent-policy
-description: 子代理的派发、审查与规划规范，含 `spawn-subagent` 流程。在 pi 中发起、审查或规划子代理工作时使用。
+description: 子代理的派发、审查与规划规范，含 `spawn-subagent` 流程。在 pi 发起子代理，或在 omp 派发 agy（`reviewer-agy` / `task-agy`）子代理时使用。
 ---
 
 # 子代理
@@ -19,7 +19,7 @@ description: 子代理的派发、审查与规划规范，含 `spawn-subagent` �
 
 ## `spawn-subagent` 环境限制
 
-- `spawn-subagent` 支持 Pi 在三种终端运行，优先级 Herdr.app（`HC_TERMINAL_ID`）> 旧 Herdr（`HERDR_PANE_ID`）> Kitty（`KITTY_WINDOW_ID`）；其他终端会停止并报告，不做降级。Oh My Pi（omp）使用原生子代理控制
+- `spawn-subagent` 支持在三种终端运行，优先级 Herdr.app（`HC_TERMINAL_ID`）> 旧 Herdr（`HERDR_PANE_ID`）> Kitty（`KITTY_WINDOW_ID`）；其他终端会停止并报告，不做降级。Pi 全部子代理走 `spawn-subagent`；Oh My Pi（omp）常规子代理使用原生子代理控制，派发 `agy`（`reviewer-agy` / `task-agy`）走 `spawn-subagent`
 - Herdr.app 内可能残留已失效的旧 `HERDR_PANE_ID`，以 `HC_TERMINAL_ID` 为准
 - Herdr.app 子代理默认后台运行，挂在当前终端下，用户在 Agents 列表查看；脚本不分屏、不聚焦，展示方式由用户决定
 - ID 含义随后端而定：Herdr.app 为 hc 终端地址（如 `t7`），旧 Herdr 为 pane ID，Kitty 为窗口 ID
