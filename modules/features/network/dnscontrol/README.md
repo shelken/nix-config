@@ -44,5 +44,5 @@ token 是专用的，权限只给 Zone:DNS:Edit 与 Zone:Read，不复用 Caddy 
 
 ## 实现
 
-- `_dnscontrol.nix`：用 mise 安装 dnscontrol `5.2.0`（nixpkgs 版本是 4.x），用 sops-nix 把 token 放到固定路径
+- `default.nix`：用 mise 安装 dnscontrol `5.2.0`（nixpkgs 版本是 4.x），用 sops-nix 把 token 放到固定路径
 - `just/dns.just`：编辑、preview、push 三个配方，`preview` 与 `push` 共用一个私有配方，读 token 后用 `sops exec-file` 解密配置并调用 `mise exec -- dnscontrol`

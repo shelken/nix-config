@@ -5,7 +5,7 @@ set working-directory := '..'
 
 config := 'modules/features/network/dnscontrol/dnsconfig.sops.js'
 creds := 'modules/features/network/dnscontrol/creds.json'
-# 文件位置由 modules/features/network/dnscontrol/_dnscontrol.nix 的 sops.secrets 决定
+# 文件位置由 modules/features/network/dnscontrol/default.nix 的 sops.secrets 决定
 token_file := home_directory() / '.config/dnscontrol/cloudflare-api-token'
 
 # sops 在文件没改动时退出码为 200，不算失败
