@@ -12,6 +12,8 @@
     };
     # nixos-rebuild、nixos-install、nixos-enter、nixos-generate-config 等
     system.disableInstallerTools = true;
+    # 重装手册的首启验收用它，只是一个小脚本
+    system.tools.nixos-version.enable = true;
     documentation.enable = false;
   };
 
