@@ -90,7 +90,7 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 - `mask.jq`：从未展开的声明里找出写了 `{{ sops.… }}` 的位置，生成输出打码规则
 - `render.jq`：把 `{{ sops.<路径> }}` 展开成 sops 解密出的值，缺值或格式不对时报错
 - 升级 nuci：改 `flake.nix` 里 `openwrt-nix` 的 tag，再 `nix flake lock --update-input openwrt-nix`
-- `hosts/router-mine/` 不是 Nix 系统，`lib/default.nix` 的 `calcUniformSchedule` 把它排除在备份排程之外
+- 路由器不是 Nix 系统，`lib/default.nix` 的 `calcUniformSchedule` 按机器表的 `type` 把它排除在备份排程之外
 
 ## 设计决策
 

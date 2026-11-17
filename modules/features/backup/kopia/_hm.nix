@@ -15,7 +15,7 @@ in
 
   # 默认每天两次快照，时间按 hostname 固定分布，策略默认值见 ./_policy-defaults.nix。
   # 实现加入 workstation 角色即开启；
-  # app/backupPaths/ignores 接口声明在 modules/features/backup/_options.nix（进 core，全平台共享），
+  # app/backupPaths/ignores 接口声明在 modules/features/backup/backup-options.nix（进 core，全平台共享），
   # 本文件只声明 kopia 后端自身的选项
   options.shelken.backup = {
     calendarInterval = lib.mkOption {
@@ -79,7 +79,7 @@ in
       default = policyDefaults;
       description = ''
         本机备份策略，固定应用于 <user>@<host> 目标，默认值见 ./_policy-defaults.nix。
-        用户级额外忽略模式见 modules/features/backup/_options.nix 的 ignores。
+        用户级额外忽略模式见 modules/features/backup/backup-options.nix 的 ignores。
       '';
       example = {
         retention = {

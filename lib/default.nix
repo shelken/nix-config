@@ -73,13 +73,13 @@ rec {
       );
 
   # 计算hostname在指定时间段内的均匀分布时间
-  # 将读取hosts目录下所有一级目录名来排序定位
+  # 按 hosts/default.nix 机器表里的 Nix 主机排序定位
   # 分钟数使用 hostname 长度
   # 参数：
   #   hostname: 当前hostname
   #   startHour: 开始小时（包含）
   #   endHour: 结束小时（不包含）
-  #   hostnames: 可选的主机名列表，用于测试（默认读取hosts目录）
+  #   hostnames: 可选的主机名列表，用于测试（默认取机器表）
   # 返回：{ hour, minute } 对象
   calcUniformSchedule =
     {
@@ -89,18 +89,13 @@ rec {
       hostnames ? null,
     }:
     let
-      # 不是 Nix 系统的机器目录（OpenWrt 路由器）不参与排程，否则新增它会挪动其他主机的时段
-      nonNixHostDirs = [ "router-mine" ];
-      # 如果提供了hostnames，使用它；否则读取hosts目录中的目录名
+      # 不读 hosts/ 目录：k8s/、vps/ 这类分组目录不是主机，增删目录会挪动所有主机的时段。
+      # OpenWrt 路由器不跑 Nix，不参与排程
       allHostnames =
         if hostnames != null then
           hostnames
         else
-          builtins.attrNames (
-            lib.attrsets.filterAttrs (name: type: type == "directory" && !lib.elem name nonNixHostDirs) (
-              builtins.readDir ../hosts
-            )
-          );
+          builtins.attrNames (lib.filterAttrs (_: h: h.type != "openwrt") (import ../hosts));
       # 按hash值排序获得稳定分布
       hostnameHashes = map (h: {
         name = h;
