@@ -19,7 +19,8 @@
     }:
     let
       cfg = config.shelken.dev.tools;
-      nixPackages = lib.concatMap (tool: lib.optional (tool.package != null) pkgs.${tool.package}) (
+      resolve = p: if lib.isFunction p then p pkgs else pkgs.${p};
+      nixPackages = lib.concatMap (tool: lib.optional (tool.package != null) (resolve tool.package)) (
         builtins.attrValues cfg
       );
     in
@@ -33,9 +34,12 @@
             {
               options = {
                 package = lib.mkOption {
-                  type = lib.types.nullOr lib.types.str;
+                  type = lib.types.nullOr (lib.types.either lib.types.str (lib.types.functionTo lib.types.package));
                   default = if config.mise != null then null else name;
-                  description = "nixpkgs 属性名，默认取登记名；与 mise 互斥";
+                  description = ''
+                    nixpkgs 属性名，默认取登记名；与 mise 互斥。
+                    也可以是 `pkgs -> 包` 的函数：宿主传 pkgs、沙箱传 linuxPkgs，用于仓库自建的包。
+                  '';
                 };
 
                 mise = lib.mkOption {

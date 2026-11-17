@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # agent-gh.sh 的表驱动测试：假 gh 只打印收到的 GH_TOKEN 与参数，不联网。
-# 用法: bash modules/features/ai/agent-gh/test.sh
+# 用法: bash modules/features/dev/gh/test.sh
 set -euo pipefail
 ((BASH_VERSINFO[0] >= 4)) || { echo "需要 bash 4 以上（agent-gh.sh 用了 \${var,,}）" >&2; exit 2; }
 
@@ -77,6 +77,7 @@ check "链接优先于 -R" "$(agent pr comment https://github.com/shelken/x/pull
 check "当前目录命中" "$(agent issue create -t a)" $T FAKE_VIEW_OWNER=shelken -- issue create -t a
 check "当前目录不命中" "$(plain issue create -t a)" $T FAKE_VIEW_OWNER=other -- issue create -t a
 check "当前目录解析失败时原样交给 gh" "$(plain issue create -t a)" $T FAKE_VIEW_FAIL=1 -- issue create -t a
+check "有 token 但 owner 为空：原样放行" "$(plain issue create -t a)" $T FAKE_VIEW_OWNER= -- issue create -t a
 
 # ── 不在三类内：即使 owner 是自己也不换，且不额外调用 gh
 check "pr create 不换" "$(plain pr create -R shelken/x)" $T $V -- pr create -R shelken/x
@@ -96,18 +97,19 @@ else
   pass=$((pass + 1))
 fi
 
-# ── token 缺失或为空
-missing=$(printf 'agent-gh: 缺少 AGENT_GITHUB_TOKEN。\n对 shelken 的仓库执行以下操作必须使用 agent 专属 token:\n  gh issue create\n  gh issue new\n  gh issue comment\n  gh pr comment\n本次调用未执行。')
-check "token 缺失时失败" "$missing" $V -- issue create -R shelken/x
-check "token 为空时失败" "$missing" AGENT_GITHUB_TOKEN= $V -- pr comment 1 -R shelken/x
+# ── token 缺失或为空：不是 agent 上下文（用户自己的终端），原样交给真 gh
+check "token 缺失时放行" "$(plain issue create -R shelken/x)" $V -- issue create -R shelken/x
+check "token 为空时放行" "$(plain pr comment 1 -R shelken/x)" AGENT_GITHUB_TOKEN= $V -- pr comment 1 -R shelken/x
 check "token 缺失但仓库不是自己：原样放行" "$(plain issue create -R other/x)" $V -- issue create -R other/x
 check "token 缺失但命令不在三类内：原样放行" "$(plain pr create -R shelken/x)" $V -- pr create -R shelken/x
 
-# 失败时不得调用真实 gh（既不创建也不评论）
-if [[ $(env -i PATH="$work/bin:/usr/bin:/bin" FAKE_LOG="$work/log" AGENT_GH_OWNER=shelken $V \
-  "$BASH" -euo pipefail "$here/agent-gh.sh" issue create -R shelken/x 2>/dev/null) == *TOKEN=* ]]; then
+# 没有 token 时连 owner 解析都不做
+: >"$work/log"
+env -i PATH="$work/bin:/usr/bin:/bin" FAKE_LOG="$work/log" AGENT_GH_OWNER=shelken FAKE_VIEW_OWNER=shelken \
+  "$BASH" -euo pipefail "$here/agent-gh.sh" issue create -t a >/dev/null
+if [[ -s $work/log ]]; then
   fail=$((fail + 1))
-  echo "FAIL token 缺失时不得调用 gh"
+  echo "FAIL 没有 token 时不应调用 gh repo view"
 else
   pass=$((pass + 1))
 fi

@@ -1,13 +1,18 @@
-# GitHub CLI：gh、git 凭据 helper 与 gh-stack 扩展
+# GitHub CLI：gh（agent-gh 包装，见 README）、git 凭据 helper 与 gh-stack 扩展
 { config, ... }:
 {
   flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.gh ];
 
   flake.modules.homeManager.gh =
-    { pkgs, ... }:
+    { pkgs, myvars, ... }:
     {
-      # gh 本体由共享工具登记表提供（shelken.dev.tools，ADR 0003）；
-      # 凭据 helper 配置保留在此，与 gh 二进制的来源解耦
+      # 登记表里的 gh 就是包装：宿主与沙箱同一份声明。没有 AGENT_GITHUB_TOKEN 时等同真 gh
+      shelken.dev.tools.gh.package =
+        pkgs:
+        import ./_package.nix {
+          inherit pkgs;
+          owner = myvars.username;
+        };
       home.packages = with pkgs; [
         gh-markdown-preview
         gh-stack

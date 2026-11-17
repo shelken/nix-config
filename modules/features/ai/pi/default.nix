@@ -5,7 +5,6 @@
       config,
       lib,
       mylib,
-      myvars,
       ...
     }:
     let
@@ -72,7 +71,7 @@
         # 关掉 pi-emphasis 自带的 ~1500 token 英文规则，改用 _agents.md 里的简版
         PI_EMPHASIS_GUIDANCE = "0";
       };
-      home.shellAliases.pi = import ../agent-gh/_launch.nix { inherit pkgs myvars; } "pi";
+      home.shellAliases.pi = "sec-run pi";
 
       shelken.dev.sandbox.writableRoots = [ ".pi/agent" ];
 

@@ -1,16 +1,17 @@
 # gh 包装：三类写操作作用于 AGENT_GH_OWNER 名下的仓库时，改用 agent 专属 token。
-# 其余调用原样交给真实 gh（PATH 上的下一个 gh，由 _package.nix 保证）。
+# 有 AGENT_GITHUB_TOKEN 即 agent 上下文（宿主由 sec-run 注入、沙箱由 msb 注入）；
+# 没有就是用户自己，其余调用也一律原样交给真实 gh（由 _package.nix 保证指向真 gh）。
 # 输入：AGENT_GH_OWNER（owner 名，由 _package.nix 写入）、AGENT_GITHUB_TOKEN（agent 的 token）
 : "${AGENT_GH_OWNER:?}"
 
-# 规则表：命中清单与报错清单共用这一份
+# 规则表
 rules=("issue create" "issue new" "issue comment" "pr comment")
 
 hit=0
 for rule in "${rules[@]}"; do
   [[ "${1-} ${2-}" == "$rule" ]] && hit=1
 done
-((hit)) || exec gh "$@"
+((hit)) && [[ -n ${AGENT_GITHUB_TOKEN-} ]] || exec gh "$@"
 
 # [HOST/]OWNER/REPO -> OWNER；不含斜杠时无 owner
 owner_of_repo() {
@@ -54,15 +55,6 @@ resolve_owner() {
 owner=$(resolve_owner "$@")
 
 if [[ -n $owner && ${owner,,} == "${AGENT_GH_OWNER,,}" ]]; then
-  if [[ -z ${AGENT_GITHUB_TOKEN-} ]]; then
-    {
-      echo "agent-gh: 缺少 AGENT_GITHUB_TOKEN。"
-      echo "对 $AGENT_GH_OWNER 的仓库执行以下操作必须使用 agent 专属 token:"
-      printf '  gh %s\n' "${rules[@]}"
-      echo "本次调用未执行。"
-    } >&2
-    exit 1
-  fi
   GH_TOKEN=$AGENT_GITHUB_TOKEN exec gh "$@"
 fi
 exec gh "$@"
