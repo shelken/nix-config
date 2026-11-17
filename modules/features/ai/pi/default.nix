@@ -5,7 +5,6 @@
       config,
       lib,
       mylib,
-      myvars,
       ...
     }:
     let
@@ -70,7 +69,8 @@
       shelken.dev.tools.pi.env = {
         ANTIGRAVITY_NO_EXTRA_TOOLS = "1";
       };
-      home.shellAliases.pi = import ../agent-gh/_launch.nix { inherit pkgs myvars; } "pi";
+      # 凭据与 agent 身份统一由 agent-run 注入（见 agent-gh/README.md）
+      home.shellAliases.pi = "agent-run pi";
 
       shelken.dev.sandbox.writableRoots = [ ".pi/agent" ];
 

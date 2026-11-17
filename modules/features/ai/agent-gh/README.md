@@ -17,7 +17,7 @@
 | 位置 | 作法 |
 | --- | --- |
 | 密钥 | [secrets.nix](../../secrets/secrets.nix) 的 `secretEnvMap` 把 sops 的 `github/agent-token` 导出成 `AGENT_GITHUB_TOKEN`，经 `sec-run` 进入 omp、pi 的环境 |
-| 宿主 | [_launch.nix](./_launch.nix) 生成 omp、pi 的启动别名：在 `sec-run` 前把包装目录放到 `PATH` 最前。不放全局 `PATH`，否则用户自己用 `gh` 的身份也会变 |
+| 宿主 | [agent-run](../agent-run/default.nix) 是启动 harness 的唯一入口：在 `sec-run` 前把包装目录放到 `PATH` 最前；omp、pi 的别名、herdr-app 菜单、spawn-subagent 都调用它。不放全局 `PATH`，否则用户自己用 `gh` 的身份也会变 |
 | 沙箱 | [sb.yaml](../sandbox/sb.yaml) 声明 secret `AGENT_GITHUB_TOKEN`；[_guest.nix](../sandbox/_guest.nix) 用 `linuxPkgs` 构建同一个包装，放到 guest PATH 最前面。整台 VM 都是 agent 环境，不区分身份 |
 | 构建 | [_package.nix](./_package.nix) 用 `writeShellApplication`，`runtimeInputs` 让脚本里的 `gh` 解析到真实 `gh` |
 

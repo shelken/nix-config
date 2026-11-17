@@ -21,6 +21,8 @@
     }:
     {
       xdg.configFile."herdr-app/settings.json" = mylib.mkConfigFile config ./herdr-app/settings.json;
+      # agent 菜单不展开 shell 别名，pi 必须经 agent-run 才带上凭据与 agent 身份
+      xdg.configFile."herdr-app/programs.json" = mylib.mkConfigFile config ./herdr-app/programs.json;
 
       # App 的 worktree 根目录写死在内置模块；目录链接使它与 CLI 使用同一个根。
       home.file.".herdr/worktrees".source =

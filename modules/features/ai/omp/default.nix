@@ -4,7 +4,6 @@
       config,
       lib,
       mylib,
-      myvars,
       pkgs,
       ...
     }:
@@ -48,10 +47,8 @@
       config = {
         # mnemopi 的 gemini embedding 维度
         shelken.dev.tools.omp.env.MNEMOPI_EMBEDDING_DIM = "3072";
-        # 别名：支持与 pi 并存，经 sec-run 启动；PATH 前置 agent-gh（见 agent-gh/README.md）
-        home.shellAliases = {
-          omp = import ../agent-gh/_launch.nix { inherit pkgs myvars; } "omp";
-        };
+        # 别名：支持与 pi 并存；凭据与 agent 身份统一由 agent-run 注入（见 agent-gh/README.md）
+        home.shellAliases.omp = "agent-run omp";
 
         shelken.dev.sandbox.writableRoots = [ ".omp/agent" ];
 

@@ -17,9 +17,9 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const agentsDir = join(homedir(), ".pi", "agent", "agents");
 const config = JSON.parse(readFileSync(join(scriptDir, "subagent-config.json"), "utf8"));
 const subHome = join(homedir(), ".pi", "agent-subagent");
-// hc 与 kitty 直接 exec pi，不经 shell，用不上主窗口 pi 别名里的 sec-run：hc run 继承的守护进程环境、
-// kitty --copy-env 复制的窗口环境里都没有 provider 凭据。每次派发现场解析，不依赖调用者可能过期的环境
-const PI_CMD = ["sec-run", "pi"];
+// hc 与 kitty 直接 exec，不经 shell，展开不了 pi 别名。agent-run 现场注入凭据与 agent 身份，
+// 不依赖调用者环境里是否碰巧带着 agent-gh 的 PATH
+const PI_CMD = ["agent-run", "pi"];
 
 type Agent = {
   name: string; model: string; thinking: string; tools: string;
