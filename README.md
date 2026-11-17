@@ -62,7 +62,7 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # 2. install nix
 ## macOS 使用 Determinate Nix；NixOS 使用系统 NixOS 配置管理。
-## note：在此说明，linux目前使用nixos源，mac使用determinate的管理。此项配置分别在 modules/features/nix/nix-settings.nix 与 modules/features/darwin/nix/ 中有体现
+## note：在此说明，linux目前使用nixos源，mac使用determinate的管理。此项配置分别在 modules/features/nix/nix-settings.nix 中有体现
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix \
   | sh -s -- install --determinate
 

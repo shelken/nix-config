@@ -1,9 +1,9 @@
 # HM 基础：liveEdit 选项、username、stateVersion、home-manager 自管理
 { config, ... }:
 {
-  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.home-base ];
+  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.home-manager ];
 
-  flake.modules.homeManager.home-base =
+  flake.modules.homeManager.home-manager =
     {
       myvars,
       mylib,

@@ -1,5 +1,5 @@
 # 启动：systemd-boot 保留代数与控制台分辨率
-# 所有 NixOS 主机都需要 → nixos.core；电源管理是笔记本/桌面的事，见 features/gui/power.nix
+# 所有 NixOS 主机都需要 → nixos.core；电源管理是笔记本/桌面的事，见 power.nix
 { config, ... }:
 {
   flake.modules.nixos.core.imports = [ config.flake.modules.nixos.boot ];

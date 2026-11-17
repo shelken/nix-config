@@ -3,7 +3,7 @@
 #
 #  lima-test：在 Lima 的 Ubuntu 虚拟机上演练「现有 Linux → NixOS」接管
 #
-#  磁盘：disko（modules/features/nixos/disko.nix），vz/qemu 的 virtio 盘是 /dev/vda
+#  磁盘：disko（modules/features/system/disko.nix），vz/qemu 的 virtio 盘是 /dev/vda
 #  硬件：nixos-anywhere 安装时生成 ./facter.json（nixos-facter），文件不存在时用兜底模块
 #  安装：见 hosts/vm/lima-test/README.md
 #

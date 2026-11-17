@@ -1,11 +1,11 @@
-# 用户账号：authorized_keys、普通用户与组、root 的部署密钥
-# nixos 与 darwin 两侧的账号都写在 core：登录能力是所有主机的最低要求（HM 侧随同名挂接进入）
+# 用户账号：普通用户与组、家目录、authorized_keys、root 的部署密钥
+# 登录能力是所有主机的最低要求 → core
 { config, ... }:
 {
-  flake.modules.nixos.core.imports = [ config.flake.modules.nixos.user-account ];
-  flake.modules.darwin.core.imports = [ config.flake.modules.darwin.user-account ];
+  flake.modules.nixos.core.imports = [ config.flake.modules.nixos.account ];
+  flake.modules.darwin.core.imports = [ config.flake.modules.darwin.account ];
 
-  flake.modules.nixos.user-account =
+  flake.modules.nixos.account =
     {
       config,
       lib,
@@ -58,9 +58,19 @@
 
   # darwin 侧同样的 authorizedKeys 写入 /etc/ssh/nix_authorized_keys.d/<user>
   # （nix-darwin 的 users.users.<user>.openssh 行为）
-  flake.modules.darwin.user-account =
+  flake.modules.darwin.account =
     { myvars, ... }:
     {
-      users.users.${myvars.username}.openssh.authorizedKeys.keys = myvars.mainSshAuthorizedKeys;
+      users.users.${myvars.username} = {
+        home = "/Users/${myvars.username}";
+        openssh.authorizedKeys.keys = myvars.mainSshAuthorizedKeys;
+        # 登录 shell 保持 zsh：nu 不兼容 POSIX，ssh 远程命令、VS Code Remote 等都假设登录 shell 是 POSIX
+      };
+    };
+
+  flake.modules.homeManager.account =
+    { osConfig, myvars, ... }:
+    {
+      home.homeDirectory = osConfig.users.users.${myvars.username}.home;
     };
 }

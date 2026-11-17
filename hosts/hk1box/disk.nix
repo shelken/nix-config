@@ -3,7 +3,7 @@
 #
 #  eMMC 分区（nixos-anywhere 装机时由 disko 执行）
 #
-#  不用 modules/features/nixos/disko.nix 的现成布局：那里都是 GPT。晶晨的 bootloader
+#  不用 modules/features/system/disko.nix 的现成布局：那里都是 GPT。晶晨的 bootloader
 #  从 eMMC 的 LBA 1（第 512 字节）开始，GPT 头恰好也写在 LBA 1，一写就把厂商 u-boot 覆盖掉；
 #  MBR 只占 LBA 0（disko 抹盘时清零的前 440 字节也在这里），所以只能用 MBR，
 #  disko 里 MBR 只有旧式 table 类型（求值时会打印一条 legacy 警告，属预期）。

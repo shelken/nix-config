@@ -2,22 +2,10 @@
   myvars,
   ...
 }:
-###################################################################################
-#
-#  macOS's System configuration
-#
-#  All the configuration options are documented here:
-#    https://daiderd.com/nix-darwin/manual/index.html#sec-options
-#  Incomplete list of macOS `defaults` commands :
-#    https://github.com/yannbertrand/macos-defaults
-#
-#
-# NOTE: Some options are not supported by nix-darwin directly, manually set them:
-#   1. To avoid conflicts with neovim, disable ctrl + up/down/left/right to switch spaces in:
-#     [System Preferences] -> [Keyboard] -> [Keyboard Shortcuts] -> [Mission Control]
-#   2. Disable use Caps Lock as 中/英 switch in:
-#     [System Preferences] -> [Keyboard] -> [Input Sources] -> [Edit] -> [Use 中/英 key to switch ] -> [Disable]
-###################################################################################
+# 选项见 https://daiderd.com/nix-darwin/manual/index.html#sec-options ，defaults 清单见 https://github.com/yannbertrand/macos-defaults
+# nix-darwin 管不到、要手动关的两项：
+#   1. 系统设置 → 键盘 → 快捷键 → 调度中心：关掉 ctrl + 方向键切换桌面，避免和 neovim 冲突
+#   2. 系统设置 → 键盘 → 输入法 → 编辑：关掉「用中/英键切换」
 {
   # Add ability to used TouchID for sudo authentication
   # https://github.com/LnL7/nix-darwin/blob/991bb2f6d46fc2ff7990913c173afdb0318314cb/modules/security/pam.nix

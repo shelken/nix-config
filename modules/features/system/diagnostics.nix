@@ -2,9 +2,9 @@
 # 开发机上排障用，体积与攻击面都不小 → nixos.tui；服务器按需自己装
 { config, ... }:
 {
-  flake.modules.nixos.tui.imports = [ config.flake.modules.nixos.system-tools ];
+  flake.modules.nixos.tui.imports = [ config.flake.modules.nixos.diagnostics ];
 
-  flake.modules.nixos.system-tools =
+  flake.modules.nixos.diagnostics =
     { lib, pkgs, ... }:
     {
       # mkOrder：与迁移前一致——基础诊断工具先于桌面机的 qemu/fhs/桌面包，

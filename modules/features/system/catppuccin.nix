@@ -1,9 +1,9 @@
 # catppuccin：主题基座
 { config, ... }:
 {
-  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.catppuccin-theme ];
+  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.catppuccin ];
 
-  flake.modules.homeManager.catppuccin-theme =
+  flake.modules.homeManager.catppuccin =
     {
       inputs,
       myvars,

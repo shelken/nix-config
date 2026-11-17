@@ -57,7 +57,7 @@
     {
       # mkBefore：与迁移前的顺序一致——基础包先于 darwin/nixos 其余模块贡献的包，
       # system-path 开 ignoreCollisions，同路径冲突时排前的包胜出
-      # NixOS 只留基线：网络诊断与 trace 工具在 features/nixos/system-tools.nix（tui）
+      # NixOS 只留基线：网络诊断与 trace 工具在 diagnostics.nix（tui）
       environment.systemPackages = lib.mkBefore (
         with pkgs;
         [

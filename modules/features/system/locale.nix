@@ -1,12 +1,15 @@
-# 时区与区域设置：北京时间、英文界面、中文区域格式
-# 所有 NixOS 主机都需要 → nixos.core
+# 时区、区域与对时：北京时间、英文界面、中文区域格式、国内 NTP
+# 所有 NixOS 主机的默认值 → nixos.core；位于国外的主机在自己的配置里覆盖
 { config, ... }:
 {
   flake.modules.nixos.core.imports = [ config.flake.modules.nixos.locale ];
 
   flake.modules.nixos.locale = {
-    # Set your time zone.
     time.timeZone = "Asia/Shanghai";
+    networking.timeServers = [
+      "ntp.aliyun.com"
+      "ntp.tencent.com"
+    ];
 
     # Select internationalisation properties.
     i18n.defaultLocale = "en_US.UTF-8";
