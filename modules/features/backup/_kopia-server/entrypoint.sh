@@ -14,6 +14,9 @@ CURRENT_HOST=$(hostname)
 # 却没有真正改名（约 0.3%），索引会引用一个不存在的块，之后整个仓库无法加载清单；并发 MOVE 还会因
 # 数据库锁返回 500。openlist 对 PUT 是原子的（上传期间读者看不到，覆盖时旧版本一直可见，中断不留残文件），
 # 详见 shelken/home-ops#1763
+#
+# 缓存只在超过上限时按 LRU 清理，维护压缩换下的旧 q blob 会一直堆到上限为止：仓库全部 q blob
+# 约 50MB，5G 上限时 sakamoto 的元数据缓存长到 5.2G。上限只留工作集的十倍余量
 if [ -n "${KOPIA_WEBDAV_URL:-}" ]; then
     (
         umask 077
@@ -29,9 +32,10 @@ if [ -n "${KOPIA_WEBDAV_URL:-}" ]; then
     }
   },
   "caching": {
-    "cacheDirectory": "/app/cache",
-    "maxCacheSize": 5242880000,
-    "maxMetadataCacheSize": 5242880000,
+    "maxCacheSize": 524288000,
+    "contentCacheSizeLimitBytes": 1073741824,
+    "maxMetadataCacheSize": 524288000,
+    "metadataCacheSizeLimitBytes": 1073741824,
     "maxListCacheDuration": 30
   }
 }
