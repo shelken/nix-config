@@ -22,5 +22,6 @@ ADR 0004 规定一个功能一处，但 #125 迁移时不少旧模块整块搬�
 
 ## 后果
 
+- 领域清单与「不按平台拆文件」由 pre-commit 钩子 `feature-domains`、`feature-platform-split` 检查，新增领域要同时改本 ADR 与钩子
 - 移动或合并文件不改变求值结果；整理时以全部主机 toplevel 的 drvPath 不变作为验证标准，拆分工具集若改变了安装范围要逐项列出
 - `docs/user-guide/02-features.md` 中「功能较复杂时可组织为目录」改为本 ADR 的资源规则；`docs/agents/software-config.md` 的样本改为单文件功能

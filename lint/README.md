@@ -7,6 +7,8 @@
 
 pre-commit 的 `ast-grep` 钩子扫描提交的文件，`ast-grep-test` 钩子在规则或样例变化时跑样例，定义见 `modules/flake/dev.nix`
 
+只看路径、不看内容的规则不放这里：ast-grep 的样例只有代码片段，测不了路径。这类规则用 pre-commit 的 `language = "fail"` 钩子写在 `modules/flake/dev.nix`，现有 `feature-domains`、`feature-platform-split`（ADR 0012）
+
 ## 新增规则
 
 1. 用 `--debug-query=cst` 查节点类型
