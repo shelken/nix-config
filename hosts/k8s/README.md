@@ -36,7 +36,7 @@
 
 1. **drain**：`kubectl drain <节点> --ignore-daemonsets --delete-emptydir-data`。控制面重装期间集群没有 API，worker 上已有的 Pod 继续运行，但不能调度、不能变更，开始前确认 Flux 没有进行中的变更
 2. **回滚点**，两条路二选一：
-   - Lima：节点停机后，在宿主上用 `cp -c`（APFS 克隆，瞬间完成、几乎不占空间）克隆实例目录里的 `diffdisk`、`datadisk` 与 `lima.yaml`；`sakamoto-k8s` 的 Longhorn 数据盘（`~/.lima/_disks/longhorn/datadisk`）同样克隆
+   - Lima：先在宿主上 `touch ~/.lima/<节点>/no-autostart`（自启动 agent 见到它就不启动，否则 deploy 或任意卷挂载都可能把停着的虚拟机拉起来），再停机；节点停机后，在宿主上用 `cp -c`（APFS 克隆，瞬间完成、几乎不占空间）克隆实例目录里的 `diffdisk`、`datadisk` 与 `lima.yaml`；`sakamoto-k8s` 的 Longhorn 数据盘（`~/.lima/_disks/longhorn/datadisk`）同样克隆
    - PVE：先 `qm shutdown <vmid>`，关机状态下 `qm snapshot <vmid> <名字>`，再 `qm start`。运行中快照会经 guest agent 冻结文件系统，Longhorn 卷的副本在同一台机器的根分区上，冻结顺序不对就互相等待，整机写入卡死
 3. **准备随装目录**：按上表建目录，目录结构即目标路径：
    ```bash
@@ -62,6 +62,7 @@
 6. **验证**：`nixos-version`、`systemctl is-system-running`、`ip -br a` 里 `eth0`/`eth1`/VLAN 子接口 `eth1.50` 都在且 `eth1` 拿到保留地址、`systemctl status k3s`、`kubectl get node`
 7. **首次 `just deploy <节点>`**，不改任何配置：nixos-anywhere 装的那一代没有 deploy-rs 的激活器，不先部署一次，之后配置变坏时无法自动回滚
 8. **uncordon**：`kubectl uncordon <节点>`，核对 Longhorn 副本重建完成
+9. **删维护标记**（仅 Lima 节点）：`rm ~/.lima/<节点>/no-autostart`，恢复自启动
 
 ### 控制面的额外要点
 
@@ -77,7 +78,7 @@
 ```bash
 just deploy <宿主>                              # 宿主的 Home Manager 换上新的 lima.yaml；agent 不会动运行中的虚拟机
 ssh <宿主> 'limactl stop <节点>'                 # 不强停；失败再 --force，并 limactl disk unlock longhorn
-ssh <宿主> 'limactl start --tty=false <节点>'    # 或等宿主的自启动 agent；配置在下次启动时生效
+ssh <宿主> 'limactl start --tty=false <节点>'    # 新配置在这次启动时生效；agent 只在登录、deploy 重载或（有外接盘时）挂载时才会启动
 ```
 
 实例名与节点名相同。`images` 只在新建实例时用，已装好的实例不受影响。`lima.yaml` 只读：`limactl edit` 之类会改配置的命令会被拒，改配置只改 Nix

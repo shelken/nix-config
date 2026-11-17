@@ -27,6 +27,13 @@
             printf '%s lima-host: %s\n' "$(date '+%F %T')" "$*"
           }
 
+          # 维护标记：重装、离线克隆时要保持停机，deploy 会重新加载 agent、StartOnMount 也会随时触发，
+          # 只靠 bootout 挡不住
+          if [ -e "$HOME/.lima/${node}/no-autostart" ]; then
+            log '有维护标记 ~/.lima/${node}/no-autostart，跳过启动 ${node}'
+            exit 0
+          fi
+
           ${lib.optionalString (externalDisk != null) ''
             # 盘没挂时 macOS 不保留挂载点；残留的空目录与 /Volumes 同属一个设备，所以比设备号
             mounted() {

@@ -5,7 +5,7 @@
 # 配置文件一律写成 volumes 而不是 configs:：Compose 的服务 hash 不含 configs 的路径与内容，
 # 改了配置 up 不会重建容器；volumes 的源路径在 hash 里，store 路径随文件内容变，只有用到它的服务会重建
 #
-# 容器一律 restart: "no"（kopia 的重试上限除外）：开机后由 sakamoto-compose 的 agent 在外接盘就绪时拉起，
+# 容器一律 restart: "no"：开机后由 sakamoto-compose 的 agent 在外接盘就绪时拉起，
 # 不能让 Docker 在盘没挂上时自己把容器带起来
 #
 # 项目名固定：命名卷带项目名前缀（homelab-compose_kopia_cache），

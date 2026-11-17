@@ -8,7 +8,7 @@
 # 1. compose.yaml 与 configs/：服务声明与静态配置；每个文件单独进 Nix store，容器挂 store 路径
 # 2. sops 模板：env 文件（口令、数据目录，以及上面各文件的 store 路径），激活时解密渲染，明文不进 store
 # 3. launchd agent：登录后与外接盘挂载时先检查数据目录，通过才拉起 OrbStack 与容器，之后每 15 分钟对账一次；
-#    容器一律 restart: "no"（kopia 除外），OrbStack 与容器都只由这个 agent 启动，外接盘没挂上时什么都不起
+#    容器一律 restart: "no"，OrbStack 与容器都只由这个 agent 启动，外接盘没挂上时什么都不起
 #
 # 切换、验收与回退步骤见同目录 README.md
 {
