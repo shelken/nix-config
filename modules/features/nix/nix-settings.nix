@@ -1,5 +1,5 @@
-# Nix 全局设置：flakes、substituters、trusted-users、GC 与 store 优化
-# Darwin 上的 /etc/nix/nix.conf 由 Determinate 接管，见 features/darwin/nix.nix
+# Nix 全局设置：flakes、substituters、trusted-users 与 store 优化；GC 见 gc.nix
+# Darwin 上的 /etc/nix/nix.conf 由 Determinate 接管，见 features/darwin/nix/
 { config, lib, ... }:
 {
   flake.modules.nixos.core.imports = [ config.flake.modules.nixos.nix-settings ];
@@ -11,13 +11,6 @@
 
       # to install chrome, you need to enable unfree packages
       nixpkgs.config.allowUnfree = lib.mkForce true;
-
-      # do garbage collection weekly to keep disk usage low
-      nix.gc = {
-        automatic = lib.mkDefault true;
-        dates = lib.mkDefault "weekly";
-        options = lib.mkDefault "--delete-older-than 7d";
-      };
 
       # Manual optimise storage: nix-store --optimise
       # https://nixos.org/manual/nix/stable/command-ref/conf-file.html#conf-auto-optimise-store

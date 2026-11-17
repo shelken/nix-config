@@ -10,8 +10,8 @@ description: 当需要在特定机器（如 mio）或全部机器上创建、修
 ## 任务规范
 
 - **机器专属任务**：存放于 `hosts/<host>/tasks/<name>.nix`
-- **全设备通用任务**：存放于 `modules/features/darwin/tasks/_global/<name>.nix`，文件为完整 darwin 模块：`{ pkgs, ... }: { shelken.tasks.<name> = { ... }; }`，参考 `_global/nix-gc.nix`
-- **零接线约定**：在对应目录下放置 nix 文件即自动注册，无需在 host 主配置中添加任何引用代码
+- **全设备通用任务**：写在所属功能的模块里（`shelken.tasks.<name>`），功能进入哪个角色就在哪些机器生效；root 任务必须写在 darwin 模块，参考 `modules/features/nix/gc.nix`
+- **零接线约定**：机器专属任务放进 tasks 目录即自动注册，无需在 host 主配置中添加任何引用代码
 
 ## 字段定义与规则
 

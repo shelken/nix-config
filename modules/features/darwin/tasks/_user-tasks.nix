@@ -53,7 +53,7 @@ in
       # 用户层只生成 LaunchAgent，root 任务在这里会被静默丢弃，改成构建期报错
       {
         assertion = lib.all (t: t.user) (lib.attrValues taskCfg);
-        message = "shelken.tasks: Home Manager 层的任务必须 user = true；root 任务写到 hosts/<机器>/tasks/ 或 modules/features/darwin/tasks/_global/";
+        message = "shelken.tasks: Home Manager 层的任务必须 user = true；root 任务写到 hosts/<机器>/tasks/ 或功能的 darwin 模块";
       }
     ];
 

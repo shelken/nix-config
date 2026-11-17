@@ -145,13 +145,12 @@ task-<名>         # 绕过 task CLI 直接执行底层脚本
 
 ## 任务存放约定
 
-| 位置                                     | 用途                   |
-| ---------------------------------------- | ---------------------- |
-| `hosts/<机器>/tasks/`                    | 机器专属               |
-| `modules/features/darwin/tasks/_global/` | 全设备默认的 root 任务 |
-| 任意模块的 `shelken.tasks.<名>`          | 功能自带               |
+| 位置                            | 用途                                                   |
+| ------------------------------- | ------------------------------------------------------ |
+| `hosts/<机器>/tasks/`           | 机器专属                                               |
+| 任意模块的 `shelken.tasks.<名>` | 功能自带，如 `modules/features/nix/gc.nix` 的 `nix-gc` |
 
-仅 `user = true` 的任务进入用户层；在模块中声明 root 任务会在构建期报错，root 任务需写在 darwin 层的两处目录中
+仅 `user = true` 的任务进入用户层；在 Home Manager 模块中声明 root 任务会在构建期报错，root 任务需写在机器 tasks 目录或功能的 darwin 模块中
 
 ## 实现位置
 
@@ -160,6 +159,5 @@ lib/tasks.nix                                  # 字段契约与脚本包装：m
 modules/features/darwin/tasks/_framework.nix   # root 任务转 LaunchDaemon
 modules/features/darwin/tasks/_user-tasks.nix  # 用户任务转 LaunchAgent，并构建 task CLI
 modules/features/darwin/tasks/_cli/            # task CLI（Python）与 zsh 补全
-modules/features/darwin/tasks/_global/         # 全设备默认任务
 modules/features/darwin/tasks/_notify.nix      # 通知组件 terminal-notifier
 ```
