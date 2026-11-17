@@ -18,6 +18,7 @@ Lima 宿主（sakamoto、yuuko）的功能：桥接网卡 `socket_vmnet`、实�
 
 ## 用户侧（`home.nix`）
 
+- **首次部署的旧文件**：`lima.yaml` 设了 `force`，直接顶替手工放的旧文件。`_disks` 没有：它指向数据盘，部署前先手动把旧的 `~/.lima/_disks` 移到别处，否则 Home Manager 因文件冲突拒绝激活
 - **`~/.lima/<节点>/lima.yaml`**：节点只暴露数据 `nixosConfigurations.<节点>.config.system.build.limaConfig`，宿主用自己的 `pkgs.formats.yaml` 生成，链到 Nix store。不用节点的构建产物：那是 aarch64-linux 的 derivation，在 Mac 上构建要 Linux builder
 - **`~/.lima/_disks`**（仅设了 `externalDisk`）：软链到 `<externalDisk>/k8s/lima/_disks`，Lima 附加盘放在外接盘上
 - **自启动 agent**（`space.ooooo.lima-host`，日志 `~/Library/Logs/lima-host.log`）：`RunAtLoad` 执行 `limactl start --tty=false <节点>`

@@ -8,7 +8,8 @@
 # 1. compose.yaml 与 configs/：服务声明与静态配置；每个文件单独进 Nix store，容器挂 store 路径
 # 2. sops 模板：env 文件（口令、数据目录，以及上面各文件的 store 路径），激活时解密渲染，明文不进 store
 # 3. launchd agent：登录后与外接盘挂载时先检查数据目录，通过才拉起 OrbStack 与容器，之后每 15 分钟对账一次；
-#    容器一律 restart: "no"，OrbStack 与容器都只由这个 agent 启动，外接盘没挂上时什么都不起
+#    容器一律 restart: "no"，OrbStack 的「登录时启动」由 agent 关掉，OrbStack 与容器都只由这个 agent 启动，
+#    外接盘没挂上时什么都不起
 #
 # 切换、验收与回退步骤见同目录 README.md
 {
@@ -157,6 +158,9 @@ let
         open -ga OrbStack || die "无法启动 OrbStack"
         wait_for 120 docker info ||
           die "OrbStack 的 docker 守护进程 120 秒内没就绪"
+        # 只能由本 agent 启动 OrbStack；它升级或被手动改回「登录时启动」时，下一轮 up 改回来
+        orbctl config set app.start_at_login false ||
+          echo "警告：关不掉 OrbStack 的「登录时启动」，盘没挂上时它可能自己启动" >&2
       }
 
       preflight() {

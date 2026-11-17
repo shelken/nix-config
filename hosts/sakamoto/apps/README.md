@@ -36,7 +36,7 @@ kopia 的 `entrypoint.sh` 与云端仓库的 `policy.json` 和 vps-cc 共用同�
 
 launchd agent（Label `space.ooooo.sakamoto-compose`，`gui` 域）负责拉起与对账。触发时机：登录（`RunAtLoad`）、外接盘挂载（`StartOnMount`，盘晚于登录挂上时立刻再跑一次）、每 15 分钟（`StartInterval`）
 
-**OrbStack 与容器都只由这个 agent 启动**：`compose.yaml` 里的容器是 `restart: "no"`（kopia 也是：`on-failure` 会在 OrbStack 重启后绕过挂载检查拉起它，失败重试交给 15 分钟一次的 `up`），OrbStack 自己的「登录时启动」应关闭。外接盘没挂上时，agent 在启动 OrbStack 之前就停下，什么都不起。
+**OrbStack 与容器都只由这个 agent 启动**：`compose.yaml` 里的容器是 `restart: "no"`（kopia 也是：`on-failure` 会在 OrbStack 重启后绕过挂载检查拉起它，失败重试交给 15 分钟一次的 `up`），OrbStack 自己的「登录时启动」由 `up` 在 OrbStack 就绪后用 `orbctl config set app.start_at_login false` 关掉（每轮都设，被改回去会自愈）。外接盘没挂上时，agent 在启动 OrbStack 之前就停下，什么都不起。
 
 | 改了什么                                      | 收敛                                                                                                              |
 | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
@@ -49,7 +49,7 @@ launchd agent（Label `space.ooooo.sakamoto-compose`，`gui` 域）负责拉起�
 
 没有用 `WatchPaths` 监视渲染目录：它在符号链接下面，sops 换代后 launchd 的监视时灵时不灵（实测三轮换代只触发一轮）。
 
-`up` 的顺序：等渲染出的 env → 逐个检查数据目录 → `open -ga OrbStack`（对已运行的 OrbStack 没有副作用）→ 等 `docker info` → `docker compose up -d`。外接盘没挂载时在第二步直接失败，既不启动 OrbStack，也不让 Docker 以 root 新建空目录。日志在 `~/Library/Logs/sakamoto-compose.log`。
+`up` 的顺序：等渲染出的 env → 逐个检查数据目录 → `open -ga OrbStack`（对已运行的 OrbStack 没有副作用）→ 等 `docker info` → 关掉「登录时启动」→ `docker compose up -d`。外接盘没挂载时在第二步直接失败，既不启动 OrbStack，也不让 Docker 以 root 新建空目录。日志在 `~/Library/Logs/sakamoto-compose.log`。
 
 改 `restart` 策略会改变服务 hash：部署后第一次 `up` 会重建全部 10 个容器（含两个 kopia，备份短暂中断），之后不再变。
 

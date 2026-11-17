@@ -52,8 +52,12 @@
       };
     in
     {
+      # lima.yaml 用 force 顶替手工放的旧文件（内容相同，不重要）；_disks 不用，它指向数据盘，首次部署前由人手动处理
       home.file = {
-        ".lima/${node}/lima.yaml".source = limaYaml;
+        ".lima/${node}/lima.yaml" = {
+          source = limaYaml;
+          force = true;
+        };
       }
       // lib.optionalAttrs (externalDisk != null) {
         ".lima/_disks".source = config.lib.file.mkOutOfStoreSymlink "${externalDisk}/k8s/lima/_disks";
