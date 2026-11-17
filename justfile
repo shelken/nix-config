@@ -42,6 +42,11 @@ deploy host mach:
 deploy host *args:
     @deploy --skip-checks .#{{ host }} {{ args }}
 
+# 并发探测各主机是否落后于 origin/main（只读）；用法: just outdated [主机...]
+[group('build')]
+outdated *args:
+    @{{ justfile_directory() }}/utils/script/just/outdated.py {{ args }}
+
 # 格式化
 [group('flake')]
 fmt:

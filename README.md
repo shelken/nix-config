@@ -177,6 +177,8 @@ nix store delete /nix/store/8jfid13h8p5gmy7llb4kvp0m357lswd0-darwin-system-25.11
 ## example
 
 ```bash
+# 哪些主机落后于 origin/main（并发、只读）
+just outdated
 # 远程部署：主机表里带 deploy 标记的主机
 just deploy vps-cc
 ```
