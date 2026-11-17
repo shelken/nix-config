@@ -8,7 +8,7 @@
 | ------------- | ------------------------------------------ | -------------------------------------------------- |
 | `core`        | 所有主机共有的基线：能登录、能用 nix       | 被其他角色包含                                     |
 | `server`      | `core` + 常驻服务器职责（仅 NixOS）        | vps-cc、hk1box、yuuko-k8s、sakamoto-k8s、homelab-1 |
-| `tui`         | `core` + 终端开发工具                      | work-test                                          |
+| `tui`         | `core` + 终端开发工具                      | 被 `gui` 包含                                      |
 | `gui`         | `tui` + 桌面环境与图形应用                 | ling                                               |
 | `desktop`     | `gui` + 日常桌面机共有的软件（仅 darwin）  | yuuko、sakamoto                                    |
 | `workstation` | `desktop` + 主力机个人工作流               | mio                                                |

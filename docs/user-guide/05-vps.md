@@ -96,7 +96,7 @@ nix build .#nixosConfigurations.<主机>.config.system.build.toplevel
 
 ### 5. 先演练（可选，换了固件或架构时强烈建议）
 
-`vps-test` 是 x86_64 BIOS 的 Lima 演练机，与 vps-cc 共用 `common.nix`，完整走一遍约 20 分钟，命令见 `hosts/vps/vps-cc/README.md` 的「演练」一节。演练暴露过的坑与处理见同一节的「演练里遇到的问题」
+装机暴露过的坑与处理见 `hosts/vps/vps-cc/README.md` 的「演练里遇到的问题」
 
 ## 装机
 
@@ -188,5 +188,5 @@ lib/deployRsLib.nix                    # deploy-rs 的 lib，激活器换成 nix
 hosts/vps/common.nix                   # VPS 共有配置
 hosts/vps/vps-cc/README.md             # vps-cc 切换实录、演练、核对清单
 justfile                               # deploy
-just/anywhere.just               # kexec-cache、lima-vps-up 等装机演练配方
+just/anywhere.just               # kexec-cache、kexec、install 等装机配方
 ```

@@ -20,7 +20,7 @@ just --list --list-submodules
 - 配方里用到 `"$@"` 时，模块自己写 `set positional-arguments := true`，设置不会从根继承
 - 不能引用根 `justfile` 的变量（如 `profile`），否则整个 just 启动失败。需要主机名时用环境变量 `$PROFILE`，它来自 `.host-profile`，环境变量会继承
 - 脚本路径写 `{{ justfile_directory() }}/utils/script/just/<脚本>`，在模块里它仍指向仓库根
-- 模块内部互相调用写全名，如 `just anywhere::lima-target-ip`
+- 模块内部互相调用写全名，如 `just anywhere::kexec-cache`
 - 配方说明用 `[doc('一句话')]`。`just --list` 只取紧挨着配方的最后一行注释，多行注释会被截断
 
 ## 新增或改名

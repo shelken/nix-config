@@ -7,7 +7,7 @@
 ## 组成
 
 - `default.nix`：真机特有的部分，主机名与静态网络；网络参数来自私有 `secrets` 仓库的 `hosts/vps-cc/network.nix`（明文，求值期读取）
-- `../common.nix`：与演练机 `vps-test` 共用的配置：BIOS + ext4 分区、sops 口令、sysctl、防火墙、tailscale、docker、NTP、DNS
+- `../common.nix`：VPS 共有配置：BIOS + ext4 分区、sops 口令、sysctl、防火墙、tailscale、docker、NTP、DNS
 - `docs/adr/0005-server-role-and-core-baseline.md`：为什么是 `server` 角色与系统层 sops
 - 口令哈希在 `secrets` 仓库的 `sops/secrets/hosts/vps-cc.yaml`，只有管理员和 vps-cc 自己的 age 密钥能解
 - 不用 nixos-facter：虚拟机的社区做法是导入 nixpkgs 的 `qemu-guest.nix`（官方 nixos-anywhere-examples 对 KVM 云主机同样如此），真机实测是标准 qemu 虚拟机（virtio 网卡与磁盘）；facter 或 `hardware-configuration.nix` 留给以后的物理机，见 `../common.nix`
@@ -30,33 +30,9 @@
 - age 私钥丢了不丢数据：密文同时写给了管理员公钥，换一把新的、`sops updatekeys`、刷新 `secrets` 输入，再装即可，不需要另存
 - 这份清单没有声明在 Nix 配置里：tailscale 与 SSH 主机密钥的路径靠 nixpkgs 默认值，见 nix-config #183
 
-## 演练（vps-test）
+## 演练
 
-在 Lima 的 qemu 里跑一台对齐 VPS 的机器（x86_64、BIOS、2 核、2GiB），用同一份 `common.nix`。软件模拟很慢，一次完整流程约 20 分钟
-
-```bash
-just anywhere::lima-vps-up                                  # qemu 由 nix 临时提供
-P=$(just anywhere::lima-vps-port); KEY=~/.lima/_config/user
-
-# 安装时放进新系统的文件：age 私钥（与真机同一把，顺带演练交付方式）
-EXTRA=$(mktemp -d)
-install -d -m 700 "$EXTRA/var/lib/sops-nix"
-install -m 600 <vps-cc 的 age 私钥文件> "$EXTRA/var/lib/sops-nix/key.txt"
-
-KEXEC=$(just anywhere::kexec-cache x86_64 nixos-26.05)      # 必须 26.05，见下表
-# --build-on local：在 Mac 上经 Native Linux Builder 构建 x86_64 系统；真机只有 2GiB 内存，不要在安装环境里构建
-# 阶段一：kexec。完成后 nixos-anywhere 会去连 Mac 自己的 22 端口，卡住，超时即可（Lima 只转发了 $P）
-timeout 200 nixos-anywhere -f .#vps-test --target-host root@127.0.0.1 --build-on local --ssh-port $P -i $KEY \
-  --kexec "$KEXEC" --kexec-extra-flags '-c' --phases kexec
-# 阶段二：分区、安装、重启
-nixos-anywhere -f .#vps-test --target-host root@127.0.0.1 --build-on local --ssh-port $P -i $KEY \
-  --phases disko,install,reboot --extra-files "$EXTRA"
-rm -r "$EXTRA"
-
-# 更新：vps-test 在 Lima 里没有可直连的地址，用 --hostname 指定
-deploy --skip-checks .#vps-test --hostname 127.0.0.1 --ssh-opts "-p $P -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-limactl delete --force nixos-anywhere-vps
-```
+装机前在 Lima 的 qemu 里用一台对齐 VPS 的 x86_64 BIOS 机器（2 核、2GiB、同一份 `common.nix`）完整走过一遍。演练机已删除，步骤见 git 历史
 
 ### 演练验收结果
 

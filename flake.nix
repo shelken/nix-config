@@ -33,7 +33,7 @@
           specialArgs
           ;
       };
-      hosts = import ./hosts { inherit self; };
+      hosts = import ./hosts;
 
       darwinHosts = lib.filterAttrs (_: v: v.type == "darwin") hosts;
       nixosHosts = lib.filterAttrs (_: v: v.type == "nixos") hosts;

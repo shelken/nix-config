@@ -16,7 +16,7 @@
 # off 删掉文件即回落到系统层的 true，家外 builder 自己下载。
 #
 # 系统层默认不带 icache（nix-settings.nix 的 darwin 与 nixos 两部分）；
-# 用户级开关只给会带出门的 Mac：常驻家里的 NixOS 主机（hk1box、k8s 节点、lima-test）用下面的 nix-icache-system
+# 用户级开关只给会带出门的 Mac：常驻家里的 NixOS 主机（hk1box、k8s 节点）用下面的 nix-icache-system
 # 在系统层吃 icache；VPS 不在内网，两者都不装（它经 Tailscale 子网路由其实连得上 icache，不能给它留开关）。
 # daemon 不重读系统 nix.conf，首次 switch 后用 `sudo launchctl kickstart -k system/systems.determinate.nix-daemon`
 # 重启一次，之后 on/off 即时生效。root 跑的 nix（sudo / nixos-rebuild）读不到用户级配置，仍走系统列表。

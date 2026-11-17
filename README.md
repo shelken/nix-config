@@ -71,7 +71,7 @@ git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-con
 
 # 4. 选择 hosts/default.nix 中登记的机器配置
 # Darwin: mio / sakamoto / yuuko / ling
-# NixOS: vps-cc / hk1box / yuuko-k8s / sakamoto-k8s / homelab-1 / lima-test / work-test
+# NixOS: vps-cc / hk1box / yuuko-k8s / sakamoto-k8s / homelab-1
 PROFILE=mio
 printf 'PROFILE=%s\n' "$PROFILE" > .host-profile
 
@@ -191,9 +191,7 @@ just deploy vps-cc
 
 ```bash
 # 构建镜像并上传到 pve 的 iso 目录
-just linux::gen-image <host> <variant>
-just linux::gen-image work-test iso
-just linux::gen-image work-test qemu
+just linux::gen-image <host> <variant>   # variant 如 iso、qemu
 ```
 
 # 引用

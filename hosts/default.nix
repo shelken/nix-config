@@ -1,11 +1,10 @@
-{ self }:
 let
   rootDeploy = {
     sshUser = "root";
     interactiveSudo = false;
   };
 in
-# deployDiff = false：just deploy-diff 不检查这台（测试机、不常用的机器）
+# deployDiff = false：just deploy-diff 不检查这台（不常用的机器）
 {
   vps-cc = {
     type = "nixos";
@@ -50,27 +49,6 @@ in
       remoteBuild = true;
     };
     nixos-modules = [ ./k8s/homelab-1 ];
-  };
-
-  vps-test = {
-    type = "nixos";
-    system = "x86_64-linux";
-    deploy = rootDeploy;
-    deployDiff = false;
-    nixos-modules = [ ./vm/vps-test ];
-  };
-
-  lima-test = {
-    type = "nixos";
-    system = "aarch64-linux";
-    nixos-modules = [ ./vm/lima-test ];
-  };
-
-  work-test = {
-    type = "nixos";
-    system = "x86_64-linux";
-    # 不建 hosts 目录：calcUniformSchedule 按 hosts/ 目录数排定备份时段
-    nixos-modules = [ self.modules.nixos.tui ];
   };
 
   yuuko = {
