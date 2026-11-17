@@ -1,7 +1,9 @@
-# zsh：shell、oh-my-zsh、fzf
+# zsh（core，含服务器）：shell、oh-my-zsh、fzf
+# zsh-dev（tui 及以上）：开发工具的 oh-my-zsh 插件，以及依赖 fd 的 fzf 默认命令
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.zsh ];
+  flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.zsh-dev ];
 
   flake.modules.homeManager.zsh =
     {
@@ -89,24 +91,12 @@
           enable = true;
           # ref: https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins
           plugins = [
-            "azure"
             # "docker-comose"
             "docker"
-            "fluxcd"
-            "gitignore" # 命令gi; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/gitignore/README.md
-            "golang" # 自动补全以及alias; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/golang/README.md
-            "helm"
-            "httpie" # 命令http; 自动补全; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/httpie/README.md
-            "kubectl"
-            "mvn" # 自动补全及alias; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/mvn/README.md
-            "pip"
-            "qrcode" # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/qrcode/README.md
-            "rclone"
             "rsync"
             "sudo" # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/sudo/README.md
             "ssh"
             "tailscale"
-            "terraform"
           ];
           # 禁用 oh-my-zsh 的 self-insert/bracketed-paste magic，避免长输入触发 ZLE 重算烧 CPU。
           extraConfig = ''
@@ -144,10 +134,6 @@
             '';
             defaultInit = ''
               bindkey '^f' autosuggest-accept
-
-              # K8s Pod 交互式路径选择 widget
-              zle -N kube-pod-path-widget
-              bindkey '^k' kube-pod-path-widget
             '';
           in
           lib.mkMerge [
@@ -185,7 +171,6 @@
         enable = true;
         # fzf --zsh 会在 fzf-tab 之后把 Tab 绑到 fzf-completion；这里只保留上面的 key-bindings。
         enableZshIntegration = false;
-        defaultCommand = "fd --type f";
       };
 
       fonts.fontconfig = {
@@ -264,4 +249,23 @@
         enableNushellIntegration = true;
       };
     };
+
+  flake.modules.homeManager.zsh-dev = {
+    programs.zsh.oh-my-zsh.plugins = [
+      "azure"
+      "fluxcd"
+      "gitignore" # 命令gi; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/gitignore/README.md
+      "golang" # 自动补全以及alias; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/golang/README.md
+      "helm"
+      "httpie" # 命令http; 自动补全; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/httpie/README.md
+      "kubectl"
+      "mvn" # 自动补全及alias; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/mvn/README.md
+      "pip"
+      "qrcode" # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/qrcode/README.md
+      "rclone"
+      "terraform"
+    ];
+    # fd 只在 tui 登记（dev/tools-base.nix）；服务器上 fzf 用内置遍历
+    programs.fzf.defaultCommand = "fd --type f";
+  };
 }
