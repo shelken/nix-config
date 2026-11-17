@@ -1,8 +1,6 @@
 # nushell：日常交互 shell，从 zsh 里敲 nu 进入，环境继承自 zsh；登录 shell 仍是 zsh
-{ config, ... }:
+# 暂停使用：没有角色导入本模块。恢复时在 tui 的 imports 里加回 config.flake.modules.homeManager.nushell
 {
-  flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.nushell ];
-
   flake.modules.homeManager.nushell = {
     programs.nushell = {
       enable = true;
