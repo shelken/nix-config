@@ -43,6 +43,20 @@
               fi
             ''}";
           };
+          # 把仓库根插值进字符串会把整仓拷进闭包：任何提交（哪怕只改 README）都会改变所有远端主机的系统路径。
+          # 曾经为绕开文件名里的 * 这样写过；遇到这类报错应改文件名
+          no-repo-root-in-store = {
+            enable = true;
+            name = "no-repo-root-in-store";
+            description = "不把仓库根插值进字符串";
+            files = "\\.nix$";
+            entry = "${pkgs.writeShellScript "check-no-repo-root-in-store" ''
+              if ${pkgs.gnugrep}/bin/grep -nE '\$\{[[:space:]]*(relativeToRoot[[:space:]]+"\.?"|self|inputs\.self)[[:space:]]*\}' "$@"; then
+                echo '以上把仓库根插值进了字符串，会把整仓拷进闭包；改用具体文件的路径字面量（如 "''${./x.toml}"）' >&2
+                exit 1
+              fi
+            ''}";
+          };
           # 被平台属性禁用的 mod（如 macOS 上的 linux 模块）不会被 just 解析，错误要到另一个平台才暴露，
           # 所以对每个模块文件单独解析。模块引用根变量也会在这里报错
           just-modules = {
