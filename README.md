@@ -180,6 +180,9 @@ nix store delete /nix/store/8jfid13h8p5gmy7llb4kvp0m357lswd0-darwin-system-25.11
 # 哪些主机需要部署、部署后会变什么（只求值不构建；主机表里 deployDiff = false 的不查）
 just deploy-diff
 
+# 先 deploy-diff，回车确认后逐台部署有差异的主机；k3s 节点交给 just k8s::deploy 滚动部署
+just deploy-all
+
 # 远程部署：主机表里带 deploy 标记的主机
 just deploy vps-cc
 ```

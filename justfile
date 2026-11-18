@@ -47,6 +47,12 @@ deploy host *args:
 deploy-diff *hosts:
     @{{ justfile_directory() }}/utils/script/just/deploy_diff.py {{ hosts }}
 
+[doc('先 deploy-diff，确认后逐台部署需部署的主机，用法: just deploy-all [主机...]')]
+[group('build')]
+[macos]
+deploy-all *hosts:
+    @{{ justfile_directory() }}/utils/script/just/deploy_diff.py --deploy {{ hosts }}
+
 # 格式化
 [group('flake')]
 fmt:

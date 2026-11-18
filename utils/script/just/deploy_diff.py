@@ -8,6 +8,9 @@
 - 包清单取自 system-path / home-manager-path 两个 buildEnv drv 的 chosenOutputs，新旧都读 drv
 
 主机名单：hosts/default.nix 里带 deploy 的主机，排除 deployDiff = false 的
+
+--deploy：检查完后列出需部署的主机，回车确认后逐台 just deploy，失败的跳过，最后汇总；
+  k3s 节点合并交给 just k8s::deploy，由它定顺序、逐台等健康
 """
 import argparse
 import json
@@ -36,6 +39,8 @@ builtins.mapAttrs (_: h: {
   diff = h.deployDiff or true;
 }) (import ./hosts)
 """
+
+K3S_EXPR = "cs: builtins.filter (n: cs.${n}.config.services.k3s.enable) (builtins.attrNames cs)"
 
 PROBE = "readlink /run/current-system && nix-store -q --graph /run/current-system"
 
@@ -237,12 +242,16 @@ def fold(items):
 
 
 def check(host, kind, probe_future):
-    start = time.monotonic()
+    """返回 (状态, 明细行, 各阶段耗时)"""
+    marks = [time.monotonic()]
     top, new_paths, new_packages = evaluate(host, kind)
+    marks.append(time.monotonic())
     current, old_refs = probe_future.result()
+    marks.append(time.monotonic())
     if top == current:
-        return "最新", [], time.monotonic() - start
+        return "最新", [], phases(marks)
     old_pkgs, missing = old_packages(host, old_refs)
+    marks.append(time.monotonic())
     upgraded, rebuilt, added, removed = set(), set(), set(), set()
     for env in old_pkgs.keys() | new_packages.keys():
         up, rb, add, rm = package_changes(old_pkgs.get(env, set()), new_packages.get(env, set()))
@@ -259,17 +268,20 @@ def check(host, kind, probe_future):
             details.append(f"{label}：{fold(items)}")
     if missing:
         details.append(f"（{'、'.join(missing)} 的旧 drv 已被清理，看不出其中新增或删除了哪些包）")
-    return "需部署", details, time.monotonic() - start
+    return "需部署", details, phases(marks)
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("hosts", nargs="*", help="只检查这些主机，默认全部")
-    args = parser.parse_args()
+def phases(marks):
+    """总耗时加分段，慢的时候能看出卡在本机求值、等远端探测还是读旧 drv"""
+    labels = ("求值", "等远端", "读旧 drv")
+    parts = [f"{label} {b - a:.0f}" for label, a, b in zip(labels, marks, marks[1:])]
+    return f"{marks[-1] - marks[0]:.0f}s（{'，'.join(parts)}）"
 
+
+def diff(hosts):
+    """检查并打印各主机，返回需部署的主机（按完成顺序）"""
     start = time.monotonic()
-    hosts = list_hosts(args.hosts)
-    total, done, counts = len(hosts), 0, {}
+    total, done, counts, outdated = len(hosts), 0, {}, []
     print(f"检查 {total} 台：{' '.join(sorted(hosts))}", flush=True)
 
     with ThreadPoolExecutor(max_workers=total) as probe_pool, ThreadPoolExecutor(max_workers=EVAL_JOBS) as eval_pool:
@@ -280,7 +292,9 @@ def main():
             done += 1
             try:
                 state, details, took = future.result()
-                head = f"[{done}/{total}] {host}  {state}  {took:.0f}s"
+                head = f"[{done}/{total}] {host}  {state}  {took}"
+                if state == "需部署":
+                    outdated.append(host)
             except RuntimeError as error:
                 state, details = ("不可达" if probes[host].done() and probes[host].exception() else "求值失败"), [str(error)[:200]]
                 head = f"[{done}/{total}] {host}  {state}"
@@ -291,6 +305,55 @@ def main():
 
     summary = "，".join(f"{k} {v}" for k, v in counts.items())
     print(f"共 {total} 台：{summary}；耗时 {time.monotonic() - start:.0f} 秒")
+    return outdated
+
+
+def deploy_steps(hosts):
+    """[(名称, 命令)]：普通主机各一步，k3s 节点合成一步放最后"""
+    r = run(["nix", "eval", "--json", ".#nixosConfigurations", "--apply", K3S_EXPR])
+    if r.returncode:
+        sys.exit(f"读取 k3s 节点失败：{error_tail(r.stderr)}")
+    k3s = set(json.loads(r.stdout))
+    steps = [(h, ["just", "deploy", h]) for h in hosts if h not in k3s]
+    nodes = [h for h in hosts if h in k3s]
+    if nodes:
+        steps.append(("k3s: " + " ".join(nodes), ["just", "k8s::deploy", *nodes]))
+    return steps
+
+
+def deploy(hosts):
+    steps = deploy_steps(hosts)
+    print(f"\n待部署 {len(hosts)} 台，分 {len(steps)} 步：")
+    for name, _ in steps:
+        print(f"  {name}")
+    try:
+        if input("回车开始部署，输入 n 取消：").strip().lower() == "n":
+            return
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return
+    results = {}
+    for i, (name, cmd) in enumerate(steps, 1):
+        print(f"\n===== [{i}/{len(steps)}] 部署 {name} =====", flush=True)
+        start = time.monotonic()
+        ok = subprocess.run(cmd).returncode == 0
+        results[name] = f"{'成功' if ok else '失败'}  {time.monotonic() - start:.0f}s"
+    print("\n部署结果：")
+    for host, result in results.items():
+        print(f"  {host}  {result}")
+    if any(r.startswith("失败") for r in results.values()):
+        sys.exit(1)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("hosts", nargs="*", help="只检查这些主机，默认全部")
+    parser.add_argument("--deploy", action="store_true", help="检查完后逐台部署需部署的主机")
+    args = parser.parse_args()
+
+    outdated = diff(list_hosts(args.hosts))
+    if args.deploy and outdated:
+        deploy(outdated)
 
 
 if __name__ == "__main__":
