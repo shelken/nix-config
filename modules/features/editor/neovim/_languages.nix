@@ -49,13 +49,11 @@ pkgs: {
       pkgs.vscode-langservers-extracted
       pkgs.yaml-language-server
       pkgs.taplo
-      pkgs.marksman
     ];
     lsp = [
       "jsonls"
       "yamlls"
       "taplo"
-      "marksman"
     ];
     formatters.toml = [ "taplo" ];
     grammars = [
@@ -70,7 +68,18 @@ pkgs: {
   go = {
     packages = [
       pkgs.gopls
-      pkgs.gotools
+      # gotools 有 46 个命令、约 240 MiB，只用 goimports；它的二进制只引用 go 与 tzdata
+      (pkgs.runCommand "goimports-${pkgs.gotools.version}"
+        {
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          preferLocalBuild = true;
+          allowSubstitutes = false;
+        }
+        ''
+          install -Dm755 ${pkgs.gotools}/bin/.goimports-wrapped $out/bin/goimports
+          wrapProgram $out/bin/goimports --prefix PATH : ${pkgs.go}/bin
+        ''
+      )
     ];
     lsp = [ "gopls" ];
     formatters.go = [ "goimports" ];
