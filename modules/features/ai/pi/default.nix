@@ -63,8 +63,6 @@
     {
       imports = [ ./_theme.nix ];
 
-      home.packages = [ pkgs.mermaid-cli ];
-
       # 插件读的环境变量写在登记表 env：宿主与沙箱同源（沙箱不继承宿主 shell 的环境）
       shelken.dev.tools.pi.env = {
         ANTIGRAVITY_NO_EXTRA_TOOLS = "1";

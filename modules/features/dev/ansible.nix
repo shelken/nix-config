@@ -8,8 +8,8 @@
     { pkgs, ... }:
     {
       home.packages = with pkgs; [
+        # ansible（= ansible-core）不带 collections；ansible-lint 会把全量 ansible（约 520 MiB）作为依赖拉进来，不装
         ansible
-        ansible-lint
         sshpass
       ];
     };

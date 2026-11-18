@@ -32,6 +32,12 @@
         bash ${./omp/plugins/install.sh} "''${SB_OMP_MANIFEST:-${./omp/plugins/package.json}}"
       '';
     };
+    # 校验 markdown 里的 mermaid：官方 mermaid.parse()，不要浏览器（mermaid-cli 要 puppeteer 与 Chrome）
+    mermaid-lint.mise = {
+      name = "npm:@mermaid-lint/cli";
+      # renovate: datasource=npm depName=@mermaid-lint/cli
+      version = "0.53.1";
+    };
     pi = {
       sandboxCommand = "pi";
       mise = {
