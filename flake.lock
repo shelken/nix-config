@@ -711,11 +711,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1752922034,
-        "narHash": "sha256-TEnXV2H4sc3Liav+uC5/Fao6M5QDSaRlRhycyXBtwd0=",
+        "lastModified": 1795038187,
+        "narHash": "sha256-zz2PIkWfc8xxcrGuZHuPCtQysuV9FSYwnzPja2+lCSQ=",
         "owner": "shelken",
         "repo": "vgpu4nixos",
-        "rev": "fd1fe577e07e76d97a33a845f3b751dcb984a3d3",
+        "rev": "32d351516b71ac56bc0f028e901d6657cce77cb2",
         "type": "github"
       },
       "original": {

@@ -17,33 +17,7 @@
       # 整卡直通不可用、vGPU 无法再升级。6.12 LTS 维护到 2028-12，之后这套硬件的 vGPU 路线到头
       boot.kernelPackages = pkgs.linuxPackages_6_12;
       hardware.nvidia = {
-        # nixpkgs 的 nvidia 模块从 package.mod 取内核模块；vgpu4nixos 的包还没有这个属性，
-        # 它把模块装在 bin 输出的 lib/modules 下
-        package =
-          let
-            grid = config.boot.kernelPackages.nvidiaPackages.grid_17_6.overrideAttrs (old: {
-              # 驱动的 conftest 不带 -std，gcc 15 起默认 gnu23，内核头文件在 gnu23 下编不过，
-              # 探测全部失败、模块误判成不支持这个内核；内核自己用 gnu11
-              env = (old.env or { }) // {
-                NIX_CFLAGS_COMPILE = "-std=gnu11";
-              };
-              # nixpkgs 聚合内核模块时要求每个外部模块带 kmodigest 生成的 <模块>.ko.cer，
-              # 通常由内核的 modules_install 顺带生成；驱动的 builder 直接拷 .ko，跳过了这一步
-              nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkgs.buildPackages.kmodigest ];
-              # builder 用一次 patchelf 同时改 interpreter 与 rpath，会把 LOAD 段改成重叠、.dynamic 落进只读页，
-              # ld.so 启动即崩（NixOS/nixpkgs#576412）：从未改动的 origBin 副本重做，拆成两次调用
-              postInstall = toString (old.postInstall or "") + ''
-                find "$bin/lib/modules" -name '*.ko' -exec kmodigest {} \;
-                for f in "$bin"/origBin/*; do
-                  i="$bin/bin/$(basename "$f")"
-                  install -m755 "$f" "$i"
-                  patchelf --set-rpath "$out/lib:$libPath" "$i"
-                  patchelf --interpreter "$(cat "$NIX_CC/nix-support/dynamic-linker")" "$i"
-                done
-              '';
-            });
-          in
-          grid // { mod = grid.bin; };
+        package = config.boot.kernelPackages.nvidiaPackages.grid_17_6;
         open = false;
         nvidiaSettings = false;
       };
