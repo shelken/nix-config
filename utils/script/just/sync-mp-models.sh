@@ -19,6 +19,11 @@ if [ -z "$BASE_URL" ]; then
   exit 1
 fi
 
+# apiKey 可写环境变量名（OMP resolveConfigValue 先查 env 后降级字面量）；脚本要自己展开
+if [[ "${API_KEY:-}" =~ ^[A-Z0-9_]+$ && -n "${!API_KEY:-}" ]]; then
+  API_KEY="${!API_KEY}"
+fi
+
 AUTH_HEADER=()
 if [ -n "$API_KEY" ]; then
   AUTH_HEADER=(-H "Authorization: Bearer ${API_KEY}")
