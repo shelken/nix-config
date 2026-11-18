@@ -2,7 +2,7 @@
   "//": "子代理配置。spawn-subagent 每次启动读取本文件（nix-config 源，经 realpath 解析）。exclude 黑名单规范：只写插件短名（路径/仓库/npm 名的最后一段，scoped 包去 scope 取 name），例：npm:@juicesharp/rpiv-todo → rpiv-todo",
   "exclude": [
     "pi-context-prune",
-    "rpiv-todo",
+    "rpiv-todo-lean",
     "pi-observational-memory",
     "pi-preferred-thinking"
   ],

@@ -14,7 +14,6 @@
       "anthropic/claude-opus-5-5": {
         "reserveTokens": 600000
       },
-
       "anthropic/claude-fable-5-2": {
         "reserveTokens": 600000
       },
@@ -94,15 +93,15 @@
     "npm:@shelken/simple-plannotator@0.1.11",
     "npm:@shelken/copy-cut@0.2.3",
     "npm:@shelken/pi-sounds@0.1.0",
-    "npm:@juicesharp/rpiv-todo@2.15.0",
+    "npm:@ssk_dev/rpiv-todo-lean@2.15.0",
+    "npm:@ssk_dev/rpiv-ask-user-question-lean@2.15.0",
+    "npm:@ff-labs/pi-fff@0.11.0",
     {
-      "source": "npm:pi-ask-user@0.17.2",
+      "source": "npm:pi-intercom@0.18.1",
       "skills": [
-        "-skills/ask-user/SKILL.md"
+        "-skills/pi-intercom/SKILL.md"
       ]
     },
-    "npm:@ff-labs/pi-fff@0.11.0",
-    "npm:pi-intercom@0.18.1",
     "npm:@juicesharp/rpiv-web-tools@2.15.0",
     "npm:pi-background@0.4.2",
     {
@@ -139,6 +138,7 @@
   "defaultProvider": "mp",
   "defaultModel": "loomy/DeepSeek-V4.1-Flash",
   "extensionChangelogVersions": {
-    "{\"source\":\"npm:pi-better@0.2.0\",\"scope\":\"user\"}": "0.2.0"
+    "{\"source\":\"npm:pi-better@0.2.0\",\"scope\":\"user\"}": "0.2.0",
+    "{\"source\":\"npm:pi-inspect\",\"scope\":\"project\"}": "0.6.0"
   }
 }
