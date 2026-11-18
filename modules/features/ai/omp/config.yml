@@ -20,7 +20,7 @@ modelRoles:
   claude: anthropic/claude-sonnet-5-5:high
   claude-max: anthropic/claude-opus-5-5:medium
   fable: anthropic/claude-opus-5-5:medium
-  reviewer-gemini: google-antigravity/gemini-3.8-flash:high
+  reviewer-gemini: cpa/gemini-3.8-flash-high:high
   reviewer-ds: "@dsf:xhigh"
   reviewer-glm: "@glm-flash"
   reviewer-gpt: "@gpt:xhigh"
@@ -31,7 +31,7 @@ modelRoles:
   tiny: cpa/workbuddy/hy3:high
   memory: cpa/gpt-5.6-luna:high
   web: google/gemini-2.5-flash
-  gog: google-antigravity/gemini-3.8-flash:high
+  gog: cpa/gemini-3.8-flash-high:high
   plan: "@reviewer-gpt"
   smol: "@gpt-lite"
   scout: "@dsf"
@@ -108,18 +108,18 @@ codexResets:
 retry:
   fallbackChains:
     scout:
-      - google-antigravity/gemini-3.8-flash:high
+      - cpa/gemini-3.8-flash-high:high
       - cpa/workbuddy/glm-5.3:max
     cpa/workbuddy/hy3:
       - cpa/gpt-5.6-luna:high
-      - google-antigravity/gemini-3.8-flash:medium
+      - cpa/gemini-3.8-flash-high:medium
     cpa/gpt-5.6-luna:
-      - google-antigravity/gemini-3.8-flash:medium
+      - cpa/gemini-3.8-flash-high:medium
       - cpa/workbuddy/hy3:high
     commit:
-      - google-antigravity/gemini-3.8-flash:medium
+      - cpa/gemini-3.8-flash-high:medium
     tiny:
-      - google-antigravity/gemini-3.8-flash:medium
+      - cpa/gemini-3.8-flash-high:medium
     memory:
       - cpa/workbuddy/hy3:high
     glm-flash:
@@ -153,7 +153,6 @@ retry:
       - web/mojeek
       - web/public
       - web/perplexity
-      - google-antigravity/gemini-2.5-flash
       - web/ollama
 compaction:
   experimentalContextManagement: true
