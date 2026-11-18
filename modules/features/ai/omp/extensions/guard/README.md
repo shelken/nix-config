@@ -1,6 +1,6 @@
 # guard
 
-omp 工具调用拦截扩展。权限文件的写法见 `modules/features/ai/omp/README.md`「Guard 权限」
+pi 与 omp 共用的工具调用拦截扩展。权限文件的写法见 `modules/features/ai/omp/README.md`「Guard 权限」
 
 ## 定位
 
@@ -34,21 +34,23 @@ omp 工具调用拦截扩展。权限文件的写法见 `modules/features/ai/omp
 
 ## 模块结构
 
-omp 加载 `extensions/<名>/index.ts`，Home Manager 软链整个目录，目录内其余文件不会被当作扩展加载
+pi 与 omp 都加载 `extensions/<名>/index.ts`。Home Manager 把整个目录同时软链到 `~/.omp/agent/extensions/guard` 与 `~/.pi/agent/extensions/guard`，目录内其余文件不会被当作扩展加载
 
-- `index.ts`：唯一判定入口 `evaluateGuard(call, policy)` 与 omp 扩展注册
+- `index.ts`：宿主入口，只做宿主适配（`getAgentDir`、`CONFIG_DIR_NAME`、借 `parseFrontmatter` 解析 YAML），是唯一 import 宿主包的文件
+- `guard.ts`：判定入口 `evaluateGuard(call, policy)` 与扩展注册 `registerGuard`
 - `shell.ts`：词法与命令拆分，输出带引用、通配、动态展开标记的词
 - `policy.ts`：读取权限文件、叠加层级，加载时把路径规则编译为绝对 glob
-- `guard.test.ts`：只经 `evaluateGuard` 测试，用例取自误伤重放的真实样本
+- `guard.test.ts`：只经 `guard.ts` 的 `evaluateGuard` 测试，用例取自误伤重放的真实样本
 - `replay.ts`：误伤重放
 
 ## 误伤重放
 
-重放 `~/.omp/agent/sessions` 中所有曾被拦截的调用，按规则统计指定 guard 版本下仍拦截的次数；`--samples` 列出某条规则的命中命令。用户规则取自部署中的权限文件，比对尚未部署的版本时用 `OMP_AGENT_DIR` 指向另一份权限文件所在目录
+重放 `~/.omp/agent/sessions` 中所有曾被拦截的调用（只读 omp 会话，依赖 `rg`），按规则统计指定 guard 版本下仍拦截的次数；`--samples` 列出某条规则的命中命令。用户规则取自部署中的权限文件，`OMP_AGENT_DIR` 可指向另一份权限文件所在目录
 
 ```bash
-git show main:modules/features/ai/omp/extensions/guard.ts > /tmp/guard-main.ts
-bun modules/features/ai/omp/extensions/guard/replay.ts /tmp/guard-main.ts
-bun modules/features/ai/omp/extensions/guard/replay.ts modules/features/ai/omp/extensions/guard/index.ts --samples "rm -rf *"
-OMP_AGENT_DIR=/tmp/agent-new bun modules/features/ai/omp/extensions/guard/replay.ts modules/features/ai/omp/extensions/guard/index.ts
+bun modules/features/ai/omp/extensions/guard/replay.ts modules/features/ai/omp/extensions/guard/guard.ts
+bun modules/features/ai/omp/extensions/guard/replay.ts modules/features/ai/omp/extensions/guard/guard.ts --samples "rm -rf *"
+OMP_AGENT_DIR=/tmp/agent-new bun modules/features/ai/omp/extensions/guard/replay.ts modules/features/ai/omp/extensions/guard/guard.ts
 ```
+
+对比两个版本时，在各自的 worktree 里用各自的 `replay.ts` 与入口，两边用同一份会话样本与权限文件（`OMP_AGENT_DIR` 指向同一目录）。拆分 `guard.ts` 之前的版本入口是 `index.ts` 的默认导出，要用它自己的 `replay.ts`
