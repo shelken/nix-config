@@ -34,7 +34,7 @@ builtins.mapAttrs (_: h: {
   inherit (h) type;
   deploy = h ? deploy;
   diff = h.deployDiff or true;
-}) (import ./hosts { self = null; })
+}) (import ./hosts)
 """
 
 PROBE = "readlink /run/current-system && nix-store -q --graph /run/current-system"
