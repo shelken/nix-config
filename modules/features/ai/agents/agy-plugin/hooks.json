@@ -13,7 +13,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -n \"${SPAWN_SUBAGENT_AGY_RUN:-}\" ]; then exec \"$HOME/.local/bin/spawn-subagent\" _agy-hook pre-tool; fi; cat >/dev/null; echo '{\"decision\":\"allow\"}'",
+            "command": "if [ -n \"${SPAWN_SUBAGENT_AGY_RUN:-}\" ]; then \"$HOME/.local/bin/spawn-subagent\" _agy-hook pre-tool || echo '{\"decision\":\"deny\",\"reason\":\"spawn-subagent pre-tool hook failed\"}'; exit 0; fi; cat >/dev/null; echo '{\"decision\":\"allow\"}'",
             "timeout": 10
           }
         ]
