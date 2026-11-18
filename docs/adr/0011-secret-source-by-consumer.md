@@ -17,6 +17,7 @@
 - 每个值只有一个来源。人也要用的机器值（如 Wi-Fi 密码），源头在 secrets.nix；1Password 里可以放一份副本，条目里写明「副本，源在 secrets.nix」，改值时以 secrets.nix 为准。
 - 只有实体设备的标识（MAC 等）算私密。服务（k8s 工作负载）的 MAC 是手动随机生成的配置，不是设备标识：它与其推出的 IPv6 后缀直接明文写在 nix-config 里，旁边注明对应的 home-ops 应用。
 - 主机的启动与部署不依赖 1Password：无人值守的机器上没有可用的 1Password 会话。
+- 例外（2026-11-18 补充）：用户态定时任务可以经 service account 读 1Password（任务 `secrets` 写 `op://` 引用）。这类任务是交互工具的定时版，用的是凭据基座里同一个 key；它不在启动与部署路径上，取不到值只让该任务失败。为它在 sops 里再存一份会让同一个 key 有两个来源。
 
 ## 考虑过的替代方案
 
@@ -32,6 +33,6 @@
   - 防火墙放行规则的 4 个 IPv6 后缀由 home-ops 里各应用的 Multus 固定 MAC 推出，属于服务配置，明文写在 `hosts/router-mine/home-ops/firewall.nix`。
 - 1Password 的 `router-mine` 条目只剩副本：Wi-Fi 密码等人也要看的值标注「副本，源在 secrets.nix」，其余可删。
 - singbox-config 留在 1Password：模板里的值只在用户手动运行生成器时读取；机器无人值守时要读的只有生成结果（旁路由的订阅 URL），它已在 sops 里。
-- 凭据基座（`opSecretMap`）只服务交互工具，范围不变。
+- 凭据基座（`opSecretMap`）服务交互工具；定时任务不经 sec-run 整份注入，只按各自声明的 `op://` 引用逐个读取。
 - 路由器的 sops 文件只有 admin_mio 能解密：路由器是 OpenWrt，不跑 sops，部署只能在 mio 上做。
 - sops-nix 是否是主机侧解密的最佳实现另行评估；本规则只决定值的来源，不依赖具体的解密工具。

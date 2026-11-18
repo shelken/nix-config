@@ -5,6 +5,8 @@
   lib,
   pkgs,
   homeDir,
+  # 1Password service account token 的 sops 解密文件；只在任务声明 op:// 引用时才求值
+  opTokenFile,
 }:
 rec {
   # 任务字段唯一默认值源：darwin 与 home 两端共用的 mkTaskType submodule
@@ -96,15 +98,34 @@ rec {
   mkPackage =
     name: t:
     let
+      isOpRef = lib.hasPrefix "op://";
+
+      readFileSecret = var: secretPath: ''
+        if [ ! -r "${secretPath}" ]; then
+          echo "Task '${name}': required secret ${var} is not readable: ${secretPath}" >&2
+          exit 1
+        fi
+        ${var}="$(<"${secretPath}")"
+        export ${var}
+      '';
+
+      # token 只以前缀变量交给这一次 op 调用，不留在任务脚本环境里
+      readOpSecret = var: ref: ''
+        if [ ! -r "${opTokenFile}" ]; then
+          echo "Task '${name}': 1Password service account token is not readable: ${opTokenFile}" >&2
+          exit 1
+        fi
+        if ! ${var}="$(OP_SERVICE_ACCOUNT_TOKEN="$(<"${opTokenFile}")" ${pkgs._1password-cli}/bin/op read ${lib.escapeShellArg ref})"; then
+          echo "Task '${name}': failed to resolve secret ${var} from ${ref}" >&2
+          exit 1
+        fi
+        export ${var}
+      '';
+
       secretExports = lib.concatStringsSep "\n" (
-        lib.mapAttrsToList (var: secretPath: ''
-          if [ ! -r "${secretPath}" ]; then
-            echo "Task '${name}': required secret ${var} is not readable: ${secretPath}" >&2
-            exit 1
-          fi
-          ${var}="$(<"${secretPath}")"
-          export ${var}
-        '') t.secrets
+        lib.mapAttrsToList (
+          var: value: if isOpRef value then readOpSecret var value else readFileSecret var value
+        ) t.secrets
       );
 
       # 把任意文本原样塞进双引号 bash 串：转义反斜杠、双引号、$ 与反引号。
@@ -241,9 +262,12 @@ rec {
         secrets = lib.mkOption {
           type = lib.types.attrsOf lib.types.str;
           default = taskDefaults.secrets;
-          description = "任务需要的环境变量到 sops 解密文件路径的映射，运行时读文件注入变量";
+          description = "任务需要的环境变量到凭据来源的映射：sops 解密文件路径，或 op:// 引用（经 service account 从 1Password 读取）";
           example = lib.literalExpression ''
-            { GH_TOKEN = secretPath "github/cli-token"; }
+            {
+              GH_TOKEN = secretPath "github/cli-token";
+              MAGPIE_API_KEY = "op://Agent/MAGPIE_API_KEY/credential";
+            }
           '';
         };
         env = lib.mkOption {
