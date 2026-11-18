@@ -33,7 +33,7 @@ export type PathRule = {
 
 export type Policy = {
   default_reason?: string;
-  /** 内置命令规则由 index.ts 的检查函数承担，这里只放用户规则 */
+  /** 内置命令规则由 guard.ts 的检查函数承担，这里只放用户规则 */
   commands: CommandRule[];
   paths: PathRule[];
 };
@@ -54,6 +54,8 @@ type ParseLayerResult =
   | { ok: false; error: string };
 
 export type BuildPolicyResult = { policy: Policy; errors: string[] };
+/** YAML 解析由宿主提供：guard 自己不带 YAML 库 */
+export type YamlParser = (source: string) => unknown;
 export type PermissionPaths = { globalPath: string; projectPath: string };
 export type LoadFailure = { path: string; message: string };
 export type LoadPolicyResult = { policy: Policy; failures: LoadFailure[] };
@@ -209,19 +211,7 @@ function parseListOps(
   return { ops, errors };
 }
 
-/** 配置解析依赖宿主 YAML 实现；omp 运行在 Bun 上，缺失说明宿主环境异常 */
-function parseYaml(source: string): unknown {
-  const bun = Reflect.get(globalThis, "Bun");
-  if (bun && typeof bun === "object" && "YAML" in bun) {
-    const yaml = bun.YAML;
-    if (yaml && typeof yaml === "object" && "parse" in yaml && typeof yaml.parse === "function") {
-      return yaml.parse(source);
-    }
-  }
-  throw new Error("宿主缺少 YAML 解析器");
-}
-
-function parseLayerYaml(source: string): ParseLayerResult {
+function parseLayerYaml(source: string, parseYaml: YamlParser): ParseLayerResult {
   let doc: unknown;
   try {
     doc = parseYaml(source);
@@ -273,14 +263,14 @@ export function buildPolicy(input: {
   projectSource?: string | null;
   home?: string;
   cwd?: string;
-  permissionPaths?: PermissionPaths;
+  permissionPaths: PermissionPaths;
+  parseYaml: YamlParser;
 }): BuildPolicyResult {
   const ctx: ExpandCtx = {
     home: input.home ?? homedir(),
     cwd: input.cwd ?? process.cwd(),
   };
-  const permissionPaths =
-    input.permissionPaths ?? getPermissionPaths(ctx.cwd, path.join(ctx.home, ".omp/agent"));
+  const { permissionPaths, parseYaml } = input;
 
   let commands: CommandRule[] = [];
   let paths = BUILTIN_PATHS.map((r) =>
@@ -295,7 +285,7 @@ export function buildPolicy(input: {
   ];
   for (const { name, source, config } of layers) {
     if (source == null) continue;
-    const parsed = parseLayerYaml(source);
+    const parsed = parseLayerYaml(source, parseYaml);
     if (!parsed.ok) {
       errors.push(`${name}: ${parsed.error}`);
       continue;
@@ -321,16 +311,15 @@ function resolveFirstExisting(candidates: string[]): string {
   return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
 }
 
-export function getPermissionPaths(cwd: string, agentDir?: string): PermissionPaths {
-  const dir = agentDir || process.env.OMP_AGENT_DIR || path.join(homedir(), ".omp/agent");
+export function getPermissionPaths(cwd: string, agentDir: string, configDirName: string): PermissionPaths {
   return {
     globalPath: resolveFirstExisting([
-      path.join(dir, "permissions.yml"),
-      path.join(dir, "permissions.yaml"),
+      path.join(agentDir, "permissions.yml"),
+      path.join(agentDir, "permissions.yaml"),
     ]),
     projectPath: resolveFirstExisting([
-      path.join(cwd, ".omp", "permissions.yml"),
-      path.join(cwd, ".omp", "permissions.yaml"),
+      path.join(cwd, configDirName, "permissions.yml"),
+      path.join(cwd, configDirName, "permissions.yaml"),
     ]),
   };
 }
@@ -347,7 +336,7 @@ function readConfigFile(filePath: string): ReadConfigResult {
 
 export function loadPolicyFromPaths(
   paths: PermissionPaths,
-  expand?: { home?: string; cwd?: string },
+  options: { home: string; cwd: string; parseYaml: YamlParser },
 ): LoadPolicyResult {
   const failures: LoadFailure[] = [];
   const read = (filePath: string): string | null => {
@@ -360,9 +349,10 @@ export function loadPolicyFromPaths(
   const built = buildPolicy({
     globalSource: read(paths.globalPath),
     projectSource: read(paths.projectPath),
-    home: expand?.home,
-    cwd: expand?.cwd,
+    home: options.home,
+    cwd: options.cwd,
     permissionPaths: paths,
+    parseYaml: options.parseYaml,
   });
 
   for (const err of built.errors) {

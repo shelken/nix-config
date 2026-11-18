@@ -2,13 +2,15 @@ import { describe, expect, it } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { buildPolicy, evaluateGuard, type Policy } from "./index.ts";
+import { buildPolicy, evaluateGuard, type Policy } from "./guard.ts";
 
 const HOME = "/Users/testuser";
 const CWD = "/Users/testuser/project";
+const PERMISSION_PATHS = { globalPath: "/global/permissions.yml", projectPath: "/project/permissions.yml" };
+const parseYaml = (source: string) => Bun.YAML.parse(source);
 
 function policyFor(globalSource?: string, projectSource?: string): Policy {
-  return buildPolicy({ home: HOME, cwd: CWD, globalSource, projectSource }).policy;
+  return buildPolicy({ home: HOME, cwd: CWD, globalSource, projectSource, permissionPaths: PERMISSION_PATHS, parseYaml }).policy;
 }
 
 function command(command: string, policy = policyFor()): { block: boolean; reason: string } {
@@ -303,7 +305,7 @@ describe("内置路径规则", () => {
       symlinkSync(path.join(linked, ".env"), path.join(linked, ".env.tpl"));
       // 规则按 cwd 展开，cwd 取真实路径（macOS 的 /tmp、/var 都是软链接）
       const cwd = realpathSync(root);
-      const policy = buildPolicy({ home: HOME, cwd }).policy;
+      const policy = buildPolicy({ home: HOME, cwd, permissionPaths: PERMISSION_PATHS, parseYaml }).policy;
       const read = (p: string) =>
         evaluateGuard({ tool: "read", path: p, cwd, home: HOME }, policy);
       expect(read(path.join(real, ".env.tpl")).block).toBe(false);
@@ -312,7 +314,7 @@ describe("内置路径规则", () => {
 
       // 项目内的模板指向目录外的 .env：例外不成立，读写与命令读取都要拦
       const projectCwd = realpathSync(project);
-      const policyInProject = buildPolicy({ home: HOME, cwd: projectCwd }).policy;
+      const policyInProject = buildPolicy({ home: HOME, cwd: projectCwd, permissionPaths: PERMISSION_PATHS, parseYaml }).policy;
       const blocked = (tool: string, p?: string, command?: string) =>
         evaluateGuard(
           command === undefined
@@ -353,7 +355,7 @@ describe("内置路径规则", () => {
       symlinkSync("../store/sshconfig", path.join(home, ".ssh", "config"));
       writeFileSync(path.join(home, ".ssh", "id_rsa"), "KEY\n");
       writeFileSync(path.join(home, ".env"), "SECRET=1\n");
-      const policy = buildPolicy({ home, cwd: home }).policy;
+      const policy = buildPolicy({ home, cwd: home, permissionPaths: PERMISSION_PATHS, parseYaml }).policy;
       const blocked = (p: string) =>
         evaluateGuard({ tool: "read", path: p, cwd: home, home }, policy).block;
       expect(blocked(path.join(home, ".ssh", "config"))).toBe(false);
@@ -575,6 +577,8 @@ deny_paths:
       home: HOME,
       cwd: CWD,
       globalSource: "deny_commands: [",
+      permissionPaths: PERMISSION_PATHS,
+      parseYaml,
     });
     expect(built.errors.length).toBe(1);
     expect(built.errors[0]?.startsWith("全局配置:")).toBe(true);
