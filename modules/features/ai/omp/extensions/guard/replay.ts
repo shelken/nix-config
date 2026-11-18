@@ -1,7 +1,8 @@
 /**
  * 重放 omp 会话中被 guard 拦截的工具调用，统计指定 guard 版本下仍拦截的规则分布。
  *
- * 用法：bun replay.ts <guard 模块路径> [--samples <规则>]
+ * 用法：bun replay.ts <guard.ts 路径> [--samples <规则>]
+ * 只读 omp 会话（~/.omp/agent/sessions），依赖 `rg`。
  * 规则即拒绝信息中 `command:` / `path:` 后的值，例如 --samples "rm -rf *"
  */
 import { homedir } from "node:os";
@@ -11,7 +12,7 @@ const args = process.argv.slice(2);
 const sampleIdx = args.indexOf("--samples");
 const sampleRule = sampleIdx === -1 ? undefined : args[sampleIdx + 1];
 const target = args.find((a, i) => a !== "--samples" && (sampleIdx === -1 || i !== sampleIdx + 1));
-if (target === undefined) throw new Error("用法：bun replay.ts <guard 模块路径> [--samples <规则>]");
+if (target === undefined) throw new Error("用法：bun replay.ts <guard.ts 路径> [--samples <规则>]");
 const modulePath = path.resolve(target);
 const sessionsDir = path.join(homedir(), ".omp/agent/sessions");
 
@@ -66,11 +67,21 @@ for (const file of files) {
 // 待测 guard 版本由命令行参数指定，只能动态加载
 const guard = await import(modulePath);
 let handler: ((event: unknown, ctx: unknown) => unknown) | undefined;
-guard.default({
-  on: (event: string, h: typeof handler) => {
-    if (event === "tool_call") handler = h;
+if (typeof guard.registerGuard !== "function") {
+  throw new Error(`${modulePath} 未导出 registerGuard（传 guard.ts，不是 index.ts）`);
+}
+guard.registerGuard(
+  {
+    on: (event: string, h: typeof handler) => {
+      if (event === "tool_call") handler = h;
+    },
   },
-});
+  {
+    agentDir: process.env.OMP_AGENT_DIR ?? path.join(homedir(), ".omp/agent"),
+    configDirName: ".omp",
+    parseYaml: (s: string) => Bun.YAML.parse(s),
+  },
+);
 if (!handler) throw new Error(`${modulePath} 未注册 tool_call`);
 
 const byRule = new Map<string, Blocked[]>();

@@ -2,13 +2,15 @@ import { describe, expect, it } from "bun:test";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { buildPolicy, evaluateGuard, type Policy } from "./index.ts";
+import { buildPolicy, evaluateGuard, type Policy } from "./guard.ts";
 
 const HOME = "/Users/testuser";
 const CWD = "/Users/testuser/project";
+const PERMISSION_PATHS = { globalPath: "/global/permissions.yml", projectPath: "/project/permissions.yml" };
+const parseYaml = (source: string) => Bun.YAML.parse(source);
 
 function policyFor(globalSource?: string, projectSource?: string): Policy {
-  return buildPolicy({ home: HOME, cwd: CWD, globalSource, projectSource }).policy;
+  return buildPolicy({ home: HOME, cwd: CWD, globalSource, projectSource, permissionPaths: PERMISSION_PATHS, parseYaml }).policy;
 }
 
 function command(command: string, policy = policyFor()): { block: boolean; reason: string } {
@@ -303,7 +305,7 @@ describe("内置路径规则", () => {
       symlinkSync(path.join(linked, ".env"), path.join(linked, ".env.tpl"));
       // 规则按 cwd 展开，cwd 取真实路径（macOS 的 /tmp、/var 都是软链接）
       const cwd = realpathSync(root);
-      const policy = buildPolicy({ home: HOME, cwd }).policy;
+      const policy = buildPolicy({ home: HOME, cwd, permissionPaths: PERMISSION_PATHS, parseYaml }).policy;
       const read = (p: string) =>
         evaluateGuard({ tool: "read", path: p, cwd, home: HOME }, policy);
       expect(read(path.join(real, ".env.tpl")).block).toBe(false);
@@ -312,7 +314,7 @@ describe("内置路径规则", () => {
 
       // 项目内的模板指向目录外的 .env：例外不成立，读写与命令读取都要拦
       const projectCwd = realpathSync(project);
-      const policyInProject = buildPolicy({ home: HOME, cwd: projectCwd }).policy;
+      const policyInProject = buildPolicy({ home: HOME, cwd: projectCwd, permissionPaths: PERMISSION_PATHS, parseYaml }).policy;
       const blocked = (tool: string, p?: string, command?: string) =>
         evaluateGuard(
           command === undefined
@@ -353,7 +355,7 @@ describe("内置路径规则", () => {
       symlinkSync("../store/sshconfig", path.join(home, ".ssh", "config"));
       writeFileSync(path.join(home, ".ssh", "id_rsa"), "KEY\n");
       writeFileSync(path.join(home, ".env"), "SECRET=1\n");
-      const policy = buildPolicy({ home, cwd: home }).policy;
+      const policy = buildPolicy({ home, cwd: home, permissionPaths: PERMISSION_PATHS, parseYaml }).policy;
       const blocked = (p: string) =>
         evaluateGuard({ tool: "read", path: p, cwd: home, home }, policy).block;
       expect(blocked(path.join(home, ".ssh", "config"))).toBe(false);
@@ -543,6 +545,30 @@ deny_paths:
     expect(command("cat apps/web/.env.tpl", policy).block).toBe(false);
   });
 
+  it("项目层的 `-值` 不能删除内置路径规则", () => {
+    const policy = policyFor(undefined, 'deny_paths:\n  - "-~/.ssh/*"\n');
+    expect(command("cat ~/.ssh/id_rsa", policy).block).toBe(true);
+  });
+
+  it("项目层的 `-值` 不能删除全局命令规则，并报告", () => {
+    const built = buildPolicy({
+      home: HOME,
+      cwd: CWD,
+      globalSource: 'deny_commands:\n  - "git reset --hard"\n',
+      projectSource: 'deny_commands:\n  - "-git reset --hard"\n',
+      permissionPaths: PERMISSION_PATHS,
+      parseYaml,
+    });
+    expect(command("git reset --hard", built.policy).block).toBe(true);
+    expect(built.errors.some((e) => e.message.startsWith("项目配置:") && e.message.includes("只能追加"))).toBe(true);
+  });
+
+  it("项目层同名规则不替换内置规则", () => {
+    const policy = policyFor(undefined, 'deny_paths:\n  - path: ".env"\n    reason: "项目理由"\n');
+    expect(command("cat nested/dir/.env", policy).block).toBe(true);
+    expect(command("cat /tmp/unrelated/.env", policy).block).toBe(true);
+  });
+
   it("用户相对路径规则只按 cwd 起效，内置环境文件规则仍按任意深度", () => {
     const project = `deny_paths:
   - path: "private.txt"
@@ -554,6 +580,18 @@ deny_paths:
     expect(toolPath("read", "/tmp/unrelated/private.txt", policy).block).toBe(false);
     expect(toolPath("read", "nested/.env", policy).block).toBe(true);
     expect(toolPath("read", "/tmp/unrelated/.env", policy).block).toBe(true);
+  });
+
+  it("合法的项目追加照常生效，单条坏项只报 item", () => {
+    const built = buildPolicy({
+      home: HOME,
+      cwd: CWD,
+      projectSource: 'deny_paths:\n  - path: "private.txt"\n  - 123\n',
+      permissionPaths: PERMISSION_PATHS,
+      parseYaml,
+    });
+    expect(toolPath("read", "private.txt", built.policy).block).toBe(true);
+    expect(built.errors.map((e) => e.scope)).toEqual(["item"]);
   });
 
   it("命令名撞上对象原型属性时按普通命令处理", () => {
@@ -575,9 +613,12 @@ deny_paths:
       home: HOME,
       cwd: CWD,
       globalSource: "deny_commands: [",
+      permissionPaths: PERMISSION_PATHS,
+      parseYaml,
     });
     expect(built.errors.length).toBe(1);
-    expect(built.errors[0]?.startsWith("全局配置:")).toBe(true);
+    expect(built.errors[0]?.message.startsWith("全局配置:")).toBe(true);
+    expect(built.errors[0]?.scope).toBe("layer");
     const result = evaluateGuard(
       { tool: "bash", command: "cat .env", cwd: CWD, home: HOME },
       built.policy,

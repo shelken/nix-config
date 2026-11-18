@@ -33,7 +33,7 @@ export type PathRule = {
 
 export type Policy = {
   default_reason?: string;
-  /** 内置命令规则由 index.ts 的检查函数承担，这里只放用户规则 */
+  /** 内置命令规则由 guard.ts 的检查函数承担，这里只放用户规则 */
   commands: CommandRule[];
   paths: PathRule[];
 };
@@ -53,9 +53,13 @@ type ParseLayerResult =
   | { ok: true; layer: ParsedLayer }
   | { ok: false; error: string };
 
-export type BuildPolicyResult = { policy: Policy; errors: string[] };
+/** layer：整层配置没能加载；item：只有其中一项被忽略，其余规则照常生效 */
+export type BuildError = { message: string; scope: "layer" | "item" };
+export type BuildPolicyResult = { policy: Policy; errors: BuildError[] };
+/** YAML 解析由宿主提供：guard 自己不带 YAML 库 */
+export type YamlParser = (source: string) => unknown;
 export type PermissionPaths = { globalPath: string; projectPath: string };
-export type LoadFailure = { path: string; message: string };
+export type LoadFailure = { path: string; message: string; scope: BuildError["scope"] };
 export type LoadPolicyResult = { policy: Policy; failures: LoadFailure[] };
 type ReadConfigResult =
   | { status: "missing" }
@@ -209,19 +213,7 @@ function parseListOps(
   return { ops, errors };
 }
 
-/** 配置解析依赖宿主 YAML 实现；omp 运行在 Bun 上，缺失说明宿主环境异常 */
-function parseYaml(source: string): unknown {
-  const bun = Reflect.get(globalThis, "Bun");
-  if (bun && typeof bun === "object" && "YAML" in bun) {
-    const yaml = bun.YAML;
-    if (yaml && typeof yaml === "object" && "parse" in yaml && typeof yaml.parse === "function") {
-      return yaml.parse(source);
-    }
-  }
-  throw new Error("宿主缺少 YAML 解析器");
-}
-
-function parseLayerYaml(source: string): ParseLayerResult {
+function parseLayerYaml(source: string, parseYaml: YamlParser): ParseLayerResult {
   let doc: unknown;
   try {
     doc = parseYaml(source);
@@ -246,16 +238,24 @@ function parseLayerYaml(source: string): ParseLayerResult {
 }
 
 /**
- * 叠加一层规则：`-值` 按规则原文删除同名规则，相同原文的新规则就地覆盖。
+ * 叠加一层规则。全局层：`-值` 按规则原文删除同名规则，相同原文的新规则就地覆盖；
  * 路径规则与内置规则走同一条路径，`-值` 因此能撤掉内置例外或整条内置规则。
+ * 项目层：只追加。
  */
 function applyRuleOps<T extends { value: string }>(
   rules: T[],
   ops: LayerOp[],
   make: (op: { value: string; reason?: string }) => T,
+  layer: { appendOnly: boolean; ignored: (value: string) => void },
 ): T[] {
   let out = rules.slice();
   for (const op of ops) {
+    // 项目权限文件随仓库克隆而来，不可信，不能放宽保护
+    if (layer.appendOnly) {
+      if (op.type === "remove") layer.ignored(op.value);
+      else out.push(make(op));
+      continue;
+    }
     if (op.type === "remove") {
       out = out.filter((r) => r.value !== op.value);
       continue;
@@ -273,44 +273,60 @@ export function buildPolicy(input: {
   projectSource?: string | null;
   home?: string;
   cwd?: string;
-  permissionPaths?: PermissionPaths;
+  permissionPaths: PermissionPaths;
+  parseYaml: YamlParser;
 }): BuildPolicyResult {
   const ctx: ExpandCtx = {
     home: input.home ?? homedir(),
     cwd: input.cwd ?? process.cwd(),
   };
-  const permissionPaths =
-    input.permissionPaths ?? getPermissionPaths(ctx.cwd, path.join(ctx.home, ".omp/agent"));
+  const { permissionPaths, parseYaml } = input;
 
   let commands: CommandRule[] = [];
   let paths = BUILTIN_PATHS.map((r) =>
     compilePathRule(r.value, r.reason, r.except ?? [], "builtin", BUILTIN_PATH_CONFIG, ctx),
   );
   let default_reason: string | undefined;
-  const errors: string[] = [];
+  const errors: BuildError[] = [];
 
   const layers = [
-    { name: "全局配置", source: input.globalSource, config: permissionPaths.globalPath },
-    { name: "项目配置", source: input.projectSource, config: permissionPaths.projectPath },
+    { name: "全局配置", source: input.globalSource, config: permissionPaths.globalPath, appendOnly: false },
+    { name: "项目配置", source: input.projectSource, config: permissionPaths.projectPath, appendOnly: true },
   ];
-  for (const { name, source, config } of layers) {
+  for (const { name, source, config, appendOnly } of layers) {
     if (source == null) continue;
-    const parsed = parseLayerYaml(source);
+    const parsed = parseLayerYaml(source, parseYaml);
     if (!parsed.ok) {
-      errors.push(`${name}: ${parsed.error}`);
+      errors.push({ message: `${name}: ${parsed.error}`, scope: "layer" });
       continue;
     }
-    errors.push(...parsed.layer.errors.map((e) => `${name}: ${e}`));
+    errors.push(...parsed.layer.errors.map((e) => ({ message: `${name}: ${e}`, scope: "item" as const })));
     if (parsed.layer.default_reason !== undefined) default_reason = parsed.layer.default_reason;
-    commands = applyRuleOps(commands, parsed.layer.commandOps, (op) => ({
-      value: op.value,
-      match: expandHomeInText(op.value, ctx.home),
-      reason: op.reason,
-      source: "user",
-      config: `${config}#deny_commands`,
-    }));
-    paths = applyRuleOps(paths, parsed.layer.pathOps, (op) =>
-      compilePathRule(op.value, op.reason, [], "user", `${config}#deny_paths`, ctx),
+    const layer = {
+      appendOnly,
+      ignored: (value: string) =>
+        errors.push({
+          message: `${name}: '-${value}' 已忽略：项目层只能追加规则，删除规则只能写在全局权限文件`,
+          scope: "item",
+        }),
+    };
+    commands = applyRuleOps(
+      commands,
+      parsed.layer.commandOps,
+      (op) => ({
+        value: op.value,
+        match: expandHomeInText(op.value, ctx.home),
+        reason: op.reason,
+        source: "user",
+        config: `${config}#deny_commands`,
+      }),
+      layer,
+    );
+    paths = applyRuleOps(
+      paths,
+      parsed.layer.pathOps,
+      (op) => compilePathRule(op.value, op.reason, [], "user", `${config}#deny_paths`, ctx),
+      layer,
     );
   }
 
@@ -321,16 +337,15 @@ function resolveFirstExisting(candidates: string[]): string {
   return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
 }
 
-export function getPermissionPaths(cwd: string, agentDir?: string): PermissionPaths {
-  const dir = agentDir || process.env.OMP_AGENT_DIR || path.join(homedir(), ".omp/agent");
+export function getPermissionPaths(cwd: string, agentDir: string, configDirName: string): PermissionPaths {
   return {
     globalPath: resolveFirstExisting([
-      path.join(dir, "permissions.yml"),
-      path.join(dir, "permissions.yaml"),
+      path.join(agentDir, "permissions.yml"),
+      path.join(agentDir, "permissions.yaml"),
     ]),
     projectPath: resolveFirstExisting([
-      path.join(cwd, ".omp", "permissions.yml"),
-      path.join(cwd, ".omp", "permissions.yaml"),
+      path.join(cwd, configDirName, "permissions.yml"),
+      path.join(cwd, configDirName, "permissions.yaml"),
     ]),
   };
 }
@@ -347,28 +362,28 @@ function readConfigFile(filePath: string): ReadConfigResult {
 
 export function loadPolicyFromPaths(
   paths: PermissionPaths,
-  expand?: { home?: string; cwd?: string },
+  options: { home: string; cwd: string; parseYaml: YamlParser },
 ): LoadPolicyResult {
   const failures: LoadFailure[] = [];
   const read = (filePath: string): string | null => {
     const result = readConfigFile(filePath);
     if (result.status === "ok") return result.text;
-    if (result.status === "error") failures.push({ path: filePath, message: result.message });
+    if (result.status === "error") failures.push({ path: filePath, message: result.message, scope: "layer" });
     return null;
   };
 
   const built = buildPolicy({
     globalSource: read(paths.globalPath),
     projectSource: read(paths.projectPath),
-    home: expand?.home,
-    cwd: expand?.cwd,
+    home: options.home,
+    cwd: options.cwd,
     permissionPaths: paths,
+    parseYaml: options.parseYaml,
   });
 
-  for (const err of built.errors) {
-    const layer = err.startsWith("项目配置:") ? paths.projectPath : paths.globalPath;
-    const prefix = err.startsWith("全局配置:") || err.startsWith("项目配置:");
-    failures.push({ path: layer, message: prefix ? err.slice(err.indexOf(":") + 1).trim() : err });
+  for (const { message, scope } of built.errors) {
+    const layerPath = message.startsWith("项目配置:") ? paths.projectPath : paths.globalPath;
+    failures.push({ path: layerPath, message: message.slice(message.indexOf(":") + 1).trim(), scope });
   }
   return { policy: built.policy, failures };
 }
