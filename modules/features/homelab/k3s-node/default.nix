@@ -17,8 +17,9 @@
       yaml = pkgs.formats.yaml { };
 
       kubeletArgs = [
-        "image-gc-low-threshold=50"
-        "image-gc-high-threshold=55"
+        # 节点根分区只放系统与镜像，Longhorn 不在根分区上；阈值太低时 nix store 稍涨就会触发 GC 失败告警
+        "image-gc-low-threshold=75"
+        "image-gc-high-threshold=80"
         "feature-gates=ImageVolume=true"
         "allowed-unsafe-sysctls=net.ipv6.*"
       ]
