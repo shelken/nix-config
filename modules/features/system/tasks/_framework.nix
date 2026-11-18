@@ -6,7 +6,7 @@
 #     # every = 7200;         # 或间隔秒数
 #     # user = true;          # 默认 true：home-manager agent + task-<name> 手动命令
 #     # packages = with pkgs; [ jq ]; # 运行时依赖，注入 PATH
-#     # secrets = { GH_TOKEN = secretPath "github/cli-token"; }; # sops 解密文件的变量注入
+#     # secrets = { GH_TOKEN = secretPath "github/cli-token"; }; # sops 解密文件或 op:// 引用的变量注入
 #     # env = { EDITOR = "vim"; };    # 普通环境变量（明文）
 #     # jitter = 600;         # launchd 调度触发时的最大随机延迟秒数，手动运行不延迟
 #     # notify = { success = true; title = "Backup"; }; # 成功通知与自定义标题
@@ -26,10 +26,12 @@
 }:
 let
   taskCfg = config.shelken.tasks;
+  userSops = config.home-manager.users.${myvars.username}.sops;
 
   tasksLib = mylib.mkTasksLib {
     inherit lib pkgs;
     homeDir = userHome;
+    opTokenFile = userSops.secrets."op/service-account-token".path;
   };
 
   # 用户家目录（task.nix 属 darwin 模块，但家目录由 users 模块解析，避免硬编码 /Users）
@@ -53,7 +55,7 @@ in
       # host 文件无需任何接线
       shelken.tasks = mylib.loadTasks (mylib.relativeToRoot "hosts/${config.networking.hostName}/tasks") {
         inherit pkgs lib;
-        secretPath = secret: config.home-manager.users.${myvars.username}.sops.secrets.${secret}.path;
+        secretPath = secret: userSops.secrets.${secret}.path;
       };
 
       assertions = tasksLib.mkAssertions taskCfg;

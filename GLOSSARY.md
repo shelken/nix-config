@@ -49,7 +49,7 @@ _避免_: 外部依赖、源码（范围过宽，会把 flake 依赖也包进来
 
 - **凭据基座 (Secret Base)**: 仓库 `opSecretMap` 声明的变量名到 1Password `op://` 引用的映射，构建期生成引用文件，真实值只在 1Password。_避免_: secret 列表、明文基座
 - **覆盖层 (Override Layer)**: `$HOME/.specific.zsh`，只放对基座的临时差异（换值、切备用账号），同名覆盖基座，注释即回落。允许明文，推荐 `op://` 引用。_避免_: 特定配置、本地 secrets
-- **引用 (Reference)**: `op://<vault>/<item>/<field>` 形式的字符串，由 `op run` 在进程启动时解析为真实值。_避免_: secret 值、token
+- **引用 (Reference)**: `op://<vault>/<item>/<field>` 形式的字符串，由 `op run`（sec-run）或 `op read`（定时任务）在进程启动时解析为真实值。_避免_: secret 值、token
 
 ## 定时任务
 

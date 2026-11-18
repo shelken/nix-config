@@ -17,6 +17,7 @@ let
   tasksLib = mylib.mkTasksLib {
     inherit lib pkgs;
     homeDir = config.home.homeDirectory;
+    opTokenFile = config.sops.secrets."op/service-account-token".path;
   };
 
   taskCfg = config.shelken.tasks;
