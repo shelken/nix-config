@@ -446,11 +446,18 @@ export function registerGuard(pi: GuardExtensionAPI, host: GuardHost): void {
 
   function reportFailures(ctx: GuardExtensionContext, failures: LoadFailure[]): void {
     for (const failure of failures) {
-      const msg = `guard: 无法加载配置 ${failure.path}: ${failure.message}；该层已忽略（fail-open）`;
-      console.error(msg);
-      if (notified.has(failure.path)) continue;
-      notified.add(failure.path);
-      if (ctx.hasUI && ctx.ui?.notify) ctx.ui.notify(msg, "error");
+      const msg =
+        failure.scope === "layer"
+          ? `guard: 无法加载配置 ${failure.path}: ${failure.message}；该层已忽略（fail-open）`
+          : `guard: 配置 ${failure.path}: ${failure.message}；该项已忽略`;
+      // TUI 占着终端时直接写 stderr 会弄花界面，所以有 UI 时只走通知
+      if (ctx.hasUI && ctx.ui?.notify) {
+        if (notified.has(msg)) continue;
+        notified.add(msg);
+        ctx.ui.notify(msg, "error");
+      } else {
+        console.error(msg);
+      }
     }
   }
 
