@@ -122,6 +122,7 @@
     },
     "npm:pi-better@0.2.0",
     "git:github.com/johnlindquist/pi-emphasis@f884b736c489944ee778ab951c7f78580f137b02",
+    "npm:pi-inspect@0.6.0",
     "-npm:pi-rewind",
     "-npm:pi-observational-memory",
     "-/Users/shelken/Code/active/pi-balance",
@@ -139,6 +140,7 @@
   "defaultModel": "loomy/DeepSeek-V4.1-Flash",
   "extensionChangelogVersions": {
     "{\"source\":\"npm:pi-better@0.2.0\",\"scope\":\"user\"}": "0.2.0",
-    "{\"source\":\"npm:pi-inspect\",\"scope\":\"project\"}": "0.6.0"
+    "{\"source\":\"npm:pi-inspect\",\"scope\":\"project\"}": "0.6.0",
+    "{\"source\":\"npm:pi-inspect\",\"scope\":\"user\"}": "0.6.0"
   }
 }
