@@ -19,7 +19,9 @@ description: 子代理的派发、审查与规划规范，含 `spawn-subagent` �
 
 ## `spawn-subagent` 环境限制
 
-- `spawn-subagent` 支持 Pi 在三种终端运行，优先级 Herdr.app（`HC_TERMINAL_ID`）> 旧 Herdr（`HERDR_PANE_ID`）> Kitty（`KITTY_WINDOW_ID`）；其他终端会停止并报告，不做降级。Oh My Pi（omp）使用原生子代理控制
+- `spawn-subagent` 支持 Pi 在三种终端运行，优先级 Herdr.app（`HC_TERMINAL_ID`）> 旧 Herdr（`HERDR_PANE_ID`）> Kitty（`KITTY_WINDOW_ID`）；其他终端会停止并报告，不做降级。Oh My Pi（omp）使用原生子代理控制，只有 agy profile（如 `reviewer-agy`、`task-agy`）在 omp 中也用 `spawn-subagent` 派发
+- agy profile 启动交互式 agy CLI：每轮最终回复由插件 hook 自动经 intercom 回传，子代理自己不调用工具回传；agy 没有 intercom 工具，主代理不能向它发 intercom 消息，追加任务一律用 `resume`
+- hc 可能把运行中的 agy 子终端误报为 `blocked (auth)`，以 intercom 回传或 `hc read` 的画面为准
 - Herdr.app 内可能残留已失效的旧 `HERDR_PANE_ID`，以 `HC_TERMINAL_ID` 为准
 - Herdr.app 子代理默认后台运行，挂在当前终端下，用户在 Agents 列表查看；脚本不分屏、不聚焦，展示方式由用户决定
 - ID 含义随后端而定：Herdr.app 为 hc 终端地址（如 `t7`），旧 Herdr 为 pane ID，Kitty 为窗口 ID

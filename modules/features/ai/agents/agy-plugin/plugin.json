@@ -1,0 +1,6 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "spawn-subagent",
+  "version": "1.0.0",
+  "description": "Hooks for agy subagents dispatched by spawn-subagent: inject the profile prompt, restrict tools, report each turn over pi-intercom. Inactive unless SPAWN_SUBAGENT_AGY_RUN is set."
+}

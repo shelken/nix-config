@@ -1,0 +1,30 @@
+{
+  "spawn-subagent": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "if [ -n \"${SPAWN_SUBAGENT_AGY_RUN:-}\" ]; then exec \"$HOME/.local/bin/spawn-subagent\" _agy-hook session-start; fi; cat >/dev/null; echo '{}'",
+        "timeout": 10
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "write_file|edit_file|invoke_subagent|define_subagent|manage_subagents|swarm|run_workflow|ask_question",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -n \"${SPAWN_SUBAGENT_AGY_RUN:-}\" ]; then exec \"$HOME/.local/bin/spawn-subagent\" _agy-hook pre-tool; fi; cat >/dev/null; echo '{\"decision\":\"allow\"}'",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "if [ -n \"${SPAWN_SUBAGENT_AGY_RUN:-}\" ]; then exec \"$HOME/.local/bin/spawn-subagent\" _agy-hook stop; fi; cat >/dev/null; echo '{}'",
+        "timeout": 30
+      }
+    ]
+  }
+}

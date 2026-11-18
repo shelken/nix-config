@@ -9,5 +9,10 @@
   "//providerAlias": "omp config.yml 的 provider 前缀 -> pi 的 provider 名。spawn-subagent 把解析出的模型名换成 pi 的 provider 名时使用。",
   "providerAlias": {
     "google-antigravity": "antigravity"
+  },
+  "//agyProfiles": "agy CLI 子代理：profile 名 -> base（正文与 tools 取自 ~/.pi/agent/agents/<base>.md）+ model（agy models 列出的 id，自带档位）。不写进 omp config.yml：omp 不认识 agy provider 会告警",
+  "agyProfiles": {
+    "reviewer-agy": { "base": "reviewer", "model": "gemini-4-carbon-high" },
+    "task-agy": { "base": "task", "model": "gemini-4-hydrogen-high" }
   }
 }
