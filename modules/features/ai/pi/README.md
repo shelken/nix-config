@@ -10,7 +10,9 @@ Posthorse 必须排在 `pi-execution-time` 前面，避免自动 compact 后出�
 
 ## 后台 shell
 
-用 `@shelken/pi-background-lean` 提供后台命令：`bg_run` 启动、`bg_status` 查看、`bg_kill` 停止，`/bg` 看输出。它包装 `pi-background@0.4.4`，行为不变，只精简模型可见的描述与规则（每次请求约 965 → 417 tokens）。
+用 `pi-background` 提供后台命令：`bg_run` 启动、`bg_status` 查看、`bg_kill` 停止，`/bg` 看输出。
+
+不用精简版 `@shelken/pi-background-lean`。它把规则压短后，模型不再知道「可以结束回合等通知」「输出已在任务日志里」，改成自己重定向日志、`sleep` 后再读。每次请求省的约 800 tokens（Claude 计）在缓存读价下不到 $0.0001，一次多余的 sleep 往返就要几美分。
 
 选它的原因是投递方式。后台任务一结束，结果就在下一次模型调用前送达（pi 的 `steer` 投递）。之前用的 `@pify/shell-background` 把结果攒到整个 run 结束才发，子代理汇报完之后还会被迟到的结果逐条唤醒。
 

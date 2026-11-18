@@ -103,7 +103,7 @@
       ]
     },
     "npm:@juicesharp/rpiv-web-tools@2.15.0",
-    "npm:@shelken/pi-background-lean@0.1.0",
+    "npm:pi-background@0.4.4",
     {
       "skills": [
         "-skills/ponytail-debt/SKILL.md",
