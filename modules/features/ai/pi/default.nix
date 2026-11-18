@@ -65,7 +65,6 @@
 
       # 插件读的环境变量写在登记表 env：宿主与沙箱同源（沙箱不继承宿主 shell 的环境）
       shelken.dev.tools.pi.env = {
-        ANTIGRAVITY_NO_EXTRA_TOOLS = "1";
         # 关掉 pi-emphasis 自带的 ~1500 token 英文规则，改用 _agents.md 里的简版
         PI_EMPHASIS_GUIDANCE = "0";
       };

@@ -169,14 +169,6 @@ function resolveSpec(
   return { model: ref, thinking: level ?? "" };
 }
 
-// omp 的 "provider/model" -> pi 的 provider 名
-function toPiModel(model: string): string {
-  const alias: Record<string, string> = config.providerAlias ?? {};
-  const i = model.indexOf("/");
-  if (i < 0) return model;
-  return (alias[model.slice(0, i)] ?? model.slice(0, i)) + model.slice(i);
-}
-
 function resolveModel(
   profile: string,
   cfg: ModelConfig,
@@ -189,7 +181,7 @@ function resolveModel(
   }
   // pi 必须拿到 thinking 档位；角色没写 level 时报错，避免把空值传给 --thinking。
   if (!resolved.thinking) return { error: `config.yml 的 '${spec}' 没有 thinking 档位` };
-  return { model: toPiModel(resolved.model), thinking: resolved.thinking };
+  return { model: resolved.model, thinking: resolved.thinking };
 }
 
 // ---------- 命令 ----------

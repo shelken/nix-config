@@ -113,13 +113,6 @@
       ],
       "source": "npm:@dietrichgebert/ponytail@5.3.3"
     },
-    {
-      "extensions": [
-        "-./src/features/google-search.ts",
-        "-./src/features/generate-image.ts"
-      ],
-      "source": "npm:pi-antigravity@0.14.0"
-    },
     "npm:pi-better@0.2.0",
     "git:github.com/johnlindquist/pi-emphasis@f884b736c489944ee778ab951c7f78580f137b02",
     "npm:pi-inspect@0.6.0",
