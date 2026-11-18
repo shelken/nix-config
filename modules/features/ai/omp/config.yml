@@ -36,7 +36,7 @@ modelRoles:
   smol: "@gpt-lite"
   scout: "@dsf"
   default: "@dsf"
-  task: "@dsf"
+  task: "@claude"
   slow: "@gpt:high"
 cycleOrder:
   - smol
@@ -77,7 +77,7 @@ statusLine:
     - usage
 task:
   agentModelOverrides:
-    reviewer: "@reviewer-ds"
+    reviewer: "@reviewer-gpt"
     reviewer-gemini: "@reviewer-gemini"
     reviewer-ds: "@reviewer-ds"
     reviewer-glm: "@reviewer-glm"

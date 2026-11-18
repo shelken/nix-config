@@ -6,40 +6,38 @@
     "reserveTokens": 22000,
     "modelOverrides": {
       "cpa/workbuddy/glm-5.3": {
-        "reserveTokens": 650000
+        "reserveTokens": 600000
       },
       "cpa/workbuddy/glm-5.2": {
-        "reserveTokens": 650000
+        "reserveTokens": 600000
       },
       "anthropic/claude-opus-5-5": {
-        "reserveTokens": 650000
+        "reserveTokens": 600000
       },
-      "mp/antigravity/gemini-3.8-flash": {
-        "reserveTokens": 698576
-      },
+
       "anthropic/claude-fable-5-2": {
-        "reserveTokens": 650000
+        "reserveTokens": 600000
       },
       "mp/qoder-cn/dfmodel": {
-        "reserveTokens": 650000
+        "reserveTokens": 600000
       },
       "cpa/claude-fable-5-2": {
-        "reserveTokens": 650000
+        "reserveTokens": 600000
       },
       "mp/qoder-cn/gmodel": {
-        "reserveTokens": 650000
+        "reserveTokens": 600000
       },
       "mp/loomy/GLM-5.3-Flash": {
-        "reserveTokens": 698576
+        "reserveTokens": 648576
       },
       "anthropic/claude-sonnet-5-5": {
-        "reserveTokens": 650000
+        "reserveTokens": 600000
       },
       "mp/loomy/DeepSeek-V4.1-Flash": {
-        "reserveTokens": 698576
+        "reserveTokens": 648576
       },
       "mp/codex/gpt-6.2-sol": {
-        "reserveTokens": 150000
+        "reserveTokens": 100000
       }
     }
   },
@@ -51,7 +49,6 @@
     "cpa/workbuddy/glm-5.3:high",
     "cpa/workbuddy/glm-5.2:high",
     "anthropic/claude-opus-5-5:medium",
-    "mp/antigravity/gemini-3.8-flash:high",
     "anthropic/claude-fable-5-2:low",
     "mp/qoder-cn/dfmodel:high",
     "cpa/claude-fable-5-2:medium",
