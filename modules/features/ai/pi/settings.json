@@ -5,6 +5,9 @@
   "compaction": {
     "reserveTokens": 22000,
     "modelOverrides": {
+      "cpa/workbuddy/glm-5.3": {
+        "reserveTokens": 650000
+      },
       "cpa/workbuddy/glm-5.2": {
         "reserveTokens": 650000
       },
@@ -45,6 +48,7 @@
     "+codemode"
   ],
   "enabledModels": [
+    "cpa/workbuddy/glm-5.3:high",
     "cpa/workbuddy/glm-5.2:high",
     "anthropic/claude-opus-5-5:medium",
     "mp/antigravity/gemini-3.8-flash:high",
