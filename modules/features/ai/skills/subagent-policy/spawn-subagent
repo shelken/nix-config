@@ -8,7 +8,7 @@ import { execFileSync, execSync, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
   appendFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync,
-  readlinkSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync,
+  readlinkSync, renameSync, statSync, rmSync, symlinkSync, unlinkSync, writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
@@ -38,7 +38,7 @@ const agyProfiles: Record<string, AgyProfile> = config.agyProfiles ?? {};
 
 // md 的 frontmatter 不是合法 YAML、缺 tools 或缺 role 即视为无法解析；
 // pi 的 model/thinking 只来自 config.yml，没有静态兜底。cfg 由调用方传入，避免每个 profile 重读 config.yml。
-function resolveAgent(profile: string, cfg: ModelConfig = loadModelConfig()): Resolved {
+function resolveAgent(profile: string, cfg?: ModelConfig): Resolved {
   const agy = agyProfiles[profile.toLowerCase()];
   if (agy) {
     if (typeof agy.base !== "string" || typeof agy.model !== "string" || !agy.model) {
@@ -55,7 +55,7 @@ function resolveAgent(profile: string, cfg: ModelConfig = loadModelConfig()): Re
   }
   const md = readProfileMd(profile);
   if ("error" in md) return md;
-  const resolved = resolveModel(md.name, cfg, md.role);
+  const resolved = resolveModel(md.name, cfg ?? loadModelConfig(), md.role);
   if ("error" in resolved) return resolved;
   // 插件排除全局统一：所有子代理共用一份派生 settings.json，per-md 无法生效
   return {
@@ -100,15 +100,19 @@ function readProfileMd(profile: string): ProfileMd | { error: string } {
 }
 
 // agy 的模型 id 自带档位（如 gemini-4-carbon-high）。未知 id 会让 agy 打印列表后直接退出、不触发任何 hook，
-// 所以派发前对照 `agy models` 校验；该命令要联网（约数秒），一个进程内只查一次
+// 所以派发前对照 `agy models` 校验；该命令要联网（约数秒），一个进程内只查一次。
+// 插件缺失时 agy 会带着 --dangerously-skip-permissions 裸跑，没有只读拦截也不会回传，必须拒绝派发。
+// 返回配置错误文本；`agy models` 本身执行失败（网络、登录）抛错，由调用方按启动失败处理
+const agyPluginHooks = join(homedir(), ".gemini", "config", "plugins", "spawn-subagent", "hooks.json");
 let agyModelCache: string[] | null = null;
-function checkAgyModel(g: Agent): string | null {
+function checkAgy(g: Agent): string | null {
   if (g.runner !== "agy") return null;
+  if (!existsSync(agyPluginHooks)) return `agy 插件未安装（缺 ${agyPluginHooks}，先运行 just hm）`;
   try {
-    agyModelCache ??= execFileSync("agy", ["models"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] })
+    agyModelCache ??= execFileSync("agy", ["models"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 15_000 })
       .split("\n").map((l) => l.split("\t")[0].trim()).filter((id) => /^[a-z0-9][a-z0-9.-]*$/.test(id));
   } catch (e: any) {
-    return `无法获取 agy 模型列表（agy models: ${String(e.message ?? e).trim()}）`;
+    throw new Error(`无法获取 agy 模型列表（agy models: ${cliError(e)}）`);
   }
   return agyModelCache.includes(g.model)
     ? null
@@ -202,8 +206,8 @@ function usage() {
   spawn-subagent resume <id> -- <task>        复用已有子代理，注入新任务（不重启；hc 后端仅允许当前终端启动的子终端）
   spawn-subagent list [-v] [--json]           列出所有 agent（表头 NAME|ACCESS|MODEL|THINK，末行总数）
                                               ACCESS: tools 含 edit/write 为 rw，否则 ro；config.yml 读不到则报错退出
-                                              -v 加 description 行；--json 输出数组（含 tools 与 description）
-  spawn-subagent --check                      派生 settings + 打印所有 agent 生效值，不启动
+                                              -v 加 description 行；--json 输出数组（含 runner、tools 与 description）
+  spawn-subagent --check                      派生 settings + 校验 agy 插件与模型（联网）+ 打印所有 agent 生效值，不启动
   spawn-subagent close <id>                   关闭子代理（含已结束的）；旧 Herdr 另聚焦回主 pane
   spawn-subagent close --finished | --all     批量关闭当前终端派发的子代理：仅已结束的 / 全部（仅 Herdr.app(hc)）
   spawn-subagent ps [--json]                  列出当前终端派发的子代理（含已结束）：
@@ -223,7 +227,10 @@ profile: 对应 ~/.pi/agent/agents/<profile>.md（文件名匹配大小写不敏
 agy profile: subagent-config.json 的 agyProfiles（如 reviewer-agy、task-agy）用 agy CLI 启动：
          正文与 tools 取自 base md，模型是 agy 模型 id（自带档位，THINK 显示 -），派发前对照 agy models 校验；
          依赖 ~/.gemini/config/plugins/spawn-subagent 插件：正文作为系统消息注入，ro 拦截 write_file/edit_file，
-         一律禁止派生子代理与 ask_question；每轮最终回复由 Stop hook 经 intercom 自动回传（首行 [agent 名]）。
+         一律禁止派生子代理与 ask_question；每轮最终回复由 Stop hook 经 intercom 自动回传（首行 [agent 名]）；
+         插件缺失或模型不在 agy models 中为 config-error，零派发。
+         健康门: 首条模型回复，或会话启动后 20s 内无报错且终端未退出即放行（高档位模型首轮思考常超 45s）；
+         放行后的报错同样经 intercom 回传。
 slug:    任务语义标识（小写字母/数字/连字符；agent 名 profile-slug-时间戳上限 32，
          超长自动截断，无需调用者计算）
 task:    子代理任务描述，支持多行；结论经 intercom 回传，不写文件
@@ -427,6 +434,8 @@ type Launch = {
   args: string[]; // 不含首条任务
   promptArgs: (prompt: string) => string[];
   observe: () => HealthObservation;
+  // 健康门放行后调用：之后的失败不再由健康门报告
+  onHealthy?: () => void;
 };
 
 const canEdit = (tools: string) => /(^|,)(edit|write)(,|$)/.test(tools);
@@ -461,6 +470,7 @@ function agyLaunch(g: Agent, agentName: string, intercom: string, promptFile?: s
     args: ["--model", g.model, "--dangerously-skip-permissions"],
     promptArgs: (p) => ["-i", p],
     observe: () => observeAgy(runDir),
+    onHealthy: () => writeFileSync(join(runDir, "gated"), ""),
   };
 }
 
@@ -838,7 +848,8 @@ type SessionEvent = {
   type?: string;
   message?: { role?: string; stopReason?: string; errorMessage?: string };
 };
-type HealthObservation = { status: "none" | "healthy" | "error"; reason?: string };
+// final: 错误不会自行恢复（agy 的 Stop 表示本轮已结束），健康门不必等到期限
+type HealthObservation = { status: "none" | "healthy" | "error"; reason?: string; final?: boolean };
 
 function observeHealth(text: string): HealthObservation {
   let reason = "";
@@ -864,7 +875,7 @@ function checkHealthParser() {
 // 状态码前后不能紧挨字母或数字，否则 request id（req_4012）、耗时（1403ms）会被误判、让可重试的故障直接失败；
 // 但下划线要算边界，pi 透传的 `${code}: ${message}` 里 model_not_found、invalid_auth、HTTP_401 都是真实配置错误。
 // auth 类词只认 auth/authentication/authorization 等，避开 author；forbidden/not_found 保持前缀匹配，不漏 not_found_error。
-const CONFIG_ERROR = /(?<![a-z0-9])(?:400|401|403|404|429)(?![a-z0-9])|(?<![a-z])(?:un)?auth(?:entic[a-z]*|oriz[a-z]*)?(?![a-z])|(?<![a-z])(?:forbidden|not_found)/i;
+const CONFIG_ERROR = /(?<![a-z0-9])(?:400|401|403|404|429)(?![a-z0-9])|(?<![a-z])(?:un)?auth(?:entic[a-z]*|oriz[a-z]*)?(?![a-z])|(?<![a-z])(?:forbidden|not_found|resource_exhausted)/i;
 
 // pi 自己负责瞬时错误重试。健康门只观察同一会话，避免脚本重启 session 造成双重重试。
 // 4xx 配置/认证错误立即失败；其他错误等到总期限，期间出现新健康 assistant 即恢复。
@@ -880,7 +891,7 @@ async function healthGate(
     if (observation.status === "healthy") return { healthy: true };
     if (observation.status === "error") {
       lastErrorText = observation.reason ?? "model error";
-      if (CONFIG_ERROR.test(lastErrorText)) {
+      if (observation.final || CONFIG_ERROR.test(lastErrorText)) {
         return { healthy: false, reason: lastErrorText };
       }
     }
@@ -925,11 +936,17 @@ function agyFinalReply(steps: AgyStep[]): AgyStep | null {
 
 const agyResponded = (steps: AgyStep[]) => steps.some((s) => s.type === "PLANNER_RESPONSE");
 
+// transcript 要等首条回复完成才写入，高档位模型首轮思考常超过健康门期限且磁盘上没有流式信号。
+// 额度、认证等快速失败会以 Stop 报错或进程退出出现，所以会话启动后安静超过宽限即视为健康
+const AGY_QUIET_HEALTHY_MS = 20_000;
+
 function observeAgy(runDir: string): HealthObservation {
-  const root = readJson<AgyRoot>(join(runDir, "root.json"));
-  if (root && agyResponded(agySteps(root.transcriptPath))) return { status: "healthy" };
+  const rootFile = join(runDir, "root.json");
+  const root = readJson<AgyRoot>(rootFile);
   const stop = readJson<{ terminationReason: string; error: string }>(join(runDir, "stop.json"));
-  if (stop) return { status: "error", reason: stop.error || `agy 在模型响应前停止（${stop.terminationReason}）` };
+  if (root && agyResponded(agySteps(root.transcriptPath))) return { status: "healthy" };
+  if (stop) return { status: "error", final: true, reason: stop.error || `agy 在模型响应前停止（${stop.terminationReason}）` };
+  if (root && Date.now() - statSync(rootFile).mtimeMs > AGY_QUIET_HEALTHY_MS) return { status: "healthy" };
   return { status: "none" };
 }
 
@@ -976,10 +993,12 @@ function agyHookEvent(event: string, input: any, meta: AgyMeta, runDir: string):
   if (event === "stop") {
     const root = readJson<AgyRoot>(rootFile);
     if (root?.conversationId !== input.conversationId) return {};
+    // 超过同步等待上限的命令会转后台，模型先结束本轮；后台完成后 agy 会继续，此时的回复只是过渡
+    if (input.fullyIdle === false && !input.error) return {};
     writeFileSync(join(runDir, "stop.json"), JSON.stringify({ terminationReason: input.terminationReason, error: input.error ?? "" }));
     const steps = agySteps(root.transcriptPath);
-    // 模型从未响应：健康门会据 stop.json 判失败并关闭终端，不再重复通知主代理
-    if (!agyResponded(steps)) return {};
+    // 健康门仍在等且模型从未响应：健康门会据 stop.json 判失败并关闭终端，不重复通知主代理
+    if (!agyResponded(steps) && !existsSync(join(runDir, "gated"))) return {};
     const final = agyFinalReply(steps);
     const key = `${steps.length}`;
     const sentFile = join(runDir, "sent");
@@ -1024,6 +1043,7 @@ type Launched = {
   pane: string;
   agentName: string;
   observe: () => HealthObservation;
+  onHealthy?: () => void;
   alive?: () => boolean;
 };
 
@@ -1076,7 +1096,7 @@ ${task}
 ---`;
   }
   const { pane, alive } = term.start({ agentName, profile: p, launch, prompt });
-  return { term, profile, pane, agentName, observe: launch.observe, alive };
+  return { term, profile, pane, agentName, observe: launch.observe, onHealthy: launch.onHealthy, alive };
 }
 
 // 失效分类: 404/401/403/认证属配置错误（重试无意义），其余（503/超时等）为瞬时故障（可重试）
@@ -1086,7 +1106,7 @@ function classifyFailure(reason: string): string {
     : `transient: ${reason}`;
 }
 
-// 阶段二（可并发）：独立健康门，等本 agent 的 stopReason:error / 健康 assistant，超时 30s
+// 阶段二（可并发）：独立健康门，等本 agent 的报错或健康响应，超时 45s
 // 失效时自动关闭 pane（模型失效的 pane 无检查价值，防残留）
 async function gateAgent(l: Launched, timeoutMs: number): Promise<DispatchResult> {
   const gate = await healthGate(l.observe, l.alive, timeoutMs);
@@ -1095,18 +1115,19 @@ async function gateAgent(l: Launched, timeoutMs: number): Promise<DispatchResult
     try { l.term.close(l.pane); } catch { /* 已关闭 */ }
     return { profile: l.profile, pane: "-", agentName: l.agentName, healthy: false, reason };
   }
+  l.onHealthy?.();
   return { profile: l.profile, pane: l.pane, agentName: l.agentName, healthy: true };
 }
 
 async function spawn(profile: string, slug: string, task: string) {
   const ctx = requireContext();
-  const resolved = resolveAgent(profile);
-  const modelError = "agent" in resolved ? checkAgyModel(resolved.agent) : null;
-  if (modelError) {
-    console.error(`spawn-subagent: config-error: ${modelError}`);
-    process.exit(1);
-  }
   try {
+    const resolved = resolveAgent(profile);
+    const configError = "agent" in resolved ? checkAgy(resolved.agent) : null;
+    if (configError) {
+      console.error(`spawn-subagent: config-error: ${configError}`);
+      process.exit(1);
+    }
     const r = await gateAgent(launchAgent(ctx, profile, slug, task), 45000);
     if (!r.healthy) {
       console.error(`spawn-subagent: 模型失效（${r.reason}）`);
@@ -1177,8 +1198,12 @@ async function batch(manifestPath: string, json: boolean) {
     const resolved = resolveAgent(profile, cfg);
     if ("error" in resolved) errors.push(`profile '${profile}' 无效（${resolved.error}）`);
     else {
-      const modelError = checkAgyModel(resolved.agent);
-      if (modelError) errors.push(modelError);
+      try {
+        const configError = checkAgy(resolved.agent);
+        if (configError) errors.push(configError);
+      } catch (e: any) {
+        errors.push(e.message);
+      }
     }
     if (!slug.match(/^[a-z0-9-]+$/)) errors.push(`slug '${slug}' 只能含小写/数字/连字符`);
     if (!task.trim()) errors.push(`profile '${profile}' 的 task 为空`);
@@ -1245,7 +1270,8 @@ if (!c0 || c0 === "-h" || c0 === "--help") {
   console.log(`全局排除 exclude(subagent-config.json 统一生效): ${JSON.stringify(config.exclude ?? [])}`);
   for (const name of Object.keys(agyProfiles)) {
     const r = resolveAgent(name);
-    const err = "error" in r ? r.error : checkAgyModel(r.agent);
+    let err: string | null;
+    try { err = "error" in r ? r.error : checkAgy(r.agent); } catch (e: any) { err = e.message; }
     console.log(err ? `agy profile ${name}: ${err}` : `agy profile ${name}: 模型 ${r.agent.model} 可用`);
   }
   console.log();
