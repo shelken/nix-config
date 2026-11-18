@@ -106,6 +106,16 @@ providers:
     #    - 原因: 当 omp 内部规范档位名与上游实际接收枚举不一致时使用 (例如 kimi-k3-1 上游是 xhigh, omp catalog 默认翻译成 max 导致 400, 需钉回 xhigh: xhigh)。
     # 档位权威来源: 各插件 data/static-config.json
     modelOverrides:
+      # 内置 catalog 对该模型只有 reasoning: true, 没有档位 (thinking: null), 需显式声明; 档位来自 CPA 的 antigravity 注册表
+      gemini-3.8-flash:
+        reasoning: true
+        thinking:
+          mode: effort
+          efforts: [low, medium, high]
+          defaultLevel: high
+        compat:
+          supportsReasoningEffort: true
+          omitReasoningEffort: false
       qwenworkcn/flash:
         contextWindow: 1000000
         maxTokens: 128000
