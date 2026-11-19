@@ -107,7 +107,7 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 - `push` 只在 UCI 命令执行中途失败或断线时，60 秒后回滚；UCI 写完后重载服务导致断网不会回滚，60 秒后备份也被删（nuci 源码 `src/target/remote_script.rs` 的 `arm_watchdog`）：改 network、firewall、wireless 前准备好不经过这条链路的登录方式
 - `sshKeys` 整份覆盖 `authorized_keys`；部署者（本机 ssh-agent）的公钥不在列表里时 nuci 会追加它，防止锁死
 - 含中文等非 ASCII 的值，`preview` 总显示要改：nuci 解析设备输出时按字节转字符（nuci 源码 `src/target/diff.rs` 的 `split_uci_quoted`），下发的值本身正确。`name` 只用 ASCII 可以避开
-- router-mine 的 odhcpd（2026.06.29）在 `br-lan.6` 重建（开机、`push`）后不再转发 RA，局域网设备拿不到 IPv6：`network/odhcpd.nix` 的 hotplug 脚本在接口起来后 reload odhcpd。上游已修（openwrt/odhcpd#430），固件带上修复后删掉该文件
+- router-mine 的 odhcpd（2026.06.29）在 `br-lan.6` 重建（开机、`push`）后不再转发 RA，局域网设备拿不到 IPv6：`network/odhcpd.nix` 的 hotplug 脚本在接口起来后 reload odhcpd。上游 odhcpd 已在 2026-10-28 修复（提交 d6c15fb），固件带上修复后删掉该文件（#369）
 - `nuci diff` 会原样打印路由器上现有的值，包括被删除行里的秘密：不要绕过 `just router::preview` 直接跑
 
 ## 实现
