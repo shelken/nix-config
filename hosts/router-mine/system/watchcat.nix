@@ -1,5 +1,5 @@
 {
-  uci.packages = [ "luci-app-watchcat" ];
+  uci.packages = [ "luci-i18n-watchcat-zh-cn" ];
 
   uci.settings.watchcat = {
     watchcat = [

@@ -1,6 +1,6 @@
 # 节点身份与网络 ID 在 secrets.nix 的 sops（router-mine.yaml 的 zerotier）
 {
-  uci.packages = [ "luci-app-zerotier" ];
+  uci.packages = [ "luci-i18n-zerotier-zh-cn" ];
 
   uci.settings.zerotier = {
     global = {
