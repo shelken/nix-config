@@ -10,15 +10,15 @@
       "luci-theme-argon",
       "prometheus-node-exporter-lua"
     ],
-    "profile": "xiaomi_mi-router-cr6606",
+    "profile": "xiaomi_mi-router-cr6608",
     "target": "ramips/mt7621",
     "version": "25.12.2",
     "client": "nix-config"
   },
   "version_code": "r38135-0c4cd0f9920a",
   "image": {
-    "name": "immortalwrt-25.12.2-a9c9bd70ac9d-ramips-mt7621-xiaomi_mi-router-cr6606-squashfs-sysupgrade.bin",
-    "sha256": "2766359987750d3b890740e65b3d61c5a92bb4206aa796af9349391d145621ed"
+    "name": "immortalwrt-25.12.2-a9c9bd70ac9d-ramips-mt7621-xiaomi_mi-router-cr6608-squashfs-sysupgrade.bin",
+    "sha256": "c6702a589fc38b0d5a8150f3ea335a54049c359c8b267fa7a5137b7d16d46db9"
   },
   "manifest": {
     "apk-openssl": "3.0.5-r3",

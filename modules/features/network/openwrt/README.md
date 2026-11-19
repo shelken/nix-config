@@ -151,7 +151,7 @@ argon 主题与 `luci-app-zerotier` 是必需的，只有 ImmortalWrt 的源里�
 
 ### LuCI 的 Web 服务器用 uhttpd
 
-LuCI 页面慢在 `/ubus` 后端调用（单个 0.8～1.2 秒，rpcd 加 MT7621 的 CPU），与 Web 服务器无关。2026-11 在 CR6606 上用同一套 LuCI 与会话对比，HTTP 访问、无头 Chrome 冷热各 3 次，uhttpd 全部更快：页面 HTML 快 35～45%（LuCI 在 uhttpd 进程内执行，nginx 每个请求经 uwsgi fork 一次 CGI），整页完成快 8～17%
+LuCI 页面慢在 `/ubus` 后端调用（单个 0.8～1.2 秒，rpcd 加 MT7621 的 CPU），与 Web 服务器无关。2026-11 在 CR6608 上用同一套 LuCI 与会话对比，HTTP 访问、无头 Chrome 冷热各 3 次，uhttpd 全部更快：页面 HTML 快 35～45%（LuCI 在 uhttpd 进程内执行，nginx 每个请求经 uwsgi fork 一次 CGI），整页完成快 8～17%
 
 - **nginx（`luci-nginx`）**：多约 20 MB 常驻内存，多出 nginx-ssl-util、uwsgi 两层组件；OpenWrt 25.12 分支的 nginx 停在 1.26.3，上游已停止维护该分支。并行 TLS 握手的优势只在 HTTPS 下有意义，LuCI 平时走 HTTP
 - **调大 uhttpd 的 `max_requests`**：不可行，大于 1 时并发请求会挂起（luci#9091）

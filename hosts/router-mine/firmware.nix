@@ -6,7 +6,8 @@
   server = "https://sysupgrade.immortalwrt.org";
   version = "25.12.2";
   target = "ramips/mt7621";
-  profile = "xiaomi_mi-router-cr6606";
+  # 机型以出厂分区为准：`strings /dev/mtd2 | grep ^model=`
+  profile = "xiaomi_mi-router-cr6608";
 
   # 不属于任何功能的包：界面主题与中文
   packages = [
