@@ -28,25 +28,25 @@ mise exec -- nuci '''
 import config:
     @modules/features/network/openwrt/uci2nix {{ target }} {{ config }}
 
-[doc('对比声明与路由器现状，显示待变更的差异，不改设备')]
-preview:
+[doc('对比声明与路由器现状，不改设备；可传 SSH 目标，例如 just router::preview root@192.168.1.1')]
+preview $host=target:
     #!/usr/bin/env bash
     set -euo pipefail
-    {{ nuci }}diff "$tmp/uci.json" --target {{ target }} 2>&1 | mask
+    {{ nuci }}diff "$tmp/uci.json" --target "$host" 2>&1 | mask
 
 # nuci 对 uci.files 只写文件：不校验也不重载服务，所以 BIRD 与 avahi 的生效在下发之后补做
-[doc('把声明下发到路由器，会改设备；务必先 just router::preview')]
-push:
+[doc('把声明下发到路由器，会改设备；先用同一个 SSH 目标运行 just router::preview')]
+push $host=target:
     #!/usr/bin/env bash
     set -euo pipefail
     # 热点中继在 LuCI 里开启时，声明里它是关闭的，下发会把它关掉并让路由器断网
     # 刚刷完的系统没有 wifinet7 段，视为关闭
-    [ "$(ssh {{ target }} 'if uci -q get wireless.wifinet7 >/dev/null; then uci -q get wireless.wifinet7.disabled; else echo 1; fi')" = 1 ] || { echo '热点中继（wifinet7）已启用，先在 LuCI 关掉再下发' >&2; exit 1; }
-    avahi_before=$(ssh {{ target }} 'md5sum /etc/avahi/avahi-daemon.conf')
-    {{ nuci }}deploy "$tmp/uci.json" --target {{ target }} 2>&1 | mask
+    [ "$(ssh -- "$host" 'if uci -q get wireless.wifinet7 >/dev/null; then uci -q get wireless.wifinet7.disabled; else echo 1; fi')" = 1 ] || { echo '热点中继（wifinet7）已启用，先在 LuCI 关掉再下发' >&2; exit 1; }
+    avahi_before=$(ssh -- "$host" 'md5sum /etc/avahi/avahi-daemon.conf')
+    {{ nuci }}deploy "$tmp/uci.json" --target "$host" 2>&1 | mask
     # bird -p 校验失败时不重载，BIRD 继续跑旧配置
-    ssh {{ target }} 'bird -p -c /etc/bird.conf && birdc configure'
-    [ "$avahi_before" = "$(ssh {{ target }} 'md5sum /etc/avahi/avahi-daemon.conf')" ] || ssh {{ target }} '/etc/init.d/avahi-daemon restart'
+    ssh -- "$host" 'bird -p -c /etc/bird.conf && birdc configure'
+    [ "$avahi_before" = "$(ssh -- "$host" 'md5sum /etc/avahi/avahi-daemon.conf')" ] || ssh -- "$host" '/etc/init.d/avahi-daemon restart'
 
 # 固件经 ASU 云端构建，镜像只放本机，旧镜像由 asu 脚本清理；锁文件提交进仓库
 firmware_dir := env('XDG_DATA_HOME', home_directory() / '.local/share') / 'router-firmware/router-mine'

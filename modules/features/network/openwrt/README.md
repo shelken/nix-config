@@ -9,8 +9,8 @@
 | 命令                           | 作用                                                   |
 | :----------------------------- | :----------------------------------------------------- |
 | `just router::import <配置>`   | 只读：把路由器上一个配置文件的现状转成 nuci 写法并打印 |
-| `just router::preview`         | 对比声明与路由器现状，显示待变更的差异，不改设备       |
-| `just router::push`            | 下发声明，会改路由器；回滚范围见「已知问题」           |
+| `just router::preview [目标]`  | 对比声明与路由器现状，显示待变更的差异，不改设备       |
+| `just router::push [目标]`     | 下发声明，会改路由器；回滚范围见「已知问题」           |
 | `just router::firmware-update` | 按软件源当前版本构建固件并重写锁文件，不改设备         |
 | `just router::firmware-build`  | 按锁文件构建并下载固件，版本不一致时失败，不改设备     |
 | `just router::acceptance`      | 采集路由器状态与内网吞吐，只读，结果存本机             |
@@ -49,7 +49,7 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 1. 改 `firmware.nix` 的 `version`，或改功能文件的 `uci.packages`
 2. `just router::firmware-update`，用 `git diff` 审查锁文件里的版本变化
 3. 刷机前 `just router::acceptance` 采一份基线
-4. 上传镜像到路由器 `/tmp`，`sysupgrade` 保留配置刷入；发行版或包管理器变了时用 `sysupgrade -n`，刷完 `just router::push` 恢复配置
+4. 上传镜像到路由器 `/tmp`，`sysupgrade` 保留配置刷入；发行版或包管理器变了时用 `sysupgrade -n`，路由器回到出厂地址，网线直连后 `just router::push root@192.168.1.1` 恢复配置。不要先手动改 lan 地址：只改地址不改 DHCP 与防火墙会导致不再分配 IP
 5. 再跑 `just router::acceptance`，`just router::acceptance-diff <前> <后>` 对比
 
 验收采集路由器状态（网口协商速率与断线次数、PPE 硬件卸载条目、mt7915 固件版本、射频参数）与本机 WiFi 到 sakamoto 有线口的 iperf3 双向吞吐。WiFi 吞吐先看 `client_*` 的信道、信号与协商速率是否相近，再比较数字。结果含设备运行数据，只放本机镜像目录下的 `acceptance/`
@@ -95,7 +95,7 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 下面这些不在声明里，设备重建时不会跟着回来：
 
 - `system`（时区、NTP、日志）、`sysctl` 的本地设置（`/etc/sysctl.d/50-local.conf`）
-- LuCI 与主题类配置：argon 安装时自己设为默认主题
+- LuCI 配置：argon 安装时自己设为默认主题；界面语言由 `system/luci.nix` 用 `rawUci` 固定为中文（`rawUci` 不进 `preview` 的差异，只在 `push` 时执行）
 
 ## 已知问题
 
