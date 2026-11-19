@@ -50,7 +50,7 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 1. 改 `firmware.nix` 的 `version`，或改功能文件的 `uci.packages`
 2. `just router::firmware-update`，用 `git diff` 审查锁文件里的版本变化
 3. 刷机前 `just router::acceptance` 采一份基线
-4. `just router::upgrade`：上传锁文件指向的镜像，核对 sha256 并用 `sysupgrade -T` 校验后保留配置刷入。发行版或包管理器变了时手动用 `sysupgrade -n`（从 Kwrt 刷入时还要 `-F`：Kwrt 自定义了 board_name），路由器回到出厂地址，网线直连后 `just router::push root@192.168.1.1` 恢复配置。不要先手动改 lan 地址：只改地址不改 DHCP 与防火墙会导致不再分配 IP
+4. `just router::upgrade`：上传锁文件指向的镜像，核对 sha256 并用 `sysupgrade -T` 校验后保留配置刷入。发行版或包管理器变了时手动用 `sysupgrade -n`（从 Kwrt 刷入时还要 `-F`：Kwrt 自定义了 board_name），路由器回到出厂地址，网线直连后 `just router::push root@192.168.1.1` 恢复配置，再在 LuCI 设置 root 密码：`-n` 会清空它，`upgrade` 保留配置刷入时 `/etc/shadow` 会保留。不要先手动改 lan 地址：只改地址不改 DHCP 与防火墙会导致不再分配 IP
 5. 再跑 `just router::acceptance`，`just router::acceptance-diff <前> <后>` 对比
 
 验收采集路由器状态（网口协商速率与断线次数、PPE 硬件卸载条目、mt7915 固件版本、射频参数）与本机 WiFi 到 sakamoto 有线口的 iperf3 双向吞吐。WiFi 吞吐先看 `client_*` 的信道、信号与协商速率是否相近，再比较数字。结果含设备运行数据，只放本机镜像目录下的 `acceptance/`
