@@ -23,20 +23,28 @@ in
       uci = pkgs.callPackage "${inputs.openwrt-nix}/nix" { };
     in
     {
-      packages = lib.mapAttrs' (
-        name: host:
-        lib.nameValuePair "${name}-uci" (
-          (uci.writeUci {
-            # 声明里读 secrets.nix 的明文 nix（MAC 等）要用到 inputs
-            imports = host.uci-modules ++ [ { _module.args = { inherit inputs; }; } ];
-          }).json.overrideAttrs
-            (old: {
-              passthru = (old.passthru or { }) // {
-                # 部署机渲染时解密的 sops 文件，路径跟随 flake.lock 里的 secrets 输入（just router::*）
-                sopsFile = inputs.secrets + "/sops/secrets/hosts/${name}.yaml";
-              };
-            })
-        )
-      ) openwrtHosts;
+      packages =
+        lib.mapAttrs' (
+          name: host:
+          lib.nameValuePair "${name}-uci" (
+            (uci.writeUci {
+              # 声明里读 secrets.nix 的明文 nix（MAC 等）要用到 inputs
+              imports = host.uci-modules ++ [ { _module.args = { inherit inputs; }; } ];
+            }).json.overrideAttrs
+              (old: {
+                passthru = (old.passthru or { }) // {
+                  # 部署机渲染时解密的 sops 文件，路径跟随 flake.lock 里的 secrets 输入（just router::*）
+                  sopsFile = inputs.secrets + "/sops/secrets/hosts/${name}.yaml";
+                };
+              })
+          )
+        ) openwrtHosts
+        # 固件定义转 JSON，由 asu 脚本与 <机器>-uci 的 packages 合并成构建请求（just router::firmware-*）
+        // lib.mapAttrs' (
+          name: host:
+          lib.nameValuePair "${name}-firmware" (
+            pkgs.writeText "${name}-firmware.json" (builtins.toJSON host.firmware)
+          )
+        ) (lib.filterAttrs (_: host: host ? firmware) openwrtHosts);
     };
 }

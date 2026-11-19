@@ -2,7 +2,8 @@
 ignore-dot   = true
 ignore-files = true
 # 忽略文件
-extend-exclude = ["*.zsh", "modules/features/ai/skills/**", "modules/features/ai/*/*-best-practice/**"]
+# firmware.lock.json 由 asu 脚本生成，是 OpenWrt 包名清单
+extend-exclude = ["*.zsh", "modules/features/ai/skills/**", "modules/features/ai/*/*-best-practice/**", "hosts/*/firmware.lock.json"]
 
 [default]
 binary = false

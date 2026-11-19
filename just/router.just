@@ -28,21 +28,60 @@ mise exec -- nuci '''
 import config:
     @modules/features/network/openwrt/uci2nix {{ target }} {{ config }}
 
-[doc('对比声明与路由器现状，显示待变更的差异，不改设备')]
-preview:
+[doc('对比声明与路由器现状，不改设备；可传 SSH 目标，例如 just router::preview root@192.168.1.1')]
+preview $host=target:
     #!/usr/bin/env bash
     set -euo pipefail
-    {{ nuci }}diff "$tmp/uci.json" --target {{ target }} 2>&1 | mask
+    {{ nuci }}diff "$tmp/uci.json" --target "$host" 2>&1 | mask
 
 # nuci 对 uci.files 只写文件：不校验也不重载服务，所以 BIRD 与 avahi 的生效在下发之后补做
-[doc('把声明下发到路由器，会改设备；务必先 just router::preview')]
-push:
+[doc('把声明下发到路由器，会改设备；先用同一个 SSH 目标运行 just router::preview')]
+push $host=target:
     #!/usr/bin/env bash
     set -euo pipefail
     # 热点中继在 LuCI 里开启时，声明里它是关闭的，下发会把它关掉并让路由器断网
-    [ "$(ssh {{ target }} 'uci -q get wireless.wifinet7.disabled')" = 1 ] || { echo '热点中继（wifinet7）已启用，先在 LuCI 关掉再下发' >&2; exit 1; }
-    avahi_before=$(ssh {{ target }} 'md5sum /etc/avahi/avahi-daemon.conf')
-    {{ nuci }}deploy "$tmp/uci.json" --target {{ target }} 2>&1 | mask
+    # 刚刷完的系统没有 wifinet7 段，视为关闭
+    [ "$(ssh -- "$host" 'if uci -q get wireless.wifinet7 >/dev/null; then uci -q get wireless.wifinet7.disabled; else echo 1; fi')" = 1 ] || { echo '热点中继（wifinet7）已启用，先在 LuCI 关掉再下发' >&2; exit 1; }
+    avahi_before=$(ssh -- "$host" 'md5sum /etc/avahi/avahi-daemon.conf')
+    {{ nuci }}deploy "$tmp/uci.json" --target "$host" 2>&1 | mask
     # bird -p 校验失败时不重载，BIRD 继续跑旧配置
-    ssh {{ target }} 'bird -p -c /etc/bird.conf && birdc configure'
-    [ "$avahi_before" = "$(ssh {{ target }} 'md5sum /etc/avahi/avahi-daemon.conf')" ] || ssh {{ target }} '/etc/init.d/avahi-daemon restart'
+    ssh -- "$host" 'bird -p -c /etc/bird.conf && birdc configure'
+    [ "$avahi_before" = "$(ssh -- "$host" 'md5sum /etc/avahi/avahi-daemon.conf')" ] || ssh -- "$host" '/etc/init.d/avahi-daemon restart'
+
+# 固件经 ASU 云端构建，镜像只放本机，旧镜像由 asu 脚本清理；锁文件提交进仓库
+firmware_dir := env('XDG_DATA_HOME', home_directory() / '.local/share') / 'router-firmware/router-mine'
+
+[private]
+_firmware mode:
+    modules/features/network/openwrt/asu {{ mode }} "$(nix build .#router-mine-firmware --no-link --print-out-paths)" "$({{ uci }})" hosts/router-mine/firmware.lock.json '{{ firmware_dir }}'
+
+[doc('按软件源当前版本构建固件并重写锁文件，不改设备；审查 git diff 后提交')]
+firmware-update: (_firmware 'update')
+
+[doc('按锁文件构建并下载固件，包版本与锁文件不一致时失败，不改设备')]
+firmware-build: (_firmware 'build')
+
+# sysupgrade 刷写时会杀掉 dropbear，ssh 以断线结束，所以最后一步不看退出码
+[doc('按锁文件刷入固件并保留配置，会重启路由器；先 just router::acceptance 采基线')]
+upgrade $host=target: (_firmware 'build')
+    #!/usr/bin/env bash
+    set -euo pipefail
+    lock=hosts/router-mine/firmware.lock.json
+    image='{{ firmware_dir }}'/"$(jq -r .image.name "$lock")"
+    ssh -- "$host" 'cat > /tmp/sysupgrade.bin' < "$image"
+    [ "$(ssh -- "$host" 'sha256sum /tmp/sysupgrade.bin' | cut -d' ' -f1)" = "$(jq -r .image.sha256 "$lock")" ] || { echo '上传后的镜像 sha256 与锁文件不符' >&2; exit 1; }
+    # -T 只校验不刷写；不加 -F，板型对不上时应当失败
+    ssh -- "$host" 'sysupgrade -T /tmp/sysupgrade.bin'
+    ssh -- "$host" 'sysupgrade /tmp/sysupgrade.bin' || true
+    echo '路由器正在刷写并重启，约 3 分钟后跑 just router::acceptance 与 acceptance-diff'
+
+# 刷机前后各跑一次 acceptance，结果含设备运行数据，只放本机
+acceptance_dir := firmware_dir / 'acceptance'
+
+[doc('采集验收数据：路由器状态（只读）与本机 WiFi 到 sakamoto 的吞吐，结果存本机')]
+acceptance:
+    modules/features/network/openwrt/acceptance run {{ target }} sakamoto '{{ acceptance_dir }}'
+
+[doc('并排对比两份验收结果，用法: just router::acceptance-diff <前.json> <后.json>')]
+acceptance-diff before after:
+    modules/features/network/openwrt/acceptance diff '{{ before }}' '{{ after }}'
