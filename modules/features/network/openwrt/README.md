@@ -95,7 +95,7 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 下面这些不在声明里，设备重建时不会跟着回来：
 
 - `system`（时区、NTP、日志）、`sysctl` 的本地设置（`/etc/sysctl.d/50-local.conf`）
-- LuCI 配置：argon 安装时自己设为默认主题；界面语言由 `system/luci.nix` 用 `rawUci` 固定为中文（`rawUci` 不进 `preview` 的差异，只在 `push` 时执行）
+- LuCI 配置：argon 安装时自己设为默认主题；界面语言由 `system/luci.nix` 用 `rawUci` 固定为中文（`rawUci` 不进 `preview` 的差异，只在 `push` 时执行；nuci 不替它 commit，要自己写 `uci commit`，否则重启后丢失）
 
 ## 已知问题
 
