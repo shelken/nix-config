@@ -61,6 +61,20 @@ firmware-update: (_firmware 'update')
 [doc('按锁文件构建并下载固件，包版本与锁文件不一致时失败，不改设备')]
 firmware-build: (_firmware 'build')
 
+# sysupgrade 刷写时会杀掉 dropbear，ssh 以断线结束，所以最后一步不看退出码
+[doc('按锁文件刷入固件并保留配置，会重启路由器；先 just router::acceptance 采基线')]
+upgrade $host=target: (_firmware 'build')
+    #!/usr/bin/env bash
+    set -euo pipefail
+    lock=hosts/router-mine/firmware.lock.json
+    image='{{ firmware_dir }}'/"$(jq -r .image.name "$lock")"
+    ssh -- "$host" 'cat > /tmp/sysupgrade.bin' < "$image"
+    [ "$(ssh -- "$host" 'sha256sum /tmp/sysupgrade.bin' | cut -d' ' -f1)" = "$(jq -r .image.sha256 "$lock")" ] || { echo '上传后的镜像 sha256 与锁文件不符' >&2; exit 1; }
+    # -T 只校验不刷写；不加 -F，板型对不上时应当失败
+    ssh -- "$host" 'sysupgrade -T /tmp/sysupgrade.bin'
+    ssh -- "$host" 'sysupgrade /tmp/sysupgrade.bin' || true
+    echo '路由器正在刷写并重启，约 3 分钟后跑 just router::acceptance 与 acceptance-diff'
+
 # 刷机前后各跑一次 acceptance，结果含设备运行数据，只放本机
 acceptance_dir := firmware_dir / 'acceptance'
 
