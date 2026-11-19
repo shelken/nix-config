@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# 经 ASU 云端构建 sysupgrade 镜像并下载到本机，用法与锁文件见 README.md「固件」
+# 用法: asu <update|build> <firmware.json> <uci.json> <锁文件> <镜像目录>
+#   update: 按软件源当前版本构建，重写锁文件
+#   build:  请求与锁文件一致才构建，构建出的包版本与锁文件逐个对照，不一致即失败
+set -euo pipefail
+mode=$1 firmware=$2 uci=$3 lock=$4 dir=$5
+keep=3 # 镜像目录保留的个数，锁文件指向的那个始终保留
+
+die() { echo "asu: $*" >&2; exit 1; }
+[[ $mode == update || $mode == build ]] || die "未知模式 $mode"
+
+server=$(jq -r .server "$firmware")
+# 功能声明里的包与固件自身的包合并去重，排序后请求才稳定，锁文件的 diff 才可读
+request=$(jq -n --slurpfile f "$firmware" --slurpfile u "$uci" '
+  $f[0] | del(.server) + {
+    packages: ($f[0].packages + $u[0].packages | unique),
+    client: "nix-config"
+  }')
+
+if [[ $mode == build ]]; then
+  [[ -f $lock ]] || die "没有锁文件，先 update"
+  [[ $(jq -S .request "$lock") == "$(jq -S . <<<"$request")" ]] ||
+    die "声明与锁文件的请求不一致，先 update 并审查锁文件的 diff"
+fi
+
+echo "asu: 请求 $server"
+jq -c . <<<"$request"
+resp=$(mktemp)
+trap 'rm -f "$resp"' EXIT
+curl -sS -o "$resp" -X POST -H 'Content-Type: application/json' -d "$request" "$server/api/v1/build"
+hash=$(jq -r '.request_hash // empty' "$resp")
+[[ -n $hash ]] || die "提交失败: $(jq -r '.detail // .' "$resp")"
+
+# 202 排队或构建中；502/503/504 是网关抖动，重试即可；500 是构建失败，结果按请求 hash 缓存，原样重试无用
+for _ in $(seq 120); do
+  code=$(curl -sS -o "$resp" -w '%{http_code}' "$server/api/v1/build/$hash") || code=000
+  case $code in
+    200) break ;;
+    202) echo "asu: $(jq -r '[.detail, .imagebuilder_status // empty] | join(" ")' "$resp")" ;;
+    000 | 502 | 503 | 504) echo "asu: HTTP $code，重试" ;;
+    *) die "构建失败 HTTP $code: $(jq -r '.detail' "$resp" 2>/dev/null)
+$(jq -r '.stderr // empty' "$resp" 2>/dev/null | tail -20)" ;;
+  esac
+  sleep 5
+done
+[[ $code == 200 ]] || die "等待超时，request_hash=$hash"
+
+result=$(jq --argjson req "$request" '{
+  request: $req,
+  version_code,
+  image: (.images[] | select(.type == "sysupgrade") | {name, sha256}),
+  manifest
+}' "$resp")
+bin_dir=$(jq -r .bin_dir "$resp")
+
+if [[ $mode == build ]]; then
+  drift=$(jq -rn --slurpfile l "$lock" --argjson r "$result" '
+    ($l[0].manifest) as $a | ($r.manifest) as $b
+    | ($a + $b | keys[]) as $k | select($a[$k] != $b[$k])
+    | "\($k): \($a[$k] // "-") -> \($b[$k] // "-")"')
+  [[ -z $drift ]] || die "构建出的包版本与锁文件不一致，软件源已更新；要接受就 update：
+$drift"
+fi
+
+name=$(jq -r .image.name <<<"$result")
+sha=$(jq -r .image.sha256 <<<"$result")
+mkdir -p "$dir"
+if [[ ! -f $dir/$name ]]; then
+  curl -sS --fail -o "$dir/$name.part" "$server/store/$bin_dir/$name"
+  mv "$dir/$name.part" "$dir/$name"
+fi
+# 已有的镜像也重新校验，回滚时用的就是它
+[[ $(shasum -a 256 "$dir/$name" | cut -d' ' -f1) == "$sha" ]] || { rm -f "$dir/$name"; die "sha256 不符，已删除: $name"; }
+
+if [[ $mode == update ]]; then jq . <<<"$result" >"$lock"; fi
+
+# 只清理本脚本下载的镜像：按修改时间留最新的 keep 个，锁文件指向的不删
+current=$(jq -r .image.name "$lock")
+shopt -s nullglob
+images=("$dir"/*-sysupgrade.bin)
+if ((${#images[@]} > keep)); then
+  ls -t "${images[@]}" | tail -n +$((keep + 1)) | while read -r old; do
+    if [[ $(basename "$old") != "$current" ]]; then
+      rm -f "$old"
+      echo "asu: 清理 $(basename "$old")"
+    fi
+  done
+fi
+
+echo "asu: $(jq -r .version_code <<<"$result") $dir/$name"

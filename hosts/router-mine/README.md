@@ -14,3 +14,4 @@
 
 - 射频的 `band`、`path`、LAN 口名、WAN 口设备名、热点的 sta 设备名都集中在 `hardware.nix`，换路由器时只改它
 - 它是纯数据，由 `network/` 下的文件 `import`，不在 `default.nix` 的 `imports` 里
+- 固件的发行版与 profile 在 `firmware.nix`，换路由器时一起改；它由 `hosts/default.nix` 引用，见 `modules/features/network/openwrt/README.md`「固件」

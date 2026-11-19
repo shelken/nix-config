@@ -46,3 +46,16 @@ push:
     # bird -p 校验失败时不重载，BIRD 继续跑旧配置
     ssh {{ target }} 'bird -p -c /etc/bird.conf && birdc configure'
     [ "$avahi_before" = "$(ssh {{ target }} 'md5sum /etc/avahi/avahi-daemon.conf')" ] || ssh {{ target }} '/etc/init.d/avahi-daemon restart'
+
+# 固件经 ASU 云端构建，镜像只放本机，旧镜像由 asu 脚本清理；锁文件提交进仓库
+firmware_dir := env('XDG_DATA_HOME', home_directory() / '.local/share') / 'router-firmware/router-mine'
+
+[private]
+_firmware mode:
+    modules/features/network/openwrt/asu {{ mode }} "$(nix build .#router-mine-firmware --no-link --print-out-paths)" "$({{ uci }})" hosts/router-mine/firmware.lock.json '{{ firmware_dir }}'
+
+[doc('按软件源当前版本构建固件并重写锁文件，不改设备；审查 git diff 后提交')]
+firmware-update: (_firmware 'update')
+
+[doc('按锁文件构建并下载固件，包版本与锁文件不一致时失败，不改设备')]
+firmware-build: (_firmware 'build')

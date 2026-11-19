@@ -87,5 +87,6 @@ in
   router-mine = {
     type = "openwrt";
     uci-modules = [ ./router-mine ];
+    firmware = import ./router-mine/firmware.nix;
   };
 }
