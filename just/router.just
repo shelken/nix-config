@@ -59,3 +59,14 @@ firmware-update: (_firmware 'update')
 
 [doc('按锁文件构建并下载固件，包版本与锁文件不一致时失败，不改设备')]
 firmware-build: (_firmware 'build')
+
+# 刷机前后各跑一次 acceptance，结果含设备运行数据，只放本机
+acceptance_dir := firmware_dir / 'acceptance'
+
+[doc('采集验收数据：路由器状态（只读）与本机 WiFi 到 sakamoto 的吞吐，结果存本机')]
+acceptance:
+    modules/features/network/openwrt/acceptance run {{ target }} sakamoto '{{ acceptance_dir }}'
+
+[doc('并排对比两份验收结果，用法: just router::acceptance-diff <前.json> <后.json>')]
+acceptance-diff before after:
+    modules/features/network/openwrt/acceptance diff '{{ before }}' '{{ after }}'

@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# 刷机前后的验收：路由器状态（只读）与内网吞吐（本机 WiFi ↔ 有线主机），结果存本机，不进仓库。用法见 README.md「固件」
+# 用法: acceptance run <路由器 ssh 目标> <有线主机 ssh 目标> <结果目录>
+#       acceptance diff <前.json> <后.json>
+set -euo pipefail
+
+die() { echo "acceptance: $*" >&2; exit 1; }
+
+# 每行「键 值」，由本机转成 JSON；sysfs 与 dmesg 在 Kwrt 和 ImmortalWrt 上都有，不依赖 ethtool
+router_state() {
+  ssh -T "$1" sh -s <<'EOF'
+. /etc/openwrt_release
+echo "firmware $DISTRIB_DESCRIPTION"
+echo "kernel $(uname -r)"
+echo "uptime_s $(cut -d. -f1 /proc/uptime)"
+echo "load5 $(cut -d' ' -f2 /proc/loadavg)"
+echo "mem_available_kb $(awk '/MemAvailable/{print $2}' /proc/meminfo)"
+for p in lan1 lan2 lan3 wan; do
+  d=/sys/class/net/$p
+  echo "port_${p} $(cat $d/operstate) $(cat $d/speed 2>/dev/null || echo -)Mb $(cat $d/duplex 2>/dev/null || echo -)"
+  echo "link_down_${p} $(logread | grep -c " $p: Link is Down")"
+done
+echo "log_since $(logread | head -1 | cut -c1-24)"
+[ -r /sys/kernel/debug/ppe0/bind ] && echo "ppe_bind $(wc -l </sys/kernel/debug/ppe0/bind)" || echo "ppe_bind -"
+echo "wifi_fw $(dmesg | grep -o 'WM Firmware Version.*Build Time: [0-9]*' | head -1)"
+for i in $(iw dev | awk '/Interface/{print $2}'); do
+  echo "wifi_${i} $(iw dev "$i" info | awk '/channel/{print $2, $6, $7}' | tr -d ',') $(iw dev "$i" info | awk '/txpower/{print $2 "dBm"}') stations=$(iw dev "$i" station dump | grep -c ^Station)"
+done
+EOF
+}
+
+# 本机当前 WiFi 的信道、信号、协商速率；WiFi 吞吐波动大，前后对比要先看这几项是否相近
+client_wifi() {
+  system_profiler SPAirPortDataType 2>/dev/null |
+    sed -n '/Current Network Information:/,/Other Local Wi-Fi Networks:/p' |
+    awk -F': ' '/PHY Mode|Channel|Signal \/ Noise|Transmit Rate|MCS Index/{gsub(/^ +/, "", $1); gsub(/[ \/]+/, "_", $1); print "client_" tolower($1), $2}' |
+    head -5
+}
+
+# 有线主机上起一次性 iperf3 服务端（-1 测完即退），本机做客户端；-R 为有线到 WiFi 方向
+throughput() {
+  local host=$1 ip dir args
+  ip=$(ssh -G "$host" | awk '/^hostname /{print $2}')
+  echo "client_route $(route -n get "$ip" | awk '/interface/{print $2}')"
+  for dir in upload download; do
+    args=(); [[ $dir == download ]] && args=(-R)
+    ssh -n "$host" 'timeout 30 iperf3 -s -1' >/dev/null 2>&1 &
+    sleep 1.5
+    echo "iperf_${dir}_mbps $(iperf3 -c "$ip" -t 10 -P 4 "${args[@]}" -J | jq '.end.sum_received.bits_per_second / 1e6 | floor')"
+    wait
+  done
+}
+
+to_json() { jq -Rn '[inputs | capture("^(?<k>\\S+) ?(?<v>.*)$") | {(.k): .v}] | add'; }
+
+case ${1:-} in
+  run)
+    [[ $# -eq 4 ]] || die "用法: acceptance run <路由器> <有线主机> <结果目录>"
+    router=$2 host=$3 dir=$4
+    mkdir -p "$dir"
+    json=$({ echo "measured_at $(date '+%F %T')"; router_state "$router"; client_wifi; throughput "$host"; } | to_json)
+    out="$dir/$(date +%Y%m%d-%H%M)-$(jq -r '.firmware | gsub("[^A-Za-z0-9.]+"; "_")' <<<"$json").json"
+    jq . <<<"$json" | tee "$out"
+    echo "acceptance: $out"
+    ;;
+  diff)
+    [[ $# -eq 3 ]] || die "用法: acceptance diff <前.json> <后.json>"
+    jq -rn --slurpfile a "$2" --slurpfile b "$3" '
+      ($a[0] + $b[0] | keys_unsorted) as $ks
+      | ["项", "前", "后"], (["--", "--", "--"]),
+        ($ks[] as $k | [$k, ($a[0][$k] // "-"), ($b[0][$k] // "-")]
+          | if .[1] != .[2] then .[0] = "* " + .[0] else . end)
+      | @tsv' | column -t -s $'\t'
+    ;;
+  *) die "用法: acceptance run|diff …" ;;
+esac
