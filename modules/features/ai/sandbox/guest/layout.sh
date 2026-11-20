@@ -9,38 +9,40 @@ declare -A AGENT_ROOTS=()
 LAYOUT_ARGS=()
 MOUNT_POINTS=()
 
-# 下面三个函数把结果写进全局变量（DST、BACKING、MOUNT_ROOT），不用 $(...) 取 stdout：
-# 每次命令替换都要 fork 子 shell，在 microVM 里约 170 个声明路径累计拖慢启动约 1.5 秒
+# 用 nameref（$1）回写结果而不用 $(...)：microVM 里约 170 个声明路径，命令替换 fork 会拖慢启动约 1.5 秒
 declared_dst() {
-  local t="$1"
-  if [[ "$t" == .config/* ]]; then
-    DST="$XDG_CONFIG_HOME/${t#.config/}"
+  local -n _out_dst="$1"
+  local _l_t="$2"
+  if [[ "$_l_t" == .config/* ]]; then
+    _out_dst="$XDG_CONFIG_HOME/${_l_t#.config/}"
   else
-    DST="$HOME/$t"
+    _out_dst="$HOME/$_l_t"
   fi
 }
 
 backing_of() {
-  local path="$1" root
-  for root in "${!AGENT_ROOTS[@]}"; do
-    if [[ "$path" == "$root" || "$path" == "$root/"* ]]; then
-      BACKING="${AGENT_ROOTS[$root]}${path#"$root"}"
+  local -n _out_backing="$1"
+  local _l_path="$2" _l_root
+  for _l_root in "${!AGENT_ROOTS[@]}"; do
+    if [[ "$_l_path" == "$_l_root" || "$_l_path" == "$_l_root/"* ]]; then
+      _out_backing="${AGENT_ROOTS[$_l_root]}${_l_path#"$_l_root"}"
       return 0
     fi
   done
-  BACKING="$path"
+  _out_backing="$_l_path"
 }
 
 mount_root_of() {
-  local path="$1" root
-  for root in "${!AGENT_ROOTS[@]}"; do
-    if [[ "$path" == "$root" || "$path" == "$root/"* ]]; then
-      MOUNT_ROOT="$root"
+  local -n _out_root="$1"
+  local _l_path="$2" _l_root
+  for _l_root in "${!AGENT_ROOTS[@]}"; do
+    if [[ "$_l_path" == "$_l_root" || "$_l_path" == "$_l_root/"* ]]; then
+      _out_root="$_l_root"
       return 0
     fi
   done
-  if [[ "$path" == "$SB_DATA_DIR"/* ]]; then
-    MOUNT_ROOT="$SB_DATA_DIR"
+  if [[ "$_l_path" == "$SB_DATA_DIR"/* ]]; then
+    _out_root="$SB_DATA_DIR"
     return 0
   fi
   return 1
@@ -104,7 +106,7 @@ require_published() {
 # 旧数据盘没有记录时，用保留的历史发布清单代替。别的上下文可能正把它当挂载点用，所以只在独占时清理
 LAYOUT_STATE="$SB_DATA_DIR/home/.declared-paths"
 prune_stale_placeholders() {
-  local others="$1" list="$2" t dst a
+  local others="$1" list="$2" t dst="" a="" _root=""
   local -a previous=()
   [[ "$others" -eq 0 ]] || return 0
   if [[ -f "$LAYOUT_STATE" ]]; then
@@ -114,12 +116,10 @@ prune_stale_placeholders() {
   fi
   while IFS= read -r t; do
     [[ -n "$t" ]] || continue
-    declared_dst "$t"
-    dst="$DST"
+    declared_dst dst "$t"
     # 不在当前可写根或 /data 下的落点映射不到数据盘，跳过，避免误删 guest 自己的文件
-    mount_root_of "$dst" || continue
-    backing_of "$dst"
-    a="$BACKING"
+    mount_root_of _root "$dst" || continue
+    backing_of a "$dst"
     if [[ -e "$a" ]] && is_empty_placeholder "$a"; then
       rm -rf "$a"
     fi
@@ -131,7 +131,7 @@ prune_stale_placeholders() {
 }
 
 prepare_declared_layout() {
-  local others="$1" cfg list roots_file rel t dst src want root p a
+  local others="$1" cfg list roots_file rel t dst="" src want root="" p a=""
   local -a ancestors=() binds=() uppers=()
   cfg="$(readlink -f "$SB_CONFIG_DIR")"
   list="$cfg/declared-paths"
@@ -170,13 +170,11 @@ prepare_declared_layout() {
       echo "[-] 错误: 声明配置缺失：$src（发布目录不完整，重新发布后重试）" >&2
       exit 1
     fi
-    declared_dst "$t"
-    dst="$DST"
-    if ! mount_root_of "$dst"; then
+    declared_dst dst "$t"
+    if ! mount_root_of root "$dst"; then
       echo "[-] 错误: 声明配置 $t 不在任何可写根或 .config/ 下（发布清单不一致，重新发布配置后重试：just hm）" >&2
       exit 1
     fi
-    root="$MOUNT_ROOT"
     p="${dst%/*}"
     p="${p:-/}"
     while [[ "$p" != "$root" && "$p" != / ]]; do
@@ -185,8 +183,7 @@ prepare_declared_layout() {
       p="${p:-/}"
     done
     if [[ -d "$src" ]]; then want="目录"; else want="文件"; fi
-    backing_of "$dst"
-    a="$BACKING"
+    backing_of a "$dst"
     if [[ -e "$a" || -L "$a" ]]; then
       if [[ -L "$a" ]] || { [[ "$want" == "目录" ]] && [[ ! -d "$a" ]]; } || { [[ "$want" == "文件" ]] && [[ -d "$a" ]]; }; then
         resolve_conflict "$a" "$want" "$others"
@@ -197,8 +194,7 @@ prepare_declared_layout() {
 
   while IFS= read -r p; do
     [[ -n "$p" ]] || continue
-    backing_of "$p"
-    a="$BACKING"
+    backing_of a "$p"
     if [[ -L "$a" ]] || { [[ -e "$a" ]] && [[ ! -d "$a" ]]; }; then
       resolve_conflict "$a" "目录" "$others"
     fi

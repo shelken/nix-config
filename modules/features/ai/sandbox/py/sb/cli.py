@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-import random
+import secrets
 import signal
 import subprocess
 import sys
@@ -112,7 +112,7 @@ def run(cfg: Config, msb: Msb, args: list[str]) -> int:
     if approvals.state(cfg, p.project_root) == "unapproved":
         raise SbError(f"{p.project_root}/.sandbox.yaml 未批准，或批准后已变更。先执行 sb plan 查看授权内容，确认后执行 sb trust")
     _snapshot(cfg)
-    ctx_id = f"ctx_{int(time.time())}_{random.randrange(32768)}"
+    ctx_id = f"ctx_{int(time.time())}_{secrets.randbits(64)}"
 
     vm.ensure(cfg, msb)
 

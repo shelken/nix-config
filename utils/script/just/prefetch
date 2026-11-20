@@ -20,23 +20,23 @@ EOF
 
 # 一次 prefetch,输出 SRI hash
 nar_hash() {
-  prefetch_json "$1" || return 1
-  jq -r '.hash' <<<"$PREFETCH_JSON"
+  local json
+  json=$(prefetch_json "$1") || return 1
+  jq -r '.hash' <<<"$json"
 }
 
-# 一次 prefetch,同时取 hash 与 locked 字段;
-# 结果写入全局 PREFETCH_JSON 供调用方用 jq 再取,避免重复走网络。
-# 注意:nix flake prefetch 会把 git 进度打到 stdout,与 JSON 混杂,必须分离
+# 一次 prefetch，成功时向 stdout 输出 JSON，失败时把诊断打到 stderr 并返回 1
 prefetch_json() {
-  local ref=$1 err
+  local ref=$1 out err
   err=$(mktemp)
-  if ! PREFETCH_JSON=$(nix flake prefetch --json "$ref" 2>"$err"); then
+  if ! out=$(nix flake prefetch --json "$ref" 2>"$err"); then
     echo "prefetch 失败: $ref" >&2
     cat "$err" >&2
     rm -f "$err"
     return 1
   fi
   rm -f "$err"
+  printf '%s\n' "$out"
 }
 
 # epoch → YYYY-MM-DD,macOS 与 Linux 的 date 参数不同
@@ -59,11 +59,11 @@ cmd_gh() {
   local ref="github:$owner/$repo"
   [[ $rev != HEAD ]] && ref="$ref/$rev"
 
-  local hash full_rev date
-  prefetch_json "$ref" || return 1
-  hash=$(jq -r '.hash' <<<"$PREFETCH_JSON")
-  full_rev=$(jq -r '.locked.rev' <<<"$PREFETCH_JSON")
-  date=$(jq -r '.locked.lastModified' <<<"$PREFETCH_JSON")
+  local json hash full_rev date
+  json=$(prefetch_json "$ref") || return 1
+  hash=$(jq -r '.hash' <<<"$json")
+  full_rev=$(jq -r '.locked.rev' <<<"$json")
+  date=$(jq -r '.locked.lastModified' <<<"$json")
 
   cat <<EOF
 # $owner/$repo @ $full_rev ($(fmt_date "$date"))
@@ -86,11 +86,14 @@ cmd_git() {
   local ref="git+$url?rev=$rev&shallow=1"
   [[ $submodules == true ]] && ref="$ref&submodules=1"
 
+  local hash
+  hash=$(nar_hash "$ref") || return 1
+
   cat <<EOF
 pkgs.fetchgit {
   url   = "$url";
   rev   = "$rev";
-  hash  = "$(nar_hash "$ref")";
+  hash  = "$hash";
 };
 EOF
 }
