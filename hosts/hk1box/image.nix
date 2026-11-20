@@ -56,8 +56,6 @@ in
 
       # 没有 age 私钥，订阅 URL 解不开：关掉代理与拉取，只当普通转发
       services.sing-box.enable = lib.mkForce false;
-      systemd.services.sing-box-sub-update.enable = lib.mkForce false;
-      systemd.timers.sing-box-sub-update.enable = lib.mkForce false;
       sops.secrets = lib.mkForce { };
 
       # server 角色关了安装工具，但 U 盘系统要靠 nixos-enter 救 eMMC（见 README）

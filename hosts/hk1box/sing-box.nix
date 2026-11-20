@@ -44,10 +44,7 @@ let
     # IoT 网段由主路由策略路由整段送来，隔离靠主路由防火墙
     ++ [ "192.168.50.0/24" ]
   );
-  # 试机镜像（./image.nix）清空了 sops.secrets，但被关掉的服务的定义仍会被求值，
-  # 所以这里给一个缺省路径，免得取不到属性；正式系统里始终用 sops 给出的路径
-  urlFile =
-    (config.sops.secrets.sing-box-sub-url or { path = "/run/secrets/sing-box-sub-url"; }).path;
+  urlFile = config.sops.secrets.sing-box-sub-url.path;
 
   update = pkgs.writeShellApplication {
     name = "sing-box-sub-update";
@@ -71,9 +68,12 @@ let
             --max-time 120 --retry 3 --retry-delay 10 --output "$raw"
 
       # 订阅里的 "source_ip_cidr": "@whitelist@" 换成本机白名单（服务端内核 merge 把单元素数组写成标量）
-      jq --argjson w ${lib.escapeShellArg whitelist} \
-        'walk(if type == "object" and .source_ip_cidr == "@whitelist@" then .source_ip_cidr = $w else . end)' \
-        "$raw" > "$tmp"
+      jq --argjson w ${lib.escapeShellArg whitelist} '
+        def replace: walk(if type == "object" and .source_ip_cidr == "@whitelist@" then .source_ip_cidr = $w else . end);
+        ([(.dns.rules? // []), (.route.rules? // []) | .. | select(type == "object" and .source_ip_cidr == "@whitelist@")] | length) as $n
+        | if $n != 2 then error("expected 2 @whitelist@ slots in dns/route rules, got \($n)") else . end
+        | ((.dns.rules, .route.rules) | select(. != null)) |= replace
+      ' "$raw" > "$tmp"
 
       # 工作目录指向临时目录，check 不在 stateDir 里留下缓存文件
       sing-box check -D "$work" -c "$tmp"
@@ -93,54 +93,55 @@ let
   };
 in
 {
-  # 不声明 settings：模块此时用 -C /etc/sing-box 读整个目录。
-  # 1.14 的上游单元以 sing-box 用户运行，并带 CAP_NET_ADMIN 等能力，tun 与监听 53 都不需要 root
-  services.sing-box.enable = true;
+  config = lib.mkMerge [
+    {
+      # 不声明 settings：模块此时用 -C /etc/sing-box 读整个目录。
+      # 1.14 的上游单元以 sing-box 用户运行，并带 CAP_NET_ADMIN 等能力，tun 与监听 53 都不需要 root
+      services.sing-box.enable = lib.mkDefault true;
+    }
+    (lib.mkIf config.services.sing-box.enable {
+      # system 栈的 TCP 经 TUN 回注内核，需在输入链的 conntrack 检查前放行。
+      networking.firewall.trustedInterfaces = [ "tun0" ];
 
-  # system 栈的 TCP 经 TUN 回注内核，需在输入链的 conntrack 检查前放行。
-  networking.firewall.trustedInterfaces = lib.optionals config.services.sing-box.enable [
-    "tun0"
+      # 订阅 URL：secrets 仓库 sops/secrets/hosts/hk1box.yaml 的 sing-box-sub-url 键
+      sops.secrets.sing-box-sub-url = { };
+
+      systemd.tmpfiles.rules = [
+        "d ${stateDir} 0750 root sing-box -"
+        "d /etc/sing-box 0755 root root -"
+        "L+ /etc/sing-box/config.json - - - - ${configFile}"
+      ];
+
+      # 首次开机还没有配置时不启动，等拉取成功后由拉取脚本拉起，避免反复失败重启
+      systemd.services.sing-box.unitConfig.ConditionPathExists = configFile;
+
+      # 只由自己的 timer 触发，不挂到任何 target 上：挂上去的话，激活时会因为它是
+      # 「完成即 inactive 的 oneshot」被当成没在运行而再拉一遍，订阅服务恰好不通就让
+      # 激活失败、触发 deploy-rs 回滚。这里让激活路径完全没有入口启动它。
+      # 换了订阅 URL 后手动 `systemctl start sing-box-sub-update`，或等下一次定时
+      systemd.services.sing-box-sub-update = {
+        description = "拉取 sing-box 订阅配置";
+        wants = [ "network-online.target" ];
+        # timer 触发时同样等网络就绪
+        after = [ "network-online.target" ];
+        restartIfChanged = false;
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = lib.getExe update;
+          PrivateTmp = true;
+          ProtectHome = true;
+        };
+      };
+
+      systemd.timers.sing-box-sub-update = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          # 开机拉一次（原来由 multi-user.target 负责），之后每 24 小时一次
+          OnBootSec = "1min";
+          OnUnitActiveSec = "24h";
+          RandomizedDelaySec = "10min";
+        };
+      };
+    })
   ];
-
-  # 订阅 URL：secrets 仓库 sops/secrets/hosts/hk1box.yaml 的 sing-box-sub-url 键
-  sops.secrets.sing-box-sub-url = { };
-
-  # 试机镜像关掉 sing-box 时，sing-box 用户与组也不存在（nixpkgs 模块把它们包在 mkIf 里），
-  # 留着这些规则会让 systemd-tmpfiles-setup 在开机时报未知组
-  systemd.tmpfiles.rules = lib.optionals config.services.sing-box.enable [
-    "d ${stateDir} 0750 root sing-box -"
-    "d /etc/sing-box 0755 root root -"
-    "L+ /etc/sing-box/config.json - - - - ${configFile}"
-  ];
-
-  # 首次开机还没有配置时不启动，等拉取成功后由拉取脚本拉起，避免反复失败重启
-  systemd.services.sing-box.unitConfig.ConditionPathExists = configFile;
-
-  # 只由自己的 timer 触发，不挂到任何 target 上：挂上去的话，激活时会因为它是
-  # 「完成即 inactive 的 oneshot」被当成没在运行而再拉一遍，订阅服务恰好不通就让
-  # 激活失败、触发 deploy-rs 回滚。这里让激活路径完全没有入口启动它。
-  # 换了订阅 URL 后手动 `systemctl start sing-box-sub-update`，或等下一次定时
-  systemd.services.sing-box-sub-update = {
-    description = "拉取 sing-box 订阅配置";
-    wants = [ "network-online.target" ];
-    # timer 触发时同样等网络就绪
-    after = [ "network-online.target" ];
-    restartIfChanged = false;
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = lib.getExe update;
-      PrivateTmp = true;
-      ProtectHome = true;
-    };
-  };
-
-  systemd.timers.sing-box-sub-update = {
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      # 开机拉一次（原来由 multi-user.target 负责），之后每 24 小时一次
-      OnBootSec = "1min";
-      OnUnitActiveSec = "24h";
-      RandomizedDelaySec = "10min";
-    };
-  };
 }
