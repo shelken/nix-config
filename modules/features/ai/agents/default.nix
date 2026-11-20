@@ -116,6 +116,7 @@
               lib.removeAttrs base [ "variantDescription" ]
               // {
                 description = "${base.variantDescription or base.description} (model role ${name})";
+                modelRole = "reviewer-${v}";
               }
             )
           ) variants
@@ -124,35 +125,16 @@
 
       agentsCommon = baseAgents // generatedVariants;
 
-      # ---------- 模型角色（omp 与 pi 共用）----------
-
-      # Nix 只声明 agent 用哪个角色名；角色对应的模型只在运行时读 config.yml：
-      # omp 解析 frontmatter 的 @role，pi 由 spawn-subagent 每次派发时读（见 docs/adr/0010）。
-      # 变体的角色是静态规则：显式 modelRole > 生成的变体用 reviewer-<后缀> > 名字本身。
-      # 新增 modelRoles 角色不会自动生效，需要在这里声明。
-      roleOf =
-        name:
-        let
-          a = agentsCommon.${name};
-        in
-        if a ? modelRole then
-          a.modelRole
-        else if generatedVariants ? ${name} then
-          "reviewer-${lib.last (lib.splitString "-" name)}"
-        else
-          name;
-
       # pi 的 frontmatter 只有 description、role、tools 三个字段，description 与正文对每个 profile 都必须是独立文件。
       # 模型与 thinking 不写进 md：spawn-subagent 每次派发按 role 读 config.yml。
       # description 用 JSON 字符串输出（合法的 YAML 双引号串）：值里的 ": " 否则会让 YAML 解析失败。
-      # role 是 roleOf 的结果，spawn-subagent 直接读它，不再自己推算角色。
       mkPiAgent = name: a: {
         name = "${name}.md";
         path = pkgs.writeText "${name}.md" (
           lib.concatStringsSep "\n" [
             "---"
             "description: ${builtins.toJSON a.description}"
-            "role: ${roleOf name}"
+            "role: ${a.modelRole or name}"
             "tools: ${a.piTools}"
             "---"
             ""
@@ -181,7 +163,7 @@
               "tools: ${a.ompTools}"
             ]
             ++ lib.optional ((a.ompSpawns or null) != null) "spawns: ${a.ompSpawns}"
-            ++ [ "model: @${roleOf name}" ]
+            ++ [ "model: @${a.modelRole or name}" ]
             ++ (a.extraFrontmatter or [ ])
             ++ [
               "---"

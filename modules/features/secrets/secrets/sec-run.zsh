@@ -36,7 +36,7 @@ fi
 _work=$(mktemp -d) || exit 1
 trap 'rm -rf "$_work"' EXIT
 trap 'exit 130' INT TERM
-typeset -a _skip # 已剔除的引用前缀，如 op://Agent/ITEM/
+typeset -a excluded_refs
 
 # 跑一次 op run，把解析后的 KEY=VALUE 以 NUL 分隔写到 stdout
 resolve() {
@@ -44,11 +44,11 @@ resolve() {
   local src copy pat
   local -i n=0
   for src in $_sources; do
-    if (( $#_skip )); then
+    if (( $#excluded_refs )); then
       # 剔除只发生在副本上；副本可能含覆盖层的明文值，放在 0700 的临时目录里
       copy="$_work/env.$((++n))"
       local -a pats=()
-      for pat in $_skip; do pats+=( -e "$pat" ); done
+      for pat in $excluded_refs; do pats+=( -e "$pat" ); done
       grep -vF "${pats[@]}" -- "$src" >"$copy"
       src=$copy
     fi
@@ -90,7 +90,7 @@ while true; do
   _err=$(<"$_work/err")
   typeset -a _current _bad
   _current=( $_sources )
-  (( $#_skip )) && _current=( "$_work"/env.*(N) )
+  (( $#excluded_refs )) && _current=( "$_work"/env.*(N) )
   _bad=( ${(f)"$(culprits "$_err" $_current)"} )
   if (( ! $#_bad )); then
     print -u2 -r -- "$_err"
@@ -99,7 +99,7 @@ while true; do
   for _ref in $_bad; do
     print -u2 -- "⚠️ [sec-run] 跳过无法解析的引用 $_ref（变量: ${(j:, :)${(f)"$(grep -hF -- "$_ref" $_current | key_names)"}}）"
   done
-  _skip+=( $_bad )
+  excluded_refs+=( $_bad )
 done
 [[ -s "$_work/err" ]] && cat "$_work/err" >&2
 # exec 不触发 EXIT trap，这里手动清理

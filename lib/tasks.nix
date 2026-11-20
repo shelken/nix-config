@@ -8,6 +8,9 @@
   # 1Password service account token 的 sops 解密文件；只在任务声明 op:// 引用时才求值
   opTokenFile,
 }:
+let
+  launchdEnv = "SHELKEN_TASK_LAUNCHD";
+in
 rec {
   # 任务字段唯一默认值源：darwin 与 home 两端共用的 mkTaskType submodule
   # 都从这里取默认值，新增字段只改这一处，杜绝两处默认漂移
@@ -44,7 +47,7 @@ rec {
       KeepAlive = false;
       # 任务脚本据此区分「launchd 调度唤起」与「手动运行」：抖动与通知只在前者生效
       EnvironmentVariables = {
-        SHELKEN_TASK_LAUNCHD = "1";
+        ${launchdEnv} = "1";
       };
       StandardOutPath = logPath name t;
       StandardErrorPath = logPath name t;
@@ -138,7 +141,7 @@ rec {
 
       # 抖动只在 launchd 调度唤起时生效：手动 task run 本来就跳过，所以不需要额外的跳过开关
       jitterBlock = lib.optionalString (t.jitter != null) ''
-        if [ "''${SHELKEN_TASK_LAUNCHD:-}" = "1" ]; then
+        if [ "''${${launchdEnv}:-}" = "1" ]; then
           jitter=$(( RANDOM % ${toString t.jitter} ))
           echo "[$(date '+%Y-%m-%d %H:%M:%S')] Jitter delay: ''${jitter}s"
           sleep "$jitter"
@@ -149,7 +152,7 @@ rec {
         ${secretExports}
         ${envExports}
         trigger=manual
-        [ "''${SHELKEN_TASK_LAUNCHD:-}" = "1" ] && trigger=launchd
+        [ "''${${launchdEnv}:-}" = "1" ] && trigger=launchd
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] ===== Task '${name}' Started ($trigger) ====="
         ${t.script}
       '';
@@ -179,7 +182,7 @@ rec {
         else
           ''
             # 仅 launchd 调度触发时通知，手动 task run 调试保持静默
-            if [ "''${SHELKEN_TASK_LAUNCHD:-}" = "1" ]; then
+            if [ "''${${launchdEnv}:-}" = "1" ]; then
               ${lib.optionalString t.notify.failure ''
                 if [ "$code" -ne 0 ]; then
                   ${mkNotify {

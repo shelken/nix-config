@@ -39,9 +39,11 @@ preview $host=target:
 push $host=target:
     #!/usr/bin/env bash
     set -euo pipefail
-    # 热点中继在 LuCI 里开启时，声明里它是关闭的，下发会把它关掉并让路由器断网
-    # 刚刷完的系统没有 wifinet7 段，视为关闭
-    [ "$(ssh -- "$host" 'if uci -q get wireless.wifinet7 >/dev/null; then uci -q get wireless.wifinet7.disabled; else echo 1; fi')" = 1 ] || { echo '热点中继（wifinet7）已启用，先在 LuCI 关掉再下发' >&2; exit 1; }
+    # 热点中继在 LuCI 里开启时，声明里它是关闭的，下发会把它关掉并让路由器断网；
+    # 直接查设备上所有启用中的 sta 段，不依赖声明中的段名（改名或临时段都能拦住）；刚刷完无 wireless 文件视为关闭
+    active_sta=$(ssh -- "$host" 'if [ -f /etc/config/wireless ]; then ubus call uci get '\''{"config":"wireless"}'\''; else echo "{}"; fi' |
+      jq -r '[.values // {} | to_entries[] | select(.value[".type"] == "wifi-iface" and .value.mode == "sta" and (.value.disabled // "0") != "1") | .key] | join(",")')
+    [ -z "$active_sta" ] || { echo "热点中继（$active_sta）已启用，先在 LuCI 关掉再下发" >&2; exit 1; }
     avahi_before=$(ssh -- "$host" 'md5sum /etc/avahi/avahi-daemon.conf')
     {{ nuci }}deploy "$tmp/uci.json" --target "$host" 2>&1 | mask
     # bird -p 校验失败时不重载，BIRD 继续跑旧配置
@@ -61,7 +63,7 @@ firmware-update: (_firmware 'update')
 [doc('按锁文件构建并下载固件，包版本与锁文件不一致时失败，不改设备')]
 firmware-build: (_firmware 'build')
 
-# sysupgrade 刷写时会杀掉 dropbear，ssh 以断线结束，所以最后一步不看退出码
+# sysupgrade 刷写时会杀掉 dropbear，ssh 以断线（255）结束，其它非零退出码视为失败
 [doc('按锁文件刷入固件并保留配置，会重启路由器；先 just router::acceptance 采基线')]
 upgrade $host=target: (_firmware 'build')
     #!/usr/bin/env bash
@@ -72,7 +74,9 @@ upgrade $host=target: (_firmware 'build')
     [ "$(ssh -- "$host" 'sha256sum /tmp/sysupgrade.bin' | cut -d' ' -f1)" = "$(jq -r .image.sha256 "$lock")" ] || { echo '上传后的镜像 sha256 与锁文件不符' >&2; exit 1; }
     # -T 只校验不刷写；不加 -F，板型对不上时应当失败
     ssh -- "$host" 'sysupgrade -T /tmp/sysupgrade.bin'
-    ssh -- "$host" 'sysupgrade /tmp/sysupgrade.bin' || true
+    rc=0
+    ssh -- "$host" 'sysupgrade /tmp/sysupgrade.bin' || rc=$?
+    [ "$rc" -eq 0 ] || [ "$rc" -eq 255 ] || exit "$rc"
     echo '路由器正在刷写并重启，约 3 分钟后跑 just router::acceptance 与 acceptance-diff'
 
 # 刷机前后各跑一次 acceptance，结果含设备运行数据，只放本机

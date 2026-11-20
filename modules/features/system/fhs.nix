@@ -5,10 +5,9 @@
   flake.modules.nixos.gui.imports = [ config.flake.modules.nixos.fhs ];
 
   flake.modules.nixos.fhs =
-    { lib, pkgs, ... }:
+    { pkgs, ... }:
     {
-      # mkOrder：保持迁移前 fhs 在桌面包之前
-      environment.systemPackages = lib.mkOrder 630 [
+      environment.systemPackages = [
         # create a fhs environment by command `fhs`, so we can run non-nixos packages in nixos!
         (
           let

@@ -7,13 +7,9 @@
   flake.modules.nixos.sunshine =
     { lib, pkgs, ... }:
     {
-      # mkOrder：保持迁移前 moonlight 在 fhs/桌面包之前
-      environment.systemPackages = lib.mkOrder 620 (
-        with pkgs;
-        [
-          moonlight-qt # moonlight client, for streaming games/desktop from a PC
-        ]
-      );
+      environment.systemPackages = with pkgs; [
+        moonlight-qt # moonlight client, for streaming games/desktop from a PC
+      ];
 
       # ===============================================================================
       #
