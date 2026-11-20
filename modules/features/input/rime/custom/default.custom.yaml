@@ -6,7 +6,6 @@ patch:
   menu:
     page_size: 8
 
-  # 中英切换交给系统输入源，rime 自己的切换键全部屏蔽
   ascii_composer:
     switch_key:
       Caps_Lock: noop

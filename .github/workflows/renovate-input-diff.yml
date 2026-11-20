@@ -28,8 +28,6 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
 
-      # 已启用的 skill 目录：逐台主机求值 flake.skillUpstreams，再按 flake.lock 归属到 input。
-      # base 与 head 各取一次，脚本用两者并集过滤：上游删掉 skill 后，旧目录只存在于 base 侧
       - name: Collect enabled skill directories (head)
         run: python3 utils/script/skill_source_dirs.py --flake . --lock flake.lock --output "$RUNNER_TEMP/head-skill-dirs.json"
 

@@ -44,7 +44,6 @@ rec {
       // config;
     };
 
-  # 加载目录下所有 .nix 任务声明文件为 { <name> = 声明; } 映射
   # 任务文件支持裸 attrset 或函数 { pkgs, ... }: 声明，配合 shelken.tasks 的 attrsOf submodule 使用
   # 目录不存在时返回空，调用方无需守卫
   loadTasks =
@@ -72,9 +71,6 @@ rec {
           )
       );
 
-  # 计算hostname在指定时间段内的均匀分布时间
-  # 按 hosts/default.nix 机器表里的 Nix 主机排序定位
-  # 分钟数使用 hostname 长度
   # 参数：
   #   hostname: 当前hostname
   #   startHour: 开始小时（包含）
@@ -89,14 +85,11 @@ rec {
       hostnames ? null,
     }:
     let
-      # 不读 hosts/ 目录：k8s/、vps/ 这类分组目录不是主机，增删目录会挪动所有主机的时段。
-      # OpenWrt 路由器不跑 Nix，不参与排程
       allHostnames =
         if hostnames != null then
           hostnames
         else
           builtins.attrNames (lib.filterAttrs (_: h: h.type != "openwrt") (import ../hosts));
-      # 按hash值排序获得稳定分布
       hostnameHashes = map (h: {
         name = h;
         hash = builtins.hashString "sha1" h;
@@ -105,11 +98,9 @@ rec {
       hostnameIndex = lib.lists.findFirstIndex (x: x == hostname) null (map (x: x.name) sortedByHash);
       totalHours = endHour - startHour;
 
-      # 在指定时间段内均匀分布
       baseHour =
-        if hostnameIndex != null then startHour + lib.mod hostnameIndex totalHours else startHour; # 默认开始小时
+        if hostnameIndex != null then startHour + lib.mod hostnameIndex totalHours else startHour;
 
-      # 使用 hostname 长度作为基础分钟数
       baseMinute = lib.mod (builtins.stringLength hostname * 13) 60;
     in
     {
@@ -125,7 +116,6 @@ rec {
     }
     // overrides;
 
-  # 创建的密钥仅自己可读取（500）
   mkSopsSecrets =
     secretsList:
     lib.listToAttrs (
@@ -174,8 +164,6 @@ rec {
   # 根据 config.shelken.dotfiles.liveEdit 开关决定配置来源：
   # - liveEdit = true（本机开发环境）：使用 mkOutOfStoreSymlink 软链至本地 ~/nix-config/<相对路径>，支持免 rebuild 热加载
   # - liveEdit = false（远程部署节点/默认）：只把该文件或目录拷进 store，保证闭包自包含与原子回滚。
-  #   不能拼成「仓库根/相对路径」：那会把整仓拷进闭包，任何提交都会改变所有远端主机的系统路径。
-  #   文件名含 * 等 store 不接受的字符时求值报错，应改文件名（lint 规则 no-repo-root-in-store 防止回退）
   # 参数是 Nix 路径字面量（如 ./settings.toml）：文件挪动后求值即报错，而非在 liveEdit 下留下悬空软链
   mkConfigLink =
     config: path:
@@ -191,7 +179,6 @@ rec {
     else
       "${path}";
 
-  # 生成标准 Home Manager 文件配置项：{ source = mkConfigLink config path; force = true; }
   mkConfigFile = config: path: {
     source = mkConfigLink config path;
     force = true;

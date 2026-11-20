@@ -1,4 +1,3 @@
-# 下载工具（Motrix）
 { config, ... }:
 {
   flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.download ];

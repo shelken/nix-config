@@ -1,14 +1,3 @@
-/**
- * guard — pi 与 omp 共用的工具调用拦截逻辑，只拦配合的 agent 的手滑。
- *
- * 范围：误删大范围目录、误读凭据、把未落盘的下载内容交给 shell、全量环境变量导出。
- * 不拦对抗性绕过（`bun -e 'readFileSync(".env")'` 之类解释器内读取不在范围内），隔离由 sb 沙箱负责；
- * 规则只落在真实危险目标上，误伤按缺陷处理，用会话重放衡量。
- *
- * 内置命令规则以检查函数实现（拒绝信息里给出规范化规则文本），内置路径规则与用户规则在 policy.ts，
- * 词法与 argv 匹配在 shell.ts。
- */
-
 import { homedir } from "node:os";
 import {
   BUILTIN_COMMAND_CONFIG,
@@ -54,11 +43,6 @@ export type GuardResult = { block: false } | { block: true; reason: string };
 type BuiltinHit = { rule: string; reason: string };
 type Rule = { value: string; reason?: string; source: "builtin" | "user"; config: string };
 
-// ============================================================================
-// 内置命令规则
-// ============================================================================
-
-/** 未引用变量的取值不可知，按空串处理（命令替换已被词法层摘成 sub token） */
 const DYNAMIC_RE = /\$\{[^}]*\}|\$[A-Za-z_][A-Za-z0-9_]*|\$\d+|\$[*@#?!$-]/g;
 
 function stripGlob(text: string): string {
@@ -78,28 +62,20 @@ function stripGlob(text: string): string {
   return out;
 }
 
-/**
- * `rm -rf` 的目标是否危险：`/`、`~`、`.`、`..` 或它们下的全量通配。
- * 定向路径、`/tmp/x-*`、`"$d"` 放行；`$d/*` 里变量按空串展开成 `/*`，照样拦截。
- */
 function dangerousRmTarget(word: ShellWord, home: string): string | null {
   if (word.value === "") return null;
   const literal = word.value.replace(DYNAMIC_RE, "");
   const globbed = word.glob ? stripGlob(literal) : literal;
-  // 先折叠重复斜杠，再逐层去掉尾部斜杠与 `/.` 层级：
-  // `.*`、`./.*`、`$HOME//.*` 都等价于「该目录的全部内容」
   const skeleton = globbed.replace(/\/{2,}/g, "/");
   const base = skeleton.replace(/\/+$/, "").replace(/(?:\/\.)+$/, "");
   if (base === home) return "rm -rf ~";
   if (base === ".") return "rm -rf .";
   if (base === "..") return "rm -rf ..";
   if (base !== "") return null;
-  // 只含变量的目标（"$d"、$EXTRA）取值可能为空，但不是全量通配
   if (literal === "") return null;
   return skeleton.startsWith("/") ? "rm -rf /" : "rm -rf *";
 }
 
-/** 规范化 `-fr`、`-r -f`、`--recursive --force` 之后，逐个目标判定 */
 function rmHit(cmd: ShellCmd, home: string): BuiltinHit | null {
   const args = stripWrapperWords(cmd.words);
   if (args.length === 0 || basenames(args[0].value) !== "rm") return null;
@@ -127,10 +103,6 @@ function rmHit(cmd: ShellCmd, home: string): BuiltinHit | null {
   return null;
 }
 
-/**
- * `env` 只要后面没有可执行的命令就是全量导出（`env`、`env -0`、`env FOO=bar`、`env -u FOO` 都算）；
- * 带命令时包装器剥离已把命令提到首词。`printenv` 只有点名变量才是精确查询。
- */
 function envHit(cmd: ShellCmd): BuiltinHit | null {
   const args = operandWords(cmd.words).map((w) => w.value);
   if (args.length === 0) return null;
@@ -145,7 +117,6 @@ function envHit(cmd: ShellCmd): BuiltinHit | null {
   return null;
 }
 
-/** 裸设备写入与低级格式化 */
 function deviceHit(cmd: ShellCmd): BuiltinHit | null {
   const args = operandWords(cmd.words).map((w) => w.value);
   if (args.length === 0) return null;
@@ -161,11 +132,6 @@ function builtinCommandHit(cmd: ShellCmd, home: string): BuiltinHit | null {
   return rmHit(cmd, home) ?? envHit(cmd) ?? deviceHit(cmd);
 }
 
-// ============================================================================
-// 路径判定
-// ============================================================================
-
-/** 元数据查询与字面回显不算读取；重定向目标与命令替换仍参与判定 */
 const METADATA_HEADS: Record<string, true> = lookup<true>({
   ls: true,
   stat: true,
@@ -176,7 +142,6 @@ const METADATA_HEADS: Record<string, true> = lookup<true>({
   printf: true,
 });
 
-/** 元数据查询与字面回显不算读取；接了管道就不能豁免：下游（xargs、cat 之类）可能真的读内容 */
 function isMetadataCommand(cmd: ShellCmd): boolean {
   if (cmd.pipeNext) return false;
   const args = operandWords(cmd.words).map((w) => w.value);
@@ -191,7 +156,6 @@ function matchingPathRule(candidate: string, policy: Policy, cwd: string, home: 
   return policy.paths.find((rule) => pathRuleMatches(rule, absolute));
 }
 
-/** 命令里的词逐个查路径规则；元数据命令的操作数不算读取 */
 function bashPathHit(nodes: ShellCmd[], policy: Policy, cwd: string, home: string): PathRule | undefined {
   for (const cmd of nodes) {
     const metadata = isMetadataCommand(cmd);
@@ -226,10 +190,6 @@ function extractEditPaths(input: string): string[] {
   return [...paths];
 }
 
-// ============================================================================
-// 判定入口
-// ============================================================================
-
 function resolveBlockReason(rule: Rule, kind: "command" | "path", defaultReason?: string): string {
   const reason = rule.source === "user" ? rule.reason || defaultReason : rule.reason;
   const detail = reason?.split(/\r\n|\r|\n/).join(" ").trim();
@@ -250,10 +210,6 @@ const GIT_GLOBAL_VALUE_OPTIONS: Record<string, true> = lookup<true>({
   "--super-prefix": true,
 });
 
-/**
- * `git add -A` / `git add .` 只看暂存范围：没有显式路径，或路径归一化后是 `.`、`..`、`:/`、
- * 通配、变量时算全仓；写了具体文件的调用照旧放行。`--` 之后一律当路径，预览选项压过全树判定。
- */
 function gitAddIsFullScope(words: ShellWord[]): boolean {
   const args = operandWords(words);
   const argv = args.map((w) => w.value);
@@ -285,9 +241,7 @@ function gitAddIsFullScope(words: ShellWord[]): boolean {
       continue;
     }
     hasPaths = true;
-    // 折叠重复斜杠、去掉尾部斜杠后，`.` / `..` / 空串都是全树
     const normalized = arg.replace(/\/{2,}/g, "/").replace(/\/+$/, "");
-    // 动态取值与通配无法静态确认范围
     if (word.dynamic || word.glob || arg === ":/") fullScope = true;
     else if (normalized === "" || normalized === "." || normalized === "..") fullScope = true;
   }
@@ -306,7 +260,6 @@ function commandRuleMatches(nodes: ShellCmd[], rule: CommandRule): boolean {
   );
 }
 
-/** heredoc 正文被 shell 当程序执行时返回正文；否则返回未引用正文里会展开的命令替换 */
 function heredocScript(token: { value: string; quoted: boolean; owner: number }, nodes: ShellCmd[]): string {
   let owner = 0;
   for (let i = 0; i < nodes.length; i++) {
@@ -360,7 +313,6 @@ function evaluateBash(
   const pathRule = bashPathHit(nodes, policy, input.cwd, input.home);
   if (pathRule) return blocked(pathRule, "path");
 
-  // 嵌套脚本与外层同等对待：命令替换、内嵌脚本、被 shell 执行的 heredoc 正文
   const nested = (script: string): GuardResult | undefined => {
     const result = evaluateBash({ command: script, cwd: input.cwd, home: input.home }, policy);
     return result.block ? result : undefined;
@@ -404,10 +356,6 @@ export function evaluateGuard(input: GuardInput, policy: Policy): GuardResult {
   return { block: false };
 }
 
-// ============================================================================
-// 扩展注册
-// ============================================================================
-
 export interface GuardExtensionContext {
   cwd: string;
   hasUI?: boolean;
@@ -431,16 +379,12 @@ export interface GuardExtensionAPI {
 }
 
 export interface GuardHost {
-  /** 全局权限文件所在目录：omp 为 ~/.omp/agent，pi 为 ~/.pi/agent */
   agentDir: string;
-  /** 项目级配置目录名：".omp" 或 ".pi" */
   configDirName: string;
-  /** 由宿主提供：nix-config 没有 node_modules，guard 自己不带 YAML 库 */
   parseYaml: YamlParser;
 }
 
 export function registerGuard(pi: GuardExtensionAPI, host: GuardHost): void {
-  // 按 CWD 独立缓存策略，切换目录执行工具时动态生效对应目录的 permissions.yml
   const policyCache = new Map<string, Policy>();
   const notified = new Set<string>();
 
@@ -483,7 +427,6 @@ export function registerGuard(pi: GuardExtensionAPI, host: GuardHost): void {
   pi.on("tool_call", (event, ctx) => {
     const policy = ensurePolicy(ctx);
     const input = event.input ?? {};
-    // 非字符串字段一律当缺省处理，路径候选由 evaluateGuard 统一收集
     const text = (v: unknown) => (typeof v === "string" ? v : undefined);
 
     const call: GuardInput =

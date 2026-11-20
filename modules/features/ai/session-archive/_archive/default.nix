@@ -38,11 +38,9 @@ in
       ];
     }
 
-    # 没有任何 app 声明目录时不装任务，也不装命令
     (lib.mkIf (roots != [ ]) {
       home.packages = [ archive ];
 
-      # 失败时原文件保留、不会损失数据，只写任务日志，不发通知
       shelken.tasks.session-archive = {
         when = "4:20";
         packages = [ archive ];

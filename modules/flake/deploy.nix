@@ -26,7 +26,6 @@ in
     }
   ) deployHosts;
 
-  # 只在原生系统启用，跨系统会让 nix flake check 尝试交叉构建
   perSystem =
     { system, ... }:
     {

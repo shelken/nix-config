@@ -1,5 +1,3 @@
-# 路由器核心网络：LAN 桥与主网 VLAN、WAN、无 IPv6 的 Wi-Fi 网段、热点中继。
-# IoT 网（viot、VLAN50）在 home-ops/iot.nix，IoT 出网的策略路由在 hk1box/network.nix，zt 在 services/zerotier
 { lib, ... }:
 let
   net = import ../../../vars/networking.nix { inherit lib; };
@@ -23,7 +21,6 @@ in
       }
     ];
 
-    # LAN 口是 PVE / K8s 节点的口：主网不打标签，其余 VLAN 打标签。VLAN50 是 IoT 网（home-ops/iot.nix）
     bridge-vlan = [
       {
         _type = "bridge-vlan";
@@ -99,8 +96,6 @@ in
       reqprefix = "auto";
     };
 
-    # 热点中继：让路由器临时连手机热点上网，开关在 LuCI 拨。
-    # 无线配置不在声明里，无线 wifinet7 的 network 选项要写这两个接口名
     hotspot = {
       _type = "interface";
       delegate = "0";

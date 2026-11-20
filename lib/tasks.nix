@@ -1,19 +1,13 @@
-# 任务系统共享核心：darwin 层（root daemon）与 home 层（user agent + task CLI）共用。
-# 两入口（just sw 内嵌 / just hm 独立）各自评估任务声明，生成逻辑必须单源，
-# 否则同一份声明在两个入口行为漂移。
 {
   lib,
   pkgs,
   homeDir,
-  # 1Password service account token 的 sops 解密文件；只在任务声明 op:// 引用时才求值
   opTokenFile,
 }:
 let
   launchdEnv = "SHELKEN_TASK_LAUNCHD";
 in
 rec {
-  # 任务字段唯一默认值源：darwin 与 home 两端共用的 mkTaskType submodule
-  # 都从这里取默认值，新增字段只改这一处，杜绝两处默认漂移
   taskDefaults = {
     enable = true;
     user = true;
@@ -31,21 +25,18 @@ rec {
     };
   };
 
-  # launchd Label 前缀；task CLI 靠它从 plist 目录里认出任务
   labelPrefix = "space.ooooo.task-";
 
   logPath =
     name: t:
     if t.user then "${homeDir}/Library/Logs/task-${name}.log" else "/Library/Logs/task-${name}.log";
 
-  # daemon 与 agent 共用的 launchd 字段；两层只各自补上启动命令
   mkLaunchdConfig =
     name: t:
     {
       Label = "${labelPrefix}${name}";
       RunAtLoad = false;
       KeepAlive = false;
-      # 任务脚本据此区分「launchd 调度唤起」与「手动运行」：抖动与通知只在前者生效
       EnvironmentVariables = {
         ${launchdEnv} = "1";
       };
@@ -54,7 +45,6 @@ rec {
     }
     // mkTrigger t;
 
-  # 两层共用的字段组合约束
   mkAssertions =
     tasks:
     lib.concatLists (
@@ -70,7 +60,6 @@ rec {
       ]) tasks
     );
 
-  # "3:15" -> { Hour = 3; Minute = 15; }
   parseTime =
     t:
     let
@@ -81,7 +70,6 @@ rec {
       Minute = lib.toIntBase10 (lib.elemAt parts 1);
     };
 
-  # 日历时间与星期组合；无调度时不生成触发键，保留纯手动入口
   mkTrigger =
     t:
     if t.every != null then
@@ -97,7 +85,6 @@ rec {
             lib.concatMap (day: map (time: (parseTime time) // { Weekday = day; }) t.when) t.weekday;
       };
 
-  # 任务包装脚本：起止记录 + 抖动 + 通知。t 来自 mkTaskType submodule，字段已带默认值
   mkPackage =
     name: t:
     let
@@ -112,7 +99,6 @@ rec {
         export ${var}
       '';
 
-      # token 只以前缀变量交给这一次 op 调用，不留在任务脚本环境里
       readOpSecret = var: ref: ''
         if [ ! -r "${opTokenFile}" ]; then
           echo "Task '${name}': 1Password service account token is not readable: ${opTokenFile}" >&2
@@ -131,7 +117,6 @@ rec {
         ) t.secrets
       );
 
-      # 把任意文本原样塞进双引号 bash 串：转义反斜杠、双引号、$ 与反引号。
       # 不用单引号包裹是为了避开 shellcheck 的 SC2016（连 info 级都会让构建失败）
       quoteDouble = s: builtins.replaceStrings [ "\\" "\"" "$" "`" ] [ "\\\\" "\\\"" "\\$" "\\`" ] s;
 
@@ -139,7 +124,6 @@ rec {
         lib.mapAttrsToList (var: value: ''export ${var}="${quoteDouble value}"'') t.env
       );
 
-      # 抖动只在 launchd 调度唤起时生效：手动 task run 本来就跳过，所以不需要额外的跳过开关
       jitterBlock = lib.optionalString (t.jitter != null) ''
         if [ "''${${launchdEnv}:-}" = "1" ]; then
           jitter=$(( RANDOM % ${toString t.jitter} ))
@@ -157,8 +141,6 @@ rec {
         ${t.script}
       '';
 
-      # 通知：默认仅 launchd 调度唤起且非零退出时提示失败，可配置成功也通知与自定义标题。
-      # 标题来自配置，必须转义后再拼进脚本；消息是模板自己拼的，含运行期展开的变量
       mkNotify =
         {
           fallbackTitle,
@@ -175,13 +157,11 @@ rec {
             2>/dev/null || true
         '';
 
-      # 两个开关都关时整段不发，否则会留下空的 if/then/fi 让 bash 报语法错误
       notifyOnExit =
         if !t.user || !(t.notify.failure || t.notify.success) then
           "" # root daemon 通常无图形会话；开关全关则不需要通知
         else
           ''
-            # 仅 launchd 调度触发时通知，手动 task run 调试保持静默
             if [ "''${${launchdEnv}:-}" = "1" ]; then
               ${lib.optionalString t.notify.failure ''
                 if [ "$code" -ne 0 ]; then
@@ -223,8 +203,6 @@ rec {
       '';
     };
 
-  # 任务声明 submodule：darwin 层（root daemon）与 home 层（user agent）共用同一份
-  # 选项契约，两端只能有一个定义源；默认值全部来自 taskDefaults
   mkTaskType =
     { name, config, ... }:
     {
@@ -321,14 +299,12 @@ rec {
         };
       };
       config = {
-        # 直接传整份 config，新增字段不必同时改这里
         package = mkPackage name config;
       };
     };
 
   enabled = tasks: lib.filterAttrs (_: t: t.enable) tasks;
 
-  # 禁用任务在两层都不部署；无调度任务仍保留手动入口
   userTasks = tasks: lib.filterAttrs (_: t: t.user) (enabled tasks);
 
   rootTasks = tasks: lib.filterAttrs (_: t: !t.user) (enabled tasks);

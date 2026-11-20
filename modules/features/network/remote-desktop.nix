@@ -1,4 +1,3 @@
-# 远程桌面客户端：Windows App（workstation）、Parsec（gui）
 { config, ... }:
 {
   flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.remote-desktop ];

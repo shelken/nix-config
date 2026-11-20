@@ -1,7 +1,5 @@
-# lima-host：承载 Lima 节点的宿主（sakamoto、yuuko）。可选功能，宿主在 imports 里声明导入
 # 系统侧：以 root 常驻的桥接网卡 socket_vmnet，供 Lima 实例经 socket 路径连接（非托管模式）；
 # 托管模式要求二进制整条路径归 root 且组不可写，/nix/store 做不到，所以由 launchd 常驻。
-# 宿主设 shelken.limaHost.*，Home Manager 部分经 osConfig 读取：实例声明、附加盘软链、自启动
 { ... }:
 {
   flake.modules.darwin.lima-host =
@@ -13,7 +11,6 @@
     }:
     let
       inherit (myvars.socketVmnet) interface socket;
-      # 与上游 launchd/io.github.lima-vm.socket_vmnet.bridged.en0.plist 的命名一致
       name = "socket_vmnet.bridged.${interface}";
     in
     {
@@ -48,7 +45,6 @@
         # 日志放平，launchd 不会替 /var/log 下的子目录建目录
         StandardOutPath = "/var/log/${name}.stdout";
         StandardErrorPath = "/var/log/${name}.stderr";
-        # 避免资源限制拖慢网络转发
         ProcessType = "Interactive";
       };
     };
@@ -65,7 +61,6 @@
     let
       inherit (osConfig.shelken.limaHost) node externalDisk;
 
-      # limactl 由 Homebrew 安装（modules/features/virt/lima.nix），沿用它，不再引入第二份 Lima
       brewBin = "${osConfig.homebrew.prefix}/bin";
 
       # 节点只给数据，YAML 在宿主上用 darwin 的 pkgs 生成：直接用节点的 build 产物要 aarch64-linux 的 builder
@@ -80,8 +75,6 @@
             printf '%s lima-host: %s\n' "$(date '+%F %T')" "$*"
           }
 
-          # 维护标记：重装、离线克隆时要保持停机，deploy 会重新加载 agent、StartOnMount 也会随时触发，
-          # 只靠 bootout 挡不住
           if [ -e "$HOME/.lima/${node}/no-autostart" ]; then
             log '有维护标记 ~/.lima/${node}/no-autostart，跳过启动 ${node}'
             exit 0
@@ -105,7 +98,6 @@
       };
     in
     {
-      # lima.yaml 用 force 顶替手工放的旧文件（内容相同，不重要）；_disks 不用，它指向数据盘，首次部署前由人手动处理
       home.file = {
         ".lima/${node}/lima.yaml" = {
           source = limaYaml;
@@ -116,7 +108,6 @@
         ".lima/_disks".source = config.lib.file.mkOutOfStoreSymlink "${externalDisk}/k8s/lima/_disks";
       };
 
-      # 不设 KeepAlive：失败时不反复重试，盘挂载（StartOnMount）或下次登录再来。
       # 不用 limactl start --foreground 常驻：Home Manager 改 plist 会 bootout 这个 agent，
       # 常驻的 limactl 会随之退出并带走虚拟机。这里 limactl 把 hostagent 放进自己的进程组后退出，
       # AbandonProcessGroup 再保证 launchd 不会清理遗留进程，所以 agent 重载不会碰到运行中的虚拟机

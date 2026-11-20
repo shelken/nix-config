@@ -1,5 +1,3 @@
-"""主 VM 生命周期与授权流程测试：真实的 `python -m sb`，假的 msb（见 testenv.py）。"""
-
 import json
 import unittest
 
@@ -207,7 +205,7 @@ class LifecycleTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         syncs = [c for c in self.e.calls("exec") if "/fake/sync-guest" in c]
         self.assertTrue(syncs)
-        for call in syncs:  # 首次 up 的自动 sync 与显式 sync 都要带上
+        for call in syncs:
             envs = [e for e in env_args(call) if e.startswith("MISE_URL_REPLACEMENTS=")]
             self.assertEqual([json.loads(e.split("=", 1)[1]) for e in envs], [rules])
 
@@ -243,7 +241,6 @@ class RunTest(unittest.TestCase):
         self.assertEqual((cwd, cmd), (str(self.e.project), ["git", "status"]))
 
     def snapshot_script(self, rc):
-        # 记下快照发生时 launcher 已被调用的次数：快照必须先于上下文启动
         log = self.e.tmp / "snapshot.log"
         script = self.e.tmp / "snapshot"
         script.write_text(
@@ -327,7 +324,7 @@ class RunTest(unittest.TestCase):
         (self.e.project / "kube.yaml").write_text("x")
         self.e.set_project({"imports": [{"src": "kube.yaml", "target": "~/.kube/config"}]})
         self.e.sb("trust")
-        self.e.msb_state(copy_rc=1)  # 失败路径会经过暂存目录回收那次 msb 调用
+        self.e.msb_state(copy_rc=1)
         self.assertNotIn("MSB_HOME", self.e.env)
         self.e.sb("run", "true")
         envs = self.e.msb_state()["envs"]
@@ -336,7 +333,6 @@ class RunTest(unittest.TestCase):
         self.assertEqual([e for e in envs if e != want], [])
 
     def host_credentials(self, **files):
-        """打开宿主凭据注入；假 sec-run 原样执行命令，避免测试碰到真实的 sec-run。"""
         sec_run = self.e.tmp / "bin" / "sec-run"
         sec_run.write_text('#!/bin/sh\nexec "$@"\n')
         sec_run.chmod(0o755)

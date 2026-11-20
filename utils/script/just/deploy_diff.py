@@ -20,10 +20,8 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# 求值很吃 CPU，限制同时求值的主机数，不占满机器
 EVAL_JOBS = 3
 PROBE_TIMEOUT = 15
-# 每类最多展示的条目数，其余折叠成「等 N 项」
 SHOW = 12
 
 ATTRS = {
@@ -54,13 +52,11 @@ def run(cmd, **kw):
 
 
 def name_of(path):
-    """去掉 store 前缀和 hash；双 hash 前缀（flake 源码快照）也一并去掉"""
     name = HASH.sub("", path)
     return HASH.sub("", name)
 
 
 def split_name(name):
-    """git-2.56.0-doc -> (git-doc, 2.56.0)；无版本时版本为空"""
     m = re.match(r"^(.+?)-(\d[^-]*)(-.*)?$", name)
     if not m:
         return name, ""
@@ -88,7 +84,6 @@ def list_hosts(only):
 
 
 def probe(host):
-    """返回 (当前系统路径, {路径: 它引用的路径集合})"""
     first, _, graph = remote(host, PROBE).partition("\n")
     refs = {}
     for line in graph.splitlines():
@@ -119,7 +114,6 @@ def chosen_outputs(shown_json):
 
 
 def remote(host, script, timeout=PROBE_TIMEOUT):
-    """host 为 None 时在本机执行"""
     cmd = ["sh", "-c", script] if host is None else [
         "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", host, script]
     try:
@@ -157,7 +151,6 @@ def old_packages(host, old_refs):
 
 
 def evaluate(host, kind):
-    """返回 (新系统路径, 新系统会用到的全部路径, {包环境名: 包路径集合})"""
     r = run(["nix", "eval", "--raw", ".#" + ATTRS[kind].format(host)])
     if r.returncode:
         raise RuntimeError(error_tail(r.stderr))
@@ -175,7 +168,6 @@ def evaluate(host, kind):
         r = run(["nix", "derivation", "show", env])
         if r.returncode:
             raise RuntimeError(error_tail(r.stderr))
-        # darwin 的闭包里有不止一个同名的 system-path，同名合并
         packages.setdefault(name_of(env).removesuffix(".drv"), set()).update(chosen_outputs(r.stdout))
     return top, paths, packages
 
@@ -193,7 +185,6 @@ def fmt_versions(vs):
 
 
 def package_changes(old_packages, new_packages):
-    """同一包环境的新旧包清单：先按包名分组再比，同名包换了路径算升级或重建"""
     o, n = by_pname(old_packages), by_pname(new_packages)
     old_paths, new_paths = group_paths(old_packages), group_paths(new_packages)
     upgraded, rebuilt = [], []
@@ -211,13 +202,10 @@ def group_paths(paths):
         groups.setdefault(split_name(name_of(p))[0], set()).add(p)
     return groups
 
-
-# 由包清单派生的聚合目录，包的变化已单独列出
 DERIVED = re.compile(r"^(system-path|home-manager-(path|applications|fonts))$")
 
 
 def source_changes(old_refs, new_paths, package_paths):
-    """旧闭包里消失、且自己的依赖都没变的路径：变化的源头"""
     changed = {p for p in old_refs if p not in new_paths}
     leaves = [p for p in changed if not (old_refs[p] & changed)]
     new_only = by_pname(new_paths - set(old_refs))
@@ -242,7 +230,6 @@ def fold(items):
 
 
 def check(host, kind, probe_future):
-    """返回 (状态, 明细行, 各阶段耗时)"""
     marks = [time.monotonic()]
     top, new_paths, new_packages = evaluate(host, kind)
     marks.append(time.monotonic())
@@ -256,7 +243,6 @@ def check(host, kind, probe_future):
     for env in old_pkgs.keys() | new_packages.keys():
         up, rb, add, rm = package_changes(old_pkgs.get(env, set()), new_packages.get(env, set()))
         upgraded.update(up), rebuilt.update(rb)
-        # 按引用推算时，被覆盖的包、空包会像新增，传播进来的包会像删除
         if env not in missing:
             added.update(add), removed.update(rm)
     package_paths = set().union(*old_pkgs.values(), *new_packages.values())
@@ -272,14 +258,12 @@ def check(host, kind, probe_future):
 
 
 def phases(marks):
-    """总耗时加分段，慢的时候能看出卡在本机求值、等远端探测还是读旧 drv"""
     labels = ("求值", "等远端", "读旧 drv")
     parts = [f"{label} {b - a:.0f}" for label, a, b in zip(labels, marks, marks[1:])]
     return f"{marks[-1] - marks[0]:.0f}s（{'，'.join(parts)}）"
 
 
 def diff(hosts):
-    """检查并打印各主机，返回需部署的主机（按完成顺序）"""
     start = time.monotonic()
     total, done, counts, outdated = len(hosts), 0, {}, []
     print(f"检查 {total} 台：{' '.join(sorted(hosts))}", flush=True)
@@ -309,7 +293,6 @@ def diff(hosts):
 
 
 def deploy_steps(hosts):
-    """[(名称, 命令)]：普通主机各一步，k3s 节点合成一步放最后"""
     r = run(["nix", "eval", "--json", ".#nixosConfigurations", "--apply", K3S_EXPR])
     if r.returncode:
         sys.exit(f"读取 k3s 节点失败：{error_tail(r.stderr)}")

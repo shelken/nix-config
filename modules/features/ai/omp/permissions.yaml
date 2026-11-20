@@ -1,7 +1,3 @@
-# guard 全局权限防护规则 — 机器级特定拦截规则
-# 通用机密凭据（如 ~/.ssh, ~/.aws, .env 等）已内置硬编码在 guard 扩展中；
-# 本文件用于声明机器特有凭据、个人敏感路径及操作规范拦截。
-
 default_reason: "BLOCKED BY USER (GLOBAL)"
 
 deny_commands:
@@ -19,10 +15,6 @@ deny_commands:
     reason: "全盘遍历改为用 find 工具，或指定具体子目录"
   - pattern: "find ~"
     reason: "全盘遍历改为用 find 工具，或指定具体子目录"
-  # - pattern: "nix run"
-    # reason: "不准使用nix run"
-  # - pattern: "nix shell"
-    # reason: "不准使用nix shell"
   - pattern: "pip3 install"
     reason: "不准使用pip,不准直接安装任何包在全局,使用uv并且经过用户允许"
   - pattern: "pip install"
@@ -33,26 +25,21 @@ deny_commands:
 
 # 路径规则：值为拒绝目标；`-值` 删除同名规则（内置规则同样可删）。
 deny_paths:
-  # --- personal shell secrets ---
   - path: "~/.specific.zsh"
     reason: "personal shell secrets"
   - path: "~/.specific.bash"
     reason: "personal shell secrets"
 
-  # --- docker ---
   - path: "~/.docker/.token_seed"
     reason: "docker token seed"
 
-  # --- gitlab CLI ---
   - path: "~/.config/glab-cli/config.yml"
     reason: "glab CLI token config"
-  # --- azure token cache ---
   - path: "~/.azure/msal_token_cache.json"
     reason: "Azure MSAL token cache"
   - path: "~/.azure/msal_http_cache.bin"
     reason: "Azure MSAL HTTP cache"
 
-  # --- pi / omp / AI tool auth files ---
   - path: "~/.omp/agent/auth.json"
     reason: "omp provider credentials"
   - path: "~/.pi/agent/auth.json"
@@ -64,10 +51,8 @@ deny_paths:
   - path: "~/.kilocode/cli/global/secrets.json"
     reason: "kilocode secrets"
 
-  # --- wrangler (oauth / account) ---
   - path: "~/.config/.wrangler/config/default.toml"
     reason: "wrangler oauth/config"
 
-  # --- sops-nix decrypted secret material (this machine) ---
   - path: "~/.config/sops-nix/secrets/*"
     reason: "sops-nix secret files"

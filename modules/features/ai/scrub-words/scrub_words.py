@@ -38,16 +38,12 @@ NO_SIGNATURE = {"", "reasoning_content"}
 # JSON 文本里的 \n \t \uXXXX 紧贴英文词时，词前其实是边界，不能按字母数字挡掉。
 BEFORE = r"(?:(?<![A-Za-z0-9_])|(?<=\\[ntrbf])|(?<=\\u[0-9a-fA-F]{4}))"
 AFTER = r"(?![A-Za-z0-9_])"
-UNSAFE = re.compile(r'["\\\x00-\x1f]')  # 会破坏 JSON 文本的字符
+UNSAFE = re.compile(r'["\\\x00-\x1f]')
 TITLE_PAD = re.compile(rb'"pad":"( *)"\}$')  # omp 首行定长 title，靠 pad 补齐
 
 
 class Changed(Exception):
-    """文件在扫描后被别的进程改过。"""
-
-
-# ---------------------------------------------------------------- 字典与匹配
-
+    pass
 
 def load_dict(path):
     if not path.is_file():
@@ -74,10 +70,9 @@ def load_dict(path):
 
 
 class Matcher:
-    """单次扫描、长词优先；非 ASCII 词额外匹配 \\uXXXX 转义形式。"""
 
     def __init__(self, entries):
-        alts = []  # (匹配文本长度, 正则, 词, 替换后的字节, 匹配文本)
+        alts = []
         for key, val in entries.items():
             variants = [(key, val)]
             esc_key, esc_val = json.dumps(key)[1:-1], json.dumps(val)[1:-1]
@@ -90,9 +85,8 @@ class Matcher:
         alts.sort(key=lambda a: -a[0])
         self.labels = {f"g{i}": a[2] for i, a in enumerate(alts)}
         self.values = {f"g{i}": a[3] for i, a in enumerate(alts)}
-        self.escaped = {f"g{i}": a[4] != a[2] for i, a in enumerate(alts)}  # 是否 \uXXXX 转义形式
+        self.escaped = {f"g{i}": a[4] != a[2] for i, a in enumerate(alts)}
         self.rx = re.compile("|".join(f"(?P<g{i}>{a[1]})" for i, a in enumerate(alts)).encode())
-        # 预筛：字面量查找比正则快约 20 倍，先排除绝大多数不含词的文件和行
         self.needles = [a[4].encode() for a in alts if not a[2].isascii()]
         ascii_pats = [a[1] for a in alts if a[2].isascii()]
         self.ascii_rx = re.compile("|".join(ascii_pats).encode()) if ascii_pats else None
@@ -102,18 +96,13 @@ class Matcher:
                 sys.exit(f"字典有误：{key!r} 的替换词 {val!r} 含有字典里的词，多次运行会连锁替换")
 
     def maybe(self, data):
-        """可能含词（不保证）；data 可以是 bytes 或 mmap。"""
         return any(data.find(n) != -1 for n in self.needles) or bool(
             self.ascii_rx and self.ascii_rx.search(data)
         )
 
-
-# ---------------------------------------------------------------- 扫描与计划
-
-
 @dataclass
 class Change:
-    idx: int  # 0 起的行下标
+    idx: int
     old: bytes
     new: bytes
 
@@ -121,11 +110,11 @@ class Change:
 @dataclass
 class Plan:
     path: Path
-    key: tuple  # (mtime_ns, size)，写回前用来确认文件没被改
+    key: tuple
     changes: list = field(default_factory=list)
     counts: Counter = field(default_factory=Counter)
     samples: dict = field(default_factory=dict)
-    protected: list = field(default_factory=list)  # (行号, 原因)
+    protected: list = field(default_factory=list)
 
 
 def iter_jsonl(roots):
@@ -210,7 +199,6 @@ def plan_file(path, m):
 
 
 def open_paths(paths):
-    """一次 lsof 找出其中正被进程打开的文件。"""
     if not paths:
         return set()
     try:
@@ -242,7 +230,6 @@ _last_progress = 0.0
 
 
 def progress(label, i, total):
-    """全量扫描要一两分钟，没有输出会像卡死；只在终端里刷新，管道和测试里保持安静。"""
     global _last_progress
     now = time.monotonic()
     if sys.stderr.isatty() and total and (i == total or now - _last_progress >= 0.3):
@@ -263,12 +250,7 @@ def collect(args, m):
     per_root = Counter(next(r for r in args.root if r in p.parents) for p in files)
     return per_root, ok, skipped
 
-
-# ---------------------------------------------------------------- 写回
-
-
 def apply_edits(path, key, changes):
-    """写临时文件再 rename，保留权限与 mtime；失败不留半成品。"""
     with open(path, "rb") as f:
         st = os.fstat(f.fileno())
         data = f.read()
@@ -286,7 +268,7 @@ def apply_edits(path, key, changes):
             f.flush()
             os.fsync(f.fileno())
         shutil.copymode(path, tmp)
-        os.utime(tmp, ns=(st.st_atime_ns, st.st_mtime_ns))  # 保持会话列表的排序
+        os.utime(tmp, ns=(st.st_atime_ns, st.st_mtime_ns))
         now = path.stat()
         if (now.st_mtime_ns, now.st_size) != key:
             raise Changed("写入期间文件被修改")
@@ -295,10 +277,6 @@ def apply_edits(path, key, changes):
         if os.path.exists(tmp):
             os.unlink(tmp)
         raise
-
-
-# ---------------------------------------------------------------- 输出
-
 
 def fmt_size(n):
     return f"{n / 1024 / 1024:.1f} MB" if n >= 1024 * 1024 else f"{n / 1024:.1f} KB"
@@ -316,7 +294,6 @@ def show_list(items):
 
 
 def root_summary(roots, per_root, plans, verb):
-    """分目录汇总，避免只看到文件清单前 10 项时误以为只处理了其中一个目录。"""
     for r in roots:
         mine = [p for p in plans if r in p.path.parents]
         changed = sum(len(p.changes) for p in mine)
@@ -353,7 +330,6 @@ def report(plans, skipped, m, verb, samples, lists=True):
 
 
 def audit(args, m):
-    """列出 agent 目录里、不在清洗范围内的残留命中。"""
     candidates = []
     for parent in sorted({r.parent for r in args.root}):
         for d, _, files in os.walk(parent):
@@ -373,7 +349,7 @@ def audit(args, m):
             with open(p, "rb") as fh, mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ) as mm:
                 if m.maybe(mm) and m.rx.search(mm):
                     found.append(p)
-        except (OSError, ValueError):  # 空文件或不可读
+        except (OSError, ValueError):
             pass
     print(f"\n范围外仍有命中（{len(found)} 个文件，不自动改）：")
     if not found:
@@ -383,10 +359,6 @@ def audit(args, m):
         print(f"  {suffix}: {n}")
     if not args.stat:
         show_list([str(p) for p in found if p.suffix != ".log"])
-
-
-# ---------------------------------------------------------------- 撤销日志
-
 
 def list_runs(cache):
     runs = []
@@ -402,17 +374,13 @@ def read_journal(run_dir):
         with gzip.open(run_dir / JOURNAL, "rt", encoding="utf-8") as f:
             for line in f:
                 records.append(json.loads(line))
-    except EOFError:  # 运行中途中断，保留已写入的部分
+    except EOFError:
         pass
     return records
 
 
 def cache_total(cache):
     return fmt_size(dir_size(cache)) if cache.exists() else "0 KB"
-
-
-# ---------------------------------------------------------------- 命令
-
 
 def cmd_dry_run(args):
     m = Matcher(load_dict(args.dict))
@@ -434,7 +402,6 @@ def cmd_run(args):
             if journal is None:
                 (args.cache / runid).mkdir(parents=True)
                 journal = gzip.open(args.cache / runid / JOURNAL, "wt", encoding="utf-8")
-            # 先落日志再改文件：中途崩溃也不会丢原文
             for c in p.changes:
                 rec = {
                     "file": str(p.path),
@@ -454,7 +421,7 @@ def cmd_run(args):
         if journal:
             journal.close()
     print(f"扫描 {sum(scanned.values())} 个 jsonl")
-    shown = done + [p for p in ok if not p.changes]  # 只含受保护行的文件也要计入"未替换"
+    shown = done + [p for p in ok if not p.changes]
     root_summary(args.root, scanned, shown, "已替换")
     report(shown, skipped, m, "已替换", samples=False, lists=not args.stat)
     if done:
@@ -552,7 +519,6 @@ def cmd_purge(args):
 
 
 def lock_cache(cache):
-    """run / undo / purge 共用一把锁，避免 undo 在 run 仍写日志时把日志目录删掉。"""
     cache.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(f"{cache}.lock", os.O_CREAT | os.O_RDWR, 0o600)
     try:
@@ -586,7 +552,6 @@ def main():
     purge.add_argument("--all", action="store_true")
     purge.set_defaults(fn=cmd_purge)
     args = parser.parse_args()
-    # 日志里记录绝对路径，换目录执行 undo 也不会动错文件
     args.dict, args.cache = args.dict.resolve(), args.cache.resolve()
     args.root = [r.resolve() for r in (args.root or DEFAULT_ROOTS) if r.is_dir()]
     if args.fn in (cmd_run, cmd_undo, cmd_purge):

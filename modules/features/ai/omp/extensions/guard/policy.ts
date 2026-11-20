@@ -1,8 +1,3 @@
-/**
- * guard 的权限策略层：内置路径规则 + 全局权限文件 + 项目权限文件依次叠加，
- * 路径规则在加载时编译成绝对 glob 正则，判定时只做匹配与软链接解析。
- */
-
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -10,7 +5,6 @@ import { globToRegExpSource } from "./shell.ts";
 
 export type RuleSource = "builtin" | "user";
 
-/** 命令规则：match 是展开 `~`/`$HOME` 后用于匹配的文本，value 是展示用原文 */
 export type CommandRule = {
   value: string;
   match: string;
@@ -19,21 +13,18 @@ export type CommandRule = {
   config: string;
 };
 
-/** 路径规则：value 在加载时编译成绝对 glob 正则；except 是内置例外（按 basename 匹配） */
 export type PathRule = {
   value: string;
   reason?: string;
   source: RuleSource;
   config: string;
   regexp: RegExp;
-  /** 相对规则（如 `.env.*`）额外编译「任意深度」形态，软链接目标在 cwd 之外时也按规则匹配 */
   anyDepth?: RegExp;
   except: RegExp[];
 };
 
 export type Policy = {
   default_reason?: string;
-  /** 内置命令规则由 guard.ts 的检查函数承担，这里只放用户规则 */
   commands: CommandRule[];
   paths: PathRule[];
 };
@@ -52,10 +43,8 @@ type ParseLayerResult =
   | { ok: true; layer: ParsedLayer }
   | { ok: false; error: string };
 
-/** layer：整层配置没能加载；item：只有其中一项被忽略，其余规则照常生效 */
 export type BuildError = { message: string; scope: "layer" | "item" };
 export type BuildPolicyResult = { policy: Policy; errors: BuildError[] };
-/** YAML 解析由宿主提供：guard 自己不带 YAML 库 */
 export type YamlParser = (source: string) => unknown;
 export type PermissionPaths = { globalPath: string; projectPath: string };
 export type LoadFailure = { path: string; message: string; scope: BuildError["scope"] };
@@ -90,17 +79,12 @@ export function normPath(p: string, cwd: string, home: string): string {
   return path.normalize(path.resolve(cwd, expandHomeInText(p.trim(), home)));
 }
 
-/**
- * 路径规则是否命中：候选路径按原样与软链接解析后的真实路径各试一次，例外按同一形态判定。
- * 相对规则对解析后的形态再试一次「任意深度」形态，`.env.tpl` 链接到 `.env` 时因此仍被拦。
- */
 export function pathRuleMatches(rule: PathRule, candidate: string): boolean {
   const forms = [candidate];
   try {
     const real = realpathSync(candidate);
     if (real !== candidate) forms.push(real);
   } catch {
-    // 路径不存在（新建、删除目标）时只按原样匹配
   }
   return forms.some(
     (form) =>
@@ -156,7 +140,6 @@ function compilePathRule(
 ): PathRule {
   const absolute = normPath(value, ctx.cwd, ctx.home);
   const relative = expandHomeInText(value, ctx.home);
-  // 任意深度只给内置环境文件规则：用户相对规则保持 cwd 锚定语义
   const anyDepth =
     source === "builtin" && !relative.startsWith("/")
       ? new RegExp(`(^|/)${globToRegExpSource(relative)}$`)
@@ -176,7 +159,6 @@ function isNonEmptyString(v: unknown): v is string {
   return typeof v === "string" && v.trim() !== "";
 }
 
-/** `-值` 删除同名规则；`--` 开头的值不是删除语法 */
 function removalValue(raw: string): string | null {
   const t = raw.trim();
   return t.startsWith("-") && !t.startsWith("--") && t.length > 1 ? t.slice(1) : null;

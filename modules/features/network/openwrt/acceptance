@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
-# 刷机前后的验收：路由器状态（只读）与内网吞吐（本机 WiFi ↔ 有线主机），结果存本机，不进仓库。用法见 README.md「固件」
-# 用法: acceptance run <路由器 ssh 目标> <有线主机 ssh 目标> <结果目录>
-#       acceptance diff <前.json> <后.json>
 set -euo pipefail
 
 die() { echo "acceptance: $*" >&2; exit 1; }
 
-# 每行「键 值」，由本机转成 JSON；sysfs 与 dmesg 在 Kwrt 和 ImmortalWrt 上都有，不依赖 ethtool
 router_state() {
   ssh -T "$1" sh -s <<'EOF'
 . /etc/openwrt_release
@@ -29,7 +25,6 @@ done
 EOF
 }
 
-# 本机当前 WiFi 的信道、信号、协商速率；WiFi 吞吐波动大，前后对比要先看这几项是否相近
 client_wifi() {
   system_profiler SPAirPortDataType 2>/dev/null |
     sed -n '/Current Network Information:/,/Other Local Wi-Fi Networks:/p' |
@@ -37,7 +32,6 @@ client_wifi() {
     head -5
 }
 
-# 有线主机上起一次性 iperf3 服务端（-1 测完即退），本机做客户端；-R 为有线到 WiFi 方向
 throughput() {
   local host=$1 ip dir args
   ip=$(ssh -G "$host" | awk '/^hostname /{print $2}')

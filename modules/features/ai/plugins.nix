@@ -8,7 +8,6 @@
       jsonFormat = pkgs.formats.json { };
     in
     {
-      # 插件配置进共享工具登记表：宿主照常作为 home.file，沙箱发布为声明配置
       shelken.dev.tools.agent-common.files = {
         ".config/ponytail/config.json".source = jsonFormat.generate "ponytail-config.json" {
           defaultMode = "off";
@@ -24,7 +23,6 @@
         };
       };
 
-      # pi-fff 在 pi 与 omp 里都装了：不扫描 $HOME，避免在家目录启动时索引整个目录
       shelken.dev.tools.agent-common.env.FFF_ENABLE_HOME_SCAN = "0";
 
       shelken.dev.tools.pi.files = {
@@ -40,10 +38,6 @@
         # pi-intercom 的配置路径由 getAgentDirPath() 决定：$PI_CODING_AGENT_DIR 未设置时是
         # ~/.pi/agent/intercom/config.json，没有单独的环境变量可改，且设了 PI_CODING_AGENT_DIR
         # 会让 OMP 绕开 XDG，所以沿用默认路径。
-        # inboundTrigger 默认 always：每条消息到达且会话空闲时，插件都会用 sendUserMessage 发
-        # "New intercom message above."，OMP 把它包成「User interjection … supersedes conflicting
-        # prior instructions」，对模型是一条高优先级的用户指令。replies 只让 ask 的回复唤醒会话，
-        # 普通 send 仍会在下一个回合注入，但不再伪造这条用户消息。会话启动或 /reload 时读取
         ".pi/agent/intercom/config.json".source = jsonFormat.generate "pi-intercom-config.json" {
           inboundTrigger = "always";
         };

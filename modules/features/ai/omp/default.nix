@@ -8,11 +8,8 @@
       ...
     }:
     let
-      # 软链仓库内文件，仓库中直接编辑即生效
       linkOmp = rel: mylib.mkConfigFile config (./. + "/${rel}");
 
-      # 沙箱专用插件清单：顶层 sandboxExclude 列出沙箱里不装的依赖。
-      # 排除即不装，装什么完全由清单决定；宿主读原清单，不受影响。
       ompManifest = builtins.fromJSON (builtins.readFile ./plugins/package.json);
       sandboxExclude = ompManifest.sandboxExclude or [ ];
       unknownExcludes = builtins.filter (n: !(ompManifest.dependencies ? ${n})) sandboxExclude;
@@ -45,21 +42,16 @@
     in
     {
       config = {
-        # mnemopi 的 gemini embedding 维度
         shelken.dev.tools.omp.env.MNEMOPI_EMBEDDING_DIM = "3072";
-        # 别名：支持与 pi 并存；凭据经 sec-run 注入（其中的 AGENT_GITHUB_TOKEN 让 gh 包装切换 agent 身份）
         home.shellAliases.omp = "sec-run omp";
 
         shelken.dev.sandbox.writableRoots = [ ".omp/agent" ];
 
-        # omp 安装与插件补齐已迁入共享工具登记表（modules/features/ai/tools.nix 的 omp 条目）
         shelken.dev.tools.omp.sandboxFiles = {
-          # 沙箱版插件清单随发布目录进 guest，sb sync 的 postInstall 读它
           ".omp/agent/plugins-package.json" = sandboxManifest;
         };
 
         shelken.dev.tools.omp.files = {
-          # omp 全局配置 / 快捷键 / 权限防护规则
           # 插件清单不在此列：它必须是普通副本，软链会被 omp plugin install 写穿到仓库
           ".omp/agent/config.yml" = linkOmp "config.yml";
           ".omp/agent/keybindings.yml" = linkOmp "keybindings.yml";

@@ -119,7 +119,6 @@ def run(cfg: Config, msb: Msb, args: list[str]) -> int:
     if p.imports:
         _stage_imports(cfg, msb, ctx_id, p)
 
-    # msb exec 只给 pty 设 TERM，不转发 COLORTERM；缺了它 pi/omp 会把主题降级成 256 色，与宿主出现色差
     if terminal == ["-t"] and os.environ.get("COLORTERM"):
         terminal += ["-e", f"COLORTERM={os.environ['COLORTERM']}"]
 
@@ -133,7 +132,6 @@ def run(cfg: Config, msb: Msb, args: list[str]) -> int:
 
 
 def _snapshot(cfg: Config) -> None:
-    """项目根可写直通宿主，Agent 误删的文件只能从宿主快照恢复。快照失败只警告，不挡住启动。"""
     if not cfg.snapshot_cmd:
         return
     try:
@@ -146,10 +144,6 @@ def _snapshot(cfg: Config) -> None:
 
 
 def _stage_imports(cfg: Config, msb: Msb, ctx_id: str, p: Plan) -> None:
-    """把 imports 复制进 VM 里本次上下文的暂存目录。launcher 接手之前任何失败都要回收暂存目录。
-
-    `starting` 标记让 guest 的注册表在 launcher 接手之前不把这个目录当成僵死上下文（guest/registry.sh）。
-    """
     guest_dir = f"{cfg.guest_contexts_dir}/{ctx_id}"
     stages = sorted({i.stage for i in p.imports})
     try:

@@ -1,8 +1,3 @@
-/**
- * alt+shift+x：剪切输入框文本到系统剪贴板。
- * 兼容 Kitty CSI-u、modifyOtherKeys、ESC+X、macOS Option+Shift+X 字符。
- */
-
 import { copyToClipboard } from "@earendil-works/pi-coding-agent";
 
 // Kitty CSI-u：x=120；mod 编码 1+bits（shift=1 alt=2）→ alt+shift=4

@@ -1,5 +1,3 @@
-# Helium 浏览器：随 gui 角色安装（与其它 GUI 应用同范围）；
-# HM 侧写受管扩展，设计说明见 README.md
 { config, ... }:
 {
   flake.modules.darwin.gui.imports = [ config.flake.modules.darwin.helium ];
@@ -13,8 +11,6 @@
     };
   };
 
-  # Helium 受管扩展：往数据目录的 External Extensions 写声明文件，各 profile 启动时按需安装
-  # 并提供 helium-sync-ext，把 Default 里这些扩展的设置复制到其他 profile
   flake.modules.homeManager.helium =
     { lib, pkgs, ... }:
     let
@@ -27,14 +23,6 @@
       extensions = {
         # 最小化原则; 一旦引入再注释 会立刻在下次重新打开时移除掉.
         pejdijmoenmkgeppbflobdenhhabjlaj = "iCloud 密码";
-        # bpoadfkcbjbfhfodiogcnhhhpibjhbnh = "沉浸式翻译";
-        # bcjindcccaagfpapjjmafapmmgkkhgoa = "JSON Formatter";
-        # clngdbkpkpeebahjckkjfobafhncgmne = "Stylus";
-        # pncfbmialoiaghdehhbnbhkkgmjanfhe = "uBlacklist";
-        # onnepejgdiojhiflfoemillegpgpabdm = "V2EX Polish";
-        # dhdgffkkebhmkfjojejmpbldmpobfkfo = "篡改猴";
-        # hlkenndednhfkekhgcdicdfddnkalmdm = "Cookie-Editor";
-        # bkcoalnaffahmgeimpeefbnddgelfokd = "GitHub DeepWiki";
         dgdbdodafgaeifgajaajohkjjgobcgje = "GeoSpoof";
         pkehgijcmpdhfbdbbnkijodmdjhbjlgp = "隐私獾";
       };

@@ -1,8 +1,5 @@
-# 自动输入法切换：所在角色的主机即启用；
-# 主机可设 shelken.tools.autoinputswitch.app 切换软件，HM 部分经 osConfig 读取同一值
 { config, ... }:
 {
-  # 加入哪一层只在这里声明，主机不直接导入具体功能
   flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.autoinputswitch ];
 
   flake.modules.darwin.autoinputswitch =
@@ -44,7 +41,6 @@
     { lib, osConfig, ... }:
     let
       inherit (osConfig.shelken.tools.autoinputswitch) app;
-      # TypeSwitch / Input Source Pro 共用的应用输入法规则（取两者并集）
       appRules =
         let
           fixed = id: {
@@ -52,7 +48,6 @@
               inputMethodId = id;
             };
           };
-          # none 必须显式写入 desired：activation 只 merge，删 key 不会清掉旧 strategy
           none = {
             none = { };
           };
@@ -61,7 +56,6 @@
           english = fixed "com.apple.keylayout.ABC";
         in
         {
-          # English（编码/终端：跨中文 App 切回来时强制 ABC）
           "com.apple.Spotlight" = english;
           "com.microsoft.VSCode" = english;
           "dev.zed.Zed" = english;
@@ -72,7 +66,6 @@
           "tv.parsec.www" = english;
           "com.google.Chrome" = english;
           "net.imput.helium" = english;
-          # Chinese（聊天/笔记）
           "com.apple.Notes" = chinese;
           "com.tencent.xinWeChat" = chinese;
           "md.obsidian" = chinese;
@@ -82,13 +75,11 @@
           "com.anthropic.claudefordesktop" = chinese;
           "com.apple.MobileSMS" = chinese;
           "com.yetone.alma" = chinese;
-          # 不强制：减少无意义边界切换 / 焦点抖动放大
-          "com.apple.ScreenSharing" = none; # 与本地键盘源同步叠加
+          "com.apple.ScreenSharing" = none;
           "com.apple.finder" = none;
-          "com.apple.Safari" = none; # 中英都写，不必钉死
+          "com.apple.Safari" = none;
           "com.apple.systempreferences" = none;
         };
-      # 传递给 jq --argjson 合并已有 app-rules.json
       desiredJSON = builtins.toJSON appRules;
     in
     lib.mkMerge [
@@ -120,7 +111,6 @@
       (lib.mkIf (app == "inputsourcepro") {
         home.file.".config/inputsourcepro/config.json".text =
           let
-            # 仅保留 fixed 策略，提取 inputMethodId 作为平坦字符串
             fixedRules = lib.filterAttrs (_: v: v ? fixed) appRules;
             inputsourceproRules = builtins.mapAttrs (_: v: v.fixed.inputMethodId) fixedRules;
           in

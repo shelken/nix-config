@@ -1,7 +1,3 @@
-# skill 的唯一入口 shelken.dev.ai.skills（ADR 0009）：
-#   - 选项挂在 core（ADR 0004「接口放 core」），任何功能都能声明自己需要的 skill
-#   - 部署挂在 ai：链接到各 agent 的 skill 目录；ai 自己需要的通用 skill 也在这里声明
-#   - flake.skillUpstreams：各主机 skill 的上游目录，CI 据此只展示在用目录的上游改动
 {
   config,
   inputs,
@@ -12,7 +8,6 @@
   flake.modules.darwin.core.imports = [ config.flake.modules.darwin.skill-options ];
   flake.modules.nixos.core.imports = [ config.flake.modules.nixos.skill-options ];
 
-  # 每台主机单独求值；读不到私有 secrets 的主机由 CI 脚本跳过
   flake.skillUpstreams = lib.mapAttrs (
     _: host:
     lib.unique (
@@ -87,7 +82,6 @@
       skillSource =
         skill:
         if skill.frontmatter != { } then
-          # 逐字复制：与旧 applyFrontmatterOverrides 的构建脚本相同
           pkgs.runCommand "skill-${skill.name}" { } ''
             cp -r ${skill.source} $out
             chmod -R +w $out
@@ -99,7 +93,6 @@
         else
           skill.source;
 
-      # list 合并不查重：同名会让多个来源争同一个部署目录
       skillSources =
         let
           names = map (skill: skill.name) cfg.skills;
@@ -126,7 +119,6 @@
         ) cfg.skillTargets
       );
 
-      # 上游是 Cursor 方言：build 期整树改写（漂移门需要跨 skill 的全局视野），再逐个取出。逐字复制
       pstackSkills =
         pkgs.runCommand "pstack-skills"
           {
@@ -141,7 +133,6 @@
               ${./skills/pstack-harness/pi.md}
           '';
 
-      # 从改写后的整树里取出单个 skill；子路径只是文本，丢掉字符串上下文，派生只依赖 pstackSkills
       pstackSkill =
         skill:
         skill
@@ -152,10 +143,8 @@
           upstream = skill.source;
         };
 
-      # 本仓库自管
       local = mylib.discoverSkills ./skills { };
 
-      # tdd 用 mattpocock 的版本
       pstack = map pstackSkill (
         mylib.discoverSkills "${inputs.cursor-plugins}/pstack/skills" {
           exclude = [ "tdd" ];
@@ -181,7 +170,6 @@
         "engineering/to-spec"
         "productivity/writing-for-agents"
         "in-progress/loop-me"
-        # "engineering/code-review"
         "engineering/implement"
         "engineering/implement-spec"
         "engineering/setup-matt-pocock-skills"
@@ -200,13 +188,10 @@
           source = "${inputs.humanlayer-skills}/plugins/show-me/skills/show-me";
           frontmatter.disable-model-invocation = false;
         }
-        # "${inputs.humanlayer-skills}/plugins/visual-pr/skills/visual-pr"
       ];
 
-      # 只取一个 skill 的仓库
       singles = [
         "${inputs.caldo-skills}/skills/untangle-codebase"
-        # pstack 把 CLI/TUI 验收委托给它；control-ui 由本机 agent-browser 承担，见 skills/pstack-harness
         "${inputs.cursor-plugins}/cursor-team-kit/skills/control-cli"
         "${inputs.diagram-design}/skills/diagram-design"
         "${inputs.llamaparse-agent-skills}/skills/liteparse"
@@ -226,10 +211,10 @@
         type = types.listOf types.str;
         default = [
           ".claude/skills"
-          ".agents/skills" # codex,opencode
+          ".agents/skills"
           ".gemini/config/skills"
           ".workbuddy/skills"
-          ".dsh/skills" # dsh (deepseek-harness) 用户级 skills, 读取 $DSH_HOME/skills; dsh 不支持多目录结构, 必须展平
+          ".dsh/skills"
         ];
         description = "skill 部署目标目录（相对 ~/）";
       };
@@ -238,21 +223,15 @@
         shelken.dev.ai.skills = local ++ pstack ++ mattpocock ++ humanlayer ++ singles;
 
         home.file = allSkillLinks;
-        # skills 进共享工具登记表（与 agents 文档同机制）：宿主照常，沙箱经 files 拿到
         shelken.dev.tools.agent-common.package = null;
         shelken.dev.tools.agent-common.files = lib.filterAttrs (
           name: _: lib.hasPrefix ".agents/" name
         ) allSkillLinks;
         shelken.dev.sandbox.writableRoots = [ ".agents" ];
 
-        # skills CLI 由 mise 提供，版本钉死，不再用 npx/bunx 现取
         # renovate: datasource=npm depName=skills
         programs.mise.globalConfig.tools."npm:skills" = "1.9.0";
 
-        # 手动命令
-        # skills update
-        # skills add github/repo -g -y -a claude-code codex --skill [skill-name]
-        # skills add microsoft/playwright-cli -g -y -a claude-code codex --skill playwright-cli
       };
     };
 }

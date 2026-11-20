@@ -1,6 +1,3 @@
-# k3s-node：家里 k3s 集群的节点（控制面或 worker）的系统层配置，只在 NixOS 上用
-# 可选功能：节点主机经 hosts/k8s/common.nix 导入，并设置 shelken.k3s.*
-# k3s 配置以 home-ops 原 Ansible 渲染出的 /etc/rancher/k3s/config.yaml 为准，逐项复现
 { ... }:
 {
   flake.modules.nixos.k3s-node =
@@ -17,13 +14,11 @@
       yaml = pkgs.formats.yaml { };
 
       kubeletArgs = [
-        # 节点根分区只放系统与镜像，Longhorn 不在根分区上；阈值太低时 nix store 稍涨就会触发 GC 失败告警
         "image-gc-low-threshold=75"
         "image-gc-high-threshold=80"
         "feature-gates=ImageVolume=true"
         "allowed-unsafe-sysctls=net.ipv6.*"
       ]
-      # 只在控制面预留内存：Pod 吃满内存会挤掉 etcd 的页缓存，导致 k3s 退出
       ++ lib.optional isServer "system-reserved=memory=4500Mi"
       # 磁盘两项是在覆盖默认值，必须连同内存一起重复写
       ++ [ "eviction-hard=memory.available<500Mi,nodefs.available<5%,imagefs.available<5%" ];
@@ -125,7 +120,6 @@
             );
           };
 
-          # Longhorn：需要 iscsid、NFS 与加密卷工具
           services.openiscsi = {
             enable = true;
             name = "iqn.2026-11.lan.home:${config.networking.hostName}";
@@ -145,10 +139,10 @@
           };
 
           boot.kernelModules = [
-            "tcp_bbr" # sysctl 里的拥塞控制算法
-            "iscsi_tcp" # Longhorn 经 iSCSI 挂卷
-            "dm_crypt" # Longhorn 加密卷
-            "cifs" # 挂载 SMB 卷
+            "tcp_bbr"
+            "iscsi_tcp"
+            "dm_crypt"
+            "cifs"
             "nls_utf8" # cifs 的 iocharset=utf8 依赖
           ];
           boot.kernel.sysctl = {
@@ -158,18 +152,15 @@
             # QUIC（cloudflare-tunnel、tailscale）要至少 7.5MB 的 UDP 缓冲，默认只有 208KB
             "net.core.rmem_max" = 67108864;
             "net.core.wmem_max" = 67108864;
-            # 出公网的长连接（备份上传、下载）：更大的 TCP 窗口与 bbr
             "net.ipv4.tcp_congestion_control" = "bbr";
             "net.ipv4.tcp_rmem" = "4096 87380 33554432";
             "net.ipv4.tcp_wmem" = "4096 65536 33554432";
-            # 经隧道（tailscale、代理）遇到路径 MTU 黑洞时自动探测
             "net.ipv4.tcp_mtu_probing" = 1;
           };
 
           # kubelet 在有 swap 时默认拒绝启动，覆盖 server 角色的 zram
           zramSwap.enable = lib.mkForce false;
 
-          # Cilium、BGP 179、kubelet、etcd、Longhorn 的端口由集群管理，生产的 Ubuntu 也没有主机防火墙
           networking.firewall.enable = false;
 
           # Lima 节点随宿主 macOS 睡眠暂停，恢复后时钟会瞬间偏差很大，必须允许任意次步进校时

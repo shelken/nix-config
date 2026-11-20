@@ -1,7 +1,3 @@
-# Neovim
-#   neovim-minimal（core，含服务器）：nvim、config/、全部语法高亮、外观与补全类插件；不装语言工具
-#   neovim（tui 及以上）：再加语言工具、LSP 与功能类插件；shelken.neovim.minimal = true 时不加
-# 语言工具链见 _languages.nix，Lua 配置见 config/
 { config, ... }:
 let
   hmModules = config.flake.modules.homeManager;
@@ -45,7 +41,6 @@ in
         vimAlias = true;
         # init.lua 属于 config/；HM 的 initLua（catppuccin、语言表）经 wrapper 的 --cmd 先于它执行
         sideloadInitLua = true;
-        # 配置见 config/lua/shelken/ui.lua
         plugins =
           with pkgs.vimPlugins;
           [
@@ -62,7 +57,6 @@ in
       xdg.configFile.nvim = mylib.mkConfigFile config ./config;
 
       catppuccin.nvim.settings = {
-        # 透出终端背景（原 AstroNvim 配置同样开启）
         transparent_background = true;
         integrations = catppuccinIntegrations lib [
           "blink_cmp"
@@ -101,9 +95,7 @@ in
 
         programs.neovim = {
           initLua = "vim.g.nix_languages = ${lib.generators.toLua { } nixLanguages}";
-          # 启动画面（config/lua/shelken/plugins.lua）用 chafa 渲染 gif
           extraPackages = [ pkgs.chafa ];
-          # 配置见 config/lua/shelken/{lsp,plugins}.lua
           plugins = with pkgs.vimPlugins; [
             nvim-lspconfig
             SchemaStore-nvim

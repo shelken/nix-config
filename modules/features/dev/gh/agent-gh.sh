@@ -1,10 +1,5 @@
-# gh 包装：三类写操作作用于 AGENT_GH_OWNER 名下的仓库时，改用 agent 专属 token。
-# 有 AGENT_GITHUB_TOKEN 即 agent 上下文（宿主由 sec-run 注入、沙箱由 msb 注入）；
-# 没有就是用户自己，其余调用也一律原样交给真实 gh（由 _package.nix 保证指向真 gh）。
-# 输入：AGENT_GH_OWNER（owner 名，由 _package.nix 写入）、AGENT_GITHUB_TOKEN（agent 的 token）
 : "${AGENT_GH_OWNER:?}"
 
-# 规则表
 rules=("issue create" "issue new" "issue comment" "pr comment")
 
 hit=0
@@ -13,15 +8,12 @@ for rule in "${rules[@]}"; do
 done
 ((hit)) && [[ -n ${AGENT_GITHUB_TOKEN-} ]] || exec gh "$@"
 
-# [HOST/]OWNER/REPO -> OWNER；不含斜杠时无 owner
 owner_of_repo() {
   [[ $1 == */* ]] || return 0
   local head=${1%/*}
   echo "${head##*/}"
 }
 
-# 目标仓库的 owner，来源按 gh 自己的优先级：issue/PR 链接 > -R/--repo > GH_REPO > 当前目录
-# 链接里的仓库优先于 -R，gh 的 issue 查找就是这样处理（pkg/cmd/issue/shared/lookup.go）
 resolve_owner() {
   local arg flag_repo="" next=0
   for arg in "${@:3}"; do
@@ -46,8 +38,6 @@ resolve_owner() {
   elif [[ -n ${GH_REPO-} ]]; then
     owner_of_repo "$GH_REPO"
   else
-    # 当前目录的仓库交给 gh 解析，它认 set-default、upstream 与改名重定向；
-    # 解析失败时输出为空，真实 gh 自己会报同样的错
     gh repo view --json owner --jq .owner.login 2>/dev/null || true
   fi
 }

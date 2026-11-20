@@ -22,7 +22,6 @@ snacks.setup({
     },
   },
 })
--- 键位沿用 AstroNvim 默认
 map("n", "<leader>ff", function() snacks.picker.files() end, { desc = "Find files" })
 map("n", "<leader>fw", function() snacks.picker.grep() end, { desc = "Find words" })
 map("n", "<leader>fb", function() snacks.picker.buffers() end, { desc = "Find buffers" })
@@ -51,7 +50,6 @@ map("n", "<leader>e", "<cmd>Yazi<cr>", { desc = "Yazi (current file)" })
 map("n", "<leader>-", "<cmd>Yazi<cr>", { desc = "Yazi (current file)" })
 map("n", "<leader>E", "<cmd>Yazi cwd<cr>", { desc = "Yazi (cwd)" })
 
--- s 留给 flash，surround 用 gs 前缀
 require("mini.surround").setup({
   mappings = {
     add = "gsa",

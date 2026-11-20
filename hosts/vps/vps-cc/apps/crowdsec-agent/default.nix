@@ -1,15 +1,4 @@
 { config, lib, ... }:
-#############################################################
-#
-#  crowdsec-agent：只做检测与 AppSec 服务，LAPI 在别处（DISABLE_LOCAL_API）
-#
-#  继续用镜像：nixpkgs 的 services.crowdsec 能表达 agent-only + 远程 LAPI
-#  （api.server.enable = false 加 api.client.credentials_path），但有两处补垫：
-#  非 hub 的本地 AppSec 规则（jellyfin 豁免）module 没有落文件的 option，
-#  远程 LAPI 的凭证文件也要自己渲染。这次迁移求行为等同，用容器保留原分发方式。
-#  Caddy 的 AppSec 后端就是它：http://crowdsec-agent:7422
-#
-#############################################################
 {
   sops.secrets = {
     "crowdsec/lapi-url" = { };
@@ -32,7 +21,6 @@
       TZ = "Asia/Shanghai";
       DISABLE_LOCAL_API = "true";
       AGENT_USERNAME = "vps-cc";
-      # 容器不带 /var/lib/crowdsec 卷：状态随容器重建重置，与旧 Compose 一致
       CROWDSEC_BYPASS_DB_VOLUME_CHECK = "true";
       COLLECTIONS = lib.concatStringsSep "\n" [
         "crowdsecurity/linux"

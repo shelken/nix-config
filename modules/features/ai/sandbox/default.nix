@@ -37,7 +37,6 @@
           guest
           ;
         policyFile = ./sb.yaml;
-        # 用户本人的 GitHub token 不经 sec-run 进入宿主环境，由 sb 在创建、启动 VM 时直接读 sops 文件
         hostSecretFiles = lib.optionalAttrs config.shelken.secrets.enable {
           GITHUB_TOKEN = config.sops.secrets."github/cli-token".path;
         };
@@ -64,7 +63,6 @@
           mkdir -p "${manifest.miseLayer.hostDir}/${manifest.miseLayer.dataSub}" "${manifest.miseLayer.hostDir}/${manifest.miseLayer.cacheSub}"
         '';
 
-        # guest 读不到宿主上 live-edit 的软链，所以发布成自包含副本；发布目录路径固定，内容变化不改变上限指纹
         home.activation.sandboxPublishConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
           run ${sandboxConfig.publishScript}
         '';

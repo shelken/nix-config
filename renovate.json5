@@ -6,7 +6,7 @@
     "local>shelken/nix-config//.renovate/docker-sources.json5",
   ],
   timezone: "Asia/Shanghai",
-  schedule: ["* 0-3 * * *"], // 每天 0:00–3:59
+  schedule: ["* 0-3 * * *"],
   labels: ["dependencies", "renovate"],
   commitMessagePrefix: "chore(deps):",
   commitMessageAction: "update",
@@ -19,14 +19,12 @@
   },
 
   // 不写 rev 的 flake 依赖（nixpkgs、nix-darwin、home-manager 等）只能靠 lock file maintenance
-  // 整体前进：一周一次，手动合并（同一次会带上所有能随 lock 移动的 input）
   lockFileMaintenance: {
     enabled: true,
-    schedule: ["* 0-3 * * 1"], // 周一 0:00–3:59
+    schedule: ["* 0-3 * * 1"],
     automerge: false,
   },
 
-  // pi 的插件清单没有内置 manager 认识；omp 的 plugins/package.json 由内置 npm manager 处理（支持 npm: 别名）
   customManagers: [
     {
       customType: "regex",
@@ -36,10 +34,6 @@
       datasourceTemplate: "npm",
     },
     {
-      // mise 工具的版本写在 Nix 里，内置 mise manager 只认 mise.toml。
-      // 每个固定版本的工具在上一行写 `# renovate: datasource=… depName=…[ extractVersion=…]`；
-      // depName 对应实际版本源；默认去掉 v 前缀，bun-v、rust-v 等特殊前缀用 extractVersion 覆盖
-      // 没有这行的工具不会被升级。`latest` 不是固定版本，不需要标注
       customType: "regex",
       description: "Nix 里 programs.mise.globalConfig.tools 与登记表 mise 条目的版本",
       managerFilePatterns: ["/^modules/.+\\.nix$/"],
@@ -49,9 +43,6 @@
       extractVersionTemplate: "{{#if extractVersion}}{{{extractVersion}}}{{else}}^v?(?<version>.+)${{/if}}",
     },
     {
-      // oci-containers 的 `image = "仓库:标签@sha256:..."` 没有内置 manager 认识。
-      // VPS 容器原先由 home-ops 的 compose 声明，镜像升级靠那边的 docker-compose manager，
-      // 迁移后升级源在这里，不认这块就等于镜像从此不再升级
       customType: "regex",
       description: "服务声明里的容器镜像",
       managerFilePatterns: ["/(^|/)hosts/[^/]+/[^/]+/apps/.+\\.nix$/"],
@@ -83,7 +74,7 @@
         "yt-dlp/yt-dlp",
         "Infisical/cli",
       ],
-      schedule: ["* 0-3 1 * *"], // 每月 1 号 0:00–3:59
+      schedule: ["* 0-3 1 * *"],
       automerge: false,
     },
     {
@@ -107,8 +98,6 @@
       matchDepNames: ["secrets"],
       enabled: false,
     },
-    // 静态资源（flake.nix 里 flake = false 的 input，见 docs/adr/0006-static-assets-as-flake-inputs.md）：
-    // original 带 ref + rev，Renovate 只替换 flake.nix 里的 rev
     {
       description: "skill 类静态资源：上游内容会进 agent 上下文，每周合成一个 PR 手动合并",
       matchManagers: ["nix"],
@@ -123,7 +112,7 @@
         "security-audit-skill",
       ],
       groupName: "skill static assets",
-      schedule: ["* 0-3 * * 1"], // 周一 0:00–3:59
+      schedule: ["* 0-3 * * 1"],
       automerge: false,
     },
     {
@@ -134,13 +123,10 @@
       automerge: true,
       automergeType: "pr",
       platformAutomerge: true,
-      // 仓库没有 PR 级构建，不等状态检查
       ignoreTests: true,
     },
     // pi / omp 插件的三条规则按顺序叠加，后面的覆盖前面的
     {
-      // 插件代码会在 agent 进程里执行，别人的插件每次升级都要人看过再合并。
-      // 不分组：某个插件有问题时可以单独搁置，不挡住其他插件
       description: "pi / omp 插件：每个插件一个 PR，手动合并",
       matchFileNames: [
         "modules/features/ai/pi/settings.json",
@@ -149,7 +135,6 @@
       automerge: false,
     },
     {
-      // 合成一个 PR：它们改的是同一个文件的相邻行，分开会互相冲突，自动合并要等逐个 rebase
       description: "自己维护的 pi / omp 插件：合成一个 PR，自动合并",
       matchFileNames: [
         "modules/features/ai/pi/settings.json",
@@ -160,11 +145,9 @@
       automerge: true,
       automergeType: "pr",
       platformAutomerge: true,
-      // 仓库没有 PR 级构建，不等状态检查
       ignoreTests: true,
     },
     {
-      // 信得过上游 patch 版本的插件写进 matchPackageNames；minor / major 仍然手动合并
       description: "pi / omp 插件 patch 自动合并名单",
       matchFileNames: [
         "modules/features/ai/pi/settings.json",
@@ -178,17 +161,12 @@
       ignoreTests: true,
     },
     {
-      // vps-cc（oci-containers）与 sakamoto（compose.yaml）的容器镜像永远一起升级：
-      // 两台主机的 kopia 写同一个仓库，版本必须同步，其余服务也按同一节奏走。
-      // sakamoto 的镜像在 compose.yaml 里，内置的 docker-compose manager 认识这个文件名；
-      // vps-cc 的在 nix 文件里，由上面的 regex manager 抽取
       description: "vps-cc 与 sakamoto 的容器镜像：合成一个 PR，手动合并",
       matchFileNames: ["hosts/vps/vps-cc/apps/**", "hosts/sakamoto/apps/**"],
       groupName: "homelab container images",
       automerge: false,
     },
     {
-      // 自建镜像里只有它用滚动 tag（vps-latest），没有可比较的版本号
       matchDatasources: ["docker"],
       matchPackageNames: ["ghcr.io/shelken/mosdns"],
       enabled: false,

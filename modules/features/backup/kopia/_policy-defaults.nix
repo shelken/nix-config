@@ -1,4 +1,3 @@
-# kopia 本机备份策略默认值：目标固定为 <user>@<host>，用户级额外忽略模式见 ../_options.nix
 {
   compression = "zstd-fastest";
   ignores = [

@@ -1,4 +1,3 @@
-# IINA: 现代多媒体播放器与 ffmpeg
 { config, ... }:
 {
   flake.modules.darwin.desktop.imports = [ config.flake.modules.darwin.iina ];

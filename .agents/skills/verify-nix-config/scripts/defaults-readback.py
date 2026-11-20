@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""回读 nix-darwin 生成的 defaults 写入，与系统实际存储逐项比对。
-
-清单来源是构建产物里的 activate 脚本，不是重新推导配置，因此覆盖标准选项、
-自定义域和路径形式域。比对区分值不符与类型不符：布尔声明被 macOS 存成整数
-时值仍然相等，属于类型差异而不是配置失效。
-"""
 
 import argparse
 import json
@@ -27,7 +21,6 @@ def parse_writes(activate_path):
 
 
 def export_domain(domain):
-    """返回 (内容, 错误)。macOS 对不存在的域会导出空 plist，因此只以解析失败判断不可读。"""
     with tempfile.TemporaryDirectory(prefix="defaults-readback.") as scratch:
         target = os.path.join(scratch, "domain.plist")
         result = subprocess.run(
@@ -40,7 +33,7 @@ def export_domain(domain):
         try:
             with open(target, "rb") as handle:
                 return plistlib.load(handle), None
-        except Exception as error:  # 损坏或非 plist 内容
+        except Exception as error:
             return None, str(error)
 
 

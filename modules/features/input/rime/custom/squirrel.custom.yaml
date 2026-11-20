@@ -1,13 +1,12 @@
 patch:
-  # 配色由 _squirrel-theme.nix 按 vars 里的 catppuccin 生成
   __include: squirrel_catppuccin:/patch
 
   style:
     color_scheme: catppuccin
     color_scheme_dark: catppuccin
 
-    candidate_list_layout: stacked # stacked | linear | tabled
-    text_orientation: horizontal # horizontal | vertical
+    candidate_list_layout: stacked
+    text_orientation: horizontal
     inline_preedit: true
     inline_candidate: false
     show_paging: false
@@ -15,7 +14,7 @@ patch:
 
     corner_radius: 10
     hilited_corner_radius: 0
-    color_space: srgb # srgb | display_p3
+    color_space: srgb
     border_height: 0
     border_width: 0
     line_spacing: 5

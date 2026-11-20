@@ -1,13 +1,8 @@
-# Time Machine 排除：选项在 darwin 侧声明，标记由 HM 侧打（用户态 xattr，不需要 Full Disk Access）
-#
 # 为什么不用 SkipPaths：它存在 /Library/Preferences/com.apple.TimeMachine.plist，`tmutil addexclusion -p`
 # 实测无 root 时报 "requires root privileges"（exit 80），有 root 时还要求 Full Disk Access；
 # 而激活脚本从终端跑（`just sw`），终端没有该权限，`-p` 这条路走不通。
 # 改用 `tmutil addexclusion <路径>`（不带 -p）：只给目标打 sticky xattr
 # com.apple.metadata:com_apple_backup_excludeItem，普通用户权限即可，不需要授权。
-# 现有 SkipPaths 条目保持原样，不由本功能接管。
-#
-# 可选功能：要用的主机在 imports 里加 self.modules.darwin.time-machine
 { lib, ... }:
 {
   flake.modules.darwin.time-machine =
@@ -15,17 +10,12 @@
     {
       options.shelken.darwin.timeMachine.excludePaths = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        # 默认值 = 可重建的缓存 + 虚拟机磁盘所在目录：又大又常变，进备份只会拖慢并钉住本地快照。
-        # 主机要额外排除别的目录时直接给这个选项赋值（列表会与本默认值合并）。
         default = [
-          # 虚拟机磁盘：只增不缩的稀疏文件，每次备份都要重新扫描
           "~/Data/sandboxes"
           "~/.lima"
           "~/.orbstack"
           "~/Parallels"
           "~/Library/Containers/com.utmapp.UTM"
-          # "~/Library/Containers/com.isaacmarovitz.Whisky"
-          # 可重建的缓存
           "~/.cache"
           "~/.vscode"
           "~/Library/Developer"
@@ -33,7 +23,6 @@
           "~/.npm"
           "~/.cargo/registry"
           "~/.cargo/git"
-          # 可重装的工具链与运行时
           "~/.local/share/mise"
           "~/.local/share/uv"
           "~/.npm-global"
@@ -53,7 +42,6 @@
         '';
       };
 
-      # 相对路径会在激活脚本里相对当前工作目录解析，静默排除掉别的东西，这里挡住
       config.assertions = [
         {
           assertion = lib.all (
@@ -64,17 +52,9 @@
       ];
     };
 
-  # 激活时给列出的目录打 Time Machine 排除标记（选项值来自 darwin 侧的 osConfig），
-  # 并每天检查各目的地多久没备份成功，超过阈值即以任务失败发通知
-  #
-  # 幂等：已带 com.apple.metadata:com_apple_backup_excludeItem 就跳过。
   # 实测同一台机器上 xattr -p 约 35ms，而 tmutil addexclusion 每个路径 1~11 秒（视 TM 守护进程状态），
   # 所以不能每次激活都无条件调用：全部已排除时整个片段 0.06 秒，新排除一个目录才付一次秒级代价。
-  # 目录不存在则跳过且不代建：备份不到就没有排除的意义，代建工具的状态目录
-  # 反而可能改变这些工具「目录已存在即已初始化」的判断。
   # 标记是目录上的 xattr，目录被删掉重建后一并消失，所以每次激活都要重放一遍。
-  #
-  # macOS 自带 /usr/bin/xattr 与 /usr/bin/tmutil，与 nix-darwin 调 /usr/bin/defaults 同一思路。
   flake.modules.homeManager.time-machine =
     {
       config,
@@ -83,7 +63,6 @@
       ...
     }:
     let
-      # `~/x` → 具体路径：公开仓库里不写死用户名
       expandHome =
         path:
         if lib.hasPrefix "~/" path then
@@ -93,7 +72,6 @@
 
       paths = map expandHome osConfig.shelken.darwin.timeMachine.excludePaths;
 
-      # TM 备份连续失败时只在设置面板里显示，不会主动通知
       staleDays = 3;
     in
     lib.mkMerge [
@@ -145,7 +123,6 @@
             elif /usr/bin/xattr -p com.apple.metadata:com_apple_backup_excludeItem "$_tm_path" > /dev/null 2>&1; then
               :
             else
-              # 失败只告警：排除是尽力而为，不该挡住激活
               if /usr/bin/tmutil addexclusion "$_tm_path"; then
                 echo "time-machine: 新排除 $_tm_path"
               else

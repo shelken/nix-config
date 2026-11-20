@@ -12,7 +12,6 @@
       linkPiConfig = rel: mylib.mkConfigFile config (./configs + "/${rel}");
       jsonFormat = pkgs.formats.json { };
 
-      # omp 与 pi 的 models.yml 在构建期转 JSON 并合成 pi 的 models.json，Nix 求值期不读 YAML（ADR 0010）
       generatedModels =
         pkgs.runCommand "pi-models.json"
           {
@@ -27,10 +26,6 @@
             jq -S -s -f ${./models.jq} omp-models.json pi-models.json > $out
           '';
 
-      # 沙箱专用 settings.json：顶层 sandboxExclude 列出沙箱里不要的 packages 条目。
-      # 排除即不装，不是装后禁用；宿主读原文件，不受影响。
-      # 名字写错在构建期失败，避免静默漏排除。对象形式的条目按 source 匹配，原样保留其余字段。
-      # 匹配忽略 npm 条目的 @版本：升级版本时不用同步改 sandboxExclude。
       piSettings = builtins.fromJSON (builtins.readFile ./settings.json);
       sandboxExclude = map unversioned (piSettings.sandboxExclude or [ ]);
       unversioned =
@@ -54,7 +49,6 @@
           }
         );
 
-      # settings.json 声明的 npm 包名（去 npm: 前缀与 @版本）。`-npm:` 之类的禁用条目不计入
       npmDeclared = map (s: lib.removePrefix "npm:" s) (
         builtins.filter (lib.hasPrefix "npm:") (map entrySource piSettings.packages)
       );
@@ -63,9 +57,7 @@
     {
       imports = [ ./_theme.nix ];
 
-      # 插件读的环境变量写在登记表 env：宿主与沙箱同源（沙箱不继承宿主 shell 的环境）
       shelken.dev.tools.pi.env = {
-        # 关掉 pi-emphasis 自带的 ~1500 token 英文规则，改用 _agents.md 里的简版
         PI_EMPHASIS_GUIDANCE = "0";
       };
       home.shellAliases.pi = "sec-run pi";
@@ -73,9 +65,6 @@
       shelken.dev.sandbox.writableRoots = [ ".pi/agent" ];
 
       # pi 只在 `pi install` / `pi remove` 时改 npm/package.json，启动时只补装缺失的包、从不清理；
-      # settings.json 由本仓库声明，删掉一行 pi 并不知情，旧包会一直留在安装目录。
-      # 这里按声明对账：多出来的包一次 `bun remove` 卸掉（与 pi remove 同一条命令，无需联网）。
-      # 没有多余包时只花一次 jq；清理失败不阻断激活，下次再试。
       home.activation.piPruneNpm = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         npm_dir="${config.home.homeDirectory}/.pi/agent/npm"
         if [ -f "$npm_dir/package.json" ]; then
@@ -88,9 +77,7 @@
         fi
       '';
 
-      # pi 安装已迁入共享工具登记表（modules/features/ai/tools.nix 的 pi 条目）
       shelken.dev.tools.pi.sandboxFiles = {
-        # 沙箱用 Nix 渲染的变体（去掉 sandboxExclude 列出的包）；宿主仍是仓库文件的软链
         ".pi/agent/settings.json" = sandboxSettings;
       };
 
@@ -102,13 +89,11 @@
           force = true;
         };
         ".pi/agent/permissions.yaml" = mylib.mkConfigFile config ../omp/permissions.yaml;
-        # 整个目录软链：新增模板直接放进 prompts/，免改本文件
         ".pi/agent/prompts" = linkPi "prompts";
 
         ".pi/agent/extensions/pi-rename.json" = linkPiConfig "pi-rename.json";
         ".pi/agent/extensions/pi-vision-handoff.json" = linkPiConfig "pi-vision-handoff.json";
         ".pi/agent/extensions/trae/config.json" = linkPiConfig "trae.json";
-        # cpa 等 provider 的模型只来自 pi-dynamic-models 的自动发现，开关不在 Nix 里沙箱就拿不到
         ".pi/agent/extensions/pi-dynamic-models/config.json" = linkPiConfig "pi-dynamic-models.json";
         ".pi/agent/extensions/subdir-context.ts" =
           mylib.mkConfigFile config ../omp/extensions/subdir-context.ts;

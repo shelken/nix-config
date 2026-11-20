@@ -33,16 +33,13 @@ IDX_SUFFIX = ".idx.age"
 VOLUME_RE = re.compile(
     r"^archive-(\d{4}-\d{2})(?:-(\d+))?" + re.escape(TAR_SUFFIX) + "$"
 )
-# 根目录直属文件由 plan 按深度整体排除，这里只列子目录里要跳过的名字
 EXCLUDED_NAMES = (".DS_Store", "*.part", "*.lock*")
 LOCK_NAME = ".session-archive.lock"
 
 
 class Failure(Exception):
-    """单个月份或单个文件的处理失败，不影响其余部分"""
+    pass
 
-
-# 一个月份、一个还原目标的处理失败都按这组异常记账，不影响其余部分
 ERRORS = (Failure, OSError, tarfile.TarError, subprocess.SubprocessError)
 
 
@@ -74,10 +71,6 @@ def unlink_quiet(path: str) -> None:
     with contextlib.suppress(FileNotFoundError):
         os.unlink(path)
 
-
-# ───────────── 编解码：zstd + age，唯一的外部接缝 ─────────────
-
-
 def recipient_args(key_file: str) -> list[str]:
     out = subprocess.run(
         ["age-keygen", "-y", key_file], capture_output=True, text=True, check=True
@@ -89,7 +82,6 @@ def recipient_args(key_file: str) -> list[str]:
 
 
 def encode(write_plain, out_path: str, recips: list[str]) -> None:
-    """write_plain(fileobj) 写出的明文经 zstd 压缩、age 加密后落到 out_path"""
     zstd = subprocess.Popen(
         ["zstd", "-19", "--long=27", "-T0", "-q", "-c"],
         stdin=subprocess.PIPE,
@@ -102,7 +94,7 @@ def encode(write_plain, out_path: str, recips: list[str]) -> None:
             write_plain(zstd.stdin)
             zstd.stdin.close()
         except BrokenPipeError:
-            pass  # 下游提前退出，由返回码给出失败
+            pass
     except BaseException:
         zstd.kill()
         age.kill()
@@ -118,7 +110,6 @@ def encode(write_plain, out_path: str, recips: list[str]) -> None:
 
 @contextlib.contextmanager
 def decrypted(path: str, key_file: str):
-    """age 解密后的字节流（仍是 zstd 压缩的）。不检查返回码，只供 rekey 比对两份密文的内容"""
     age = subprocess.Popen(["age", "-d", "-i", key_file, path], stdout=subprocess.PIPE)
     try:
         yield age.stdout
@@ -130,7 +121,6 @@ def decrypted(path: str, key_file: str):
 
 @contextlib.contextmanager
 def decoded(path: str, key_file: str):
-    """解密并解压后的明文字节流。退出时读完整个流并检查返回码，不完整的流视为失败"""
     age = subprocess.Popen(["age", "-d", "-i", key_file, path], stdout=subprocess.PIPE)
     zstd = subprocess.Popen(
         ["zstd", "-d", "-q", "-c"], stdin=age.stdout, stdout=subprocess.PIPE
@@ -172,28 +162,22 @@ def same_stream(a, b) -> bool:
         if not x:
             return True
 
-
-# ───────────── 规划：哪些月份封存，哪些文件进哪个月 ─────────────
-
-
 def month_of(mtime: float) -> str:
     return dt.datetime.fromtimestamp(mtime).strftime("%Y-%m")
 
 
 def seal_time(month: str, days: int) -> dt.datetime:
-    """月份结束后再过 days 天，该月所有文件都已是冷文件"""
     y, m = map(int, month.split("-"))
     end = dt.datetime(y + (m == 12), m % 12 + 1, 1)
     return end + dt.timedelta(days=days)
 
 
 def plan(root: str, now: float, days: int):
-    """返回 (已封存月份 -> [(相对路径, 大小)], 等待中月份 -> [...], 不可读文件)"""
     by_month: dict[str, list[tuple[str, int]]] = defaultdict(list)
     unreadable: list[str] = []
     for d, _, files in os.walk(root):
         if d == root:
-            continue  # 根目录直属文件是 agent 自己的状态（如 sqlite 库），不碰
+            continue
         for name in files:
             if any(fnmatch.fnmatchcase(name, pat) for pat in EXCLUDED_NAMES):
                 continue
@@ -201,7 +185,7 @@ def plan(root: str, now: float, days: int):
             rel = os.path.relpath(path, root)
             try:
                 st = os.lstat(path)
-            except OSError:  # 目录无进入权限，或枚举后文件被删
+            except OSError:
                 unreadable.append(rel)
                 continue
             if not stat.S_ISREG(st.st_mode):
@@ -214,10 +198,6 @@ def plan(root: str, now: float, days: int):
     sealed = {m: sorted(v) for m, v in by_month.items() if seal_time(m, days) <= now_dt}
     waiting = {m: sorted(v) for m, v in by_month.items() if m not in sealed}
     return sealed, waiting, unreadable
-
-
-# ───────────── 归档卷：archive-<月份>[-<序号>].tar.zst.age + .idx.age ─────────────
-
 
 @dataclass(frozen=True)
 class Volume:
@@ -264,7 +244,6 @@ def write_tar(out, root: str, members: list[str]) -> None:
 
 
 def verify(tar_path: str, root: str, members: list[str], key_file: str) -> None:
-    """归档里每个成员必须与磁盘上的原文件逐字节一致，members 必须全部出现"""
     want, seen = set(members), set()
     with decoded(tar_path, key_file) as s, tarfile.open(fileobj=s, mode="r|") as tf:
         for info in tf:
@@ -296,7 +275,6 @@ def seal(
         encode(lambda out: write_tar(out, root, rels), tar_part, recips)
         verify(tar_part, root, rels, key_file)
         encode(lambda out: out.write(json.dumps(members).encode()), idx_part, recips)
-        # 清单先落地：只有 tar 存在才算分卷，没有 tar 的清单是崩溃残留，下次会被覆盖
         os.replace(idx_part, vol.idx)
         os.replace(tar_part, vol.tar)
     finally:
@@ -307,7 +285,6 @@ def seal(
 
 @contextlib.contextmanager
 def root_lock(root: str):
-    """同一根目录同时只允许一个归档进程：卷名和 .part 名都由根目录内状态决定"""
     try:
         fd = os.open(os.path.join(root, LOCK_NAME), os.O_RDWR | os.O_CREAT, 0o600)
     except OSError as e:
@@ -328,7 +305,6 @@ def signature(path: str) -> tuple[int, int, int]:
 
 
 def delete_originals(root: str, snap: dict[str, tuple[int, int, int]]) -> None:
-    """只删仍与打包前快照一致的文件；打包后被写过的保留，之后按迟到文件处理"""
     for rel, sig in sorted(snap.items()):
         try:
             if signature(os.path.join(root, rel)) != sig:
@@ -340,7 +316,7 @@ def delete_originals(root: str, snap: dict[str, tuple[int, int, int]]) -> None:
         parent = os.path.dirname(os.path.join(root, rel))
         while parent != root:
             try:
-                os.rmdir(parent)  # 只删因此变空的目录
+                os.rmdir(parent)
             except OSError:
                 break
             parent = os.path.dirname(parent)
@@ -353,7 +329,6 @@ def archive_month(
     cfg: Config,
     recips: list[str],
 ) -> list[Volume]:
-    """返回本次新写的分卷。已有分卷已覆盖且内容一致的文件只补删原文件"""
     pending = dict(members)
     snap = {rel: signature(os.path.join(root, rel)) for rel in pending}
     for vol in volumes(root, month):
@@ -367,7 +342,7 @@ def archive_month(
         try:
             verify(vol.tar, root, covered, cfg.key_file)
         except (Failure, OSError, tarfile.TarError):
-            continue  # 同名但内容不同，留给新分卷
+            continue
         delete_originals(root, {r: snap[r] for r in covered})
         for r in covered:
             del pending[r]
@@ -376,10 +351,6 @@ def archive_month(
     vol = seal(root, month, sorted(pending.items()), cfg.key_file, recips)
     delete_originals(root, {r: snap[r] for r in pending})
     return [vol]
-
-
-# ───────────── 命令 ─────────────
-
 
 def print_exts(rels: list[str]) -> None:
     if not rels:
@@ -393,7 +364,6 @@ def print_exts(rels: list[str]) -> None:
 def run_root(
     cfg: Config, root: str, now: float, dry: bool, recips: list[str], archived: list
 ) -> int:
-    """处理一个根目录，返回失败数；已归档的相对路径追加到 archived"""
     sealed, waiting, unreadable = plan(root, now, cfg.days)
     for rel in unreadable:
         print(f"无法读取，跳过: {os.path.join(root, rel)}", file=sys.stderr)
@@ -428,7 +398,6 @@ def cmd_run(cfg: Config, dry: bool) -> int:
     now, archived, failed = time.time(), [], 0
     for root in cfg.roots:
         try:
-            # dry-run 不写不删，不需要锁
             with contextlib.nullcontext() if dry else root_lock(root):
                 failed += run_root(cfg, root, now, dry, recips, archived)
         except Failure as e:
@@ -440,7 +409,6 @@ def cmd_run(cfg: Config, dry: bool) -> int:
 
 
 def restore(vol: Volume, key_file: str) -> None:
-    """还原整卷到它所在的根目录。已存在的文件不覆盖；还原出的是新文件，mtime 为现在"""
     with decoded(vol.tar, key_file) as s, tarfile.open(fileobj=s, mode="r|") as tf:
         for info in tf:
             if not info.isreg():
@@ -498,7 +466,6 @@ def cmd_list(cfg: Config) -> int:
 
 
 def rekey_file(path: str, key_file: str, recips: list[str]) -> None:
-    """解密再用当前全部公钥加密，不动压缩层；比对两边解密结果一致才替换"""
     part, st = path + ".part", os.stat(path)
     dec = subprocess.Popen(["age", "-d", "-i", key_file, path], stdout=subprocess.PIPE)
     enc = subprocess.Popen(["age", *recips, "-o", part], stdin=dec.stdout)
@@ -561,7 +528,6 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
 
     os.umask(0o077)
-    # 被终止时走 finally 清掉 .part，restore 的 .part 是明文
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     cfg = load_config()
     if args.cmd == "run":

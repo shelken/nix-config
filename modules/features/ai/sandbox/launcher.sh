@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# 由 _guest.nix 内嵌 guest/ 下四个模块，并在最前加载 guest-env.sh（路径与环境）。
 set -euo pipefail
 
 if [[ "${1:-}" == "--check-busy" ]]; then
@@ -17,13 +16,10 @@ PLAN_JSON="$2"
 CWD="$3"
 shift 3
 
-# 解析执行计划：JSON 有问题在占用槽位和锁之前就失败
 parse_plan "$PLAN_JSON"
 
-# 启动序列：槽位锁覆盖到布局结束，其他启动者在此排队
 allocate_slot "$CTX_ID"
 
-# 退出清理钩子放在 net_up 之前：网络配置中途失败也会拆掉已建的部分并归还槽位
 cleanup() {
   local exit_code=$?
   trap - EXIT INT TERM HUP

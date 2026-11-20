@@ -1,4 +1,3 @@
-# ai 是跑 agent 的机器都需要的运行时；只在工作站用的能力是各自独立的功能（ADR 0008）
 { config, ... }:
 {
   flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.ai ];
@@ -14,8 +13,6 @@
     let
       cfg = config.shelken.dev.ai;
 
-      # CLI tools and their agents file configurations
-      # Format: { targetPath = "relative/path"; fileName = "FILENAME.md"; }
       agentsTargets = [
         {
           targetPath = ".claude";
@@ -47,7 +44,7 @@
         }
         {
           targetPath = ".dsh";
-          fileName = "AGENTS.md"; # dsh (deepseek-harness) 用户全局指令, 读取 $DSH_HOME/AGENTS.md
+          fileName = "AGENTS.md";
         }
         {
           targetPath = ".config/zed";
@@ -59,11 +56,10 @@
         }
         {
           targetPath = ".workbuddy";
-          fileName = "SOUL.md"; # WorkBuddy 读取 ~/.workbuddy/SOUL.md 而非 AGENTS.md
+          fileName = "SOUL.md";
         }
       ];
 
-      # Generate symlinks for all agents targets
       agentsLinks = builtins.listToAttrs (
         map (target: {
           name = "${target.targetPath}/${target.fileName}";
@@ -71,7 +67,6 @@
         }) agentsTargets
       );
 
-      # 沙箱只消费 omp 与 pi 的用户级配置（launcher 挂载 ~/.omp、~/.pi），其余是宿主独有工具
       ownedBy = dir: lib.filterAttrs (name: _: lib.hasPrefix "${dir}/" name) agentsLinks;
     in
     {
@@ -87,12 +82,10 @@
       config = lib.mkMerge [
         {
           home.file = agentsLinks;
-          # agents 文档随所属工具登记（ADR 0003）：宿主照常作为 home.file，沙箱经该工具的 files 拿到同一份链接
           shelken.dev.tools.omp.files = ownedBy ".omp";
           shelken.dev.tools.pi.files = ownedBy ".pi";
         }
         {
-          # 沙箱拿到的本来就是发布副本，生成新文件不损失 liveEdit
           shelken.dev.tools = lib.mkIf (cfg.sandboxInstructions != "") (
             let
               sandboxAgents = pkgs.writeText "AGENTS.sandbox.md" (

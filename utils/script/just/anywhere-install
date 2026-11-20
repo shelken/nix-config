@@ -1,15 +1,8 @@
 #!/usr/bin/env bash
-# nixos-anywhere 阶段二（disko、install、reboot）的唯一入口：先把目标主机声明的 substituters
-# 以覆盖语义写进安装环境，再装机。
-#
 # 为什么要先写：nixos-anywhere 自带的 use-machine-substituters 用 extra-substituters 追加到末尾，
 # 而 icache 与原站 Priority 相同、同级按列表顺序试源，追加等于 icache 永不命中（见 modules/features/nix/nix-icache.nix）。
 # 所以关掉它（--no-use-machine-substituters），由这里写入。写在 root 的用户级 nix.conf：
 # --build-on remote 经 ssh-ng 起的 nix-daemon 以 root 运行，会读它；安装环境在内存里，重启即消失。
-#
-# 用法: anywhere-install <主机> <目标地址> [extra-files 目录]；目标须已 kexec 进安装环境，SSH 用 root
-# PHASES=disko,install 时装完不重启：大体积、稀疏的数据不走 extra-files（经 macOS tar 不保证保留稀疏），
-# 此时自行写入目标的 /mnt，再 ssh root@<目标> reboot
 set -euo pipefail
 host="${1:?用法: anywhere-install <主机> <目标地址> [extra-files 目录]}"
 target="${2:?用法: anywhere-install <主机> <目标地址> [extra-files 目录]}"
@@ -31,7 +24,6 @@ ssh_opts=(-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLeve
 ssh "${ssh_opts[@]}" "root@${target}" '[ "$(hostname)" = nixos-installer ]' ||
     { echo "$target 不在 nixos-anywhere 安装环境里：先跑阶段一 kexec" >&2; exit 1; }
 ssh "${ssh_opts[@]}" "root@${target}" "mkdir -p ~/.config/nix && cat > ~/.config/nix/nix.conf" <<EOF
-# 由 anywhere-install 写入：覆盖语义，按 ${host} 的声明排序
 substituters = ${substituters}
 trusted-public-keys = ${keys}
 connect-timeout = ${timeout}

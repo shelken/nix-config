@@ -1,5 +1,3 @@
-# sec-run：把凭据解析进环境后运行目标命令
-# 输入（由 secrets.nix 写入）：SEC_RUN_BASE 基座环境文件、SEC_RUN_TOKEN_FILE service account token 文件
 if (( $# == 0 )); then
   echo "Usage: sec-run <command> [args...]" >&2
   exit 1
@@ -7,7 +5,6 @@ fi
 
 SPECIFIC_ZSH="$HOME/.specific.zsh"
 
-# 环境文件里的变量名
 key_names() {
   sed -nE 's/^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)=.*/\2/p' "$@" 2>/dev/null | sort -u
 }
@@ -22,7 +19,6 @@ if [[ -n "${SEC_RUN_VERBOSE:-}" ]]; then
   print -u2 -- "🔐 [sec-run] 变量: ${(j: :)${(f)"$(key_names $_sources)"}}"
 fi
 
-# 无 op：直接 source 覆盖层，然后执行
 if ! command -v op >/dev/null 2>&1; then
   [[ -s "$SPECIFIC_ZSH" ]] && source "$SPECIFIC_ZSH"
   exec "$@"
@@ -38,14 +34,12 @@ trap 'rm -rf "$_work"' EXIT
 trap 'exit 130' INT TERM
 typeset -a excluded_refs
 
-# 跑一次 op run，把解析后的 KEY=VALUE 以 NUL 分隔写到 stdout
 resolve() {
   local -a files keys
   local src copy pat
   local -i n=0
   for src in $_sources; do
     if (( $#excluded_refs )); then
-      # 剔除只发生在副本上；副本可能含覆盖层的明文值，放在 0700 的临时目录里
       copy="$_work/env.$((++n))"
       local -a pats=()
       for pat in $excluded_refs; do pats+=( -e "$pat" ); done
@@ -66,7 +60,6 @@ resolve() {
 }
 
 # 从 op 的报错里认出解析不了的引用：条目名或带引号的 vault 名出现在报错文本中。
-# 认不出就不猜（断网、token 失效等），交给调用方整体失败
 culprits() {
   local err=" $1 " ref vault item
   local -a refs found

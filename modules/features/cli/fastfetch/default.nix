@@ -1,4 +1,3 @@
-# fastfetch：nix 安装 + 配置软链
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.fastfetch ];

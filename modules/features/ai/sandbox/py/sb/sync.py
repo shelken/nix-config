@@ -1,8 +1,3 @@
-"""sb sync：在 VM 内补齐 mise 工具与 OMP 插件，宿主侧用共用目录下的锁串行化。
-
-上下文里的 `mise install` 不拿这把锁（项目工具），只有 sync 写登记工具与插件缓存时才拿。
-"""
-
 from __future__ import annotations
 
 import sys

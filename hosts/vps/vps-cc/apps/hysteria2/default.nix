@@ -4,14 +4,6 @@ let
   # 因为挂载路径在构建期就得确定，域名只存在于 sops 模板里
   certDir = "/data/docker/caddy/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory";
 in
-#############################################################
-#
-#  hysteria2：公网 UDP 代理，证书直接复用 Caddy 申请的 wildcard 证书
-#
-#  只有镜像、没有 nixpkgs module，继续用镜像 + 宿主机网络（10357/udp）。
-#  配置整体含口令与域名，走 sops 模板渲染后再挂进容器。
-#
-#############################################################
 {
   sops.secrets = {
     "main-domain" = { };

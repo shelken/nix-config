@@ -1,9 +1,3 @@
-"""session_archive.py 端到端验证：临时目录 + 临时 age 密钥 + 改过 mtime 的假会话，不碰真实数据。
-
-需要 age、age-keygen、zstd 在 PATH。用法: python3 e2e.py
-失败路径用 PATH 垫片替换 zstd 注入，这是脚本唯一的外部接缝。
-"""
-
 import datetime as dt
 import os
 import shutil
@@ -123,7 +117,6 @@ try:
     M1, M2, M_NOW = month(100), month(200), month(10)
     check(len({M1, M2, M_NOW}) == 3, "测试月份必须互不相同")
 
-    # 已封存月份 M1（100 天前）与 M2（200 天前），以及未封存的当月
     mk("proj/old.jsonl", 100)
     mk("proj/artifacts/old.md", 100)
     mk("proj/sub/deep/x.log", 100)
@@ -134,7 +127,6 @@ try:
     mk("sessions.db", 100)
     mk("stray.bin", 100)
 
-    # 1. dry-run 只统计，不写不删
     r = sa("run", "--dry-run")
     check(r.returncode == 0, f"dry-run 退出码: {r.stderr}")
     check(
@@ -148,7 +140,6 @@ try:
     check(not vols() and exists("proj/old.jsonl"), "dry-run 改动了文件")
     ok("dry-run 只统计")
 
-    # 2. 封存：原文件被删，空目录被清，排除规则与未封存月份不动
     r = sa("run")
     check(r.returncode == 0, f"run 失败: {r.stdout}{r.stderr}")
     check(
@@ -182,7 +173,6 @@ try:
     check(not leftovers(), "不应残留 .part")
     ok("封存、排除规则、空目录清理、无明文")
 
-    # 3. 幂等
     before = {v: os.stat(os.path.join(root, v)).st_mtime_ns for v in vols()}
     r = sa("run")
     check(
@@ -195,7 +185,6 @@ try:
     )
     ok("幂等")
 
-    # 4. list
     r = sa("list")
     check(
         r.returncode == 0
@@ -205,7 +194,6 @@ try:
     )
     ok("list")
 
-    # 5. restore 整卷：内容一致，mtime 为现在，不覆盖已存在文件，归档卷保持不变
     vol1 = os.path.join(root, f"archive-{M1}.tar.zst.age")
     r = sa("restore", vol1)
     check(
@@ -235,7 +223,6 @@ try:
     check(len(vols()) == 2 and not leftovers(), "restore 不应改动归档卷或残留 .part")
     ok("restore 整卷")
 
-    # 6. 不是归档卷的路径报错；刚还原的文件不会被再次归档
     check(
         sa("restore", os.path.join(root, "proj/old.jsonl")).returncode != 0,
         "不是归档卷的路径应报错",
@@ -252,7 +239,6 @@ try:
     )
     ok("restore 错误路径")
 
-    # 7. 重入：原文件与归档一致时只补删，不另写分卷；同名但内容不同则写新分卷
     t = NOW - 100 * DAY
     for rel in ("proj/artifacts/old.md", "proj/sub/deep/x.log"):
         os.utime(os.path.join(root, rel), (t, t))
@@ -273,7 +259,6 @@ try:
     )
     check(not exists("proj/artifacts/old.md"), "新分卷封存后应删原文件")
     mk("proj/late.jsonl", 100)
-    # 迟到文件：封存月份里又出现旧 mtime 的文件
     sa("run")
     check(
         f"archive-{M1}-3.tar.zst.age" in vols() and not exists("proj/late.jsonl"),
@@ -286,7 +271,6 @@ try:
     )
     ok("重入与分卷")
 
-    # 8. 校验失败：原文件保留，无归档与 .part 残留，退出码非零
     mk("proj3/bad.jsonl", 300)
     M3 = month(300)
     garbage = shim(
@@ -302,7 +286,6 @@ try:
     )
     ok("校验失败保留原文件")
 
-    # 9. 写入失败（根目录只读）：原文件保留
     mk("proj5/ro.jsonl", 400)
     os.chmod(root, stat.S_IRUSR | stat.S_IXUSR)
     try:
@@ -315,7 +298,6 @@ try:
     )
     ok("写入失败保留原文件")
 
-    # 10. 单个文件不可读：其余文件照常归档，不可读文件保留
     mk("proj6/ok.jsonl", 500)
     locked = mk("proj6/locked.jsonl", 500)
     mk("proj6/noenter/f.jsonl", 500)
@@ -336,7 +318,6 @@ try:
     )
     ok("不可读文件不阻断其余")
 
-    # 11. 中途被终止：不留 .part，原文件保留
     mk("proj7/slow.jsonl", 600)
     slow = shim(
         "slow",
@@ -369,14 +350,13 @@ try:
     )
     ok("中断清理")
 
-    # 11b. 校验完成后、删除前文件被写入：保留被改写的文件，不丢新内容
     race = mk("proj8/race.jsonl", 700)
     cnt = os.path.join(work, "cnt")
     racer = shim(
         "race",
         'for a in "$@"; do [ "$a" = -d ] && exec @REAL@ "$@"; done\n'
         f"n=$(cat {cnt} 2>/dev/null || echo 0); n=$((n+1)); echo $n > {cnt}\n"
-        f"[ $n = 2 ] && echo LATE >> {race}\n"  # 第 2 次压缩是写清单，在 verify 之后
+        f"[ $n = 2 ] && echo LATE >> {race}\n"
         'exec @REAL@ "$@"\n',
     )
     r = sa("run", path_prefix=racer)
@@ -387,7 +367,6 @@ try:
     )
     ok("校验后被写入的文件不被删")
 
-    # 11c. 同一根目录不允许两个归档进程并行
     mk("proj9/lock.jsonl", 600)
     p = subprocess.Popen(
         [sys.executable, SCRIPT, "run"],
@@ -409,8 +388,7 @@ try:
     p.wait(timeout=30)
     ok("并发 run 被锁拒绝")
 
-    # 12. 换钥：密钥文件加入第二把后 rekey，只留新私钥仍可 list 与 restore
-    sa("run")  # 把前面保留下来的文件正常封存
+    sa("run")
     k2 = os.path.join(work, "k2.txt")
     keygen(k2)
     with open(keys, "a") as f, open(k2) as g:
@@ -426,7 +404,6 @@ try:
     )
     ok("rekey 与密钥轮换")
 
-    # 13. 还原期间别处新建了同名文件：不覆盖
     raced = os.path.join(root, "proj7/slow.jsonl")
     check(not exists("proj7/slow.jsonl"), "用例前提: proj7/slow.jsonl 已封存并删除")
     py = (
@@ -465,7 +442,6 @@ try:
     check(not leftovers(), "还原后不应残留 .part")
     ok("restore 不覆盖期间新建的文件")
 
-    # 14. 还原不跟随目录符号链接
     outside = os.path.join(work, "outside")
     os.makedirs(outside)
     shutil.rmtree(os.path.join(root, "proj2"))
@@ -477,7 +453,6 @@ try:
     )
     ok("restore 拒绝符号链接")
 
-    # 15. 一个根目录无法加锁：计入失败，其余根目录照常归档
     ro = os.path.join(work, "ro-root")
     os.makedirs(ro)
     mk("proj10/x.jsonl", 700)

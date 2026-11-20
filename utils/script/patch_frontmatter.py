@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# 覆盖 SKILL.md frontmatter 中的标量字段；缺失字段追加到末尾。
 import json
 import re
 import sys

@@ -1,5 +1,3 @@
-# 鼠须管（Squirrel）+ 雾凇拼音：cask 与 rime 配置；
-# 输入法是 GUI 才有意义的东西，tui/core 主机不需要
 { config, ... }:
 {
   flake.modules.darwin.gui.imports = [ config.flake.modules.darwin.rime ];
@@ -14,14 +12,10 @@
       ...
     }:
     let
-      # 鼠须管只在 darwin
       rimeDir = "Library/Rime";
       squirrel = "/Library/Input Methods/Squirrel.app/Contents/MacOS/Squirrel";
-      # 各设备共用的同步目录，靠 iCloud「桌面与文稿」在设备间传递
       syncDir = "${config.home.homeDirectory}/Documents/rime/sync";
 
-      # 小鹤双拼实际读到的上游文件：方案本身、它声明的两个依赖方案、三者引用的词库与符号表。
-      # 其余方案和上游仓库的杂项不进用户目录
       upstreamFiles = [
         "default.yaml"
         "squirrel.yaml"
@@ -40,7 +34,6 @@
         "opencc"
       ];
 
-      # 上游改名或删文件时在求值阶段报错，而不是部署后输入法静默缺功能
       upstream =
         name:
         assert lib.assertMsg (builtins.pathExists "${inputs.rime-main}/${name}")
@@ -58,7 +51,6 @@
 
       squirrelTheme = import ./_squirrel-theme.nix { inherit config lib myvars; };
 
-      # 按内容取指纹：用仓库源路径的话，任何无关提交都会让它变
       sourceStamp = builtins.hashString "sha256" (
         lib.concatStrings (
           [ inputs.rime-main.outPath ]

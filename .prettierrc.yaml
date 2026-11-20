@@ -1,4 +1,4 @@
-semi: false # 尾部始终加分号
+semi: false
 singleQuote: false
 printWidth: 100
 proseWrap: preserve

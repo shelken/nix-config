@@ -25,7 +25,6 @@ def load_mapping(path: str) -> dict[str, Any]:
 
 
 def canonical_json(path: str) -> bytes:
-    """键排序、无缩进的 JSON，注释与排版变化不影响它。它的 sha256 就是批准哈希，参数一变历史批准记录全部失效。"""
     return _yq(path, "-I=0", "sort_keys(..)")
 
 

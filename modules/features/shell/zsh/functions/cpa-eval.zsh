@@ -1,8 +1,3 @@
-# cpa-eval - 用糖果题测试 CPA 模型回答能力
-# Usage:
-#   cpa-eval [--apiurl <url>] [--model <model>] [--envkey <ENV_VAR_NAME>] [--max <n>]
-#   cpa-eval --help | -h
-
 emulate -L zsh
 setopt typeset_silent
 unsetopt monitor notify

@@ -1,5 +1,3 @@
-# home-ops 的 IoT 网（VLAN50）：Home Assistant、go2rtc 等经 Multus 接入，节点的 eth1.50 由 lan1~3 的 VLAN 标签送达。
-# 网段、DHCP 基础段、防火墙区域与入站放行都在这里；DHCP 选项与出网策略（经 hk1box）在 hk1box/。
 # 端口的 VLAN50 定义在 network/network.nix：匿名段按模块顺序拼接，放在同一个列表里才与路由器上的顺序一致
 {
   uci.settings.network = {
@@ -12,7 +10,6 @@
     };
   };
 
-  # IoT 的两个 SSID，SSID 与密码在 secrets.nix 的 sops（router-mine.yaml 的 wifi）
   uci.settings.wireless = {
     wifinet4 = {
       _type = "wifi-iface";
@@ -62,8 +59,6 @@
       }
     ];
 
-    # IoT 网段只能向路由器本机要这几样：DHCP、mDNS（avahi 反射到主网）、ping、IPv6 邻居发现。
-    # 实测 IoT 发给路由器的流量只有 mDNS，DNS 由 DHCP 指向 hk1box，其余一律拒绝；某个设备出问题再逐项开放
     rule = [
       {
         _type = "rule";

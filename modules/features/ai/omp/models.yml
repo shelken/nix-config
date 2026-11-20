@@ -5,7 +5,6 @@ providers:
     api: anthropic-messages
   mp:
     baseUrl: https://magpie.int.ooooo.space/v1
-    # baseUrl: http://127.0.0.1:3425/v1
     api: openai-responses
     apiKey: MAGPIE_API_KEY
     discovery:
@@ -83,31 +82,19 @@ providers:
         input: ["text", "image"]
     # <<< mp-modelOverrides:auto-sync <<<
   cpa:
-    # cpa 端点锚点(openai/cpa 两 provider 共用): 外出 localhost, 回家改回 https://cpa.int.ooooo.space/v1
     baseUrl: https://cpa.int.ooooo.space/v1
-    # baseUrl: http://localhost:8317/v1
     apiKey: CPA_PI_API_KEY
     api: openai-responses
     discovery:
       type: openai-models-list
       timeoutMs: 3000
-    # <<: *cpa-endpoint
-    # === 覆盖原则与参数必要性说明 ===
-    # 1. 覆盖原则: 仅对 omp 无法映射、或映射错误 (如丢失思考、档位错误/与上游对不上) 的常用模型做覆盖; 不常用/不值得的模型不列入, 保持精简。
     # 2. compat.supportsReasoningEffort: true & compat.omitReasoningEffort: false (必须成对出现):
-    #    - 原因: 宿主 /v1/models 仅返回 id/object, 无能力字段; omp 发现后查内置 catalog 盲目碰撞同名行,
-    #      会继承到无关第三方平台的 omitReasoningEffort: true 或 supportsReasoningEffort: false。
     #    - 源码行为: 若 omitReasoningEffort=true 或 supportsReasoningEffort=false, omp 会在 wire 序列化时直接把 reasoning.effort 抹除,
-    #      只发 { summary: "auto" }, 导致上游根本收不到 effort (glm-5.3-flash, kimi-k2.6, minimax-m3 实测)。故必须显式钉死。
     # 3. thinking.requiresEffort: true (仅对纯思考 onlyReasoning: true 模型必须):
     #    - 原因: 对应 omp 客户端的 Mandatory-reasoning 保护机制 (stream.ts normalizeMandatoryReasoningOptions)。
     #      当上游模型是强制思考模型 (无非思考模式) 时, 若用户客户端手滑关闭思考或未带档位, omp 会自动保底 clamp 到默认/最低档位, 防止上游 400 报错。
     #    - 注意: 混合模型 (如 deepseek-v4-flash 本身支持关思考) 绝对不要加此参数, 否则会剥夺用户关闭思考的自由 (被强行拉回 high)。
-    # 4. compat.reasoningEffortMap (按需配置):
-    #    - 原因: 当 omp 内部规范档位名与上游实际接收枚举不一致时使用 (例如 kimi-k3-1 上游是 xhigh, omp catalog 默认翻译成 max 导致 400, 需钉回 xhigh: xhigh)。
-    # 档位权威来源: 各插件 data/static-config.json
     modelOverrides:
-      # 内置 catalog 对该模型只有 reasoning: true, 没有档位 (thinking: null), 需显式声明; 档位来自 CPA 的 antigravity 注册表
       gemini-3.8-flash:
         reasoning: true
         thinking:
@@ -235,7 +222,6 @@ providers:
         compat:
           supportsReasoningEffort: true
           omitReasoningEffort: false
-          # 内置 catalog 的 kimi k3 lineage 映射会把 xhigh 翻成 max (厂商表里没有 max), 这里钉回原值。
           reasoningEffortMap: { xhigh: xhigh }
       workbuddy/minimax-m3:
         reasoning: true

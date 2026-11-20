@@ -6,15 +6,6 @@
   self,
   ...
 }:
-#############################################################
-#
-#  k3s 节点共有配置：yuuko-k8s、sakamoto-k8s、homelab-1 共用
-#  主机名、磁盘设备、k3s 角色与标签是各主机自己的事，写在各自目录里
-#
-#  网卡 MAC 在私有 secrets 仓库的 hosts/<主机>/network.nix（求值期读取，不加密）
-#  切换与重装流程见 ./README.md
-#
-#############################################################
 let
   net = import (inputs.secrets + "/hosts/${config.networking.hostName}/network.nix");
 in
@@ -24,7 +15,6 @@ in
     self.modules.nixos.disko
     self.modules.nixos.sops
     self.modules.nixos.k3s-node
-    # 常驻家里、没有 Home Manager：在系统层走内网 icache
     self.modules.nixos.nix-icache-system
   ];
 

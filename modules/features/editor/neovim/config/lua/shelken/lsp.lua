@@ -1,4 +1,3 @@
--- 只在完整层加载（见 init.lua）；语言表由 Nix 生成，见 _languages.nix
 local languages = vim.g.nix_languages
 
 vim.diagnostic.config({
@@ -29,7 +28,6 @@ conform.setup({
 vim.keymap.set({ "n", "x" }, "<leader>lf", function()
   conform.format({ lsp_format = "fallback" })
 end, { desc = "Format buffer" })
--- 与 Neovim 自带的 gra / grn 等并存，沿用 AstroNvim 习惯
 vim.keymap.set({ "n", "x" }, "<leader>la", vim.lsp.buf.code_action, { desc = "LSP code action" })
 vim.keymap.set("n", "<leader>lr", vim.lsp.buf.rename, { desc = "Rename current symbol" })
 vim.keymap.set("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })

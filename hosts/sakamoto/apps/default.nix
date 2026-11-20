@@ -1,17 +1,3 @@
-# sakamoto 的业务容器：原先由 home-ops 的 docker compose 声明并部署，现在搬进本仓库
-#
-# 为什么仍然是 Compose 而不是 nix-darwin 的容器声明：macOS 侧没有 oci-containers 这类模块
-# （vps-cc 用的是 NixOS 的 virtualisation.oci-containers），容器、命名卷与 homelab 网络都在
-# OrbStack 里；换运行时等于把 10 个服务连数据一起再起一遍，与「把声明搬过来」是两件事。
-#
-# 这个目录管三件事：
-# 1. compose.yaml 与 configs/：服务声明与静态配置；每个文件单独进 Nix store，容器挂 store 路径
-# 2. sops 模板：env 文件（口令、数据目录，以及上面各文件的 store 路径），激活时解密渲染，明文不进 store
-# 3. launchd agent：登录后与外接盘挂载时先检查数据目录，通过才拉起 OrbStack 与容器，之后每 15 分钟对账一次；
-#    容器一律 restart: "no"，OrbStack 的「登录时启动」由 agent 关掉，OrbStack 与容器都只由这个 agent 启动，
-#    外接盘没挂上时什么都不起
-#
-# 切换、验收与回退步骤见同目录 README.md
 {
   config,
   lib,
@@ -27,8 +13,6 @@ let
     mkIf
     ;
 
-  # 与旧 Compose 相同的项目名。命名卷带项目名前缀（homelab-compose_kopia_cache），
-  # 改名会新建两个空卷：kopia 需要重新对账，还会丢掉缓存
   projectName = "homelab-compose";
 
   # 传给 docker compose -f 的是固定路径的符号链接，不是 store 路径。
@@ -37,10 +21,6 @@ let
   # 固定路径下标签不随内容变，只会有一组
   composeFile = "${config.xdg.configHome}/sakamoto-compose/compose.yaml";
 
-  # 容器要读的静态配置，键名即 compose.yaml 里 volumes 引用的变量。
-  # 必须是 volumes 而不是 configs:：Compose 的服务 hash 不含 configs 的路径与内容，改了配置 up 不会重建容器；
-  # volumes 的源路径在 hash 里，每个文件单独进 store、路径随内容变，所以改哪个文件只重建用到它的服务
-  # 与 vps-cc 共用的 kopia 入口脚本与策略
   kopiaShared = ../../../modules/features/backup/kopia/server;
 
   configFiles = {
@@ -55,12 +35,8 @@ let
     mapAttrsToList (name: path: "${name}=${path}") configFiles
   );
 
-  # sops 在激活时渲染出来的 env 文件，含机密，只能由模板产生
   envFile = config.sops.templates."sakamoto-compose.env".path;
 
-  # 键名即私有 secrets 仓库（sops/secrets/shelken/default.yaml）里的键。
-  # 前三项是跨主机共用的键（域名、kopia 口令与 webhook），其余在 compose-sakamoto/ 下；
-  # 值沿用旧 Bitwarden 条目 compose-sakamoto 的字段，迁移时不要顺手轮换
   secretNames = [
     "main-domain"
     "kopia/password"
@@ -72,15 +48,12 @@ let
     "compose-sakamoto/rustfs-password"
     "compose-sakamoto/rustfs-user"
   ];
-  # 外接盘上的两个固定路径，与旧 compose 里写死的一致；不是机密，不进 sops。
-  # 写在 env 里而不是 compose.yaml：开机检查要读同一份来确认盘已挂载
   externalDisks = {
     sakamotoData = "/Volumes/sakamoto-data";
     localRepo = "/Volumes/BackUp3T/kopia-local-repo";
   };
   placeholder = name: config.sops.placeholder.${name};
 
-  # 手动入口与 agent 共用同一份逻辑：agent 每 15 分钟跑一次 up，人工用同一个命令排障
   composeCli = pkgs.writeShellApplication {
     name = "sakamoto-compose";
     runtimeInputs = with pkgs; [
@@ -112,7 +85,6 @@ let
         exit 1
       }
 
-      # 登录瞬间 sops 渲染、OrbStack 守护进程与本 agent 谁先就绪不确定，都要等
       wait_for() {
         local timeout=$1
         shift
@@ -151,14 +123,12 @@ let
         [ -z "$missing" ] || die "这些数据目录不存在，挂好外接盘再重试：$missing"
       }
 
-      # 容器不自启，OrbStack 也不自启：数据目录检查通过后才在这里拉起。open 对已运行的 OrbStack 没有副作用
       start_orbstack() {
         command -v docker >/dev/null 2>&1 ||
           die "PATH 里没有 docker：OrbStack 未装或命令行工具不在 /usr/local/bin"
         open -ga OrbStack || die "无法启动 OrbStack"
         wait_for 120 docker info ||
           die "OrbStack 的 docker 守护进程 120 秒内没就绪"
-        # 只能由本 agent 启动 OrbStack；它升级或被手动改回「登录时启动」时，下一轮 up 改回来
         orbctl config set app.start_at_login false ||
           echo "警告：关不掉 OrbStack 的「登录时启动」，盘没挂上时它可能自己启动" >&2
       }
@@ -178,7 +148,6 @@ let
           args+=(--force-recreate)
         fi
 
-        # 成功时输出很吵，只留失败的情况完整打出来
         local output
         if ! output=$(compose "''${args[@]}" 2>&1); then
           printf '%s\n' "$output" >&2
@@ -226,8 +195,6 @@ in
     (mkIf config.shelken.secrets.enable {
       sops.secrets = genAttrs secretNames (_: mylib.mkDefaultSecret { });
 
-      # 变量名沿用旧 .env.tpl，compose.yaml 里的插值保持不变；
-      # UID/GID 与通用 TZ 没有服务引用，不再复制过来
       sops.templates."sakamoto-compose.env" = {
         content = ''
           MAIN_DOMAIN=${placeholder "main-domain"}
@@ -246,12 +213,7 @@ in
       };
 
       # 不写 domain：默认 gui，配 OrbStack 所在的 Aqua 会话；
-      # 登录后 RunAtLoad 跑一次，外接盘挂载时 StartOnMount 立刻再跑一次（盘晚于登录挂上），
-      # StartInterval 负责补漏（容器被手工删掉、StartOnMount 漏触发），
-      # 也是密钥值轮换后的收敛路径：env 变了，下一轮 up 会重建受影响的容器。
       # 不用 WatchPaths：渲染目录在符号链接下面，sops 换代后 launchd 的监视时灵时不灵（实测三轮只触发一轮）；
-      # compose.yaml、配置文件或密钥变了时 plist 都不变，等下一轮，或手动 sakamoto-compose up；
-      # 只有 default.nix 里 CLI 本身变了，plist 才跟着变，Home Manager 会重新加载并立刻再跑一次
       launchd.agents.sakamoto-compose = {
         enable = true;
         config = {

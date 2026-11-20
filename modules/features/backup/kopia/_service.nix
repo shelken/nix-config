@@ -15,7 +15,6 @@ let
   kopiaConfigPath = config.sops.templates."kopia-repository.config".path;
   kopiaPasswordPath = config.sops.secrets.kopia-password.path;
 
-  # 连接检查：所有 kopia 操作的前提，快照/策略/维护三条命令共用
   repoCheck = ''
     ${pkgs.kopia}/bin/kopia repository status &>/dev/null || {
       echo "Kopia repository not connected" >&2
@@ -23,12 +22,9 @@ let
     }
   '';
 
-  # 快照体：只做逐路径快照。策略收敛与全量维护不在快照热路径上
   backupBody = ''
     ${repoCheck}
 
-    # 目标策略还没落进这个库（首次部署或新设备）时先同步一次，
-    # 否则首个快照会按默认策略把 node_modules、target、.build 之类一并传上去
     if ! ${pkgs.kopia}/bin/kopia policy export "${target}" >/dev/null 2>&1; then
       ${policySyncCore}
     fi
@@ -54,11 +50,7 @@ let
     ''}
   '';
 
-  # 策略收敛核心：ignores 先比对再写（无变化不产生写操作），压缩与保留每次幂等声明。
-  # 快照前补同步与独立命令共用，因此不含仓库连接检查
   policySyncCore = ''
-    # 一次 export 同时拿输出和退出码：写成 cmd | grep 时，管道在 pipefail 下整体判失败，
-    # 首次部署（目标策略还不存在）会被误判成读取失败
     policyJson=""
     if ! policyJson=$(${pkgs.kopia}/bin/kopia policy export "${target}" 2>&1); then
       case "$policyJson" in
@@ -117,7 +109,6 @@ let
     ${pkgs.kopia}/bin/kopia maintenance run --full
   '';
 
-  # 手动入口共用前置：自行解密口令并指向仓库配置
   cliPrelude = ''
     KOPIA_PASSWORD="$(cat "''${KOPIA_PASSWORD_FILE:-"${kopiaPasswordPath}"}")"
     export KOPIA_PASSWORD
@@ -135,7 +126,6 @@ in
       }
     ];
 
-    # 定时快照与维护接入 shelken.tasks：调度、抖动、日志与失败通知全部由任务系统提供
     shelken.tasks = {
       kopia-backup = {
         when = cfg.calendarInterval;

@@ -1,4 +1,3 @@
-# yazi：文件管理器
 { config, ... }:
 {
   flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.yazi ];
@@ -24,15 +23,9 @@
 
       home.packages = with pkgs; [
         file
-        # fd 由共享工具登记表提供（shelken.dev.tools，ADR 0003）
         exiftool
         mediainfo
-        # for markdown preview
         glow
-        # for fg.yazi
-        # fzf
-        # ripgrep
-        # bat
       ];
 
       xdg.configFile = {

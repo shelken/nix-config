@@ -1,9 +1,3 @@
-"""宿主配置：Nix 生成的 sb-config.json，是 sb 读取外部事实的唯一入口。
-
-sb 的其余模块都不碰 os.environ。验证与测试换一份 sb-config.json 即可
-改变目录、策略文件与凭据行为；MSB_HOME、MSB_CONFIG_PATH 是 msb 自己的变量，优先于文件里的值。
-"""
-
 from __future__ import annotations
 
 import json
@@ -34,10 +28,10 @@ class Config:
     mise_guest_mount: str
     mise_url_replacements_file: str
     host_credentials: bool
-    host_secret_files: Mapping[str, str]  # 变量名 -> 宿主上存放真实值的文件；只在 msb 创建、启动 VM 时读
-    snapshot_cmd: tuple[str, ...]  # 启动上下文前在宿主建本地快照的命令；空表示不建
+    host_secret_files: Mapping[str, str]
+    snapshot_cmd: tuple[str, ...]
     home: str
-    msb_env: Mapping[str, str]  # msb 子进程的环境：调用者环境加上解析后的 MSB_HOME、MSB_CONFIG_PATH，不依赖用户 shell 是否导出
+    msb_env: Mapping[str, str]
 
     @property
     def approval_dir(self) -> str:

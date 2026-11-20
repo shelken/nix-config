@@ -92,7 +92,6 @@ let
   ]
   ++ displayCommands;
 
-  # App 以命令 id 索引别名、收藏与快捷键，所以 id 必须由名字稳定派生
   commandID =
     name:
     let
@@ -108,8 +107,6 @@ let
   }) customCommands;
 
   # 命令内容与它的快捷键都不进 settings.json，App 只能从 UserDefaults 读到，所以这两项留在这里。
-  # App 快捷键、启动器可见性等偏好一律写在 settings.json：镜像打开后 App 以文件为准，
-  # 在这里重复声明只会被文件清掉。
   tinycastDefaults = {
     boundCustomCommandIDs = map (cmd: commandID cmd.name) hotkeyedCommands;
     settingsFileEnabled = true;
@@ -133,11 +130,8 @@ in
 
   xdg.configFile."tinycast/scripts" = mylib.mkConfigFile config scriptsDir;
 
-  # settings.json 由 App 回写，所以源文件必须可写：liveEdit 主机软链到仓库，其他主机链到只读
-  # 的 Store 路径，启动时照常应用，但 App 内改动保存会失败
   xdg.configFile."tinycast/settings.json" = mylib.mkConfigFile config ./settings.json;
 
-  # 排在 setDarwinDefaults 之后，避免两个步骤的写入顺序不明确
   home.activation.tinycastCustomCommands = lib.hm.dag.entryAfter [ "setDarwinDefaults" ] ''
     /usr/bin/swift ${./sync-commands.swift} '${builtins.toJSON commandRecords}'
   '';

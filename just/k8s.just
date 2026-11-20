@@ -1,5 +1,3 @@
-# k3s 节点：调用 just k8s::<配方>
-
 set working-directory := '..'
 set positional-arguments := true
 

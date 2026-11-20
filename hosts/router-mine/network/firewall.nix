@@ -1,8 +1,4 @@
-# 通用部分：默认策略、lan/wan 区域，以及路由器自身通信所需的 wan 入站放行。
-# zt 区域在 services/zerotier，iot 区域与入站放行在 home-ops/iot.nix，对外 IPv6 放行与 K8s 相关在 home-ops，经 hk1box 的 IoT 规则在 hk1box
 let
-  # OpenWrt 出厂的 wan 入站放行：DHCP 续租、ping、IGMP/MLD、ICMPv6、IPsec 穿透。
-  # 路由器自身收发这些流量才能正常工作，与具体业务无关，所以单独成列
   routerDefaultRules = [
     {
       _type = "rule";

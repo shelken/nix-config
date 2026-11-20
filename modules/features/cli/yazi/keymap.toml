@@ -1,17 +1,14 @@
 #:schema https://yazi-rs.github.io/schemas/keymap.json
-# 一次Esc退出输入框
 [[input.prepend_keymap]]
 desc = "Cancel input"
 on   = ["<Esc>"]
 run  = "close"
 
-# 新建本地tab
 [[mgr.prepend_keymap]]
 desc = "新建本地 tab"
 on   = ["<C-t>"]
 run  = "tab_create ~"
 
-# plugins projects.yazi
 [[mgr.prepend_keymap]]
 on   = ["P", "s"]
 run  = "plugin projects save"

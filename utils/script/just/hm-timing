@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# 在真实 just hm 运行时逐项打印激活耗时；参数原样传给 just hm
 set -euo pipefail
 trace="$(mktemp)"
 hook="$(mktemp)"

@@ -1,5 +1,3 @@
-# 挂载根目录在 guest 内的路径与宿主保持绝对一致。
-
 image: "ubuntu"
 cpus: 4
 memory: "8G"
@@ -8,7 +6,6 @@ memory: "8G"
 # 只有附着的 exec 会话算活跃；msb 只在创建时应用它，改了会让上限指纹变化（空闲时下次启动重建）。不写则不自动停止
 idle_timeout: "5m"
 
-# 命名数据卷（用于 /data，ext4 disk）
 volume:
   name: "sb-main-data"
   size: "8G"
@@ -19,24 +16,16 @@ mount_roots:
   # 临时目录也能作项目根；写真实路径，macOS 的 /tmp 是指向它的符号链接
   - "/private/tmp"
 
-# VM 级网络策略：公网 + DNS + 私网。私网在这一层整体放开，逐项限制由每个
-# 执行上下文自己的 iptables 链完成：只有 sb.yaml 的 default_grant 与已批准（sb trust）的
-# .sandbox.yaml 声明的目标才放行。不在上下文里运行的 guest 进程（如 sb sync）不受上下文链约束，
-# 也能连私网。改这一段会改变上限指纹、触发重建；授权的增减不会触发重建。
 network:
   policy: "public"
   allow:
     - "public"
     - "dns"
     - "private"
-  # 所有执行上下文默认放行的私网 IP:端口：内网入口，cpa、magpie 等模型服务都经它访问
   default_grant:
     - "192.168.69.46:443"
 
 # Secret 全局声明：allow 是真实值的替换目标；passthrough 是占位符的放行目标
-# 占位符 $MSB_<名字> 一旦进入对话（读到含它的文件或文档、跑 env），就会随每轮请求体发往模型服务。
-# msb 对发往 allow 之外目标的占位符默认拦截并切断连接，表现为首字节前 ECONNRESET。
-# 占位符本身不含凭据，原样放行到任何目标不会泄露凭据；真实值仍只替换给 allow 里的目标
 secrets:
   GITHUB_TOKEN:
     allow:
@@ -44,7 +33,6 @@ secrets:
       - "api.github.com"
     passthrough:
       - "*"
-  # agent 专属身份：dev/gh 的 gh 包装在 issue/评论命中时用它
   AGENT_GITHUB_TOKEN:
     allow:
       - "github.com"

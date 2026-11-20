@@ -1,18 +1,9 @@
-"""功能文件形式检查（docs/adr/0012-feature-domains-and-file-form.md）
-
-ast-grep 只看单个文件的语法树，这三条要同时看路径与目录内容，所以单独成脚本：
-- 只装一个 default.nix 的目录：没有资源，应改成 <名>.nix
-- 只把功能挂进角色、自己不发布模块的文件：转发壳，挂接写回功能本身
-- 发布的模块里没有与文件名同名的：模块名即文件名；领域聚合模块（与一级目录同名，如 ai）例外
-"""
-
 import re
 import subprocess
 import sys
 from pathlib import Path
 
 FEATURES = "modules/features"
-# 只算定义：`config.flake.modules.<类>.<名>` 是引用别人的模块
 MODULE = re.compile(r'(?<![\w.])flake\.modules\.(?:darwin|nixos|homeManager)\."?([A-Za-z0-9_-]+)"?')
 
 roles = {p.stem for p in Path("modules/profiles").glob("*.nix")}

@@ -1,9 +1,3 @@
-"""测试环境：临时 HOME、真实 git 项目、sb-config.json 与一个假的 msb。
-
-假 msb 把 VM 状态存在一个 JSON 文件里，只实现 sb 用到的子命令，并把每次调用记进 calls，
-让测试在没有 microsandbox 的机器上驱动完整的生命周期状态机。
-"""
-
 import json
 import os
 import subprocess
@@ -117,7 +111,6 @@ class SbEnv:
 
         self.write_config()
         self.set_policy()
-        # 不继承调用者的环境：MSB_HOME、SB_* 指向真实目录，sb trust 会把批准记录写进去
         inherited = {k: os.environ[k] for k in ("LANG", "LC_ALL", "TMPDIR") if k in os.environ}
         self.env = {
             **inherited,

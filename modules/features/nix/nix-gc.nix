@@ -1,4 +1,3 @@
-# Nix 垃圾回收：root 清系统代数，用户清自己的 home-manager 与 nix profile 代数，保留 7 天
 # root 的 GC 按设计不碰用户家目录里的 profile（NixOS/nix#8508），所以两层都要
 { config, lib, ... }:
 {
@@ -22,7 +21,6 @@
     shelken.tasks.nix-gc = {
       when = "3:15";
       user = false;
-      # --quiet 去掉逐条 deleting 输出：一次几千行，日志一个月涨到 8MB；汇总行走 stdout 不受影响
       script = ''
         exec /nix/var/nix/profiles/default/bin/nix-collect-garbage --quiet --delete-older-than 7d
       '';
@@ -37,7 +35,6 @@
         options = "--delete-older-than 7d";
       };
       # HM 在 launchd 上把 options 整串当一个参数传，nix-collect-garbage 会报 unrecognised flag；
-      # 顺带改用 Determinate 的 nix，不再把 nixpkgs 的 nix 带进闭包
       launchd.agents.nix-gc.config.ProgramArguments = lib.mkIf pkgs.stdenv.isDarwin (
         lib.mkForce [
           "/nix/var/nix/profiles/default/bin/nix-collect-garbage"

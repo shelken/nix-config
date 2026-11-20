@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# 构建 NixOS 镜像并同步到 pve；用法: gen-image <host> <format>
 set -e
 host="${1:?用法: gen-image <host> <format>}"
 format="${2:?用法: gen-image <host> <format>}"

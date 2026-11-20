@@ -1,7 +1,4 @@
 #!/usr/bin/env zsh
-# git-check: 递归检查目录下所有 git 仓库的未提交/未推送状态
-# 用法: git-check [目录] [目录2] ...
-#       不传参数则检查当前目录
 
 local dirs=("$@")
 [[ ${#dirs} -eq 0 ]] && dirs=("$(pwd)")

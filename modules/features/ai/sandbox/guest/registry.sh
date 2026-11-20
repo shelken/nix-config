@@ -1,13 +1,4 @@
 #!/usr/bin/env bash
-# guest/registry.sh: 上下文注册表与槽位生命周期管理
-# 槽位分配不碰网络：调用方在 allocate_slot 之后自己 net_up；回收死上下文与 release_slot 会 net_down。
-# 宿主 sb 在启动 launcher 之前，用 <contexts>/<ctx_id>/starting 标记把有 imports 的上下文登记为「启动中」（py/sb/cli.py）。
-#
-# allocate_slot 返回时持有槽位锁（fd 9），设置：
-#   CURRENT_SLOT           本上下文的槽位号
-#   CURRENT_CTX_DIR        本上下文的注册目录
-#   OTHER_CONTEXTS_COUNT   其他仍在运行或启动宽限期内的上下文数
-# 调用方在启动结束后 release_slot_lock
 set -euo pipefail
 
 CONTEXTS_DIR="$SB_CONTEXTS_DIR"

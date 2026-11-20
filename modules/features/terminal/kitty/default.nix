@@ -1,7 +1,5 @@
-# Kitty 终端：配置 + 应用本体都由 HM programs.kitty 提供（nixpkgs）
 { config, ... }:
 {
-  # 跨平台（nixpkgs 应用 + 无 darwin 专属安装），gui 角色全覆盖保持原覆盖范围
   flake.modules.darwin.gui.imports = [ config.flake.modules.darwin.kitty ];
   flake.modules.nixos.gui.imports = [ config.flake.modules.nixos.kitty ];
 
@@ -18,17 +16,15 @@
         (lib.importJSON "${config.catppuccin.sources.palette}/palette.json")
         .${myvars.catppuccin.flavor}.colors;
       hex = c: lib.removePrefix "#" c.hex;
-      # 与 kitty 主题的 tab_bar_background / active_tab_background 一致，圆角字符靠它们融入背景
       bar = hex palette.crust;
       pill = hex palette.mauve;
-      dim = hex palette.overlay0; # 序号
+      dim = hex palette.overlay0;
     in
     {
       programs.kitty = {
         enable = true;
 
         darwinLaunchOptions = [
-          # "--directory=/Users/${myvars.username}"
         ];
 
         font = {
@@ -42,10 +38,7 @@
           enableBashIntegration = true;
         };
 
-        extraConfig = ''
-          # claude(supported >= 2.1.0)
-          # map --when-focus-on title:claude shift+enter send_text normal,application \n
-        '';
+        extraConfig = "";
 
         keybindings = {
           # pi：协议协商失败时 Shift+Enter 会退化成普通 Enter；强制发 CSI-u（#5188）
@@ -55,7 +48,6 @@
 
           "cmd+t" = "new_tab";
           "cmd+w" = "close_tab";
-          # 默认 ctrl+shift+q 会关 tab，与 pi dequeue 冲突；关 tab 用上面 cmd+w
           "ctrl+shift+q" = "no_op";
 
           "cmd+shift+m" = "toggle_maximized";
@@ -91,9 +83,6 @@
         settings = {
           symbol_map = "U+2E80-U+9FFF,U+F900-U+FAFF,U+FE30-U+FE4F,U+FF00-U+FFEF,U+20000-U+3FFFF ${myvars.fontFamilies.cjkMonospace}";
 
-          # 仅允许通过 unix socket 远程控制（供 spawn-subagent 在 kitty 中派发子代理）
-          # socket 文件权限为用户独占，不暴露网络；listen_on 需重启 kitty 才生效
-          # ref: https://sw.kovidgoyal.net/kitty/remote-control/
           allow_remote_control = "socket-only";
           listen_on = "unix:/tmp/kitty-{kitty_pid}";
           cursor_trail = 3;
@@ -106,14 +95,11 @@
           window_padding_width = "3 5 1 5";
 
           tab_bar_edge = "bottom";
-          # separator 不额外画分隔符，胶囊圆角由标题模板自己画
           tab_bar_style = "separator";
           tab_separator = ''""'';
           tab_bar_min_tabs = 2;
-          # 标题取活跃 panel 标题的最后一级；非激活 tab 前后各补 2 格，与激活 tab 的「圆角+空格」等宽
           # 以空格开头/结尾的值必须加引号，否则 kitty 解析时会去掉
           tab_title_template = ''"  {fmt.fg._${dim}}{index} {fmt.fg.tab}{title.rsplit('/', 1)[-1]}  "'';
-          # U+E0B6 / U+E0B4 是 Nerd Font 的左右半圆，前景=胶囊色、背景=条色
           active_tab_title_template = "{fmt.fg._${pill}}{fmt.bg._${bar}}{fmt.bg.tab}{fmt.fg.tab} {index} {title.rsplit('/', 1)[-1]} {fmt.fg._${pill}}{fmt.bg._${bar}}";
 
           macos_option_as_alt = "yes";
@@ -134,24 +120,11 @@
         };
       };
 
-      # xdg.configFile."kitty/kitty.conf" = {
-      #   text = concatStrings [
-      #     ''
-      #       # Shell integration
-      #       shell_integration ${shell_integration}
-      #     ''
-      #     origin_file
-      #   ];
-      # };
-      # xdg.configFile."kitty/current-theme.conf" = {
-      #   source = "${pkgs.kitty-themes}/share/kitty-themes/themes/${theme}";
-      # };
       xdg.configFile."kitty/kitty.app.png" = {
         source = "${inputs.kitty-icon}/kitty-light.png";
       };
 
       home.sessionVariables = {
-        # TERM = "xterm-256color";
       };
     };
 }

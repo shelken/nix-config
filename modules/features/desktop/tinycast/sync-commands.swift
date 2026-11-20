@@ -1,6 +1,3 @@
-// 把 Nix 声明的自定义命令合并进 Tinycast 的 UserDefaults。
-// 命令内容不在 settings.json 里，只能由 App 之外的写入者补进去：同 id 的记录以
-// Nix 声明为准，其余记录原样保留，所以用户手建的命令不会被清掉。
 import Foundation
 
 guard let defaults = UserDefaults(suiteName: "com.tinycast.app") else { exit(1) }

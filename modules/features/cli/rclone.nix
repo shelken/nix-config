@@ -1,4 +1,3 @@
-# rclone：sops 渲染的 rclone.conf；rclone 本体只在 darwin 上装
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.rclone ];
@@ -43,7 +42,6 @@
             mode = "0500";
           };
 
-          # 重新调整密码
           home.activation.postRclone = lib.hm.dag.entryAfter [ "sops-nix" ] ''
             RCLONE_PATH=${config.xdg.configHome}/rclone/rclone.conf
             RCLONE_TEMPLATE_PATH=${config.xdg.configHome}/sops-nix/secrets/rendered/rclone.conf

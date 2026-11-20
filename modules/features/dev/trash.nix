@@ -1,4 +1,3 @@
-# rm 改为移到废纸篓：Agent 与人在宿主上误删可从废纸篓找回
 { config, ... }:
 {
   flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.trash ];

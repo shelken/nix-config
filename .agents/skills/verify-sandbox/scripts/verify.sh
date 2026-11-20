@@ -9,7 +9,6 @@ HOST="${SB_VERIFY_HOST:-mio}"
 BASE="$(realpath /tmp)/sb-verify/$RUN_ID"
 WORK="$BASE/work"
 EVIDENCE="$BASE/evidence"
-# 测试项目必须在 sb.yaml 的挂载根内
 PROJ="$HOME/Code/sb-verify-$RUN_ID"
 MSB_BIN="$(mise which msb 2>/dev/null || command -v msb)"
 
@@ -21,7 +20,6 @@ sb_bin() {
 }
 
 # 会话里继承的 MSB_CONFIG_PATH 指向日常配置，其中的 home 字段会覆盖 MSB_HOME，必须同时替换；
-# sb 读的 sb-config.json 换成 setup 里由真实产物改写的那份
 iso_env() {
   env SB_TEST_CONFIG="$WORK/sb-config.json" \
     MSB_HOME="$WORK/msb" MSB_CONFIG_PATH="$WORK/msb.json" "$@"
@@ -32,7 +30,6 @@ yq_repo() { nix shell --no-warn-dirty --inputs-from "$REPO" nixpkgs#yq-go -c yq 
 cmd_setup() {
   mkdir -p "$WORK/msb" "$EVIDENCE"
   echo "[*] 构建 $HOST 的 Home Manager 产物（out-link 作为 GC root，防止验证中途被回收）"
-  # liveEdit 会把声明的配置软链到主工作区，验证的就不是当前 worktree；构建时强制关掉
   nix build --impure --out-link "$WORK/gen" --expr "
     let
       flake = builtins.getFlake \"$REPO\";
@@ -51,7 +48,6 @@ cmd_setup() {
 {"version":1,"home":"$WORK/msb","paths":{"cache":"$cache"},"sandbox_defaults":{"metrics_sample_interval_ms":0,"disable_metrics_sample":true}}
 EOF
 
-  # 激活时的发布脚本写宿主 ~/.config/sandbox；改写目标到隔离目录，不碰日常 VM 在用的配置
   local publish
   publish="$(grep -o '/nix/store/[a-z0-9]*-publish-sandbox-config' "$WORK/gen/activate" | head -n 1)"
   [[ -n "$publish" ]] || die "激活脚本里找不到 publish-sandbox-config，沙箱是否已为 $HOST 启用"
@@ -123,7 +119,6 @@ cmd_cleanup() {
   echo "[+] 已清理 VM、卷、工作目录与测试项目；证据保留在 $EVIDENCE"
 }
 
-# 文档里的模型、网关、规格都从仓库的事实源现算，避免写死后过期
 cmd_env() {
   local sbyaml="$REPO/modules/features/ai/sandbox/sb.yaml"
   printf 'MODEL=%q\n' "$(jq -r '"\(.defaultProvider)/\(.defaultModel)"' "$REPO/modules/features/ai/pi/settings.json")"
