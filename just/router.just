@@ -13,7 +13,7 @@ uci := 'nix build .#router-mine-uci --no-link --print-out-paths'
 # 从未展开的声明里找出写了 {{ sops.… }} 的 文件.段.选项，把输出中这些键的值打码（规则见 mask.jq）
 nuci := '''
 esc=$'\033'
-src=${src:-$(''' + uci + ''')}
+src=$(''' + uci + ''')
 sops_file=$(nix eval --raw .#router-mine-uci.sopsFile)
 mask_expr=$(jq -r --arg esc "$esc" -f modules/features/network/openwrt/mask.jq "$src")
 # 兜底：被删除的条目声明里没有占位符，规则覆盖不到，MAC 与由 MAC 推出的 IPv6 后缀（EUI-64）一律打码
@@ -39,11 +39,11 @@ preview $host=target:
 push $host=target:
     #!/usr/bin/env bash
     set -euo pipefail
-    src=$({{ uci }})
-    hotspot=$(jq -r '.settings.wireless | to_entries | map(select(.value._type == "wifi-iface" and .value.mode == "sta" and .value.disabled == "1")) | if length == 1 then .[0].key else error("expected 1 disabled sta wifi-iface in wireless settings") end' "$src")
-    # 热点中继在 LuCI 里开启时，声明里它是关闭的，下发会把它关掉并让路由器断网
-    # 刚刷完的系统没有该段，视为关闭
-    [ "$(ssh -- "$host" "if uci -q get 'wireless.$hotspot' >/dev/null; then uci -q get 'wireless.$hotspot.disabled'; else echo 1; fi")" = 1 ] || { echo "热点中继（$hotspot）已启用，先在 LuCI 关掉再下发" >&2; exit 1; }
+    # 热点中继在 LuCI 里开启时，声明里它是关闭的，下发会把它关掉并让路由器断网；
+    # 直接查设备上所有启用中的 sta 段，不依赖声明中的段名（改名或临时段都能拦住）；刚刷完无 wireless 文件视为关闭
+    active_sta=$(ssh -- "$host" 'if [ -f /etc/config/wireless ]; then ubus call uci get '\''{"config":"wireless"}'\''; else echo "{}"; fi' |
+      jq -r '[.values // {} | to_entries[] | select(.value[".type"] == "wifi-iface" and .value.mode == "sta" and (.value.disabled // "0") != "1") | .key] | join(",")')
+    [ -z "$active_sta" ] || { echo "热点中继（$active_sta）已启用，先在 LuCI 关掉再下发" >&2; exit 1; }
     avahi_before=$(ssh -- "$host" 'md5sum /etc/avahi/avahi-daemon.conf')
     {{ nuci }}deploy "$tmp/uci.json" --target "$host" 2>&1 | mask
     # bird -p 校验失败时不重载，BIRD 继续跑旧配置
