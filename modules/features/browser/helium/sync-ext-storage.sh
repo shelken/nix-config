@@ -20,12 +20,21 @@ for id in "${ids[@]}"; do
     [ -f "$profile/Preferences" ] || continue
     to="$profile/Local Extension Settings/$id"
     mkdir -p "${to%/*}"
-    # 先复制到临时目录再替换，中途失败不会留下空存储
-    rm -rf "$to.tmp"
+    rm -rf "$to.tmp" "$to.bak"
     cp -R "$from" "$to.tmp"
     rm -f "$to.tmp/LOCK"
-    rm -rf "$to"
-    mv "$to.tmp" "$to"
+    if [ -e "$to" ]; then
+      mv "$to" "$to.bak"
+    fi
+    if mv "$to.tmp" "$to"; then
+      rm -rf "$to.bak"
+    else
+      if [ -e "$to.bak" ]; then
+        mv "$to.bak" "$to"
+      fi
+      rm -rf "$to.tmp"
+      exit 1
+    fi
     echo "$id: $source_profile -> ${profile##*/}"
   done
 done
