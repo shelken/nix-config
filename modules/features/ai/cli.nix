@@ -19,7 +19,7 @@
         programs.mise.globalConfig.tools = {
           herdr = "latest";
           # renovate: datasource=npm depName=ctx7
-          "npm:ctx7" = "0.11.1";
+          "npm:ctx7" = "0.12.2";
           "npm:@seflless/deepwiki" = {
             # renovate: datasource=npm depName=@seflless/deepwiki
             version = "0.1.8";
