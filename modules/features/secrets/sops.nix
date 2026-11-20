@@ -1,3 +1,4 @@
+# 可选功能：需要的 NixOS 主机在 imports 里加 self.modules.nixos.sops，并设置 sops.defaultSopsFile
 { inputs, ... }:
 {
   flake.modules.nixos.sops =

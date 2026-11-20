@@ -1,7 +1,7 @@
 /**
  * 移植自 npm:pi-subdir-context v1.1.7（MIT, Anton Kuzmenko），作为 omp 对
  * 「cwd 之下子目录 AGENTS.md 只提示指针、不自动注入」行为的补强；宿主已加载
- * 的 cwd 层文件与上游一样跳过。整个会话内每个文件只注入一次。
+ * 的 cwd 层文件与上游一样跳过。
  */
 
 import fs from "node:fs";
@@ -145,6 +145,7 @@ export default function subdirContext(pi: ExtensionAPI): void {
 		const pathInput = result.input?.path;
 		if (typeof pathInput !== "string" || pathInput === "") return undefined;
 
+		// /move、/wt 会在同一会话内就地改 cwd 且不触发会话事件，必须每次比对
 		if (sessionCwd !== ctx.cwd) resetSession(ctx.cwd);
 
 		const isRead = result.toolName === "read";

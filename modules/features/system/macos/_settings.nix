@@ -93,7 +93,7 @@
           AppleHighlightColor = "1.000000 0.749020 0.823529 Pink";
           AppleIconAppearanceTintColor = "Other";
           AppleICUForce24HourTime = true;
-          AppleICUForce12HourTime = false;
+          AppleICUForce12HourTime = false; # 12h 键优先：为 true 时无论 24h 键为何值都走 12h
           AppleIconAppearanceCustomTintColor = "0.475000 0.822795 1.000000 0.845588";
           AppleLanguages = [
             "zh-Hans-${myvars.region}"

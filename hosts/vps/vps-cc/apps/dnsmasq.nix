@@ -4,7 +4,7 @@ let
 in
 #  这里试过走 nixpkgs 的原生 module，落不下来：`services.dnsmasq.configFile`
 #  是 readOnly 的，配置只能由 `settings` 生成，而这份配置里的主域名与集群网关
-#  地址来自 sops，sops 只能渲染整份文件。容器保留挂载 sops 渲染文件的写法，
+#  地址来自 sops，sops 只能渲染整份文件，因此改为容器挂载 sops 渲染文件。
 {
   sops.secrets = {
     "main-domain" = { };

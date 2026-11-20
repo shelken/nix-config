@@ -7,6 +7,7 @@
 }:
 #  Homepage 的 docker 集成只从列表接口读 Id / Names / State / Labels，health 只能靠
 #  filters 区分（其源码注释：docker exposes health only as a filter on the list
+#  endpoint, never as a field）。
 let
   address = myvars.networking.hostAddress."vps-cc-ts".address;
 

@@ -1,5 +1,5 @@
+# 可选功能：要用的主机在 imports 里加 self.modules.darwin.dnscontrol（NixOS 主机同理）
 {
-  # dnscontrol：安装工具并通过 dnscontrol-cf 封装 Cloudflare token，操作入口在 just/dns.just
   flake.modules.homeManager.dnscontrol =
     {
       config,

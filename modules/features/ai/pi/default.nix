@@ -65,6 +65,7 @@
       shelken.dev.sandbox.writableRoots = [ ".pi/agent" ];
 
       # pi 只在 `pi install` / `pi remove` 时改 npm/package.json，启动时只补装缺失的包、从不清理；
+      # settings.json 由本仓库声明，删掉一行 pi 并不知情，旧包会一直留在安装目录。
       home.activation.piPruneNpm = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         npm_dir="${config.home.homeDirectory}/.pi/agent/npm"
         if [ -f "$npm_dir/package.json" ]; then

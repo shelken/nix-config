@@ -119,6 +119,7 @@ def run(cfg: Config, msb: Msb, args: list[str]) -> int:
     if p.imports:
         _stage_imports(cfg, msb, ctx_id, p)
 
+    # msb exec 只给 pty 设 TERM，不转发 COLORTERM；缺了它 pi/omp 会把主题降级成 256 色，与宿主出现色差
     if terminal == ["-t"] and os.environ.get("COLORTERM"):
         terminal += ["-e", f"COLORTERM={os.environ['COLORTERM']}"]
 

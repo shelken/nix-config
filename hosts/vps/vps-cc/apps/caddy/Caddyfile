@@ -9,7 +9,7 @@
   metrics {
     per_host
   }
-  # 而 Caddy 管理面无认证：GET /config/ 读生效配置（含已替换的 CF token）、POST /load 重配整站
+  # Caddy 管理面无认证（GET /config/ 可读含已替换 CF token 的生效配置、POST /load 可重配整站），因此仅绑定容器内 unix socket
   admin unix//run/caddy-admin.sock
   servers {
     protocols h1 h2 h3

@@ -47,7 +47,6 @@ else
   echo '{"models":[]}' > "$OMP_JSON"
 fi
 
-# 4. 用 jq 对比差集并生成 YAML 格式的 modelOverrides
 JQ_BIN="$(command -v jq 2>/dev/null || echo "/run/current-system/sw/bin/jq")"
 
 # shellcheck disable=SC2016
@@ -110,7 +109,6 @@ else
   : > "$BLOCK_FILE"
 fi
 
-# 5. 确保 models.yml 中存在锚点注释，存在则替换区域内容
 if ! grep -q '# >>> mp-modelOverrides:auto-sync >>>' "$MODELS_FILE"; then
   awk '
     /^  mp:/ { in_mp = 1 }
@@ -125,7 +123,6 @@ if ! grep -q '# >>> mp-modelOverrides:auto-sync >>>' "$MODELS_FILE"; then
   ' "$MODELS_FILE" > "${MODELS_FILE}.tmp" && mv "${MODELS_FILE}.tmp" "$MODELS_FILE"
 fi
 
-# 使用 awk 替换锚点区间
 awk -v block_file="$BLOCK_FILE" '
   BEGIN { in_block = 0 }
   /# >>> mp-modelOverrides:auto-sync >>>/ {

@@ -1,3 +1,4 @@
+# 可选功能：节点主机经 hosts/k8s/common.nix 导入，并设置 shelken.k3s.*
 { ... }:
 {
   flake.modules.nixos.k3s-node =
@@ -14,6 +15,7 @@
       yaml = pkgs.formats.yaml { };
 
       kubeletArgs = [
+        # 节点根分区只放系统与镜像，Longhorn 不在根分区上；阈值太低时 nix store 稍涨就会触发 GC 失败告警
         "image-gc-low-threshold=75"
         "image-gc-high-threshold=80"
         "feature-gates=ImageVolume=true"

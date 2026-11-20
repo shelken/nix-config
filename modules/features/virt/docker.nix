@@ -1,3 +1,4 @@
+# 可选功能，需要时主机 imports = [ self.modules.nixos.docker ]
 {
   flake.modules.nixos.docker.virtualisation.docker = {
     enable = true;

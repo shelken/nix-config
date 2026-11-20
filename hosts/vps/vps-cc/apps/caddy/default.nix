@@ -37,6 +37,7 @@ in
     autoStart = true;
     environment = {
       TZ = "Asia/Shanghai";
+      # 与本机 sysctl 一起关掉 MPTCP：双入口场景下 MPTCP 会踩到内核缺陷
       GODEBUG = "multipathtcp=0";
     };
     environmentFiles = [ config.sops.templates."caddy.env".path ];

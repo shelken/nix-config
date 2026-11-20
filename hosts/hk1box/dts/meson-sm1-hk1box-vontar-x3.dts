@@ -53,6 +53,7 @@
 			sound-dai = <&frddr_c>;
 		};
 
+		/* 8ch hdmi interface */
 		dai-link-3 {
 			sound-dai = <&tdmif_b>;
 			dai-format = "i2s";
@@ -67,6 +68,7 @@
 			};
 		};
 
+		/* hdmi glue */
 		dai-link-4 {
 			sound-dai = <&tohdmitx TOHDMITX_I2S_OUT>;
 
@@ -118,6 +120,8 @@
 	pinctrl-names = "default";
 	phy-handle = <&external_phy>;
 
+	//phy-mode = "rgmii-txid";
+	//rx-internal-delay-ps = <800>;
 	phy-mode = "rgmii";
 	amlogic,tx-delay-ns = <2>;
 
@@ -134,6 +138,10 @@
 
 &ext_mdio {
 	external_phy: ethernet-phy@0 {
+		/* 
+		 * Realtek RTL8211F (0x001cc916) 
+		 * JLSemi JL2101 (0x937c4032)
+		 */
 		reg = <0>;
 		max-speed = <1000>;
 
@@ -142,6 +150,7 @@
 		reset-gpios = <&gpio GPIOZ_15 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
 
 		interrupt-parent = <&gpio_intc>;
+		/* MAC_INTR on GPIOZ_14 */
 		interrupts = <IRQID_GPIOZ_14 IRQ_TYPE_LEVEL_LOW>;
 	};
 };
@@ -194,24 +203,35 @@
 	dr_mode = "host";
 };
 
+/* SDIO */
 &sd_emmc_a {
+	///delete-property/ sd-uhs-sdr104;
 	sd-uhs-sdr50;
 	max-frequency = <100000000>;
 
+        //sd-uhs-ddr50;
+	//max-frequency = <50000000>;
+
+	//sd-uhs-sdr104;
+	//max-frequency = <200000000>;
 };
 
+/* Begin: fix hcy6355 wifi module problem */
 &sdio_pins {
 	mux {
 		/delete-property/ bias-disable;
 		bias-pull-up;
 	};
 };
+/* End: fix hcy6355 wifi module problem */
 
+/* SD card */
 &sd_emmc_b {
 	cap-sd-highspeed;
 	max-frequency = <25000000>;
 };
 
+/* eMMC */
 &sd_emmc_c {
 	max-frequency = <200000000>;
 };

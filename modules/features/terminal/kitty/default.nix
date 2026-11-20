@@ -48,6 +48,7 @@
 
           "cmd+t" = "new_tab";
           "cmd+w" = "close_tab";
+          # 默认 ctrl+shift+q 会关 tab，与 pi dequeue 冲突；关 tab 用上面 cmd+w
           "ctrl+shift+q" = "no_op";
 
           "cmd+shift+m" = "toggle_maximized";

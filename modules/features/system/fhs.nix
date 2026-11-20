@@ -23,8 +23,6 @@
         )
       ];
 
-      # nix-ld's nixos module will set default values for `NIX_LD` and `NIX_LD_LIBRARY_PATH` environment variables, so
-      # it can work out of the box:
       programs.nix-ld = {
         enable = true;
         libraries = with pkgs; [

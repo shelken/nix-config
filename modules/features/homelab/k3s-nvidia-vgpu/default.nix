@@ -1,3 +1,4 @@
+# 可选功能：homelab-1 主机直接导入；不要与桌面用的 features/system/nvidia.nix 同时导入
 { inputs, ... }:
 {
   flake.modules.nixos.k3s-nvidia-vgpu =

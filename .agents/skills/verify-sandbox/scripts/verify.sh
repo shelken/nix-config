@@ -19,7 +19,7 @@ sb_bin() {
   readlink -f "$WORK/gen/home-path/bin/sb"
 }
 
-# 会话里继承的 MSB_CONFIG_PATH 指向日常配置，其中的 home 字段会覆盖 MSB_HOME，必须同时替换；
+# 会话里继承的 MSB_CONFIG_PATH 指向日常配置，其中的 home 字段会覆盖 MSB_HOME，必须同时替换。
 iso_env() {
   env SB_TEST_CONFIG="$WORK/sb-config.json" \
     MSB_HOME="$WORK/msb" MSB_CONFIG_PATH="$WORK/msb.json" "$@"

@@ -62,6 +62,7 @@ in
         serviceConfig = tasksLib.mkLaunchdConfig name t;
       }) rootTasks;
 
+      # launchd 每次启动任务都会重新打开日志，标志 N 避免 newsyslog 轮转后向 syslogd 发 SIGHUP
       environment.etc."newsyslog.d/space.ooooo.tasks.conf".text = ''
         /Library/Logs/task-*.log               root:wheel                  644  5     1024     *    GNZ
         ${userHome}/Library/Logs/task-*.log    ${myvars.username}:staff    644  5     1024     *    GNZ

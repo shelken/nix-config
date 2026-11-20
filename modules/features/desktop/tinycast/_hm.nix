@@ -107,6 +107,8 @@ let
   }) customCommands;
 
   # 命令内容与它的快捷键都不进 settings.json，App 只能从 UserDefaults 读到，所以这两项留在这里。
+  # App 快捷键、启动器可见性等偏好一律写在 settings.json：镜像打开后 App 以文件为准，
+  # 在这里重复声明只会被文件清掉。
   tinycastDefaults = {
     boundCustomCommandIDs = map (cmd: commandID cmd.name) hotkeyedCommands;
     settingsFileEnabled = true;

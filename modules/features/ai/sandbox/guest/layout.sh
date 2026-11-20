@@ -96,6 +96,7 @@ require_published() {
   fi
 }
 
+# 声明删除或改名后，旧落点的空占位留在数据盘，工具会把它当真文件加载（OMP 读到空的 guard.ts 报「does not export a valid factory function」）。
 LAYOUT_STATE="$SB_DATA_DIR/home/.declared-paths"
 prune_stale_placeholders() {
   local others="$1" list="$2" t dst="" a="" _root=""

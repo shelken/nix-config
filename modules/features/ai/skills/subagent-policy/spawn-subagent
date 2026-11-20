@@ -479,7 +479,7 @@ const herdrTerm: Term = {
   },
   start({ agentName, launch, prompt }) {
     const newPane = layoutPane(process.env.HERDR_PANE_ID!);
-    const closeNew = () => { try { execFileSync("herdr", ["pane", "close", newPane]); } catch { /* 已关闭 */ } };
+    const closeNew = () => { try { execFileSync("herdr", ["pane", "close", newPane]); } catch {} };
     try {
       execFileSync("herdr", ["pane", "run", newPane, `export ${envPairs(launch.env).join(" ")}`]);
       herdrAgentStart(agentName, newPane, launch.kind, launch.args);
@@ -576,7 +576,7 @@ const kittyTerm: Term = {
     try {
       kittyEqualize(main);
     } catch (e: any) {
-      try { kitten(["close-window", "--match", `id:${pane}`]); } catch { /* 已关闭 */ }
+      try { kitten(["close-window", "--match", `id:${pane}`]); } catch {}
       throw new Error(`布局调整失败: ${String(e.message ?? e)}`);
     }
     return { pane, alive: () => kittyAlive(pane) };
@@ -668,6 +668,7 @@ function cliError(e: any): string {
   }
 }
 
+// HC_TERMINAL_ID 优先（Herdr.app 内可能残留已失效的旧 HERDR_PANE_ID），其次旧 Herdr（可能运行在 kitty 内），最后 Kitty
 function getTerm(): Term {
   if (process.env.HC_TERMINAL_ID) return hcTerm;
   if (process.env.HERDR_PANE_ID) return herdrTerm;
@@ -848,6 +849,8 @@ function agyFinalReply(steps: AgyStep[]): AgyStep | null {
 
 const agyResponded = (steps: AgyStep[]) => steps.some((s) => s.type === "PLANNER_RESPONSE");
 
+// transcript 要等首条回复完成才写入，高档位模型首轮思考常超过健康门期限且磁盘上没有流式信号。
+// 额度、认证等快速失败会以 Stop 报错或进程退出出现，所以会话启动后安静超过宽限即视为健康
 const AGY_QUIET_HEALTHY_MS = 20_000;
 
 function observeAgy(runDir: string): HealthObservation {
@@ -927,6 +930,7 @@ async function agyHook(event: string) {
     reply = agyHookEvent(event, input, meta, runDir);
   } catch (e: any) {
     try { appendFileSync(join(runDir, "hook.log"), `${new Date().toISOString()} ${event}: ${e.stack ?? e}\n`); } catch { /* 目录不可写 */ }
+    // hook 失败时 agy 默认放行，受限工具必须显式拒绝，否则只读约束失效
     if (event === "pre-tool") reply = { decision: "deny", reason: `spawn-subagent hook 出错: ${e.message ?? e}` };
   }
   console.log(JSON.stringify(reply));
@@ -1009,7 +1013,7 @@ async function gateAgent(l: Launched, timeoutMs: number): Promise<DispatchResult
   const gate = await healthGate(l.observe, l.alive, timeoutMs);
   const reason = gate && !gate.healthy ? classifyFailure(gate.reason ?? "") : (gate ? undefined : "transient: health-check timeout (no model response)");
   if (reason) {
-    try { l.term.close(l.pane); } catch { /* 已关闭 */ }
+    try { l.term.close(l.pane); } catch {}
     return { profile: l.profile, pane: "-", agentName: l.agentName, healthy: false, reason };
   }
   l.onHealthy?.();

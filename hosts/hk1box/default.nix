@@ -40,6 +40,8 @@ in
     # sing-box 的 auto_redirect 用 nftables
     nftables = {
       enable = true;
+      # 开启 flushRuleset 会在重载时清空整个规则集，连 sing-box（auto_redirect）自己建的表一起删掉，导致代理中断；
+      # 关掉后 NixOS 只删除、重建它自己声明的表
       flushRuleset = false;
     };
     firewall = {

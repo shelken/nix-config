@@ -35,6 +35,7 @@
         options = "--delete-older-than 7d";
       };
       # HM 在 launchd 上把 options 整串当一个参数传，nix-collect-garbage 会报 unrecognised flag；
+      # 顺带改用 Determinate 的 nix，不再把 nixpkgs 的 nix 带进闭包
       launchd.agents.nix-gc.config.ProgramArguments = lib.mkIf pkgs.stdenv.isDarwin (
         lib.mkForce [
           "/nix/var/nix/profiles/default/bin/nix-collect-garbage"

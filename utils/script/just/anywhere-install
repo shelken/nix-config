@@ -3,6 +3,8 @@
 # 而 icache 与原站 Priority 相同、同级按列表顺序试源，追加等于 icache 永不命中（见 modules/features/nix/nix-icache.nix）。
 # 所以关掉它（--no-use-machine-substituters），由这里写入。写在 root 的用户级 nix.conf：
 # --build-on remote 经 ssh-ng 起的 nix-daemon 以 root 运行，会读它；安装环境在内存里，重启即消失。
+# PHASES=disko,install 时装完不重启：大体积、稀疏的数据不走 extra-files（nixos-anywhere 的 tar 未启用 --sparse，无法保留稀疏），
+# 此时自行写入目标的 /mnt，再 ssh root@<目标> reboot
 set -euo pipefail
 host="${1:?用法: anywhere-install <主机> <目标地址> [extra-files 目录]}"
 target="${2:?用法: anywhere-install <主机> <目标地址> [extra-files 目录]}"
