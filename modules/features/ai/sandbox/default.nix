@@ -56,7 +56,7 @@
         };
         shelken.dev.ai.sandboxInstructions = builtins.readFile ./AGENTS.sandbox.md;
         # renovate: datasource=github-releases depName=superradcompany/microsandbox
-        programs.mise.globalConfig.tools.microsandbox = "0.7.15";
+        programs.mise.globalConfig.tools.microsandbox = "0.7.16";
 
         home.sessionVariables = host.sessionVariables;
 
