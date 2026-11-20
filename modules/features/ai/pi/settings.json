@@ -6,55 +6,49 @@
     "reserveTokens": 22000,
     "modelOverrides": {
       "cpa/gemini-4-hydrogen-xhigh": {
-        "reserveTokens": 648576
+        "reserveTokens": 748576
       },
       "cpa/gemini-4-neon-medium": {
-        "reserveTokens": 648576
+        "reserveTokens": 748576
       },
       "cpa/gemini-4-neon-xhigh": {
-        "reserveTokens": 648576
+        "reserveTokens": 748576
       },
       "cpa/gemini-4-neon-high": {
-        "reserveTokens": 648576
+        "reserveTokens": 748576
       },
       "anthropic/gemini-4-argon-high": {
-        "reserveTokens": 648576
+        "reserveTokens": 748576
       },
       "cpa/gemini-3.8-flash": {
-        "reserveTokens": 648576
+        "reserveTokens": 748576
       },
       "cpa/workbuddy/glm-5.3": {
-        "reserveTokens": 600000
+        "reserveTokens": 700000
       },
       "cpa/workbuddy/glm-5.2": {
-        "reserveTokens": 600000
+        "reserveTokens": 700000
       },
       "anthropic/claude-opus-5-5": {
-        "reserveTokens": 600000
+        "reserveTokens": 700000
       },
       "anthropic/claude-fable-5-2": {
-        "reserveTokens": 600000
-      },
-      "mp/qoder-cn/dfmodel": {
-        "reserveTokens": 600000
+        "reserveTokens": 700000
       },
       "cpa/claude-fable-5-2": {
-        "reserveTokens": 600000
-      },
-      "mp/qoder-cn/gmodel": {
-        "reserveTokens": 600000
+        "reserveTokens": 700000
       },
       "mp/loomy/GLM-5.3-Flash": {
-        "reserveTokens": 648576
+        "reserveTokens": 748576
       },
       "anthropic/claude-sonnet-5-5": {
-        "reserveTokens": 600000
+        "reserveTokens": 700000
       },
       "mp/loomy/DeepSeek-V4.1-Flash": {
-        "reserveTokens": 648576
+        "reserveTokens": 748576
       },
       "mp/codex/gpt-6.2-sol": {
-        "reserveTokens": 100000
+        "reserveTokens": 200000
       }
     }
   },
@@ -73,9 +67,7 @@
     "cpa/workbuddy/glm-5.2:high",
     "anthropic/claude-opus-5-5:medium",
     "anthropic/claude-fable-5-2:low",
-    "mp/qoder-cn/dfmodel:high",
     "cpa/claude-fable-5-2:medium",
-    "mp/qoder-cn/gmodel:high",
     "mp/loomy/GLM-5.3-Flash:high",
     "anthropic/claude-sonnet-5-5:high",
     "mp/loomy/DeepSeek-V4.1-Flash:high",

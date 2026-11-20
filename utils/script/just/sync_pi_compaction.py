@@ -13,10 +13,9 @@ import threading
 from pathlib import Path
 
 # ---- 可调参数 ----------------------------------------------------------------
-# 自动压缩节点（token）：窗口用到该值时压缩。按「向下就近」选：取不超过窗口的最大节点
-COMPACT_AT = (250_000, 400_000)
-# 节点与窗口之差（即 reserveTokens）的下限；更小的差放弃该节点。压缩摘要自己也要占空间，
-# 取 pi 默认的 reserveTokens
+# 自动压缩节点（token）：取满足预留下限的最大节点。
+COMPACT_AT = (250_000, 300_000)
+# 压缩摘要需要空间，预留值的下限取 pi 内置默认值。
 MIN_RESERVE = 16_384
 # 等 pi 返回模型列表的秒数上限
 RPC_TIMEOUT = 60
@@ -26,7 +25,7 @@ SETTINGS = Path(__file__).resolve().parents[3] / "modules/features/ai/pi/setting
 
 
 def reserve_for(window, nodes, floor):
-    """窗口对应的 reserveTokens；没有节点满足下限时返回 None（走 pi 默认）。"""
+    """窗口对应的模型预留值；没有节点满足下限时使用全局设置。"""
     usable = [n for n in nodes if window - n >= floor]
     return window - max(usable) if usable else None
 
