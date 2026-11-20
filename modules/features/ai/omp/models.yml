@@ -5,6 +5,7 @@ providers:
     api: anthropic-messages
   mp:
     baseUrl: https://magpie.int.ooooo.space/v1
+    # baseUrl: http://127.0.0.1:3425/v1
     api: openai-responses
     apiKey: MAGPIE_API_KEY
     discovery:

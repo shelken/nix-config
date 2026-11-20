@@ -5,6 +5,24 @@
   "compaction": {
     "reserveTokens": 22000,
     "modelOverrides": {
+      "cpa/gemini-4-hydrogen-xhigh": {
+        "reserveTokens": 648576
+      },
+      "cpa/gemini-4-neon-medium": {
+        "reserveTokens": 648576
+      },
+      "cpa/gemini-4-neon-xhigh": {
+        "reserveTokens": 648576
+      },
+      "cpa/gemini-4-neon-high": {
+        "reserveTokens": 648576
+      },
+      "anthropic/gemini-4-argon-high": {
+        "reserveTokens": 648576
+      },
+      "cpa/gemini-3.8-flash": {
+        "reserveTokens": 648576
+      },
       "cpa/workbuddy/glm-5.3": {
         "reserveTokens": 600000
       },
@@ -45,6 +63,12 @@
     "+codemode"
   ],
   "enabledModels": [
+    "cpa/gemini-4-hydrogen-xhigh:xhigh",
+    "cpa/gemini-4-neon-medium:medium",
+    "cpa/gemini-4-neon-xhigh:xhigh",
+    "cpa/gemini-4-neon-high:high",
+    "anthropic/gemini-4-argon-high:high",
+    "cpa/gemini-3.8-flash:high",
     "cpa/workbuddy/glm-5.3:high",
     "cpa/workbuddy/glm-5.2:high",
     "anthropic/claude-opus-5-5:medium",
@@ -60,7 +84,7 @@
   "extensions": [],
   "fullscreenScrollbar": "auto",
   "hideThinkingBlock": false,
-  "lastChangelogVersion": "1.5.2",
+  "lastChangelogVersion": "1.6.0",
   "npmCommand": [
     "bun"
   ],
@@ -134,6 +158,7 @@
   "extensionChangelogVersions": {
     "{\"source\":\"npm:pi-better@0.2.0\",\"scope\":\"user\"}": "0.2.0",
     "{\"source\":\"npm:pi-inspect\",\"scope\":\"project\"}": "0.6.0",
-    "{\"source\":\"npm:pi-inspect\",\"scope\":\"user\"}": "0.6.0"
+    "{\"source\":\"npm:pi-inspect\",\"scope\":\"user\"}": "0.6.0",
+    "{\"source\":\"npm:pi-inspect@0.6.0\",\"scope\":\"user\"}": "0.6.0"
   }
 }

@@ -26,7 +26,7 @@
 
       extensions = {
         # 最小化原则; 一旦引入再注释 会立刻在下次重新打开时移除掉.
-        # pejdijmoenmkgeppbflobdenhhabjlaj = "iCloud 密码";
+        pejdijmoenmkgeppbflobdenhhabjlaj = "iCloud 密码";
         # bpoadfkcbjbfhfodiogcnhhhpibjhbnh = "沉浸式翻译";
         # bcjindcccaagfpapjjmafapmmgkkhgoa = "JSON Formatter";
         # clngdbkpkpeebahjckkjfobafhncgmne = "Stylus";

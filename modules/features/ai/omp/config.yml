@@ -20,23 +20,26 @@ modelRoles:
   claude: anthropic/claude-sonnet-5-5:high
   claude-max: anthropic/claude-opus-5-5:medium
   fable: anthropic/claude-opus-5-5:medium
+  gemini-lite: cpa/gemini-3.8-flash:high
+  gemini: cpa/gemini-4-neon-medium:medium
+  gemini-max: cpa/gemini-4-neon-high:high
   reviewer-gemini: cpa/gemini-3.8-flash:high
   reviewer-ds: "@dsf:xhigh"
   reviewer-glm: "@glm-flash"
   reviewer-gpt: "@gpt:xhigh"
   reviewer-cc: "@claude"
-  judge: "@claude"
+  reviewer: "@reviewer-gpt"
+  judge: "@gemini-max"
   vision: cpa/gpt-5.6-luna:high
   commit: cpa/workbuddy/hy3:high
   tiny: cpa/workbuddy/hy3:high
   memory: cpa/gpt-5.6-luna:high
   web: google/gemini-2.5-flash
-  gog: cpa/gemini-3.8-flash:high
   plan: "@reviewer-gpt"
   smol: "@gpt-lite"
-  scout: "@dsf"
-  default: "@dsf"
-  task: "@claude"
+  scout: "@gemini-lite"
+  default: "@gemini"
+  task: "@gemini"
   slow: "@gpt:high"
 cycleOrder:
   - smol
@@ -44,7 +47,6 @@ cycleOrder:
   - default
   - claude-max
   - gpt
-  - gog
   - glm-flash
   - glm-max
   - dsf
@@ -77,12 +79,13 @@ statusLine:
     - usage
 task:
   agentModelOverrides:
-    reviewer: "@reviewer-gpt"
+    reviewer: "@reviewer"
     reviewer-gemini: "@reviewer-gemini"
     reviewer-ds: "@reviewer-ds"
     reviewer-glm: "@reviewer-glm"
     reviewer-gpt: "@reviewer-gpt"
     reviewer-cc: "@reviewer-cc"
+    task-gpt: "@gpt:high"
     judge: "@judge"
     poteto-agent: "@task"
     comment-sicko: "@reviewer-gpt"
