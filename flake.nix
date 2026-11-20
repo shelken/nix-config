@@ -137,19 +137,19 @@
     # 静态资源（flake = false）：他人维护、只锁版本的文件树，见 docs/adr/0006-static-assets-as-flake-inputs.md。
     # 用 git+https 而不是 github:：github fetcher 拒绝同时给 ref 与 rev，而 Renovate 要靠两者开 digest PR。
     anti-slop = {
-      url = "git+https://github.com/dmmulroy/anti-slop?ref=main&rev=13909c9e07590f5a85d93c62712259fe14a883f7&shallow=1";
+      url = "git+https://github.com/dmmulroy/anti-slop?ref=main&rev=63dbb09f73438e550a6991dc6d778f979ffbf183&shallow=1";
       flake = false;
     };
     caldo-skills = {
-      url = "git+https://github.com/caldoai/skills?ref=main&rev=f3cf47774975a7d9fca45730babf4ff7ad765ada&shallow=1";
+      url = "git+https://github.com/caldoai/skills?ref=main&rev=d5b68dace378219890d821adb3685538e2c69b04&shallow=1";
       flake = false;
     };
     cursor-plugins = {
-      url = "git+https://github.com/cursor/plugins?ref=main&rev=bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7&shallow=1";
+      url = "git+https://github.com/cursor/plugins?ref=main&rev=aaeb0ea3a0584995aa8f55ce44c6c5259414b896&shallow=1";
       flake = false;
     };
     diagram-design = {
-      url = "git+https://github.com/cathrynlavery/diagram-design?ref=main&rev=f6db0decea96de66b901331a0f79a8d4b147ebae&shallow=1";
+      url = "git+https://github.com/cathrynlavery/diagram-design?ref=main&rev=d74d8c2d0c78a9e1efd43137f6a9a51182a8b5f0&shallow=1";
       flake = false;
     };
     humanlayer-skills = {
@@ -169,7 +169,7 @@
       flake = false;
     };
     mattpocock-skills = {
-      url = "git+https://github.com/mattpocock/skills?ref=main&rev=5863806dd4e15c63174bee4e7515a4256792ecfa&shallow=1";
+      url = "git+https://github.com/mattpocock/skills?ref=main&rev=abeeaf95660ba9e8b7c753eb38f441ca707a8823&shallow=1";
       flake = false;
     };
     rime-main = {
