@@ -55,21 +55,22 @@ nix build "$installable" --dry-run 2>"$log" || {
 }
 
 # 两段清单：will be built 下的 .drv，will be fetched 下的路径
-built=$(awk '/will be built:$/ {f=1; next} /will be fetched/ {f=0} f && /^ +\/nix\/store\// {print $1}' "$log")
+built_drvs=()
+while IFS= read -r drv; do
+  [[ -n $drv ]] && built_drvs+=("$drv")
+done < <(awk '/will be built:$/ {f=1; next} /will be fetched/ {f=0} f && /^ +\/nix\/store\// {print $1}' "$log")
 fetched=$(awk '/will be fetched/ {f=1; next} /will be built:$/ {f=0} f && /^ +\/nix\/store\// {print $1}' "$log")
 fetch_summary=$(grep -oE 'will be fetched \([^)]*\)' "$log" | sed -E 's/will be fetched \((.*)\)/\1/' || true)
 
-if [[ -z $built && -z $fetched ]]; then
+if (( ${#built_drvs[@]} == 0 )) && [[ -z $fetched ]]; then
   echo "无需编译，无需下载"
   exit 0
 fi
 
 name_of() { sed -E 's#^/nix/store/[a-z0-9]{32}-##; s#\.drv$##'; }
 
-if [[ -n $built ]]; then
-  # 一次取出全部派生，按上面的规则分类；输出「类别<TAB>工具链<TAB>名字」
-  # shellcheck disable=SC2086
-  classified=$(nix derivation show $built 2>/dev/null | jq -r '
+if (( ${#built_drvs[@]} > 0 )); then
+  classified=$(nix derivation show "${built_drvs[@]}" 2>/dev/null | jq -r '
     (.derivations // .) | to_entries[] | .value as $d |
     ($d.inputs.drvs // $d.inputDrvs // {} | keys | map(sub("^[a-z0-9]{32}-"; "")) | join(" ")) as $in |
     (if $d.env.outputHash then "fetch"
@@ -87,7 +88,7 @@ if [[ -n $built ]]; then
      else "c/其他" end) as $tc |
     "\($kind)\t\($tc)\t\(.key | sub("^[a-z0-9]{32}-"; "") | sub("\\.drv$"; ""))"')
 
-  n_all=$(wc -l <<<"$built" | tr -d ' ')
+  n_all=${#built_drvs[@]}
   n_build=$(grep -c $'^build\t' <<<"$classified" || true)
   n_fetch=$(grep -c $'^fetch\t' <<<"$classified" || true)
   n_gen=$(grep -c $'^gen\t' <<<"$classified" || true)

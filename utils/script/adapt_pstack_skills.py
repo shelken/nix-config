@@ -130,10 +130,9 @@ def rewrite_links(root):
             resolved = os.path.normpath(os.path.join(os.path.dirname(path), target))
             if os.path.commonpath([resolved, root]) == root:
                 return match.group(0)
-            rel = os.path.relpath(resolved, pstack_root)
-            # 相对路径跳出 pstack 根，说明链接本来就不成立，保持原样交给上游。
-            if rel.startswith(".."):
+            if os.path.commonpath([resolved, pstack_root]) != pstack_root:
                 return match.group(0)
+            rel = os.path.relpath(resolved, pstack_root)
             kind = "tree" if os.path.isdir(os.path.join(pstack_root, rel)) else "blob"
             suffix = href[len(target):]
             changed += 1
@@ -166,14 +165,8 @@ def main():
 
     missing = {}
     for key in sorted({term for terms in used.values() for term in terms}):
-        # 术语以连字符结尾（如 `claude-`）时前缀本身即语义，只要求字面出现；
-        # 其余按右侧词边界比对，避免 generalPurpose 被 generalPurposeful 误判为已覆盖。
-        if key.endswith("-"):
-            hit = lambda text: key in text
-        else:
-            needle = re.compile(rf"(?<![A-Za-z0-9]){re.escape(key)}(?![A-Za-z0-9])")
-            hit = needle.search
-        uncovered = [os.path.basename(path) for path, text in adapter_text.items() if not hit(text)]
+        needle = re.compile(rf"(?<![A-Za-z0-9]){re.escape(key)}(?![A-Za-z0-9])")
+        uncovered = [os.path.basename(path) for path, text in adapter_text.items() if not needle.search(text)]
         if uncovered:
             missing[key] = uncovered
     if missing:
