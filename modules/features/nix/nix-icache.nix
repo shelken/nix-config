@@ -4,6 +4,11 @@
 # mise 下载失败不回退原站，所以规则只能跟开关走，不能写进 Home Manager 生成的 mise 配置。
 # 用文件而不是环境变量：mise 每次运行都重读配置，已开的终端随开关立即生效。沙箱经 miseConfigFile 读同一个文件
 #
+# 也管 Homebrew：on 时写 ~/.config/homebrew/brew.env 与 ~/.homebrew/brew.env，把 ghcr.io 的 bottle 与 portable-ruby
+# 经 HOMEBREW_ARTIFACT_DOMAIN 指到 icache/ghcr.io，并保留 HOMEBREW_DOCKER_REGISTRY_TOKEN=QQ== 让失败回退原站时仍带匿名认证。
+# 同时写两处：交互 shell 设了 XDG_CONFIG_HOME 读前者，nix-darwin 激活跑 brew bundle 时未设它读后者；
+# 仅管理带本脚本首行标记的常规文件，避免覆盖或误删用户自建的 brew.env。
+#
 # 状态 = ~/.config/nix/icache.conf 是否存在，靠用户级 nix.conf 的 `!include icache.conf` 生效
 # （被包含文件不存在时 nix 静默忽略；用户级设置由客户端转发给 daemon，改文件即生效，不用重启）
 #
@@ -23,6 +28,7 @@
 { config, ... }:
 let
   icache = "https://icache.int.ooooo.space";
+  brewArtifactDomain = "${icache}/ghcr.io";
   mirrors = [
     "${icache}/cache.nixos.org"
     "${icache}/nix-community.cachix.org"
@@ -48,6 +54,13 @@ in
       miseConfSource = (pkgs.formats.toml { }).generate "mise-icache.toml" {
         settings.url_replacements = miseUrlReplacements;
       };
+      brewEnvHeader = "# 由 nix-icache 生成";
+      brewEnvSource = pkgs.writeText "homebrew-icache.env" ''
+        ${brewEnvHeader}
+        HOMEBREW_ARTIFACT_DOMAIN=${brewArtifactDomain}
+        # 只设 ARTIFACT_DOMAIN 时 Homebrew 会省略 Authorization，回退官方 ghcr.io 会 401，必须保留公开匿名 token
+        HOMEBREW_DOCKER_REGISTRY_TOKEN=QQ==
+      '';
       nix-icache = pkgs.writeShellApplication {
         name = "nix-icache";
         # install -D 是 GNU 语义；SSH 非交互登录的 PATH 只有系统路径，会用到 macOS 的 BSD install
@@ -55,6 +68,8 @@ in
         text = ''
           conf="$HOME/.config/nix/icache.conf"
           miseConf="$HOME/.config/mise/conf.d/icache.toml"
+          brewXdgEnv="$HOME/.config/homebrew/brew.env"
+          brewHomeEnv="$HOME/.homebrew/brew.env"
           mirrors="${lib.concatStringsSep " " mirrors}"
 
           # 只读系统层，避免把已写入的 icache 再算一遍
@@ -62,8 +77,19 @@ in
             NIX_USER_CONF_FILES=${pkgs.emptyFile} nix config show | sed -n 's/^substituters = //p'
           }
 
+          isManagedBrewEnv() {
+            local first_line=""
+            [ ! -L "$1" ] && [ -f "$1" ] && [ -r "$1" ] && IFS= read -r first_line < "$1" && [ "$first_line" = "${brewEnvHeader}" ]
+          }
+
           case "''${1:-status}" in
             on)
+              for f in "$brewXdgEnv" "$brewHomeEnv"; do
+                if { [ -e "$f" ] || [ -L "$f" ]; } && ! isManagedBrewEnv "$f"; then
+                  echo "nix-icache: $f 不是由 nix-icache 生成，未改动任何配置" >&2
+                  exit 1
+                fi
+              done
               system=$(systemSubstituters)
               if [ -z "$system" ]; then
                 echo "nix-icache: 读不到系统 substituters，未改动 $conf" >&2
@@ -76,10 +102,19 @@ in
               } > "$conf.tmp"
               mv "$conf.tmp" "$conf"
               install -D -m 0644 ${miseConfSource} "$miseConf"
+              install -D -m 0644 ${brewEnvSource} "$brewXdgEnv"
+              install -D -m 0644 ${brewEnvSource} "$brewHomeEnv"
               echo "icache: on"
               ;;
             off)
               rm -f "$conf" "$miseConf"
+              for f in "$brewXdgEnv" "$brewHomeEnv"; do
+                if isManagedBrewEnv "$f"; then
+                  rm -f "$f"
+                elif [ -e "$f" ] || [ -L "$f" ]; then
+                  echo "nix-icache: 保留非受管文件 $f" >&2
+                fi
+              done
               echo "icache: off"
               ;;
             status)
