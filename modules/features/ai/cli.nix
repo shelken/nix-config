@@ -32,7 +32,7 @@
           # renovate: datasource=npm depName=@llamaindex/liteparse
           "npm:@llamaindex/liteparse" = "2.19.0";
           # renovate: datasource=npm depName=@playwright/cli
-          "npm:@playwright/cli" = "0.1.24";
+          "npm:@playwright/cli" = "0.1.25";
           # renovate: datasource=github-releases depName=rtk-ai/rtk
           rtk = "1.2";
           # "github:lycorp-jp/sim-use" = "0.14"; # ios 模拟器控制(暂时不使用 使用iphone-use-best-practice)
