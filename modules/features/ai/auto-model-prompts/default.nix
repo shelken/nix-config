@@ -15,7 +15,8 @@
         "cn-model" = "cn-model";
         "deepseek-v4*" = "deepseek-flash";
         "dfmodel" = "deepseek-flash";
-        "gemini-3.8*" = "gemini";
+        "gemini-3*" = "gemini-3";
+        "gemini-4*" = "gemini-4";
         "glm*" = "glm";
         "gfmodel" = "glm";
         "gpt-5.6*" = "gpt-5.6";
