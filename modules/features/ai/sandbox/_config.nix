@@ -57,6 +57,8 @@ let
           chmod -R u+w "$tmp/$target"
         fi
       done < ${configManifest}
+      mkdir -p "$tmp/bin"
+      ln -sfn ${guest.miseBin} "$tmp/bin/mise"
       ln -sfn ${miseToml} "$tmp/mise.toml"
       ln -sfn ${guestEnvSh} "$tmp/guest-env.sh"
       ln -sfn ${declaredPaths} "$tmp/declared-paths"

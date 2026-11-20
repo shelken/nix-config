@@ -46,7 +46,7 @@ flowchart LR
 - **批准 (Approval)**: 用户用 `sb trust` 对项目 `.sandbox.yaml` 的规范化内容哈希做的记录。未批准或内容变了，启动直接报错
 - **项目配置 (Project Config)**: 项目仓库根 `.sandbox.yaml`，请求导入文件、私网目标和额外路径；批准后才生效
 - **执行计划 (Plan)**: `sb` 解析、校验能力上限与项目配置后交给 launcher 的数据，host → guest 的唯一契约。类型在 [py/sb/plan.py](./py/sb/plan.py)，guest 里只有 [guest/plan.sh](./guest/plan.sh) 解析它，改字段要同步两处，[py/test_contract.py](./py/test_contract.py) 校验两边一致。_避免_: plan_json（那只是它的序列化）
-- **发布目录 (Published Config)**: `~/.config/sandbox/current` 指向的版本化目录，只读挂进 VM 的 `/run/sandbox-config`，含声明配置副本、`mise.toml`、`guest-env.sh`、`declared-paths`、`writable-roots`。旧版本保留 7 天
+- **发布目录 (Published Config)**: `~/.config/sandbox/current` 指向的版本化目录，只读挂进 VM 的 `/run/sandbox-config`，含声明配置副本、`bin/mise`、`mise.toml`、`guest-env.sh`、`declared-paths`、`writable-roots`。旧版本保留 7 天
 - **沙箱基础环境 (Sandbox Base)**: 沙箱启动与隔离所需的 Linux 工具，由 sandbox 模块管理，不属于共享工具。不含 C 工具链，见「设计决策」
 - **补齐 (Sync)**: 显式安装已登记但缺失的 mise 工具和插件。_避免_: 升级、更新
 - **共用安装层 (Shared Install Layer)**: 宿主上由所有沙箱 VM 共用的一份 mise 安装产物与下载缓存。_避免_: 共享缓存、镜像卷
@@ -188,7 +188,7 @@ secret 由 msb 在网络边界替换：guest 内只有 `$MSB_<名字>` 占位符
 
 ### 共用 mise 安装层
 
-mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-linux`（`just hm` 创建），挂到所有 VM 的 `/opt/sandbox-mise`，新 VM 不必重新下载。目录、挂载点与上下文环境只在 [_mise-layer.nix](./_mise-layer.nix) 定义。mise 的 state、shims 与用户层配置留在各 VM 数据卷
+mise 的安装目录与下载缓存放在宿主 `~/Data/sandboxes/mise/aarch64-linux`（`just hm` 创建），挂到所有 VM 的 `/opt/sandbox-mise`，新 VM 不必重新下载。目录、挂载点与上下文环境只在 [_mise-layer.nix](./_mise-layer.nix) 定义。mise 的 state、shims 与用户层配置留在各 VM 数据卷；`guest-env.sh` 把 `$SB_CONFIG_DIR/bin` 排在 `${guestEnv}/bin` 之前，使 mise 生成的 shim 软链指向稳定的 `/run/sandbox-config/current/bin/mise`，避免 `just hm` 加 Nix GC 后旧 store 路径失效导致 shim 断链
 
 上下文对共用层可写：在上下文里 `mise trust`、`mise install` 即可装项目工具，产物落在宿主目录，重建 VM 后和其他 VM 都复用。launcher 设 `MISE_PREFER_OFFLINE=1` 而不是 `MISE_OFFLINE=1`：后者连安装下载也拒绝，前者让已装的 `latest` 工具直接用本地版本，不必每次联网等版本列表
 
