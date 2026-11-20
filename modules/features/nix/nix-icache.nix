@@ -10,7 +10,8 @@
 # 仅管理带本脚本首行标记的常规文件，避免覆盖或误删用户自建的 brew.env。
 #
 # 状态 = ~/.config/nix/icache.conf 是否存在，靠用户级 nix.conf 的 `!include icache.conf` 生效
-# （被包含文件不存在时 nix 静默忽略；用户级设置由客户端转发给 daemon，改文件即生效，不用重启）
+# （被包含文件不存在时 nix 静默忽略；用户级设置由客户端转发给 daemon，改文件即生效，不用重启）；
+# 部署（Home Manager 激活）时按当前 on/off 状态自动重跑新版同步，新增接入点无需逐台手敲。
 #
 # 必须用覆盖语义的 `substituters`：nix 先按各源 nix-cache-info 里的 Priority 排序，同级才按列表顺序。
 # icache 原样透传上游的 Priority，与原站同级，所以必须排在原站前面；`extra-substituters` 只会追加到末尾，
@@ -72,9 +73,18 @@ in
           brewHomeEnv="$HOME/.homebrew/brew.env"
           mirrors="${lib.concatStringsSep " " mirrors}"
 
-          # 只读系统层，避免把已写入的 icache 再算一遍
+          # 只读系统层，避免把已写入的 icache 或外部 NIX_CONFIG 污染固化进 icache.conf；
+          # 非交互 SSH 等精简 PATH 环境不含 /nix/var/nix/profiles/default/bin，需回退到默认路径
           systemSubstituters() {
-            NIX_USER_CONF_FILES=${pkgs.emptyFile} nix config show | sed -n 's/^substituters = //p'
+            local nixBin=""
+            nixBin=$(command -v nix || true)
+            if [ -z "$nixBin" ] && [ -x /nix/var/nix/profiles/default/bin/nix ]; then
+              nixBin=/nix/var/nix/profiles/default/bin/nix
+            fi
+            if [ -z "$nixBin" ]; then
+              return 1
+            fi
+            NIX_CONFIG="" NIX_USER_CONF_FILES=${pkgs.emptyFile} "$nixBin" config show substituters
           }
 
           isManagedBrewEnv() {
@@ -90,11 +100,11 @@ in
                   exit 1
                 fi
               done
-              system=$(systemSubstituters)
-              if [ -z "$system" ]; then
+              if ! system=$(systemSubstituters) || [ -z "$system" ]; then
                 echo "nix-icache: 读不到系统 substituters，未改动 $conf" >&2
                 exit 1
               fi
+              mkdir -p "$(dirname "$conf")"
               {
                 echo "# 由 nix-icache 生成"
                 echo "substituters = $mirrors $system"
@@ -139,6 +149,15 @@ in
       config = {
         home.packages = [ nix-icache ];
         home.file.".config/nix/nix.conf".text = lib.mkAfter "!include icache.conf";
+
+        # 部署时按当前 on/off 状态用新版脚本重跑一次，新增接入点无需再逐台手动执行；
+        # 缓存属加速层，同步失败仅打印警告，不阻断主部署流程
+        home.activation.nixIcacheSync = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+          _nix_icache_state=$(${nix-icache}/bin/nix-icache status)
+          if ! run ${nix-icache}/bin/nix-icache "$_nix_icache_state"; then
+            echo "nix-icache: 部署自动同步($_nix_icache_state)失败，请排查上方错误后手动执行 nix-icache $_nix_icache_state" >&2
+          fi
+        '';
       };
     };
 
