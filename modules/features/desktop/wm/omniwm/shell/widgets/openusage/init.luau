@@ -1,4 +1,3 @@
--- OpenUsage 本地 API → 栏上的图标 + 剩余额度（Session / Weekly）
 -- 图标路径取自 OpenUsage（MIT）的 ProviderIcons/*.svg
 local URL = "http://127.0.0.1:6736/v1/usage"
 local INTERVAL = 60

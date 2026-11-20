@@ -12,26 +12,19 @@ import sys
 import threading
 from pathlib import Path
 
-# ---- 可调参数 ----------------------------------------------------------------
-# 自动压缩节点（token）：取满足预留下限的最大节点。
 COMPACT_AT = (250_000, 300_000)
-# 压缩摘要需要空间，预留值的下限取 pi 内置默认值。
 MIN_RESERVE = 16_384
-# 等 pi 返回模型列表的秒数上限
 RPC_TIMEOUT = 60
-# ------------------------------------------------------------------------------
 
 SETTINGS = Path(__file__).resolve().parents[3] / "modules/features/ai/pi/settings.json"
 
 
 def reserve_for(window, nodes, floor):
-    """窗口对应的模型预留值；没有节点满足下限时使用全局设置。"""
     usable = [n for n in nodes if window - n >= floor]
     return window - max(usable) if usable else None
 
 
 def apply(settings, windows, nodes, floor):
-    """返回 (新 settings, 查不到窗口的模型)。查不到窗口的模型保持原 override，不凭空改。"""
     result = copy.deepcopy(settings)
     compaction = result.setdefault("compaction", {})
     old = compaction.get("modelOverrides", {})

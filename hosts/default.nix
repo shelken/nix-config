@@ -4,7 +4,6 @@ let
     interactiveSudo = false;
   };
 in
-# deployDiff = false：just deploy-diff 不检查这台（不常用的机器）
 {
   vps-cc = {
     type = "nixos";
@@ -83,7 +82,6 @@ in
     home-modules = [ ./ling/home.nix ];
   };
 
-  # OpenWrt 路由器不是 Nix 系统：只把声明编译成 nuci 的 uci.json，见 modules/features/network/openwrt/
   router-mine = {
     type = "openwrt";
     uci-modules = [ ./router-mine ];

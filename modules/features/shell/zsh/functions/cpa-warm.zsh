@@ -1,8 +1,3 @@
-# cpa-warm - 并发发送 CPA warm 请求
-# Usage:
-#   cpa-warm [--apiurl <url>] [--model <model>] [--envkey <ENV_VAR_NAME>] [--max <n>] [--input <text>]
-#   cpa-warm --help | -h
-
 emulate -L zsh
 unsetopt monitor notify
 

@@ -1,4 +1,3 @@
-# worktrunk（wt）：git worktree 管理，工作区统一放在 ~/Code/worktrees
 { config, ... }:
 {
   flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.worktrunk ];
@@ -24,7 +23,6 @@
           };
         };
         programs.zsh.initContent = ''
-          # worktrunk (wt) shell integration
           if command -v wt >/dev/null 2>&1; then
             eval "$(wt config shell init zsh)"
           fi

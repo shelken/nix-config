@@ -1,4 +1,3 @@
-# Mac：底模用服务端内嵌的 template.json；私密值走 1Password 的 proxy 条目
 subs:
   - "{{ op://Projects/proxy/subs-miaona }}"
 nodes:

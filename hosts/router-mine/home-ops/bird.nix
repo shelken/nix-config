@@ -1,5 +1,3 @@
-# home-ops 的 BGP：路由器与 3 个 K8s 节点建立 eBGP，学到 Cilium 宣告的 LB /32 路由（Allow-K8s-LB-Asymmetric 因此而来）。
-# nuci 只写文件，不校验、不重载；push 之后的 `bird -p` 校验与 `birdc configure` 软重载由 just router::push 负责
 { lib, ... }:
 let
   net = import ../../../vars/networking.nix { inherit lib; };

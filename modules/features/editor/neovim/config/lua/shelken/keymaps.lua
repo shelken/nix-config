@@ -1,4 +1,3 @@
--- 不依赖插件的键位，neovim-minimal 也有；沿用 AstroNvim 习惯
 local map = vim.keymap.set
 
 map("n", "<leader>w", "<cmd>write<cr>", { desc = "Save" })

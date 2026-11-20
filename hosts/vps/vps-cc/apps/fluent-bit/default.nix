@@ -2,16 +2,6 @@
 let
   dbDir = "/data/docker/fluent-bit/db";
 in
-#############################################################
-#
-#  fluent-bit：把 Caddy 的访问日志转到集群里的 VictoriaLogs
-#
-#  继续用镜像：它要 tail 宿主机的 /var/log/caddy 并把 db 落在宿主机目录，
-#  nixpkgs 的 fluent-bit module 是 DynamicUser + 单位硬化，没有 StateDirectory、
-#  ReadOnlyPaths、EnvironmentFile 这些开关，换过去得整段覆盖它的 unit。
-#  docker.sock 是旧 Compose 就挂着的（当前配置并未用它），这里按原样保留。
-#
-#############################################################
 {
   systemd.tmpfiles.rules = [
     "d ${dbDir} 0755 root root -"
@@ -27,7 +17,6 @@ in
   };
 
   virtualisation.oci-containers.containers.fluent-bit = {
-    # 固定版本：与集群 chart 的 appVersion 对齐
     image = "ghcr.io/fluent/fluent-bit:5.2.0@sha256:e2718c47aaab7d99587fdffe78818549bdd09dee5e30a9199d2ff3da6e2c7628";
     autoStart = true;
     cmd = [
@@ -37,7 +26,6 @@ in
     environment = {
       TZ = "Asia/Shanghai";
       VICTORIA_LOGS_PORT = "9428";
-      # fluent-bit.yaml 里用它给每行日志打标签
       HOSTNAME = "vps-cc";
     };
     environmentFiles = [ config.sops.templates."fluent-bit.env".path ];

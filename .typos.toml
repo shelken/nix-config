@@ -1,21 +1,17 @@
 [files]
 ignore-dot   = true
 ignore-files = true
-# 忽略文件
-# firmware.lock.json 由 asu 脚本生成，是 OpenWrt 包名清单
 extend-exclude = ["*.zsh", "modules/features/ai/skills/**", "modules/features/ai/*/*-best-practice/**", "hosts/*/firmware.lock.json"]
 
 [default]
 binary = false
-# 自定义不可纠正的文本Custom uncorrectable sections (e.g. markdown code fences, PGP signatures, etc)
 extend-ignore-re = [
   "iterm2",
   "Deactive",
   "Pn",
-  "imput",    # helium
+  "imput",
   "(?i)udid", # Apple 设备标识，不是 UUID 的拼写错误
 
-  # catppuccin theme colors
   "11111b",
   "1e1e2e",
   "313244",
@@ -40,7 +36,6 @@ extend-ignore-re = [
   "E0BA",
   "facter",
 
-  # AstroNvim 的「最近文件」键位（modules/features/editor/neovim/config）
   "<leader>fo",
 
   # neovim 插件 noice.nvim

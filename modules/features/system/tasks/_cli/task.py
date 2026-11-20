@@ -1,5 +1,3 @@
-# task CLI：声明式定时任务的查看与调试入口
-# 标签前缀是占位符，构建时由 lib/tasks.nix 的 labelPrefix 注入，避免两处硬编码漂移
 import argparse
 import glob
 import gzip
@@ -186,7 +184,6 @@ def select_log_lines(lines, count, all_lines):
     if all_lines:
         return lines
     selected = select_runs(lines, count)
-    # 没有任何 Started 标记（纯手动 task-<名> 的残留、格式异常）时回退到末尾若干行，避免打印空
     return selected if selected else lines[-50:]
 
 
@@ -216,7 +213,6 @@ def render_table(rows, color):
         for index, cell in enumerate(row):
             padding = " " * (widths[index] - len(cell))
             if keys[index] in ("result", "loaded"):
-                # 先按纯文本算好宽度再上色，否则 ANSI 转义码会被算进列宽
                 rendered.append(colorize(cell, color) + padding)
             else:
                 rendered.append(cell + padding)
@@ -233,8 +229,6 @@ def read_file(path):
 
 
 def read_log_text(path):
-    # 轮转刚发生时当前日志为空，回看最近一份 gzip 旧档；读全文件是因为单次运行输出可能很长
-    # （轮转后单个日志不超过约 1MB）
     text = read_file(path)
     if parse_runs(text):
         return text

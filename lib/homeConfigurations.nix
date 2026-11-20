@@ -7,7 +7,6 @@ lib.mapAttrs (
   let
     hm = system.config.home-manager.users.${myvars.username};
 
-    # 与上游 homeManagerConfiguration 等价的断言/告警检查，避免请求 Home 时静默跳过失败断言
     failed = map (x: x.message) (lib.filter (x: !x.assertion) hm.assertions);
     checkedHome =
       if failed != [ ] then

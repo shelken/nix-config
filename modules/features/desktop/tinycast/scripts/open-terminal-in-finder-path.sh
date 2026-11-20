@@ -31,14 +31,11 @@ exec /usr/bin/osascript -e '
   set the clipboard to pathList
 
   tell application "System Events"
-    # new tab
     keystroke "t" using {command down}
-    # cd "thePath" return;
     keystroke "cd \""
     keystroke "v" using {command down}
     keystroke "\""
     keystroke return
-    # clean screen
     keystroke "l" using {control down}
   end tell
 '

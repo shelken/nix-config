@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
-# 逐台部署 k3s 节点：agent 在前、控制面最后；每台部署后等它健康再继续，任一台不健康就停。
-# 用法: k8s-deploy [节点...]   不带参数时部署全部启用 k3s 的主机
-# 健康检查不用 sudo：k3s 在运行、系统不是 degraded、kubelet 的 healthz 返回 ok
 set -euo pipefail
 
 timeout=${K8S_DEPLOY_TIMEOUT:-180}
 
-# 一次求值拿到全部 k3s 主机与角色，按 agent 在前排序
 # shellcheck disable=SC2016  # 单引号里的 ${} 是 Nix 语法
 mapfile -t all < <(nix eval --raw .#nixosConfigurations --apply '
   cs: let

@@ -1,5 +1,3 @@
-# anyrun 启动器：flake 包、插件集合与用户态配置
-# NixOS 桌面机（gui 角色）→ nixos.gui
 { config, ... }:
 {
   flake.modules.nixos.gui.imports = [ config.flake.modules.nixos.anyrun ];
@@ -37,13 +35,9 @@
         # The package should come from the same flake as all the plugins to avoid breakage.
         package = anyrunPackages.anyrun;
         config = {
-          # The horizontal position.
-          # when using `fraction`, it sets a fraction of the width or height of the screen
-          x.fraction = 0.5; # at the middle of the screen
-          # The vertical position.
-          y.fraction = 0.05; # at the top of the screen
-          # The width of the runner.
-          width.fraction = 0.3; # 30% of the screen
+          x.fraction = 0.5;
+          y.fraction = 0.05;
+          width.fraction = 0.3;
 
           hideIcons = false;
           ignoreExclusiveZones = false;
@@ -53,15 +47,14 @@
           showResultsImmediately = true;
           maxEntries = null;
 
-          # https://github.com/anyrun-org/anyrun/tree/master/plugins
           plugins = with anyrunPackages; [
-            applications # Launch applications
-            dictionary # Look up word definitions using the Free Dictionary API.
-            nix-run # search & run graphical apps from nixpkgs via `nix run`, without installing it.
-            rink # A simple calculator plugin
-            symbols # Look up unicode symbols and custom user defined symbols.
-            translate # ":zh <text to translate>" Quickly translate text using the Google Translate API.
-            niri-focus # Search for & focus the window via title/appid on Niri
+            applications
+            dictionary
+            nix-run
+            rink
+            symbols
+            translate
+            niri-focus
           ];
         };
 
@@ -71,7 +64,6 @@
         };
       };
 
-      # https://github.com/anyrun-org/anyrun/discussions/179
       xdg.configFile."anyrun/style.css".source = pkgs.replaceVars ./conf/style.css {
         inherit (myvars.fontFamilies) cjkMonospace monospace;
         background = palette.surface0.hex;

@@ -1,9 +1,3 @@
-"""host → guest 契约测试：真实的 `sb plan --json` 产出 Plan，交给 guest/plan.sh 的 parse_plan 解析，
-每个字段两边必须一致。改 Plan 字段而没同步 plan.sh，这里会失败。
-
-需要 bash ≥ 4（macOS 自带的 3.2 不行）、jq、yq、git。
-"""
-
 import json
 import os
 import subprocess
@@ -19,7 +13,6 @@ SANDBOX = Path(__file__).parent.parent
 PLAN_SH = SANDBOX / "guest" / "plan.sh"
 GUEST_STATUS_SH = SANDBOX / "guest-status.sh"
 
-# 每个变量一行 KEY=值，数组每项一行
 DUMP = r"""
 set -euo pipefail
 source "$1"
@@ -71,7 +64,6 @@ class ContractTest(unittest.TestCase):
         plan = self.host_plan()
         got = guest_parse(json.dumps(plan))
 
-        # 新增的 Plan 字段要先让 guest/plan.sh 读取、再加进这个集合，否则这里失败
         guest_fields = {"project_root", "git_common_dir", "imports", "network", "paths", "default_allow"}
         self.assertEqual(set(plan) - {"approval"}, guest_fields)
         self.assertEqual(got["ROOT"], [plan["project_root"]])
@@ -80,7 +72,6 @@ class ContractTest(unittest.TestCase):
         self.assertEqual(got["NET"], plan["network"])
         self.assertEqual(got["IMP"], [f"{s}\t{d}" for s, d in sorted({(i["stage"], i["dir"]) for i in plan["imports"]})])
         self.assertEqual(got["PATH"], [f"{p['path']}\t{str(p['readonly']).lower()}" for p in plan["paths"]])
-        # 上面的夹具要真的覆盖到每种字段，避免空对空的假通过
         self.assertTrue(all(plan[k] for k in ("imports", "network", "paths", "default_allow", "git_common_dir")))
 
     def test_path_with_a_backslash_reaches_the_guest_unescaped(self):

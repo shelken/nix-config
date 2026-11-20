@@ -1,4 +1,3 @@
-# 鼠须管配色：从 catppuccin 调色板生成，flavor 与 accent 跟随 vars
 {
   config,
   lib,

@@ -4,23 +4,14 @@
   pkgs,
   ...
 }:
-#############################################################
-#
-#  HK1 Box（Amlogic S905X3 / meson-sm1）硬件：内核、设备树、引导
-#
-#  内核：nixpkgs 默认内核（主线），meson-sm1 的 eMMC、USB、千兆网口驱动都在主线里
 #  设备树：主线没有 HK1，用 unifreq 维护的 dts（./dts，来源见 README），
 #          它只依赖主线已有的 meson-sm1-ac2xx.dtsi，所以拿 nixpkgs 内核同版本的源码树直接编
-#  引导：厂商 u-boot → autoscript → 主线 u-boot → extlinux，见 ./bootfs.nix
-#
-#############################################################
 let
   inherit (config.boot.kernelPackages) kernel;
   bootfs = pkgs.callPackage ./bootfs.nix { };
 
   dtbName = "amlogic/meson-sm1-hk1box-vontar-x3.dtb";
 
-  # 只从内核源码包里解出编 dts 要用的几个目录，不编整个内核
   dtbs = pkgs.runCommandCC "hk1box-dtbs-${kernel.version}" { nativeBuildInputs = [ pkgs.dtc ]; } ''
     tar -xf ${kernel.src} --strip-components=1 --wildcards \
       '*/arch/arm64/boot/dts/amlogic/*' \
@@ -45,7 +36,6 @@ in
 
   boot.kernelParams = [
     "console=tty0"
-    # 板载串口（主板上的 TTL 三针），排障时用
     "console=ttyAML0,115200n8"
   ];
 

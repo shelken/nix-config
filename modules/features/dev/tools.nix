@@ -1,6 +1,3 @@
-# 共享工具登记表：接口声明与宿主生成器（ADR 0003）
-# 接口会被 ai（omp/pi/codex 等）等多个功能写入，按「接口放 core」（ADR 0004）
-# 挂到 darwin/nixos 的 core；第一批 Nix 条目在 tools-base.nix。
 {
   config,
   ...
@@ -143,8 +140,6 @@
                 assertion = (tool.package != null || tool.mise != null) || (tool.files != { });
                 message = "shelken.dev.tools.${name}: 必须指定 package 或 mise 之一，或声明 files（纯配置条目）";
               }
-              # sandboxFiles 的目标由 sandbox/default.nix 统一校验是否落在可写根下；
-              # 同名条目是覆盖，新条目是沙箱专属文件，两者都合法，这里不重复判断。
             ]) cfg
           );
 

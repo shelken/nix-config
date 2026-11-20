@@ -1,13 +1,4 @@
-# 声明式分区：disko 模块 + 两种常用布局（ext4 / btrfs）× 两种引导方式（uefi / bios）
 # 可选功能：要用的 NixOS 主机在 imports 里加 self.modules.nixos.disko，并设置 shelken.disko.*
-#
-# 分区表都是 GPT，引导分区随 shelken.disko.boot：
-#   - uefi：1G ESP(/boot, vfat)，引导程序由主机自己选（如 systemd-boot）
-#   - bios：1M EF02 分区，不格式化，只给 GRUB 放 core.img；GRUB 直接读根分区，不单独分 /boot
-# 根分区默认占剩余全部空间（shelken.disko.rootSize 可限定大小，主机再自己往 partitions 里加分区）：
-#   - ext4 ：一个根分区，最简单，适合测试机与小 VPS
-#   - btrfs：根分区里分 @root @home @nix @log 子卷，zstd 压缩，可选 swapfile 子卷
-#
 # disko 生成的 fileSystems/swapDevices 会写入系统配置，所以主机的硬件配置
 # （nixos-facter 报告或 nixos-generate-config --no-filesystems）里不要再写 fileSystems。
 { inputs, ... }:

@@ -6,11 +6,9 @@
       ...
     }:
     let
-      # omp 与 pi 共用的 agent 定义：正文只有一份，模型只来自 config.yml 的角色，Nix 只写角色名。
       readOnlyOmpTools = "read, find, grep, glob, web_search";
       readOnlyPiTools = "read,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom";
 
-      # comment-sicko 只查本地代码与注释，严禁外网检索干扰
       commentSickoOmpTools = "read, find, grep, glob";
       commentSickoPiTools = "read,grep,find,ls,ffgrep,fffind,intercom";
 
@@ -20,11 +18,9 @@
       workerOmpTools = "read, edit, write, bash, eval, todo, grep, find, glob, lsp, ast_grep, web_search";
       workerPiTools = "read,bash,edit,write,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom";
 
-      # judge 只裁决不改代码：给 web_search 查外部规范，不给 bash 防止偷偷改动代码。
       judgeOmpTools = "read, find, grep, glob, web_search";
       judgePiTools = "read,grep,find,ls,ffgrep,fffind,web_search,web_fetch,intercom";
 
-      # omp 从 18.x 起自带这些 bundled agent，写进 agents 目录只是重复定义内置能力。
       ompBundledAgents = [
         "task"
         "scout"
@@ -34,8 +30,6 @@
         "seance"
       ];
 
-      # 变体声明：新增模型后缀只在 variants 加一行；新增支持变体的类别只在
-      # variantCategories 加一行，其余生成逻辑自动生效。
       variants = [
         "gemini"
         "ds"
@@ -70,10 +64,8 @@
           variantDescription = "Adversarial code reviewer (quality, security, correctness); read-only";
           ompTools = reviewerOmpTools;
           ompSpawns = "scout";
-          # pi 的 profile 没有 spawns 概念，多派一个 reviewer-variant 才是它的跨家族面板。
           piTools = reviewerPiTools;
           body = ./prompts/reviewer.md;
-          # output schema 只有 omp 认；挂在 agent 上，变体自动继承，无需按名字特判。
           extraFrontmatter = [ reviewerOutputSchema ];
         };
 
@@ -82,7 +74,6 @@
           ompTools = judgeOmpTools;
           piTools = judgePiTools;
           body = ./prompts/judge.md;
-          # 裁决要的是强推理，不是审查模板；角色在 config.yml 里单列。
           modelRole = "judge";
         };
 
@@ -102,7 +93,6 @@
         };
       };
 
-      # 类别 × 变体后缀的笛卡尔积：每个组合生成一个独立 agent，属性全部继承类别基础声明。
       generatedVariants = builtins.listToAttrs (
         lib.concatMap (
           cat:
@@ -125,8 +115,6 @@
 
       agentsCommon = baseAgents // generatedVariants;
 
-      # pi 的 frontmatter 只有 description、role、tools 三个字段，description 与正文对每个 profile 都必须是独立文件。
-      # 模型与 thinking 不写进 md：spawn-subagent 每次派发按 role 读 config.yml。
       # description 用 JSON 字符串输出（合法的 YAML 双引号串）：值里的 ": " 否则会让 YAML 解析失败。
       mkPiAgent = name: a: {
         name = "${name}.md";
@@ -144,11 +132,7 @@
         );
       };
 
-      # pi 没有内置 agent：每个 profile 都是独立 md，缺一个 spawn-subagent 就找不到它。
       piAgentsDir = pkgs.linkFarm "pi-agents" (lib.mapAttrsToList mkPiAgent agentsCommon);
-
-      # ---------- omp ----------
-      # 输出 omp 的 agent frontmatter；output schema 只有 omp 认，放在独立文件里按需附加。
 
       reviewerOutputSchema = lib.removeSuffix "\n" (builtins.readFile ./reviewer.output.yml);
 

@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# 硬约束:
-#   - 一次性 MSB_HOME（mktemp 后取真实路径），绝不触碰日常主 VM；
-#     绝不全局 export MSB_HOME，msb 只以单命令前缀执行。
-#   - 共用 mise 目录只挂载、绝不写入/移动/删除：guest_sync 指向 /dev/null，
-#     首次建 VM 的自动 sb sync 什么都不装（上下文只用 launcher 内置的
-#     bash/coreutils/git/curl，无需 mise 工具）；sync 锁放在临时目录，不在共用层创建锁文件。
-#   - host_credentials=false 禁止注入宿主真实凭据（sec-run 的环境与 host_secret_files 都不读）。
-#   - sb 读取的 sb-config.json 由真实产物的那份改写而来，只换目录、策略文件与上面两项。
 set -euo pipefail
 
 E2E_DIR=""
@@ -29,9 +21,6 @@ find_msb() {
   fi
 }
 
-# 幂等清理: 停止并删除隔离 MSB_HOME 内的 VM 与卷，删除临时目录。
-# 只经隔离 MSB_HOME 操作 msb，绝不按进程名清理（日常主 VM 同名 sb-main，
-# 按名 kill 会误伤日常环境）。
 cleanup() {
   local rc=$?
   trap - EXIT INT TERM HUP
@@ -93,7 +82,6 @@ PROJ_B="$WS/project-b"
 WORKTREE="$WS/project-a-worktree"
 mkdir -p "$PROJ_A" "$PROJ_B"
 
-# 项目 A 不声明任何私网目标（network: []），断言 2 的目标对其即「未声明」
 echo "# smoke project a" > "$PROJ_A/README.md"
 printf 'network: []\n' > "$PROJ_A/.sandbox.yaml"
 echo "ADJACENT_PROJECT_B_PRIVATE" > "$PROJ_B/private.txt"
@@ -108,7 +96,6 @@ git_host=(-c user.name=SmokeTest -c user.email=smoke@test.local)
   git worktree add -q "$WORKTREE" smoke-wt
 )
 
-# 全局上限: VM 级放开私网（上下文的 iptables 链仍按项目声明逐项拦截）
 TEST_YAML="$E2E_DIR/sb.yaml"
 cat > "$TEST_YAML" <<EOF
 image: "ubuntu"
@@ -136,7 +123,6 @@ if [[ ! -e "$REPO_ROOT/flake.nix" ]]; then
   exit 1
 fi
 if [[ -z "${SB_BIN:-}" || ! -x "${SB_BIN:-}" ]]; then
-  # stderr 不并入：nix 会往 stderr 打设置提示，混进来会顶掉产物路径
   app_dir="$(nix build --no-link --print-out-paths \
     "$REPO_ROOT#homeConfigurations.mio.config.home.activationPackage" || true)"
   if [[ -n "$app_dir" && -x "$app_dir/home-path/bin/sb" ]]; then
@@ -152,14 +138,12 @@ echo "[+] 临时隔离环境: $E2E_DIR"
 REAL_CONFIG="${SB_TEST_CONFIG:-$(grep -o '/nix/store/[a-z0-9]*-sb-config.json' "$SB_BIN" | head -n 1)}"
 [[ -n "$REAL_CONFIG" ]] || { echo "[-] 在 $SB_BIN 里找不到 sb-config.json" >&2; exit 1; }
 
-# 共用 mise 目录: 只挂载、绝不写入（缺失即失败，绝不代建）
 MISE_HOST_DIR="$(resolve "$(jq -r .mise.host_dir "$REAL_CONFIG")")"
 if [[ ! -d "$MISE_HOST_DIR" ]]; then
   echo "[-] 共用 mise 目录不存在: $MISE_HOST_DIR" >&2
   exit 1
 fi
 
-# 一次性发布目录：空声明清单与空可写根清单表示本 e2e 不需要任何声明配置
 CFG_DIR="$E2E_DIR/sandbox-config"
 mkdir -p "$CFG_DIR/current"
 : > "$CFG_DIR/current/declared-paths"
@@ -177,7 +161,6 @@ run_sb() {
     "$SB_BIN" "$@"
 }
 
-# 项目 A 的 .sandbox.yaml 需要先批准；worktree 里是同一份内容，哈希相同，无需再批准
 (cd "$PROJ_A" && run_sb trust >/dev/null)
 
 

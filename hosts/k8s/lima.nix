@@ -5,14 +5,6 @@
   myvars,
   ...
 }:
-#############################################################
-#
-#  Lima（vz）节点共有配置：yuuko-k8s、sakamoto-k8s
-#
-#  引导、usernet 网卡、Lima 实例声明（system.build.limaConfig，替代 home-ops 的 lima/<宿主>.yaml）
-#  limaConfig 只是数据：宿主的 lima-host 功能用自己的 pkgs 生成 lima.yaml，更新流程见 ./README.md
-#
-#############################################################
 let
   cfg = config.shelken.lima;
   net = import (inputs.secrets + "/hosts/${config.networking.hostName}/network.nix");
@@ -65,7 +57,6 @@ in
       efi.canTouchEfiVariables = false;
     };
 
-    # usernet 是宿主到 guest 的管理通道，默认路由 metric 必须高于 eth1（100），流量才走桥接网卡
     systemd.network.links."10-eth0" = {
       matchConfig.PermanentMACAddress = net.usernetMac;
       linkConfig.Name = "eth0";
@@ -117,7 +108,6 @@ in
       hostResolver.enabled = false;
       networks = [
         {
-          # 非托管：socket 由宿主的 lima-host 功能常驻提供
           inherit (myvars.socketVmnet) socket;
           interface = "eth1";
           macAddress = net.lanMac;

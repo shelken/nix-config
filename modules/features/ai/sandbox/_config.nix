@@ -62,7 +62,6 @@ let
       ln -sfn ${declaredPaths} "$tmp/declared-paths"
       ln -sfn ${writableRootsFile} "$tmp/writable-roots"
       mv "$tmp" "$dst"
-      # current 不能有空窗：先就位 current.new，再 rename 覆盖
       ln -sfn "$version" "$cfg_root/current.new"
       mv -Tf "$cfg_root/current.new" "$cfg_root/current"
       find "$cfg_root" -mindepth 1 -maxdepth 1 -name 'v*' -mmin +$((7 * 24 * 60)) -print0 \

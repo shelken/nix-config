@@ -1,4 +1,3 @@
-# 本配置仅放置通用的config部分。
 version: 0.1
 storage:
   filesystem:

@@ -3,7 +3,6 @@ filename: /var/log/caddy/access.log
 labels:
   type: caddy
 ---
-# NixOS 的 sshd 只写 journald，没有 /var/log/auth.log。
 # --directory 必须有：容器里没有 /etc/machine-id，journalctl 默认找不到宿主机的日志。
 source: journalctl
 journalctl_filter:

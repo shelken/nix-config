@@ -1,4 +1,3 @@
-# task CLI 纯函数单元测试：不碰真实 launchd 与日志，只验证解析与格式化
 import gzip
 import os
 import re

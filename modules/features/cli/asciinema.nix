@@ -1,5 +1,3 @@
-# asciinema：终端录制与回放
-# 开发机 → tui
 { config, ... }:
 {
   flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.asciinema ];

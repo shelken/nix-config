@@ -15,20 +15,12 @@ in
   };
   programs.zed-editor = {
     enable = true;
-    package = null; # homebrew
+    package = null;
     mutableUserSettings = true;
     mutableUserKeymaps = true;
     # 注意：
     # 列表不要直接传入，会直接覆盖
     userSettings = {
-      # Zed settings
-      #
-      # For information on how to configure Zed, see the Zed
-      # documentation: https://zed.dev/docs/configuring-zed
-      #
-      # To see all of Zed's default settings without changing your
-      # custom settings, run `zed: open default settings` from the
-      # command palette (cmd-shift-p / ctrl-shift-p)
 
       file_scan_exclusions = [
         "..."
@@ -65,17 +57,6 @@ in
           default = "allow";
         };
 
-        # model_parameters = [
-        #   # 代码生成/数学解题      0.0
-        #   # 数据抽取/分析        1.0
-        #   # 通用对话            1.3
-        #   # 翻译                1.3
-        #   # 创意类写作/诗歌创作  1.5
-        #   # {
-        #   #   provider = "deepseek";
-        #   #   temperature = 0.0;
-        #   # }
-        # ];
       };
 
       git_panel = {
@@ -88,9 +69,6 @@ in
         light = themeName;
         dark = themeName;
       };
-
-      # ssh_connections = [
-      # ];
 
       ui_font_family = myvars.fontFamilies.cjkMonospace;
       buffer_font_family = myvars.fontFamilies.monospace;
@@ -106,8 +84,6 @@ in
         diagnostics = false;
         metrics = false;
       };
-
-      # proxy = "http://127.0.0.1:7890";
 
       git = {
         inline_blame = {
@@ -136,35 +112,6 @@ in
         light = themeName;
         dark = themeName;
       };
-
-      # agent_servers = {
-      #   "claude-acp" = {
-      #     type = "registry";
-      #     env = {
-      #       CLAUDE_CODE_EXECUTABLE = "/opt/homebrew/bin/claude";
-      #     };
-      #   };
-
-      #   # opencode = {
-      #   #   type = "custom";
-      #   #   command = "/opt/homebrew/bin/opencode";
-      #   #   args = [ "acp" ];
-      #   # };
-
-      #   "codex-acp" = {
-      #     default_config_options = {
-      #       mode = "full-access";
-      #     };
-      #     type = "registry";
-      #   };
-
-      #   # kimi = {
-      #   #   type = "custom";
-      #   #   command = "kimi";
-      #   #   args = [ "acp" ];
-      #   #   env = { };
-      #   # };
-      # };
 
       languages = {
         Nix = {
@@ -204,7 +151,6 @@ in
       lsp = {
         "nixd" = {
           settings = {
-            # ponytail: 默认 4 个 worker 各自全量展开 nixpkgs,16G 内存吃不消;补全变慢再调回
             eval.workers = 1;
           };
         };
@@ -212,7 +158,6 @@ in
           settings = {
             yaml = {
               schemas = {
-                # 为特定的 YAML 文件类型指定 schema
               };
               completion = true;
               hover = true;
@@ -306,7 +251,6 @@ in
           "shift-down" = "terminal::ScrollLineDown";
         };
       }
-      # for projects:open recent
       {
         context = "Terminal";
         unbind = {

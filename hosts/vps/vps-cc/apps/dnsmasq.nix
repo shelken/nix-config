@@ -2,16 +2,9 @@
 let
   address = myvars.networking.hostAddress."vps-cc-ts".address;
 in
-#############################################################
-#
-#  dnsmasq：宿主机的解析入口：宿主 loopback 上的 53，加 tailnet 地址上的 5353（给 Gatus 探测）
-#
 #  这里试过走 nixpkgs 的原生 module，落不下来：`services.dnsmasq.configFile`
 #  是 readOnly 的，配置只能由 `settings` 生成，而这份配置里的主域名与集群网关
-#  地址来自 sops，sops 只能渲染整份文件。容器保留挂载 sops 渲染文件的写法，
-#  与旧 Compose 的容器内 5353 + 宿主 53 映射逐个字段对齐。
-#
-#############################################################
+#  地址来自 sops，sops 只能渲染整份文件，因此改为容器挂载 sops 渲染文件。
 {
   sops.secrets = {
     "main-domain" = { };
@@ -26,7 +19,6 @@ in
       no-resolv
       strict-order
 
-      # 内部域与主域都交集群 k8s-gateway；更具体的内部域规则优先
       server=/int.${config.sops.placeholder."main-domain"}/${
         config.sops.placeholder."cluster/k8s-gateway-address"
       }
@@ -34,7 +26,6 @@ in
         config.sops.placeholder."cluster/k8s-gateway-address"
       }
 
-      # k8s-gateway 不可用时的顺序回落；公网上游使用 1.1.1.1 / 8.8.8.8
       server=/${config.sops.placeholder."main-domain"}/1.1.1.1
       server=/${config.sops.placeholder."main-domain"}/8.8.8.8
       server=1.1.1.1
@@ -42,11 +33,9 @@ in
     '';
     # 渲染文件默认 root:root 0400，而容器以镜像里的 dnsmasq 用户（uid 100/gid 101）运行，
     # 非 root 读不到就起不来（旧 Compose 挂的是宿主上 644 的文件，所以没暴露这个问题）。
-    # 属主对齐容器用户、权限保持 0400；镜像换用户时要跟着改
     uid = 100;
     gid = 101;
     mode = "0400";
-    # 配置在容器创建时被读走，密文变了要重建容器
     restartUnits = [ "docker-dnsmasq.service" ];
   };
 
@@ -55,9 +44,6 @@ in
     autoStart = true;
     user = "dnsmasq";
     volumes = [ "${config.sops.templates."dnsmasq.conf".path}:/etc/dnsmasq.conf:ro" ];
-    # 127.0.0.1: 本机 resolv.conf 指向它；tailnet 地址上的 5353 只给集群侧
-    # Gatus 做解析探测（公网 IP 上没有监听），等于把解析入口开到 tailnet，
-    # 与 mosdns 的 5054 同级
     ports = [
       "127.0.0.1:53:5353/tcp"
       "127.0.0.1:53:5353/udp"

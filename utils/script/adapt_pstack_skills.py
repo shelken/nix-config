@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""把上游 pstack 的 Cursor 方言改写成 omp/pi 可用的形状。
-
-做三件事，全部幂等：
-1. 对含 Cursor 专名的 SKILL.md，在首个 H1 之后插入一行指针，指向 harness 适配文档。
-2. 把指向 skills/ 之外的相对链接改写成上游 GitHub 地址（安装后这些文件不存在）。
-3. 校验被实际用到的每个 Cursor 专名都出现在每份适配文档里，缺失即失败。
-
-用法: adapt.py <pstack-root> <adapter.md>...
-"""
 import os
 import re
 import sys
@@ -15,7 +6,6 @@ import sys
 MARKER = "This skill uses Cursor names. In omp or pi, read"
 GITHUB = "https://github.com/cursor/plugins"
 
-# 与上游 scripts/generate-pstack-harness-trees.mjs 的 TERMS 保持一致；新增项必须同时进适配文档。
 TERMS = [
     ("`Task`", r"`Task`|\bTask (tool|subagent|call)"),
     ("`AskQuestion`", r"AskQuestion"),
@@ -29,8 +19,6 @@ TERMS = [
     ("`run_in_background: true`", r"run_in_background"),
     ("`resume`", r"`resume`"),
     ("`file_attachments`", r"file_attachments"),
-    # 模型选择在这里不成立：具体 slug、别名、规则文件都属于同一件事，
-    # 文档只需声明「不按模型选择」，不列举任何一个 slug。
     ("No pstack skill selects a model", r"\b(?:claude|grok|gpt)-[a-z0-9]|inherit-parent|pstack-models\.mdc"),
     (".cursor/skills/", r"\.cursor\/skills"),
     ("~/.cursor/plugins/", r"\.cursor\/plugins|\.cursor-plugin"),
@@ -40,14 +28,10 @@ TERMS = [
         "Cursor-only features",
         r"Bugbot|Cursor [Aa]utomation|cursor\.(sh|com)\/automations|[Cc]loud [Aa]gent|built-in PR tool",
     ),
-    # cursor-team-kit 里 deslop 与 Cursor 内建的 create-skill 在本机不存在，映射表要给出平替；
-    # control-cli 已按上游原样安装为原生 skill，control-ui 由本机 agent-browser 替代。
     ("`deslop`", r"\bdeslop\b"),
     ("`create-skill`", r"\bcreate-skill\b"),
-    # 两项分别检查：合并成一个正则会让只写了其中一项的文档蒙混过关。
     ("`control-cli`", r"\bcontrol-cli\b"),
     ("`control-ui`", r"\bcontrol-ui\b"),
-    # 上游用展示名 "Comment Sicko" 作 subagent_type，本机只有小写 slug。
     ("Comment Sicko", r"Comment Sicko"),
 ]
 ROUTE_KEY = "Run another pstack skill"
@@ -79,7 +63,6 @@ def skill_text(skill_dir):
 
 
 def used_terms(root):
-    """返回 {skill: 用到的 Cursor 专名}，含兄弟 skill 的裸引用。"""
     names = skill_dirs(root)
     result = {}
     for name in names:
@@ -97,7 +80,6 @@ def used_terms(root):
 
 
 def inject_pointer(root, name, adapter_ref):
-    """在首个 H1 之后插入指针行；已有标记则跳过。"""
     path = os.path.join(root, name, "SKILL.md")
     text = open(path, encoding="utf-8").read()
     if MARKER in text:
@@ -113,7 +95,6 @@ def inject_pointer(root, name, adapter_ref):
 
 
 def rewrite_links(root):
-    """skills/ 之外的目标在安装后不存在，改写成上游地址。"""
     pstack_root = os.path.dirname(root)
     changed = 0
     for path in walk(root):

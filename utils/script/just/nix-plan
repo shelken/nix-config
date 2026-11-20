@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# 构建前摘要：这次要真编译什么、要下载多少，其中多少是编译工具链。
-# 只调用 nix build --dry-run 与 nix derivation show，不构建、不下载。
-#
-# 分类依据派生本身：
-#   源码下载  带 outputHash 的固定输出派生（fetchurl、fetchFromGitHub 等）
-#   生成      带 buildCommand 或没有 src：配置文件、包装脚本、系统组装层
-#   编译      其余带 src 的派生；按输入里的工具链名标注语言
 set -euo pipefail
 
 usage() {
@@ -103,7 +96,6 @@ fi
 if [[ -n $fetched ]]; then
   n_fetched=$(wc -l <<<"$fetched" | tr -d ' ')
   echo "将下载 $n_fetched 个路径（$fetch_summary）"
-  # 只认「工具名[-wrapper|-auditable]-版本号」，排除同名前缀的 hook 脚本与 crate
   toolchain=$(name_of <<<"$fetched" | grep -E '^(rustc|cargo|llvm|clang|gcc|go|ghc|swift|zig|cmake|meson|ninja|openjdk|jdk|nodejs)(-wrapper|-auditable)?-[0-9]' | sort || true)
   if [[ -n $toolchain ]]; then
     echo "  其中编译工具链（说明有东西要现编）："

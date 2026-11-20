@@ -17,7 +17,6 @@ let
 
   miseLayer = import ./_mise-layer.nix { homeDir = config.home.homeDirectory; };
 
-  # VM 内的固定路径：guest-env.sh、launcher、sb-config.json 都从这里取
   guestPaths = rec {
     configMount = "/run/sandbox-config";
     configDir = "${configMount}/current";
@@ -25,7 +24,6 @@ let
     dataDir = "/data";
   };
 
-  # 每个声明文件在沙箱里的 (落点, 来源)：同名条目以 sandboxFiles 的内容覆盖 files 的
   sandboxOverrides = lib.foldl' (acc: tool: acc // tool.sandboxFiles) { } (
     builtins.attrValues devTools
   );

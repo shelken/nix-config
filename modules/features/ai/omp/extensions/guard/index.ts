@@ -1,7 +1,3 @@
-/**
- * guard 的宿主入口：pi 与 omp 都加载本文件。判定逻辑在 guard.ts，
- * 宿主包只在这里 import，测试与重放脚本直接用 guard.ts，不依赖宿主运行时。
- */
 import { CONFIG_DIR_NAME, getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent";
 import { registerGuard, type GuardExtensionAPI } from "./guard.ts";
 

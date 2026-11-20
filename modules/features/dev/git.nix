@@ -1,5 +1,3 @@
-# git（core，含服务器）：git 本体与配置
-# git-tools（tui 及以上）：delta、lazygit、tig 等交互与历史工具
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.git ];
@@ -29,9 +27,7 @@
         ];
         includes = [
           {
-            # use different email & name for work
             path = "~/work/.gitconfig";
-            # condition = "gitdir:~/work/";
           }
         ];
         settings = {
@@ -70,12 +66,8 @@
             renames = "copies";
             interHunkContext = 10;
           };
-          # GitHub HTTPS 保持原样，开启 secrets 的机器通过 gh credential helper 使用 GH_TOKEN。
-          # 旧的 SSH rewrite 是为 memex 插件服务；插件弃用后，token 认证作为默认路径。
           alias = {
-            # git change-commits GIT_COMMITTER_NAME "old name" "new name"
             change-commits = "!f() { VAR=$1; OLD=$2; NEW=$3; shift 3; git filter-branch --env-filter \"if [[ \\\"$`echo $VAR`\\\" = '$OLD' ]]; then export $VAR='$NEW'; fi\" $@; }; f ";
-            # search config
             cs = "config --get-regexp";
           };
         };
@@ -88,7 +80,6 @@
     {
       programs.git.settings.delta = {
         navigate = true;
-        # side-by-side = true;
         hyperlinks = true;
         dark = true;
       };
@@ -99,16 +90,15 @@
       };
 
       home.packages = with pkgs; [
-        onefetch # 显式当前git项目的详细信息
+        onefetch
         git-cliff
-        git-filter-repo # 清除git大文件，修改历史
+        git-filter-repo
         tig
       ];
 
       programs.lazygit = {
         enable = true;
         settings = {
-          # diff with delta
           gui = {
             timeFormat = "2006-01-02 15:04";
             shortTimeFormat = "15:04";

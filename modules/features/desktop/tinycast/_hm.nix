@@ -92,7 +92,6 @@ let
   ]
   ++ displayCommands;
 
-  # App 以命令 id 索引别名、收藏与快捷键，所以 id 必须由名字稳定派生
   commandID =
     name:
     let
@@ -133,11 +132,8 @@ in
 
   xdg.configFile."tinycast/scripts" = mylib.mkConfigFile config scriptsDir;
 
-  # settings.json 由 App 回写，所以源文件必须可写：liveEdit 主机软链到仓库，其他主机链到只读
-  # 的 Store 路径，启动时照常应用，但 App 内改动保存会失败
   xdg.configFile."tinycast/settings.json" = mylib.mkConfigFile config ./settings.json;
 
-  # 排在 setDarwinDefaults 之后，避免两个步骤的写入顺序不明确
   home.activation.tinycastCustomCommands = lib.hm.dag.entryAfter [ "setDarwinDefaults" ] ''
     /usr/bin/swift ${./sync-commands.swift} '${builtins.toJSON commandRecords}'
   '';

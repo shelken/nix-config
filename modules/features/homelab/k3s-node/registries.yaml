@@ -12,11 +12,9 @@ mirrors:
   quay.io:
     endpoint:
       - "https://quay-mirror.int.ooooo.space"
-      # - "https://quay.m.daocloud.io"
   registry.k8s.io:
     endpoint:
       - "https://k8s-mirror.int.ooooo.space"
-      # - "https://k8s.m.daocloud.io"
   ghcr.io:
     endpoint:
       - "https://ghcr-mirror.int.ooooo.space"

@@ -1,5 +1,3 @@
-# set options
-
 set positional-arguments := true
 set dotenv-load := true
 set dotenv-filename := ".host-profile"
@@ -32,10 +30,8 @@ plan host=profile kind="system":
 deploy host mach:
     @nixos-rebuild switch --flake .#{{ host }} --target-host {{ mach }} --use-remote-sudo --verbose
 
-# 远程部署 darwin 主机: just deploy sakamoto [--dry-activate --verbose ...]
 # 默认 --skip-checks: deploy-rs 的 check 阶段会对整个 flake 跑 nix flake check,
 # 求值所有主机（含 linux 的 IFD/assertion 问题），与目标节点无关也会失败。
-# schema 校验单独跑: nix build .#checks.aarch64-darwin.deploy-schema
 [doc('远程部署 darwin 主机，用法: just deploy <主机> [--dry-activate ...]')]
 [group('build')]
 [macos]

@@ -1,4 +1,3 @@
-# 组网客户端：Tailscale、ZeroTier
 { config, ... }:
 {
   flake.modules.darwin.gui.imports = [ config.flake.modules.darwin.vpn ];

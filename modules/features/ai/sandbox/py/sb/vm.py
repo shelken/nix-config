@@ -1,9 +1,3 @@
-"""主 VM (sb-main) 的期望配置、能力上限指纹与就绪状态机。
-
-能力上限 = sb.yaml 决定的挂载根、VM 级网络策略、secret 与规格。指纹只含这些，所以改它们要重建 VM，
-改发布目录里的声明配置不用。共用 mise 目录的宿主真实路径不进指纹：换机器或搬目录不该重建。
-"""
-
 from __future__ import annotations
 
 import hashlib
@@ -31,7 +25,6 @@ def log(msg: str) -> None:
 
 @contextmanager
 def lifecycle_lock(cfg: Config, action: str) -> Iterator[None]:
-    """主 VM 的生命周期互斥：创建、重建、停止、删除、首次启动都要拿。"""
     path = os.path.join(cfg.lock_dir, "sb-main.lock")
     try:
         with flock(path, 300):
@@ -43,7 +36,6 @@ def lifecycle_lock(cfg: Config, action: str) -> Iterator[None]:
 
 @dataclass(frozen=True)
 class Desired:
-    """sb.yaml 推出的主 VM 期望配置。conf 里 mise 目录的宿主路径是占位符，指纹因此不随它变。"""
 
     conf: dict[str, Any]
     volume: str
@@ -125,7 +117,6 @@ def ensure(cfg: Config, msb: Msb) -> None:
 
 
 def ensure_running(cfg: Config, msb: Msb) -> None:
-    """sb sync 只需要 VM 在运行：不存在就创建，停止就启动，不检查能力上限。"""
     if msb.inspect(VM_NAME) is None:
         log(f"[sb] VM {VM_NAME} 尚未创建，正在自动启动...")
         ensure(cfg, msb)

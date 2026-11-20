@@ -1,10 +1,3 @@
-# 语言表：每种语言的外部工具、LSP、formatter、linter、treesitter 语法都写在这里
-# default.nix 把它拆成 home.packages、treesitter 插件和 vim.g.nix_languages（供 config/ 读取）
-#   packages   装进 PATH 的工具
-#   lsp        nvim-lspconfig 的配置名（vim.lsp.enable）
-#   formatters filetype -> conform formatter 名
-#   linters    filetype -> nvim-lint linter 名
-#   grammars   nvim-treesitter grammar 名
 pkgs: {
   nix = {
     packages = [
@@ -91,7 +84,6 @@ pkgs: {
     ];
   };
 
-  # rust-analyzer / rustfmt 由 mise 声明的 rust 工具链（rustup）提供
   rust = {
     lsp = [ "rust_analyzer" ];
     formatters.rust = [ "rustfmt" ];
@@ -115,7 +107,6 @@ pkgs: {
   };
 
   web = {
-    # html / cssls 来自 data 里的 vscode-langservers-extracted
     packages = [
       pkgs.typescript-language-server
       pkgs.typescript
@@ -172,7 +163,6 @@ pkgs: {
       "buf_ls"
     ];
     formatters.proto = [ "buf" ];
-    # config/ 只对 .github/workflows 下的文件跑 actionlint
     linters.yaml = [ "actionlint" ];
     grammars = [
       "just"

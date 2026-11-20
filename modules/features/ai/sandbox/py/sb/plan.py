@@ -1,9 +1,3 @@
-"""执行计划 (Plan)：sb.yaml 能力上限 + 项目 .sandbox.yaml 授权解析成 host → guest 的唯一数据契约。
-
-宿主这边由 resolve_plan 产出，guest 的 launcher 通过 PLAN_JSON 消费。字段就是 Plan 的属性，
-改字段时 guest/plan.sh 要一起改，test_contract.py 用真实的 Plan 校验两边一致。
-"""
-
 from __future__ import annotations
 
 import json

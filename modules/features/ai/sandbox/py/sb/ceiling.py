@@ -1,5 +1,3 @@
-"""能力上限 sb.yaml：一次解析成带类型的 Ceiling，其余模块不再读 YAML 原文。"""
-
 from __future__ import annotations
 
 import os
@@ -31,12 +29,12 @@ class Ceiling:
     memory: str
     volume_name: str
     volume_size: str
-    mount_roots: list[str]  # 已展开 ~ 与 ${HOME}，未 realpath
-    network: dict[str, Any]  # 交给 msb 的 VM 级网络策略，不含 default_grant
-    default_grants: list[str]  # 所有上下文默认放行的私网 IP:端口
-    default_allow: list[str]  # 所有上下文默认放行的宿主端口，形如 host:tcp:8317
+    mount_roots: list[str]
+    network: dict[str, Any]
+    default_grants: list[str]
+    default_allow: list[str]
     secrets: dict[str, Any]
-    idle_timeout: str | None  # msb 的 idle_timeout：没有活跃的 exec 会话超过该时长就停止主 VM；None 不启用
+    idle_timeout: str | None
 
     @staticmethod
     def load(path: str, home: str) -> "Ceiling":

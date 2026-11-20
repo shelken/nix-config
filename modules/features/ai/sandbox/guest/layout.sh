@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# 可写根映射到数据盘 $SB_DATA_DIR/home/<root>；声明文件逐项只读挂在根上，祖先目录钉成挂载点，防止改名绕过只读。
-#
-# 读：HOME、SB_DATA_DIR、SB_CONFIG_DIR、SB_CONFIG_MOUNT、XDG_CONFIG_HOME（guest-env.sh）；写：AGENT_ROOTS（数据盘可写根映射）、LAYOUT_ARGS（bwrap 参数）、MOUNT_POINTS（祖先挂载点）
-# reject_reserved_target 在 prepare_declared_layout 之后供 launcher 校验 imports 目标
 set -euo pipefail
 
 declare -A AGENT_ROOTS=()
@@ -92,7 +88,6 @@ reject_reserved_target() {
   done
 }
 
-# 发布目录在而清单缺失时不能静默放行：上下文会没有任何声明配置和只读保护
 require_published() {
   local file="$1"
   if [[ ! -f "$file" ]]; then
@@ -101,9 +96,7 @@ require_published() {
   fi
 }
 
-# 声明删除或改名后，旧落点的空占位留在数据盘，工具会把它当真文件加载（OMP 读到空的 guard.ts 报
-# 「does not export a valid factory function」）。记录上次布局用的清单，删掉新清单里已经没有的空占位；
-# 旧数据盘没有记录时，用保留的历史发布清单代替。别的上下文可能正把它当挂载点用，所以只在独占时清理
+# 声明删除或改名后，旧落点的空占位留在数据盘，工具会把它当真文件加载（OMP 读到空的 guard.ts 报「does not export a valid factory function」）。
 LAYOUT_STATE="$SB_DATA_DIR/home/.declared-paths"
 prune_stale_placeholders() {
   local others="$1" list="$2" t dst="" a="" _root=""
@@ -117,14 +110,12 @@ prune_stale_placeholders() {
   while IFS= read -r t; do
     [[ -n "$t" ]] || continue
     declared_dst dst "$t"
-    # 不在当前可写根或 /data 下的落点映射不到数据盘，跳过，避免误删 guest 自己的文件
     mount_root_of _root "$dst" || continue
     backing_of a "$dst"
     if [[ -e "$a" ]] && is_empty_placeholder "$a"; then
       rm -rf "$a"
     fi
   done < <(LC_ALL=C comm -23 <(cat "${previous[@]}" 2>/dev/null | LC_ALL=C sort -u) <(LC_ALL=C sort -u "$list"))
-  # 没有可写根的发布（如冒烟测试）不会建 /data/home
   mkdir -p "${LAYOUT_STATE%/*}"
   cp "$list" "$LAYOUT_STATE.tmp"
   mv "$LAYOUT_STATE.tmp" "$LAYOUT_STATE"

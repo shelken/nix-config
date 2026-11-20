@@ -2,7 +2,6 @@ require("zoxide"):setup({
   update_db = true,
 })
 
--- plugin projects
 require("projects"):setup({
     event = {
         save = {
@@ -27,12 +26,9 @@ require("projects"):setup({
         },
     },
     save = {
-        method = "yazi", -- yazi | lua
-        yazi_load_event = "@projects-load", -- event name when loading projects in `yazi` method
-        lua_save_path = "", -- path of saved file in `lua` method, comment out or assign explicitly
-                            -- default value:
-                            -- windows: "%APPDATA%/yazi/state/projects.json"
-                            -- unix: "~/.local/state/yazi/projects.json"
+        method = "yazi",
+        yazi_load_event = "@projects-load",
+        lua_save_path = "",
     },
     last = {
         update_after_save = true,
@@ -52,7 +48,6 @@ require("projects"):setup({
     },
 })
 
--- 状态栏显示符号链接
 Status:children_add(function(self)
   local h = self._current.hovered
   if h and h.link_to then

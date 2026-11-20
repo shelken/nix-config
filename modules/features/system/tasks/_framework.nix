@@ -34,7 +34,6 @@ let
     opTokenFile = userSops.secrets."op/service-account-token".path;
   };
 
-  # 用户家目录（task.nix 属 darwin 模块，但家目录由 users 模块解析，避免硬编码 /Users）
   userHome = config.users.users.${myvars.username}.home;
 
   taskType = tasksLib.mkTaskType;
@@ -51,8 +50,6 @@ in
       rootTasks = tasksLib.rootTasks taskCfg;
     in
     {
-      # 约定优于配置：hosts/<hostname>/tasks/ 自动加载，目录存在即接入，
-      # host 文件无需任何接线
       shelken.tasks = mylib.loadTasks (mylib.relativeToRoot "hosts/${config.networking.hostName}/tasks") {
         inherit pkgs lib;
         secretPath = secret: userSops.secrets.${secret}.path;
@@ -60,15 +57,13 @@ in
 
       assertions = tasksLib.mkAssertions taskCfg;
 
-      # root 任务：launchd daemon；手动执行 sudo task-<name>
       launchd.daemons = lib.mapAttrs (name: t: {
         command = "${t.package}/bin/task-${name}";
         serviceConfig = tasksLib.mkLaunchdConfig name t;
       }) rootTasks;
 
-      # launchd 每次启动任务才打开日志，轮转后无需发信号（N）；超 1MB 轮转、留 5 份 gzip 旧档
+      # launchd 每次启动任务都会重新打开日志，标志 N 避免 newsyslog 轮转后向 syslogd 发 SIGHUP
       environment.etc."newsyslog.d/space.ooooo.tasks.conf".text = ''
-        # logfilename                          [owner:group]               mode count size(KB) when flags
         /Library/Logs/task-*.log               root:wheel                  644  5     1024     *    GNZ
         ${userHome}/Library/Logs/task-*.log    ${myvars.username}:staff    644  5     1024     *    GNZ
       '';

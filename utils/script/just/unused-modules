@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""列出没有被任何主机载入的功能模块文件。
-
-候选是 modules/features 与 modules/profiles 下被 import-tree 自动导入的 .nix 文件。
-"已载入"取自各主机求值结果的模块图（darwin/NixOS 系统与其中的 Home Manager 用户）：
-只要文件的任一 flake.modules.* 贡献进入了某台主机，就算被引用。
-所以一个文件里有多个功能、只用到其中一个时不会被列出。
-"""
 import json
 import subprocess
 import sys
@@ -27,7 +20,6 @@ def run(*args):
 
 
 def main():
-    # HM 自带的 modules/ 与本仓库同名，必须按源码树的 store 路径区分
     root = json.loads(run("nix", "flake", "prefetch", "--json", "."))["storePath"] + "/"
 
     loaded = set()

@@ -1,4 +1,3 @@
-# iOS：底模换 template-ios.json（含 Tailscale endpoint）
 subs:
   - "{{ op://Projects/proxy/subs-miaona }}"
 nodes:

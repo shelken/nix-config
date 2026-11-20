@@ -1,11 +1,9 @@
-# lib/tests/calcUniformSchedule.nix
 {
   lib,
   mylib,
 }:
 
 let
-  # 使用固定的主机名列表确保结果可预测
   fixedHostnames = [
     "ling"
     "mio"
@@ -17,7 +15,6 @@ let
     "yuuko"
   ];
 
-  # 计算排序后的主机名列表
   sortedHostnames =
     let
       hostnameHashes = map (h: {
@@ -28,7 +25,6 @@ let
     in
     map (x: x.name) sortedByHash;
 
-  # 计算每个主机名的期望值
   calculateExpected =
     hostname: startHour: endHour:
     let
@@ -109,7 +105,6 @@ let
   testResults = map runTest testCases;
   allPassed = builtins.all (test: test.valid) testResults;
 
-  # 转换为属性集便于查看
   testsByName = builtins.listToAttrs (
     map (test: {
       name = test.name;
@@ -127,7 +122,6 @@ in
   allPassed = allPassed;
   summary = if allPassed then "✅ All tests passed!" else "❌ Some tests failed";
 
-  # 调试信息：显示固定主机名的排序结果
   debug = {
     fixedHostnames = fixedHostnames;
     sortedHostnames = sortedHostnames;

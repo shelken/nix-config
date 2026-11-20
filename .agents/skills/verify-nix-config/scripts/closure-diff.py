@@ -1,17 +1,4 @@
 #!/usr/bin/env python3
-"""对比两个 flake 修订下某主机的 derivation 闭包，判断是否只有 hash / 顺序差异。
-
-用法（在仓库根目录运行，新增文件需先 git add）:
-  .agents/skills/verify-nix-config/scripts/closure-diff.py <before-rev> <host> [after-ref=.]
-before-rev 可以是任意 git 修订（hash、分支、HEAD~1）；after-ref 默认为工作树 "."。
-
-输出每个闭包（sys / home）：
-  added / removed  按名字计的新增或删除 derivation（应为空）
-  hashOnly         归一化 store hash 后完全相同的数量
-  orderOnly        仅列表或行顺序不同
-  real             实际内容差异（应为空）
-  collisions       ignoreCollisions=true 的 buildEnv 中，各包首次出现顺序变化的 derivation 名
-"""
 import json, os, re, subprocess, sys
 
 def sh(*a):

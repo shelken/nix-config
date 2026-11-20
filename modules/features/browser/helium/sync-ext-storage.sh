@@ -1,5 +1,4 @@
 # shellcheck shell=bash
-# 数组 ids 由 home.nix 在本文件前面定义
 data=${HELIUM_DATA:-"$HOME/Library/Application Support/net.imput.helium"}
 source_profile=Default
 

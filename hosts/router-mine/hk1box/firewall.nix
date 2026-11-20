@@ -1,5 +1,3 @@
-# IoT 网段只能访问 hk1box 的 DNS 与公网：先放行 DNS，再拒绝其余私网，最后放行出网，三条的顺序不能变。
-# Block-LAN-IPv6-DNS 禁止 LAN 用 IPv6 直连外部 DNS，让 DNS 回到 hk1box
 { lib, ... }:
 let
   net = import ../../../vars/networking.nix { inherit lib; };

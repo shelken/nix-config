@@ -1,6 +1,6 @@
 { pkgs, ... }:
 {
-  every = 3600 * 5 + 1; # 5小时1秒
+  every = 3600 * 5 + 1;
   packages = [
     pkgs.nodejs
     pkgs.mise

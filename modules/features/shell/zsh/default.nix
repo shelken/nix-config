@@ -1,5 +1,3 @@
-# zsh（core，含服务器）：shell、oh-my-zsh、fzf
-# zsh-dev（tui 及以上）：开发工具的 oh-my-zsh 插件，以及依赖 fd 的 fzf 默认命令
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.zsh ];
@@ -70,15 +68,10 @@
 
       programs.zsh = {
         enable = true;
-        # 自定义配置目录
         dotDir = zshDotDir;
-        # 自动补全 默认不需要，如果使用omz的话
-        # enableCompletion = true;
         # Home Manager 默认早于 oh-my-zsh/fzf-tab 加载；改为 plugins 控制 ZLE 包装顺序。
         autosuggestion.enable = false;
-        # 语法高亮保持 Home Manager 默认末尾加载。
         syntaxHighlighting.enable = true;
-        # https://home-manager-options.extranix.com/?query=zsh.history
         history = {
           size = 30000;
           save = 30000;
@@ -89,12 +82,10 @@
         };
         oh-my-zsh = {
           enable = true;
-          # ref: https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins
           plugins = [
-            # "docker-comose"
             "docker"
             "rsync"
-            "sudo" # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/sudo/README.md
+            "sudo"
             "ssh"
             "tailscale"
           ];
@@ -102,13 +93,10 @@
           extraConfig = ''
             DISABLE_MAGIC_FUNCTIONS=true
           '';
-          # custom = omzCustomPath;
         };
         initContent =
           let
             firstInit = lib.mkBefore ''
-              # 性能分析
-              # zmodload zsh/zprof
 
               # mise 的 shim 目录全局共用一份，但版本声明是项目级的。
               # oh-my-zsh 的 helm/fluxcd 等插件在加载时探测命令，项目外调用会命中
@@ -126,7 +114,6 @@
               fpath=( ${functionsDir} $fpath )
               autoload -Uz ${functionsDir}/*(:t)
               # compinit 已由 oh-my-zsh 提前运行，手动注册 functions/_* 补全函数
-              # 命名规范：_<command>.zsh → _<command>，自动 compdef _<command> <command>
               for _hmf in ${functionsDir}/_*(N:t); do
                 compdef "$_hmf" "''${_hmf#_}"
               done
@@ -140,15 +127,9 @@
             firstInit
             functionsInit
             defaultInit
-            # PATH、代理函数
             (lib.mkOrder 1001 initContent)
           ];
         plugins = [
-          # oh-my-zsh/compinit
-          #    -> fzf key bindings, 不含 Tab completion
-          #    -> fzf-tab
-          #    -> zsh-autosuggestions
-          #    -> zsh-syntax-highlighting
           {
             name = "fzf-key-bindings";
             src = pkgs.fzf;
@@ -169,7 +150,7 @@
 
       programs.fzf = {
         enable = true;
-        # fzf --zsh 会在 fzf-tab 之后把 Tab 绑到 fzf-completion；这里只保留上面的 key-bindings。
+        # HM 的 fzf zsh 集成会加载 completion.zsh，在 fzf-tab 之后覆写 ^I（Tab）绑定；只保留上面手动加载的 key-bindings.zsh
         enableZshIntegration = false;
       };
 
@@ -181,7 +162,6 @@
         ];
       };
 
-      # bash：补全与 PATH、代理函数
       programs.bash = {
         enable = true;
         enableCompletion = true;
@@ -189,24 +169,18 @@
         initExtra = lib.mkOrder 1001 initContent;
       };
 
-      # zsh 追加：PATH 环境变量与别名（initContent 已并入上方 mkMerge）
       programs.zsh.envExtra = envExtra;
 
       home.shellAliases = shellAliases // {
         ll = "eza --icons -l -T -L=1";
       };
 
-      # ls 替代：现代 ls
-      # A modern replacement for 'ls'
-      # useful in bash/zsh prompt, not in nushell.
       programs.eza = {
         enable = true;
         git = true;
         icons = "auto";
       };
 
-      # a cat(1) clone with syntax highlighting and Git integration.
-      # cat 替代
       programs.bat = {
         enable = true;
         config = {
@@ -227,21 +201,6 @@
         ''
       );
 
-      # zoxide is a smarter cd command, inspired by z and autojump.
-      # It remembers which directories you use most frequently,
-      # so you can "jump" to them in just a few keystrokes.
-      # zoxide works on all major shells.
-      #
-      #   z foo              # cd into highest ranked directory matching foo
-      #   z foo bar          # cd into highest ranked directory matching foo and bar
-      #   z foo /            # cd into a subdirectory starting with foo
-      #   z ..               # cd one level up
-      #   z -                # cd into previous directory
-      #
-      #   zi foo             # cd with interactive selection (using fzf)
-      #
-      #   z foo<SPACE><TAB>  # show interactive completions (zoxide v0.8.0+, bash 4.4+/fish/zsh only)
-      # 快速跳转
       programs.zoxide = {
         enable = true;
         enableBashIntegration = true;
@@ -254,18 +213,17 @@
     programs.zsh.oh-my-zsh.plugins = [
       "azure"
       "fluxcd"
-      "gitignore" # 命令gi; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/gitignore/README.md
-      "golang" # 自动补全以及alias; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/golang/README.md
+      "gitignore"
+      "golang"
       "helm"
-      "httpie" # 命令http; 自动补全; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/httpie/README.md
+      "httpie"
       "kubectl"
-      "mvn" # 自动补全及alias; https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/mvn/README.md
+      "mvn"
       "pip"
-      "qrcode" # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/qrcode/README.md
+      "qrcode"
       "rclone"
       "terraform"
     ];
-    # fd 只在 tui 登记（dev/tools-base.nix）；服务器上 fzf 用内置遍历
     programs.fzf.defaultCommand = "fd --type f";
   };
 }

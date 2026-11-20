@@ -28,16 +28,13 @@ PINKY_APPS = ("/Applications/Pinky.app/Contents/MacOS/Pinky", "~/Applications/Pi
 PROTOCOL = "2025-06-18"
 KEYS = ["back", "home", "recents", "enter", "tab", "delete", "forward_delete", "escape",
         "dpad_up", "dpad_down", "dpad_left", "dpad_right", "page_up", "page_down"]
-SWIPE = {"down": "up", "up": "down", "right": "left", "left": "right"}  # 手指方向与内容相反
+SWIPE = {"down": "up", "up": "down", "right": "left", "left": "right"}
 ELEMENT = re.compile(r'^\[(\d+)\]\s+\S+\s+"(.*?)"(?:\s+@(\d+),(\d+))?')
 OCR = re.compile(r'^ocr\s+"(.*?)"\s+@(\d+),(\d+)')
 
 
 class Fail(Exception):
     pass
-
-
-# ---------- Pinky 进程与 HTTP ----------
 
 def pinky_bin():
     for c in (os.environ.get("PINKY_BIN"), shutil.which("pinkyctl"), *PINKY_APPS):
@@ -56,7 +53,6 @@ def token():
 
 
 def rpc(body, sid=None, timeout=120):
-    """发一条 JSON-RPC；返回 (会话 ID, 结果)。响应是 SSE 或 JSON，按 id 取对应那条。"""
     headers = {"Authorization": f"Bearer {token()}", "Content-Type": "application/json",
                "Accept": "application/json, text/event-stream"}
     if sid:
@@ -94,7 +90,6 @@ def new_session():
 
 
 def call(tool, args, create=False):
-    """调用一个工具，返回 (文本, 图片块列表)。create: 没有会话时新建（只有 up 这样做）。"""
     sid = SESSION.read_text().strip() if SESSION.exists() else None
     body = {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": tool, "arguments": args}}
     for attempt in (0, 1):
@@ -117,7 +112,6 @@ def call(tool, args, create=False):
 
 
 def run(tool, args, create=False):
-    """调用并打印；首行状态是 settled 才算成功。返回 (退出码, 文本)。"""
     text, _ = call(tool, {k: v for k, v in args.items() if v is not None and v is not False}, create)
     print(text)
     if "phone_connect first" in text:
@@ -126,11 +120,7 @@ def run(tool, args, create=False):
 
 
 def common(a):
-    """动作工具共有的参数。"""
     return {"intent": a.intent, "approval_id": a.approval_id}
-
-
-# ---------- 子命令 ----------
 
 def cmd_up(a):
     apps = [x.strip() for x in a.apps.split(",")] if a.apps else None
@@ -207,7 +197,7 @@ def cmd_tap(a):
 
 def cmd_tap_text(a):
     q = " ".join(a.text).lower()
-    found = []  # (标签, tap 参数)
+    found = []
     for l in screen_lines():
         m, o = ELEMENT.match(l), OCR.match(l)
         label = (m or o).group(2) if (m or o) else ""

@@ -17,7 +17,6 @@
 
     sops = {
       secrets.kopia-password = mylib.mkDefaultSecret { key = "kopia/password"; };
-      # WebDAV 入口域名：secret 只存裸域名，scheme 与 /dav 前缀在模板里拼
       secrets.kopia-main-domain = mylib.mkDefaultSecret { key = "main-domain"; };
       secrets.kopia-webdav-username = mylib.mkDefaultSecret { key = "drive/webdav/username"; };
       secrets.kopia-webdav-password = mylib.mkDefaultSecret {
@@ -25,8 +24,6 @@
       };
 
       ## atomicWrites：直接 PUT 到最终名，绕开 openlist 偶发「MOVE 返回成功却没改名」的问题，见 shelken/home-ops#1763
-      ## NOTE: kopia 仓库存储结构随后端类型而异（S3 与 WebDAV 互不兼容），
-      ## 载入旧库的数据不能直接连新库，迁移需在旧库上执行 repository sync-to
       templates."kopia-repository.config" = {
         content = ''
           {

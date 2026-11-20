@@ -1,10 +1,3 @@
-# tasks 用户态部分：用户 launch agents、task CLI 与主机任务发现
-# hosts/<host>/tasks/ 中的任务与 feature 模块声明的 shelken.tasks.<name> 汇总到
-# 同一份选项：user 任务生成 LaunchAgent + task-<name> 手动命令。
-#
-# 为什么在 home 层：两个 HM 入口（just sw 内嵌 / just hm 独立）共同持有
-# 用户态 agent，任一入口切换都不会清理另一入口部署的 agent
-# （否则独立 just hm 会把 sw 生成的 profile-usage agent 删掉）。
 {
   config,
   lib,
@@ -23,7 +16,6 @@ let
   taskCfg = config.shelken.tasks;
   userTasks = tasksLib.userTasks taskCfg;
 
-  # 标签前缀只在 lib/tasks.nix 定义一次，构建时注入 CLI
   taskCli = pkgs.writers.writePython3Bin "task" { flakeIgnore = [ "E501" ]; } (
     builtins.replaceStrings [ "@labelPrefix@" ] [ tasksLib.labelPrefix ] (
       builtins.readFile ./_cli/task.py
@@ -41,8 +33,6 @@ in
   };
 
   config = {
-    # 约定优于配置：hosts/<hostname>/tasks/ 自动加载，目录存在即接入，host 文件无需接线。
-    # 只取 user 任务，root 任务由 darwin 层从同一目录另行加载
     shelken.tasks = lib.filterAttrs (_: t: t.user or true) (
       mylib.loadTasks (mylib.relativeToRoot "hosts/${hostname}/tasks") {
         inherit pkgs lib;
@@ -51,7 +41,6 @@ in
     );
 
     assertions = tasksLib.mkAssertions taskCfg ++ [
-      # 用户层只生成 LaunchAgent，root 任务在这里会被静默丢弃，改成构建期报错
       {
         assertion = lib.all (t: t.user) (lib.attrValues taskCfg);
         message = "shelken.tasks: Home Manager 层的任务必须 user = true；root 任务写到 hosts/<机器>/tasks/ 或功能的 darwin 模块";

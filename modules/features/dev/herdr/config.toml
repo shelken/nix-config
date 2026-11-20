@@ -3,7 +3,6 @@ onboarding = false
 [theme]
 name = "catppuccin"
 
-# worktree 检出根目录：实际路径为 <directory>/<仓库名>/<分支 slug>，默认 ~/.herdr/worktrees
 [worktrees]
 directory = "~/Code/worktrees"
 
@@ -11,7 +10,6 @@ directory = "~/Code/worktrees"
 prefix = "alt+x"
 split_horizontal = "prefix+h"
 
-# focus / swap：只绑方向键（覆盖默认 prefix+hjkl，hjkl 关闭）
 focus_pane_left = "prefix+left"
 focus_pane_down = "prefix+down"
 focus_pane_up = "prefix+up"
@@ -27,38 +25,30 @@ navigate_pane_down = ""
 navigate_pane_up = ""
 navigate_pane_right = ""
 
-# agent/workspace 跳转用 session navigator：prefix+g（默认）
-
-# auto-pi：当前目录 session 浮窗（过滤 skill）
-# 不用 prefix+r：留给内置 resize_mode。
 [[keys.command]]
 key = "alt+s"
 type = "plugin_action"
 command = "shelken.auto-pi.pick-session"
 description = "pick pi session for cwd"
 
-# recent-navigator：只 Agents 页（比 prefix+g 干净）
 [[keys.command]]
 key = "alt+a"
 type = "plugin_action"
 command = "beyondlex.herdr-recent-navigator.focus-agents"
 description = "recent agents navigator"
 
-# pi-float：浮动弹窗选预设，在 focus pane cwd 启动 pi（alt+f 另有他用）
 [[keys.command]]
 key = "prefix+i"
 type = "plugin_action"
 command = "shelken.pi-float.pick-preset"
 description = "pi-float: pick preset"
 
-# herdr-file-viewer：只读文件树
 [[keys.command]]
 key = "prefix+f"
 type = "plugin_action"
 command = "herdr-file-viewer.open-file-viewer-tab"
 description = "file viewer tab"
 
-# herdr-lazy：插件声明管理（list/lock 在 nix-config herdr/）
 [[keys.command]]
 key = "prefix+shift+l"
 type = "plugin_action"

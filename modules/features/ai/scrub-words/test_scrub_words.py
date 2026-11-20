@@ -1,5 +1,3 @@
-"""scrub-words 端到端测试：用临时目录驱动真实 CLI。运行：python3 test_scrub_words.py"""
-
 import json
 import os
 import subprocess
@@ -15,7 +13,7 @@ DICT = "傻逼 -> 傻瓜\n傻逼玩意->笨东西\n# 注释\n\nfuck  ->  heck\n"
 
 def title_line():
     head = '{"type":"title","v":1,"title":"傻逼玩意 标题","source":"auto","pad":"'
-    pad = 255 - len((head + '"}').encode())  # 含换行共 256 字节
+    pad = 255 - len((head + '"}').encode())
     return head + " " * pad + '"}'
 
 
@@ -36,8 +34,8 @@ class ScrubWords(unittest.TestCase):
             title_line(),
             msg("你真是个傻逼玩意，傻逼"),
             msg("Fuck this, fucking thing\nfuck"),
-            r'{"text":"\u50bb\u903c"}',  # JSON 转义形式
-            msg("傻逼", thinkingSignature="Ep4xCpsxAWkU"),  # 带真签名，不能改
+            r'{"text":"\u50bb\u903c"}',
+            msg("傻逼", thinkingSignature="Ep4xCpsxAWkU"),
             msg("没有脏话"),
         ]
         self.old = self.root / "proj" / "old.jsonl"
@@ -63,7 +61,7 @@ class ScrubWords(unittest.TestCase):
         out = self.cli("dry-run").stdout
         self.assertEqual(self.old.read_bytes(), self.before)
         self.assertIn("傻逼玩意 → 笨东西", out)
-        self.assertIn("fresh.jsonl", out)  # 近期写入的文件被列为跳过
+        self.assertIn("fresh.jsonl", out)
 
     def test_stat_prints_counts_without_paths(self):
         out = self.cli("dry-run", "--stat").stdout
@@ -74,14 +72,14 @@ class ScrubWords(unittest.TestCase):
     def test_run_replaces_and_undo_restores(self):
         self.cli("run")
         new = self.old.read_bytes().decode().split("\n")
-        self.assertEqual(len((new[0] + "\n").encode()), 256)  # title 行定长
-        self.assertIn("笨东西，傻瓜", new[1])  # 长词优先
+        self.assertEqual(len((new[0] + "\n").encode()), 256)
+        self.assertIn("笨东西，傻瓜", new[1])
         self.assertIn("笨东西 标题", new[0])
-        self.assertEqual(new[2], msg("heck this, fucking thing\nheck"))  # 大小写不敏感且带词边界
-        self.assertEqual(json.loads(new[3])["text"], "傻瓜")  # 转义形式同样替换
-        self.assertEqual(new[4], self.lines[4])  # 签名行原样
-        self.assertEqual(self.old.stat().st_mtime_ns, self.mtime)  # 不打乱会话排序
-        self.assertIn("傻逼", self.fresh.read_text(encoding="utf-8"))  # 活跃文件未动
+        self.assertEqual(new[2], msg("heck this, fucking thing\nheck"))
+        self.assertEqual(json.loads(new[3])["text"], "傻瓜")
+        self.assertEqual(new[4], self.lines[4])
+        self.assertEqual(self.old.stat().st_mtime_ns, self.mtime)
+        self.assertIn("傻逼", self.fresh.read_text(encoding="utf-8"))
 
         self.cli("undo")
         self.assertEqual(self.old.read_bytes(), self.before)
@@ -94,7 +92,7 @@ class ScrubWords(unittest.TestCase):
         out = self.cli("undo", "--min-age", "0").stdout
         self.assertIn("内容已被改动", out)
         self.assertIn("改过了", self.old.read_text(encoding="utf-8"))
-        self.assertTrue(any(self.cache.iterdir()))  # 有未恢复的行，日志保留
+        self.assertTrue(any(self.cache.iterdir()))
 
     def test_purge_all(self):
         self.cli("run")
@@ -119,7 +117,7 @@ class ScrubWords(unittest.TestCase):
 
     def test_escaped_backslash_is_not_a_unicode_escape(self):
         (self.tmp / "dict.txt").write_text("操 -> x\n", encoding="utf-8")
-        literal = r'{"text":"\\u64cd"}'  # 正文是字面量 \u64cd，不是“操”；误替换会产出非法 JSON
+        literal = r'{"text":"\\u64cd"}'
         self.old.write_bytes(self.old.read_bytes() + literal.encode() + b"\n")
         self.cli("run", "--min-age", "0")
         last = self.old.read_text(encoding="utf-8").split("\n")[-2]

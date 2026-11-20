@@ -1,8 +1,3 @@
-/**
- * line-cap 扩展测试：纯函数 + 临时目录，不触碰真实会话，也不写 ~/.pi/agent/line-cap。
- * 覆盖：列截断、头尾保留、回读完整输出、失败状态保留、文件丢失回退、后台消息与 !cmd、缓存稳定。
- */
-
 import { afterAll, expect, test } from "bun:test";
 import fs from "node:fs";
 import os from "node:os";
@@ -117,7 +112,6 @@ test("shape：尾部窗口只剩一行超长行被清空时，回退用头部余
 	expect(ends.tail).toEqual([]);
 	const shaped = shape(ends.head, ends.tail);
 	const out = shaped.text.split("\n");
-	// 回退后开头仍在、输出行数远多于不回退时的 104 行、字节接近 50KB 上限
 	expect(out[0]).toBe(lines[0]);
 	expect(out.length).toBeGreaterThan(400);
 	expect(Buffer.byteLength(shaped.text)).toBeGreaterThan(40 * 1024);

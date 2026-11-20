@@ -1,7 +1,3 @@
-# secrets：age 密钥能力（主机属性）与 sops-nix 用户态模块
-# 系统侧选项在此声明，值由 hosts/<host>/default.nix 设置；
-# HM 侧经 osConfig 只读同名选项
-# 所有主机都可能有 age 密钥 → 两个 core 都导入；开关仍由主机设置
 { config, ... }:
 {
   flake.modules.darwin.core.imports = [ config.flake.modules.darwin.secrets ];
@@ -22,8 +18,6 @@
         description = "Whether or not this host holds age secrets";
       };
 
-      # sec-run 用 op 与 service account token 取 1Password 里的 key，不依赖桌面 App；
-      # 与定时任务共用同一个 nixpkgs 包
       config.environment.systemPackages = lib.mkIf config.shelken.secrets.enable [
         pkgs._1password-cli
       ];
@@ -53,14 +47,10 @@
       inherit (lib) mkIf;
       cfg = config.shelken.secrets;
 
-      # ─── 凭据基座与覆盖层 ───
-      # 基座：仓库内声明的 op:// 引用映射，注入文件只含引用不含明文，可安全进 nix store
       # 条目必须放在 Agent vault：sec-run 用的 service account 只能读它（1Password 不允许授权 Personal）
       opSecretMap = {
-        # APIM_API_KEY = "Agent/APIM_API_KEY";
         BRAVE_API_KEY = "Agent/BRAVE_API_KEY";
         BRAVE_SEARCH_API_KEY = "Agent/BRAVE_SEARCH_API_KEY";
-        # COMMANDCODE_API_KEY = "Agent/COMMANDCODE_API_KEY";
         CONTEXT_API_KEY = "Agent/CONTEXT_API_KEY";
         CPA_PI_API_KEY = "Agent/CPA_PI_API_KEY";
         MAGPIE_API_KEY = "Agent/MAGPIE_API_KEY";
@@ -72,12 +62,8 @@
         MODELSCOPE_API_KEY = "Agent/MODELSCOPE_API_KEY";
         MODELSCOPE_API_TOKEN = "Agent/MODELSCOPE_API_TOKEN";
         OMLX_API_KEY = "Agent/OMLX_API_KEY";
-        # OPENCODE_API_KEY = "Agent/OPENCODE_API_KEY";
-        # WX_PI_API_KEY = "Agent/WX_PI_API_KEY";
       };
 
-      # 基座 env 文件：VAR=op://<vault>/<item>/credential，只含引用不含明文
-      # 必须以换行结尾：无末尾换行时 cat 拼接覆盖层会让两行粘在一起，最后一行的 KEY 丢失
       opEnvBase = pkgs.writeText "op-secrets.env" (
         lib.concatStringsSep "\n" (
           lib.mapAttrsToList (var: ref: "${var}=op://${ref}/credential") opSecretMap
@@ -85,11 +71,8 @@
         + "\n"
       );
 
-      # 经 sec-run 进入目标命令环境的 sops 凭据。用户本人的 github/cli-token 不在这里：
-      # 环境变量会随 agent 的 env 输出进入对话；gh、git、mise 从 gh 的 hosts.yml 取它，
-      # 定时任务与沙箱各自读 sops 文件
       secretEnvMap = {
-        AGENT_GITHUB_TOKEN = "github/agent-token"; # agent 专属身份，由 dev/gh 的 gh 包装读取
+        AGENT_GITHUB_TOKEN = "github/agent-token";
       };
 
       enabledSecrets = lib.unique (lib.attrValues secretEnvMap);
@@ -104,12 +87,10 @@
           fi
         '') secretEnvMap
       );
-      # 脚本正文在 sec-run.zsh，这里只写入 Nix 侧才知道的路径；测试见 test.sh
       # -f：不读启动文件。调用者环境里没有 __NIX_DARWIN_SET_ENVIRONMENT_DONE 时（hc 守护进程启动的子代理），
       # /etc/zshenv 会把 PATH 重置成系统默认，mise 装的目标命令就找不到了
       secRun = pkgs.writeScriptBin "sec-run" ''
         #!${pkgs.zsh}/bin/zsh -f
-        # sops 凭据直接进本进程环境，目标命令继承
         ${shellInit}
         SEC_RUN_BASE=${opEnvBase}
         SEC_RUN_TOKEN_FILE=${opTokenFile}
@@ -211,7 +192,6 @@
         inputs.sops-nix.homeManagerModules.sops
       ];
       options.shelken.secrets = {
-        # 主机属性：只在 hosts/<host>/default.nix 声明，HM 侧只读
         enable = lib.mkOption {
           type = lib.types.bool;
           default = osConfig.shelken.secrets.enable;
@@ -220,11 +200,9 @@
         };
       };
       config = mkIf cfg.enable {
-        # ─── 统一明确的 Age 解密密钥 ───
         sops.age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
         home.sessionVariables.SOPS_AGE_KEY_FILE = config.sops.age.keyFile;
 
-        # ─── 统一凭据定义 ───
         sops.secrets =
           (mylib.mkSopsSecrets (
             enabledSecrets
@@ -261,7 +239,6 @@
       };
     };
 
-  # 手工加解密、给新主机生成 age 公钥用的 CLI，开发机才需要 → tui
   flake.modules.homeManager.secrets-cli =
     { pkgs, ... }:
     {

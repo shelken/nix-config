@@ -1,8 +1,3 @@
-"""执行计划端到端测试：临时目录里的真实 git 仓库与 YAML，驱动真实的 `sb plan --json`。
-
-YAML 用 JSON 写，它是合法 YAML，yq 照常解析。
-"""
-
 import json
 import os
 import subprocess

@@ -29,7 +29,6 @@
               configPath = "./.prettierrc.yaml";
             };
           };
-          # 仓库自定义规则按语法树匹配，规则与正反样例见 lint/README.md
           ast-grep = {
             enable = true;
             name = "ast-grep";
@@ -45,7 +44,6 @@
             pass_filenames = false;
             entry = "${pkgs.ast-grep}/bin/ast-grep test --skip-snapshot-tests";
           };
-          # 功能的放置规则见 docs/adr/0012-feature-domains-and-file-form.md；新增领域要同时改这里与 ADR
           feature-domains = {
             enable = true;
             name = "feature-domains";
@@ -91,7 +89,6 @@
       devShells.default = pkgs.mkShellNoCC {
         name = "dots";
         packages = with pkgs; [
-          # mkShellNoCC 里没有交互式 bash，非交互 shell 会报错
           bashInteractive
           deploy-rs
           nixfmt
@@ -101,7 +98,6 @@
           prettier
           nixos-anywhere
           actionlint
-          # 不要引入 nh：它会把 nix 一起带进来
         ];
         shellHook = config.checks.pre-commit-check.shellHook;
       };

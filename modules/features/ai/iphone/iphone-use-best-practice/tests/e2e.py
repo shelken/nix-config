@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""iphone 对 Pinky 假手机的端到端测试：隔离的 PINKY_HOME 与 IPHONE_HOME，不碰真机、不碰用户的 Pinky。
-
-用法: tests/e2e.py [iphone 脚本路径]；需要 Pinky 可执行文件（PINKY_BIN 或 /Applications/Pinky.app）
-"""
 import os
 import socket
 import subprocess

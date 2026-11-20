@@ -1,11 +1,3 @@
-/**
- * guard 的 shell 词法层：把一行命令拆成独立命令与词，并对 argv 做前缀匹配。
- *
- * 词上保留四处信息：引用剥掉后的字面值、通配是否生效、取值是否可静态确定、是否为重定向目标。
- * 判定层据此区分 `rm -rf "$d"`（已知字符串）与 `rm -rf $d/*`（变量可能展开为空）、
- * `ls .env`（元数据）与 `cat < .env`（读取）。
- */
-
 export type ShellWord = {
   value: string;
   glob: boolean;
@@ -13,7 +5,6 @@ export type ShellWord = {
   target: "in" | "out" | null;
 };
 
-/** 单条简单命令；pipeNext 表示同管道的下游还有命令 */
 export type ShellCmd = {
   words: ShellWord[];
   pipeNext: boolean;
@@ -23,9 +14,7 @@ export type ShellCmd = {
 type ShellToken =
   | { kind: "word"; value: string; activeGlob: boolean; dynamic: boolean }
   | { kind: "op"; value: string }
-  /** 活跃命令替换（$() 或反引号）捕获到的内嵌脚本 */
   | { kind: "sub"; value: string }
-  /** heredoc 正文；quoted 仅表示不做替换展开，正文仍可能被解释器当作程序；owner 是所属命令首 token 下标 */
   | { kind: "heredoc"; value: string; quoted: boolean; owner: number };
 
 /** 查表用无原型对象：命令名可能撞上 `constructor`、`toString` 这类继承属性 */
@@ -44,7 +33,6 @@ const CONTROL_OPS: Record<string, true> = lookup<true>({
   ")": true,
 });
 
-/** 扫描 $() 的平衡括号正文（感知引号与转义） */
 function scanCommandSub(input: string, openParen: number): { body: string; end: number } {
   let depth = 1;
   let i = openParen + 1;
@@ -141,7 +129,6 @@ function heredocBody(input: string, start: number, delim: string, dash: boolean)
   }
 }
 
-/** 未引用的 [ 是否构成可展开字符类；未闭合或空区间按字面量处理 */
 function hasGlobClass(input: string, start: number): boolean {
   const close = input.indexOf("]", start + 1);
   if (close === -1) return false;
@@ -235,7 +222,6 @@ export function tokenizeShell(input: string): ShellToken[] {
       if (" \t\r\n|;&()<>".includes(c)) break;
       if (input.startsWith("||", i) || input.startsWith("&&", i)) break;
 
-      // 命令替换在单引号之外始终会执行，包括双引号内
       if (c === "$" && input[i + 1] === "(") {
         dynamic = true;
         i = readSub(i + 1);
@@ -295,12 +281,6 @@ export function tokenizeShell(input: string): ShellToken[] {
   return tokens;
 }
 
-/**
- * 将 Token 拆分为独立命令。
- * 重定向操作符（<, >, >>）后的文件名保留在当前 argv 中，路径判定才能捕获 `cat < .env`；
- * startToken 指向命令段首个 token（含前置重定向），与 heredoc token 的 owner 对齐，
- * 否则 `2>/tmp/err bash <<EOF` 的正文会因找不到所属命令被当成无害数据。
- */
 export function commandNodes(tokens: ShellToken[]): ShellCmd[] {
   const out: ShellCmd[] = [];
   let words: ShellWord[] = [];
@@ -324,7 +304,6 @@ export function commandNodes(tokens: ShellToken[]): ShellCmd[] {
       continue;
     }
     if (t.kind !== "op") {
-      // 命令替换 sub token 属于当前命令段的 token 范围，同样计入起点
       if (t.kind === "sub" && words.length === 0 && pendingStart === null) pendingStart = idx;
       continue;
     }
@@ -356,10 +335,6 @@ function stripLeadingAssignments(words: string[]): string[] {
   return words.slice(i);
 }
 
-/**
- * 包装器命令：值为带独立取值的选项（要连后一个词一起跳过）。
- * 不在表里的命令本身就是被检查的目标。
- */
 const WRAPPER_VALUE_FLAGS: Record<string, string[]> = lookup<string[]>({
   env: ["-u", "--unset", "-C", "--chdir", "-S", "--split-string"],
   sudo: ["-u", "-g", "-p", "--user", "--group", "--prompt"],
@@ -378,7 +353,6 @@ const WRAPPER_VALUE_FLAGS: Record<string, string[]> = lookup<string[]>({
   time: [],
 });
 
-/** 剥离包装器命令（如 sudo, env, nohup, timeout 等）与前置变量赋值 */
 export function stripWrappers(words: string[]): string[] {
   let w = stripLeadingAssignments(words);
   for (;;) {
@@ -393,32 +367,26 @@ export function stripWrappers(words: string[]): string[] {
       }
       j += valueFlags.includes(w[j]) ? 2 : 1;
     }
-    // timeout 的时长、env/sudo 后的变量赋值都不是被包装的命令
     if (head === "timeout" && j < w.length) j++;
     while (j < w.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(w[j])) j++;
-    // 裸 `env -0` 之类没有后续命令，保留原样交给内置规则判定
     if (j >= w.length) return w;
     w = stripLeadingAssignments(w.slice(j));
   }
 }
 
-/** 剥离包装器后的词表；长度不变说明没有包装器 */
 export function stripWrapperWords(words: ShellWord[]): ShellWord[] {
   const kept = stripWrappers(words.map((w) => w.value)).length;
   return kept === words.length ? words : words.slice(words.length - kept);
 }
 
-/** 重定向目标不是命令操作数；剥离包装器前缀后返回剩余词 */
 export function operandWords(words: ShellWord[]): ShellWord[] {
   return stripWrapperWords(words.filter((w) => w.target === null));
 }
 
-/** 剥离包装器与重定向目标后的 argv */
 export function argvOf(cmd: ShellCmd): string[] {
   return operandWords(cmd.words).map((w) => w.value);
 }
 
-/** 折叠连续通配符防止正则回溯；正则元字符转义，`*` 匹配任意长度（含 /） */
 export function globToRegExpSource(pattern: string): string {
   let out = "";
   for (const ch of pattern.replace(/\*{2,}/g, "*")) {
@@ -429,7 +397,6 @@ export function globToRegExpSource(pattern: string): string {
   return out;
 }
 
-/** 规则文本拆成词；含控制符的规则不是简单命令，返回 null */
 export function patternWords(pattern: string): string[] | null {
   const tokens = tokenizeShell(pattern);
   if (tokens.some((t) => t.kind === "op" && CONTROL_OPS[t.value])) return null;
@@ -438,10 +405,6 @@ export function patternWords(pattern: string): string[] | null {
   return words.length > 0 ? words : null;
 }
 
-/**
- * argv 前缀匹配：首词按 basename 比对，其余按词相等，末词允许跟上通配续写
- * （`find ~` 因此只命中家目录本身，`find ~/Code` 不受影响）。
- */
 export function argvMatches(args: string[], patternWords: string[]): boolean {
   if (args.length < patternWords.length) return false;
   for (let i = 0; i < patternWords.length; i++) {
@@ -486,7 +449,6 @@ const SCRIPT_RUNNERS: Record<string, true> = lookup<true>({
   luajit: true,
 });
 
-/** 显式 stdin 操作数：出现即等于把管道体或 heredoc 当程序 */
 const STDIN_PATHS: Record<string, true> = lookup<true>({
   "/dev/stdin": true,
   "/dev/fd/0": true,
@@ -507,11 +469,6 @@ function hasInlineProgram(head: string, flags: string[]): boolean {
   return flags.some((f) => /^-[a-zA-Z]*[ep]/.test(f) || f === "--eval" || f === "--print");
 }
 
-/**
- * 该命令是否从 stdin 读取要执行的程序。
- * shellsOnly 为真时只认 shell：heredoc 正文只按 shell 脚本递归，python 之类的
- * 正文是另一种语言，按 shell 解释只会误报。
- */
 export function executesStdinProgram(words: ShellWord[], shellsOnly = false): boolean {
   const args = operandWords(words);
   if (args.length === 0) return false;
@@ -525,7 +482,6 @@ export function executesStdinProgram(words: ShellWord[], shellsOnly = false): bo
   const operands = rest.filter((a) => !a.startsWith("-"));
   // 内联程序优先于 `-` 与 /dev/stdin 操作数
   if (hasInlineProgram(head, flags)) return false;
-  // 显式 stdin 操作数（或 `-`）都是把输入当程序
   if (rest.some((a) => STDIN_PATHS[a] === true || a === "-")) return true;
   // shell 的 -s 表示从 stdin 读程序，其后即使跟位置参数也仍然是 stdin 程序；
   // -o 每个都要取值（`sh -o pipefail`），这些词不是脚本文件名
@@ -536,7 +492,6 @@ export function executesStdinProgram(words: ShellWord[], shellsOnly = false): bo
   return operands.length === 0;
 }
 
-/** 同一管道里下载器下游有命令从 stdin 读程序时的两端命令名 */
 export function downloadPipeExecutes(
   nodes: ShellCmd[],
 ): { downloader: string; interpreter: string } | null {
@@ -554,7 +509,6 @@ export function downloadPipeExecutes(
   return null;
 }
 
-/** 提取嵌套在 shell wrapper（如 sh -c, bash -lc, eval）中的内嵌脚本；命令替换由词法层产出 sub token */
 export function embeddedScripts(argvs: string[][]): string[] {
   const scripts: string[] = [];
   for (const argv of argvs) {
@@ -577,7 +531,6 @@ export function embeddedScripts(argvs: string[][]): string[] {
   return scripts;
 }
 
-/** 扫描自由文本中的命令替换；无引用 heredoc 正文在展开阶段会执行其中的替换 */
 export function scanSubsInText(text: string): string[] {
   const out: string[] = [];
   let i = 0;

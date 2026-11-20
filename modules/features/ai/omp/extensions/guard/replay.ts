@@ -1,10 +1,3 @@
-/**
- * 重放 omp 会话中被 guard 拦截的工具调用，统计指定 guard 版本下仍拦截的规则分布。
- *
- * 用法：bun replay.ts <guard.ts 路径> [--samples <规则>]
- * 只读 omp 会话（~/.omp/agent/sessions），依赖 `rg`。
- * 规则即拒绝信息中 `command:` / `path:` 后的值，例如 --samples "rm -rf *"
- */
 import { homedir } from "node:os";
 import path from "node:path";
 
@@ -22,7 +15,6 @@ function ruleOf(reason: string): string {
   return reason.match(/\n(?:path|command): ([^\n]*)/)?.[1] ?? reason.split("\n")[0];
 }
 
-// 会话文件由 omp 写入，只读取下列字段
 type SessionMessage = {
   role?: string;
   toolCallId?: string;
@@ -64,7 +56,6 @@ for (const file of files) {
   }
 }
 
-// 待测 guard 版本由命令行参数指定，只能动态加载
 const guard = await import(modulePath);
 let handler: ((event: unknown, ctx: unknown) => unknown) | undefined;
 if (typeof guard.registerGuard !== "function") {

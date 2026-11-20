@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# herdr-lazy 官方不上 PATH；用 herdr 查 plugin_root 再转调
 set -euo pipefail
 
 root="$(

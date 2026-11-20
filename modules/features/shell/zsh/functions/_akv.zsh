@@ -1,8 +1,5 @@
 #compdef akv
 
-# _akv - akv 命令的 zsh 补全函数
-# 按 Tab 时自动从 shelken-homelab vault 拉取 secret 名称列表
-
 local vault_name="shelken-homelab"
 local -a secrets
 local state

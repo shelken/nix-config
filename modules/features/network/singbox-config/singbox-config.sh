@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# 生成 mac / ios / router 的订阅 URL：填充 1Password 模板 → encode（URL 进剪切板）
 
 usage() {
   cat >&2 <<'EOF'
@@ -45,6 +44,5 @@ sec-run op inject -i "$template" -o "$yaml"
 chmod 600 "$yaml"
 
 # 不跑 sbtools check：那一步要启动 sing-box 内核，本机没装就报「启动内核失败（sing-box）」。
-# 想校验就先装内核，再手动 `sbtools check -c <填充后的 yaml>`
 echo "→ 生成订阅 URL（写入剪切板）"
 mise exec -- sbtools encode -s "https://subs.$main_domain" -c "$yaml"

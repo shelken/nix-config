@@ -27,7 +27,6 @@ head = lock(
     }
 )
 
-# 只有 rev 变化（或新增/移除）的 input 才算变化，未变的 nixpkgs 不进报告
 changed = module.changed_inputs(base, head)
 assert [name for name, _, _ in changed] == ["added-input", "demo-skill"], changed
 assert module.changed_inputs(base, base) == []
@@ -77,11 +76,9 @@ assert "README.md" not in body
 assert "https://github.com/example/demo-skill/compare/" in body
 assert len(calls) == 1
 
-# 新增 input：只写锁定版本
 blocks = module.input_blocks("added-input", None, head["nodes"]["added-input"], None, "token")
 assert "新增 input" in "\n\n".join(blocks)
 
-# URL 变了但 rev 没变（例如 github: 换 git+https:）：说明 rev 未变，也不查文件
 calls.clear()
 retargeted = dict(base["nodes"]["demo-skill"])
 retargeted["original"] = {**retargeted["original"], "type": "github", "url": "https://github.com/example/demo-skill"}
@@ -89,7 +86,6 @@ body = "\n\n".join(module.input_blocks("demo-skill", base["nodes"]["demo-skill"]
 assert "rev 未变" in body
 assert calls == []
 
-# 启用目录内没有改动时给出说明，不列文件
 calls.clear()
 
 
@@ -101,7 +97,6 @@ module.github_json = no_relevant_files
 body = "\n\n".join(module.input_blocks("demo-skill", base["nodes"]["demo-skill"], head["nodes"]["demo-skill"], ["skills/demo"], "token"))
 assert "没有文件改动" in body
 
-# 溢出：评论装不下的部分写进 summary，并带上运行链接
 module.github_json = compare_request
 header = [module.MARKER, module.TITLE]
 many = [f"### `skill-{index}`\n\n" + "x" * 200 for index in range(20)]
@@ -112,7 +107,6 @@ assert summary.startswith(module.TITLE)
 assert "skill-19" in summary and "skill-19" not in comment
 assert module.compose(header, many[:2], comment_limit=1200, run_url=None)[1] == ""
 
-# 目录取 base 与 head 的并集：上游删掉自动发现的 skill 后，旧目录只在 base 侧
 base_dirs = {"demo-skill": ["skills/demo", "skills/gone"]}
 head_dirs = {"demo-skill": ["skills/demo"]}
 assert module.skill_dirs_for("demo-skill", base_dirs, head_dirs) == ["skills/demo", "skills/gone"]
@@ -145,7 +139,6 @@ body = "\n\n".join(
 )
 assert "skills/gone/SKILL.md" in body
 
-# 重命名：新路径落在未启用目录、旧路径在启用目录内时，记录仍要保留
 renamed_file = {
     "filename": "cursor-team-kit/skills/control-ui/references/example.md",
     "previous_filename": "cursor-team-kit/skills/control-cli/references/example.md",
@@ -170,7 +163,6 @@ body = "\n\n".join(
 assert "control-ui/references/example.md" in body
 
 
-# compare 达到 300 文件上限时不能宣称「没有改动」
 def three_hundred_files(method, url, token, payload=None):
     return {
         "files": [
@@ -192,16 +184,13 @@ body = "\n\n".join(module.input_blocks("demo-skill", base["nodes"]["demo-skill"]
 assert "结果不完整" in body
 assert "没有文件改动" not in body
 
-# Job Summary 按 UTF-8 字节截断：中文内容会先撞上 1 MiB，而字符数还没到
 cjk = [f"### `中文{index}`\n\n" + "汉" * 200 for index in range(20)]
 _, summary = module.compose(header, cjk, comment_limit=1000, summary_limit=1200, run_url=None)
 assert summary.endswith(module.SUMMARY_TRUNCATION_NOTE)
 assert len(summary.encode("utf-8")) <= 1200
-# 上限小到装不下说明时，退化成只留被截断的说明，仍不超限
 tiny = module.compose(header, cjk, comment_limit=1000, summary_limit=40, run_url=None)[1]
 assert len(tiny.encode("utf-8")) <= 40
 
-# 转义：围栏比 patch 里最长的反引号长，文件名做 HTML 转义
 assert module.fence_for("a\n```\nb") == "````"
 assert module.fence_for("x\n```````\ny") == "````````"
 rendered = module.render_file(
@@ -217,7 +206,6 @@ rendered = module.render_file(
 assert "<code>skills/demo/&lt;b&gt;&amp;&quot;x&quot;.md</code>" in rendered
 assert "````diff" in rendered
 
-# 评论按 marker 幂等更新：已有自己的评论就 PATCH，否则 POST
 requests = []
 
 

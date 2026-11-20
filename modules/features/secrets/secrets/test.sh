@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# sec-run.zsh 的表驱动测试：假 op 按环境文件解析引用，不联网、不碰真实凭据。
-# 用法: bash modules/features/secrets/secrets/test.sh
 set -euo pipefail
 
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -8,12 +6,6 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 mkdir "$work/bin" "$work/home"
 
-# 假 op：只实现 `op run --no-masking --env-file=… -- <命令>`。
-# 引用 op://V/I/F 解析成 "V/I 的值"；报错文本照抄真实 op 的两种格式。
-#   FAKE_MISSING_ITEMS  空格分隔的条目名，命中即按「条目不存在」失败
-#   FAKE_MISSING_VAULTS 空格分隔的 vault 名，命中即按「vault 不可见」失败
-#   FAKE_OP_FAIL        非空时按无法识别的错误失败
-#   FAKE_DROP_KEYS      空格分隔的变量名，解析成功但不导出（模拟 op 没给出这个变量）
 cat >"$work/bin/op" <<'EOF'
 #!/usr/bin/env bash
 echo "call token=${OP_SERVICE_ACCOUNT_TOKEN-<unset>}" >>"$FAKE_LOG"
@@ -55,8 +47,6 @@ echo "tok-secret" >"$token"
 pass=0
 fail=0
 
-# check <名称> <期望输出> <环境变量...> -- <sec-run 参数...>
-# 输出 = sec-run 的 stdout+stderr，末尾追加一行 "rc=<退出码>"
 check() {
   local name=$1 want=$2 got rc=0
   shift 2
@@ -79,7 +69,6 @@ check() {
   fi
 }
 
-# 探针：打印指定变量，未设置的显示 <unset>
 probe='for k in "$@"; do eval "v=\${$k-<unset>}"; echo "$k=$v"; done'
 P=(sh -c "$probe" _)
 

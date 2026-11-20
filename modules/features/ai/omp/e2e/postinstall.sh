@@ -1,21 +1,4 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# 宿主激活 e2e：tool-postInstall-omp (postinstall.sh)
-#
-# 取已构建 Home Manager generation 里真实的 `tool-postInstall-omp` 激活片段，
-# 连同 activate 头部（HM 在此重置 PATH），在隔离 HOME 里按 `just hm` 同样的
-# 环境跑一遍。不下载任何东西：`bun` 的位置放一个替身，其余（PATH 解析、清单
-# 同步、GitHub 改走 https、失败处理）全部真实执行。
-#
-# 检查安装后的插件文件、清单可写性、失败退出策略和 XDG 路径选择。
-# Bun 替身按测试清单生成插件文件，不访问网络。
-# 真实 HOME 的检查只解析 mise 提供的 Bun，不安装插件。
-#
-# 运行方式（仓库根目录执行）:
-#   bash modules/features/ai/omp/e2e/postinstall.sh
-#   前置: 新增文件已 git add；profile 取 HM_PROFILE 或 .host-profile 的 PROFILE；
-#         第 4 项要求宿主已 `mise install` 过 bun。
-# ==============================================================================
 set -euo pipefail
 
 repo="$(git rev-parse --show-toplevel)"
@@ -32,18 +15,16 @@ mv_bin="$(command -v mv)"
 work="$(mktemp -d)"
 trap 'rm -r "$work"' EXIT
 
-# activate 头部到 source home-manager.sh 为止：含 set -eu、cd $HOME、重置 PATH、_iNote
 header() { sed '/^source .*home-manager\.sh$/q' "$activate"; }
 block() { awk '/^_iNote "Activating %s" "tool-postInstall-omp"/{f=1;next} /^_iNote "Activating/{f=0} f' "$activate"; }
 [[ -n "$(block)" ]] || { echo "activate 里找不到 tool-postInstall-omp" >&2; exit 2; }
 
 fails=0
-check() { # check <描述> <命令...>
+check() {
   local desc="$1"; shift
   if "$@"; then echo "PASS $desc"; else echo "FAIL $desc"; fails=$((fails + 1)); fi
 }
 
-# $1：Bun 退出码；$2：xdg / xdg-bare / 空；$3：严格模式。
 run_activation() {
   home="$work/home-$1${2:+-$2}"
   layout="${2:-}"
@@ -85,7 +66,6 @@ STUB
 }
 
 activate_home() {
-  # 不继承宿主变量，清单与所有写入都限定在隔离 HOME。
   env -i HOME="$home" ${layout:+XDG_DATA_HOME="$home/xdg/data"} \
     ${2:+SB_POSTINSTALL_STRICT=1} SB_OMP_MANIFEST="$home/manifest.json" \
     GITHUB_TOKEN=MSB_VERIFY_GITHUB_TOKEN \

@@ -1,7 +1,5 @@
 {
   log {
-    # format console
-    # 访问日志（INFO）来自下面站点块的 log 指令；CrowdSec 的 caddy parser 与 fluent-bit 都只认它
     level INFO
     output file /var/log/caddy/access.log {
      	roll_size 30MiB
@@ -11,11 +9,8 @@
   metrics {
     per_host
   }
-  # 管理面只留在容器内（unix socket）：对外没有 L4 入口，
-  # 原来 `admin :2019` 意味着同 homelab 网络的容器与 tailnet 节点都能直连管理面，
-  # 而 Caddy 管理面无认证：GET /config/ 读生效配置（含已替换的 CF token）、POST /load 重配整站
+  # Caddy 管理面无认证（GET /config/ 可读含已替换 CF token 的生效配置、POST /load 可重配整站），因此仅绑定容器内 unix socket
   admin unix//run/caddy-admin.sock
-  # 所有服务全局配置块
   servers {
     protocols h1 h2 h3
   }
@@ -29,11 +24,6 @@
   }
 }
 
-# 2019 上唯一对外开放的入口：只读门面，只放行监控真正用到的两个 GET
-#   Prometheus  /metrics                    kube-prometheus-stack ScrapeConfig caddy-vps-cc
-#   Homepage    /reverse_proxy/upstreams    caddy widget（widget.js: endpoint: reverse_proxy/upstreams）
-# 其余路径一律 403；管理面本身在 unix//run/caddy-admin.sock，容器外拿不到。
-# 容器内绑 :2019 即可——对外的地址范围由 docker 的 "${address}:2019:2019/tcp" 决定。
 # 注意：容器里想手动 reload 要用 caddy reload --address unix//run/caddy-admin.sock
 http://:2019 {
   @readonly {
@@ -59,7 +49,6 @@ http://:2019 {
     }
 }
 
-# 通用的代理头部设置
 (common_to_proxy_headers) {
   flush_interval -1
 }
@@ -76,9 +65,6 @@ http://:2019 {
 
 }
 
-# 0: to
-# 1: 特殊处理
-# 2: 添加 transport 参数
 (reverse_template) {
   reverse_proxy {
     to {args[0]}
@@ -130,10 +116,6 @@ http://:2019 {
   HTML 200
 }
 
-# 第一个参数 代表三级域名例如sub.ooooo.space的sub；也代表匹配规则的名字
-# 第二个参数 代表需要跳转的机器(to_开头)
-# 第三个参数 代表机器上的端口
-# 第四个参数 代表特殊额外处理的import
 (service2) {
   @{args[0]} host {args[0]}.{$MAIN_DOMAIN}
   handle @{args[0]} {
@@ -180,8 +162,6 @@ http://:2019 {
   }
 }
 
-# Homepage 的 docker 集成只读 label：给它一份只含声明的静态列表，
-# 不接真 Docker API，也就没有可读的容器 env 与挂载路径。
 # health 只能靠 filters 区分（Homepage 从 filter 推断 health），所以按 query 形状应答。
 http://:2576 {
   root * /srv/homepage-docker

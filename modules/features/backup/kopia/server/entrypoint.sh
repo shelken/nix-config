@@ -1,20 +1,14 @@
 #!/bin/sh
 
-# 遇到错误立即退出
 set -e
 
 CURRENT_HOST=$(hostname)
 
-# vps-cc 与 sakamoto 的云端 kopia 共用本脚本（modules/features/backup/kopia/server/），改这里两边一起生效。
-# 云端仓库的配置含 WebDAV 凭据，由 env 在启动时生成，所以仓库配置的字段只在这里写一份；
-# 本地仓库的配置是挂进来的静态文件，不设 KOPIA_WEBDAV_*。
 # 不挂 sops 渲染的文件：macOS 上它在符号链接下面，密钥轮换换代后，运行中的容器会读到 Operation not permitted
-#
 # atomicWrites：块直接 PUT 到最终名，不走「临时名 + MOVE 改名」。openlist 的 MOVE 偶发返回 201
 # 却没有真正改名（约 0.3%），索引会引用一个不存在的块，之后整个仓库无法加载清单；并发 MOVE 还会因
 # 数据库锁返回 500。openlist 对 PUT 是原子的（上传期间读者看不到，覆盖时旧版本一直可见，中断不留残文件），
 # 详见 shelken/home-ops#1763
-#
 # 缓存只在超过上限时按 LRU 清理，维护压缩换下的旧 q blob 会一直堆到上限为止：仓库全部 q blob
 # 约 50MB，5G 上限时 sakamoto 的元数据缓存长到 5.2G。上限只留工作集的十倍余量
 if [ -n "${KOPIA_WEBDAV_URL:-}" ]; then
@@ -127,10 +121,7 @@ if [ "$SKIP_RECONCILE" != "1" ]; then
     mv "$STATE_TMP" "$STATE_FILE"
 fi
 
-# 启动服务器
 echo "正在启动 Kopia Server..."
-# 默认参数：无密码模式，方便内网访问
-# 可通过传入参数覆盖，例如: entrypoint.sh --address=0.0.0.0:8080 --password=xxx
 if [ $# -eq 0 ]; then
     exec kopia server start --address=0.0.0.0:51515 --without-password --insecure --allow-extremely-dangerous-unauthenticated-server-on-the-network
 else

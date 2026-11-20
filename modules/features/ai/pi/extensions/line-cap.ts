@@ -1,20 +1,10 @@
 /**
- * line-cap — bash 类输出进模型之前：超长单行截短，总量超限时保留头尾。
- *
  * 为什么需要：pi 内置 bash 只限总量（50KB / 2000 行）、不限单行，且只留尾部。
- * 几行几十 KB 的 JSON 会整块进上下文，开头的内容反而丢了。
- *
  * 为什么 bash 结果挂 tool_result 并回读完整输出：这个钩子运行时 pi 已经把输出截成尾部，
  * 开头只存在于 details.fullOutputPath 指向的文件里，只处理钩子拿到的文本救不回开头。
  *
  * 为什么后台结果和 !cmd 挂 context：pi-background 的完成消息是 custom 消息，用户 !cmd 是
  * bashExecution 消息，都不经过 tool_result。context 只改发给模型的副本，会话存档不变。
- *
- * 缓存：结果只由输入决定（落盘路径取原文哈希），同一条消息每次发给模型的字节相同。
- * 落盘路径若含时间戳、随机数或进程号，提供方的前缀缓存即失效。
- * 例外是被截断的 !cmd：每轮重读 pi 的临时文件，文件被系统清理后退回只有尾部的文本。
- *
- * 不处理 read：截断源码行会让模型照残缺文本去 edit。
  */
 
 import { createHash } from "node:crypto";
@@ -23,7 +13,6 @@ import os from "node:os";
 import path from "node:path";
 
 export const MAX_COLUMNS = 768;
-// 总量与 pi 内置 bash 相同，只是从“全给尾部”改成头尾分配
 export const MAX_BYTES = 50 * 1024;
 export const MAX_LINES = 2000;
 const HEAD_SHARE = 0.2;
@@ -55,13 +44,11 @@ interface ExtensionAPI {
 	on(event: string, handler: (event: unknown) => unknown): void;
 }
 
-/** 原文按内容哈希落盘，同一内容永远是同一路径；失败时返回 undefined，截断照常进行。 */
 export function spill(text: string): string | undefined {
 	try {
 		const file = path.join(SPILL_DIR, `${createHash("sha256").update(text).digest("hex").slice(0, 16)}.txt`);
 		if (!fs.existsSync(file)) {
 			fs.mkdirSync(SPILL_DIR, { recursive: true, mode: 0o700 });
-			// 先写临时文件再改名，进程中途退出不会留下半截文件被后续当成完整原文
 			const tmp = `${file}.${process.pid}.tmp`;
 			fs.writeFileSync(tmp, text, { mode: 0o600 });
 			fs.renameSync(tmp, file);
@@ -105,10 +92,6 @@ export interface Shaped {
 	omittedLines: number;
 }
 
-/**
- * 先按列截短每一行，再在总量超限时保留头尾。
- * 只传 head 表示拿到了全部行；同时传 tail 表示大文件只读了两端，gap 是两端之间没读到的行数。
- */
 export function shape(head: string[], tail?: string[], gap: number = 0): Shaped {
 	let cutLines = 0;
 	const cap = (line: string) => {
@@ -126,7 +109,6 @@ export function shape(head: string[], tail?: string[], gap: number = 0): Shaped 
 	const nh = takeFront(h, headBytes, headLines);
 	const back = t?.length ? t : h.slice(nh);
 	const nt = takeBack(back, MAX_BYTES - headBytes, MAX_LINES - headLines);
-	// 尾部窗口为空时 back 取自头部窗口，没读到的行在它之后；标在末尾，否则最后一行会被当成输出的结尾
 	const between = h.length - nh - nt + (t?.length ? gap + t.length : 0);
 	const after = t?.length ? 0 : gap;
 	const mark = (n: number) => (n > 0 ? [`[… ${n} lines omitted …]`] : []);
@@ -147,8 +129,6 @@ export function readEnds(file: string, window: number = WINDOW_BYTES): { head: s
 		};
 		const head = read(0).split("\n");
 		const tail = splitLines(read(size - window));
-		// 窗口边缘是半截行。有多行时丢掉它；只有一行说明整个窗口落在一个超长行里：
-		// 开头那段交给列截断，结尾那段没有可用信息
 		if (head.length > 1) head.pop();
 		if (tail.length > 1) tail.shift();
 		else tail.length = 0;
@@ -158,7 +138,6 @@ export function readEnds(file: string, window: number = WINDOW_BYTES): { head: s
 	}
 }
 
-/** 回读完整输出重排；不需要改动时返回 undefined。 */
 function capOutputText(
 	text: string,
 	truncated: boolean | undefined,
@@ -189,7 +168,6 @@ function capOutputText(
 	return `${shaped.text}\n\n[line-cap: ${shaped.cutLines} line(s) cut to ${MAX_COLUMNS} chars, ${shaped.omittedLines} line(s) omitted. Full output: ${where}]${suffix}`;
 }
 
-/** 返回 tool_result 的补丁；不需要改动时返回 undefined。 */
 export function capToolResult(event: ToolResultEvent, save: (t: string) => string | undefined = spill): ToolResultPatch | undefined {
 	if (!BASH_TOOLS.has(event.toolName)) return undefined;
 	const index = event.content.findIndex((block) => block.type === "text" && typeof block.text === "string");
@@ -210,7 +188,6 @@ export function capText(text: string, save: (t: string) => string | undefined = 
 	return `${shaped.text}\n\n[line-cap: ${shaped.cutLines} line(s) cut to ${MAX_COLUMNS} chars, ${shaped.omittedLines} line(s) omitted. Full output: ${where}]`;
 }
 
-/** 返回截短后的消息；没有任何改动时返回原对象，调用方据此决定是否替换列表。 */
 export function capMessage(m: Message, save: (t: string) => string | undefined = spill): Message {
 	if (m.role === "bashExecution") {
 		// 用户 !cmd 的输出由 bash-executor 截尾，和 tool_result 一样回读完整文件重排
@@ -240,7 +217,6 @@ export default function lineCap(pi: ExtensionAPI) {
 	pi.on("context", (event) => {
 		const { messages } = event as { messages: Message[] };
 		const capped = messages.map((m) => capMessage(m));
-		// 没有改动就不返回，让 pi 保留原列表（含中途 system 消息与缓存前缀）
 		return capped.some((m, i) => m !== messages[i]) ? { messages: capped } : undefined;
 	});
 }

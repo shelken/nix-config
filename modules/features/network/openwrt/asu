@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
-# 经 ASU 云端构建 sysupgrade 镜像并下载到本机，用法与锁文件见 README.md「固件」
-# 用法: asu <update|build> <firmware.json> <uci.json> <锁文件> <镜像目录>
-#   update: 按软件源当前版本构建，重写锁文件
-#   build:  请求与锁文件一致才构建，构建出的包版本与锁文件逐个对照，不一致即失败
 set -euo pipefail
 mode=$1 firmware=$2 uci=$3 lock=$4 dir=$5
-keep=3 # 镜像目录保留的个数，锁文件指向的那个始终保留
+keep=3
 
 die() { echo "asu: $*" >&2; exit 1; }
 [[ $mode == update || $mode == build ]] || die "未知模式 $mode"
 
 server=$(jq -r .server "$firmware")
-# 功能声明里的包与固件自身的包合并去重，排序后请求才稳定，锁文件的 diff 才可读
 request=$(jq -n --slurpfile f "$firmware" --slurpfile u "$uci" '
   $f[0] | del(.server) + {
     packages: ($f[0].packages + $u[0].packages | unique),
@@ -70,12 +65,10 @@ if [[ ! -f $dir/$name ]]; then
   curl -sS --fail -o "$dir/$name.part" "$server/store/$bin_dir/$name"
   mv "$dir/$name.part" "$dir/$name"
 fi
-# 已有的镜像也重新校验，回滚时用的就是它
 [[ $(shasum -a 256 "$dir/$name" | cut -d' ' -f1) == "$sha" ]] || { rm -f "$dir/$name"; die "sha256 不符，已删除: $name"; }
 
 if [[ $mode == update ]]; then jq . <<<"$result" >"$lock"; fi
 
-# 只清理本脚本下载的镜像：按修改时间留最新的 keep 个，锁文件指向的不删
 current=$(jq -r .image.name "$lock")
 shopt -s nullglob
 images=("$dir"/*-sysupgrade.bin)

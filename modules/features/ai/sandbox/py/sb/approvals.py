@@ -1,5 +1,3 @@
-"""项目 .sandbox.yaml 的批准：按内容哈希记账，注释与排版变化不触发重新批准。"""
-
 from __future__ import annotations
 
 import hashlib
@@ -38,7 +36,6 @@ def approve(cfg: Config, project_root: str) -> str:
 
 
 def render(cfg: Config, plan: Plan) -> str:
-    """`sb plan` 给人看的授权摘要。ceiling 里的 default_grant 标成「sb.yaml 默认放行」，其余是项目声明。"""
     pr = plan.project_root
 
     def section(title: str, rows: list[str]) -> list[str]:

@@ -1,5 +1,3 @@
-# ssh：客户端配置（所有主机 → HM core）与服务端 OpenSSH（所有 NixOS 主机 → nixos.core）
-# 服务端模块叫 openssh 而不叫 ssh：HM 的 ssh 已在 HM core 里，同名挂接会让它在 NixOS 上被导入两次
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.ssh ];
@@ -33,29 +31,23 @@
             Port 443
           ${myvars.networking.ssh.extraConfig}
         '';
-        # 用户特定的需要额外加的host
         includes = [
           "~/.ssh/specific"
         ];
       };
     };
 
-  # 仅密钥登录、terminfo 全量安装；防火墙保持 NixOS 默认（开启）
   flake.modules.nixos.openssh = {
-    # Enable the OpenSSH daemon.
     services.openssh = {
       enable = true;
       settings = {
-        # root user is used for remote deployment, so we need to allow it
         PermitRootLogin = "prohibit-password";
-        PasswordAuthentication = false; # disable password login
+        PasswordAuthentication = false;
         KbdInteractiveAuthentication = false;
       };
       openFirewall = true;
     };
 
-    # Add terminfo database of all known terminals to the system profile.
-    # https://github.com/NixOS/nixpkgs/blob/nixos-24.05/nixos/modules/config/terminfo.nix
     environment.enableAllTerminfo = true;
   };
 }

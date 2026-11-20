@@ -1,4 +1,3 @@
-# starship：提示符
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.starship ];
@@ -18,7 +17,6 @@
       sep = glyph "E0BC";
       end = glyph "E0B0";
       k8s = builtins.fromJSON ''"\udb84\udcfe"''; # nf-md-kubernetes，超出 BMP，需代理对
-      # 块是否出现取决于运行时状态，分隔符的底色一律取 prev_bg（前一块的背景，打头时为终端底色）。
       rhead = color: "[${glyph "E0B2"}](bg:prev_bg fg:${color})";
       rslant = color: "[${cap}](bg:prev_bg fg:${color})";
     in
@@ -48,20 +46,17 @@
         add-zsh-hook precmd _starship_transient_restore
       '';
 
-      # 与上面 zsh 的 transient prompt 同效果；nu 原生支持，不需要钩子
       programs.nushell.extraConfig = ''
         $env.TRANSIENT_PROMPT_COMMAND = {|| "\n" + (^starship module character $"--status=($env.LAST_EXIT_CODE)") }
         $env.TRANSIENT_PROMPT_COMMAND_RIGHT = ""
         $env.TRANSIENT_PROMPT_INDICATOR = ""
       '';
 
-      # 色板与 palette 由 catppuccin.starship（autoEnable）注入，这里只引用颜色名。
       programs.starship = {
         enable = true;
         settings = {
           add_newline = true;
 
-          # 两行：第 1 行 左 [os 目录 git] ... 右 [主机名 nix_shell 时间]，第 2 行 ❯。
           # zsh 的 right_format 落在最后一行，所以右侧用 $fill 放进第 1 行。
           format = lib.concatStrings [
             "[${cap}](fg:${accent})"
@@ -72,7 +67,6 @@
             "$git_commit"
             "$git_state"
             "$git_status"
-            # 收尾箭头随最后一块变色：非仓库蓝、干净绿、有改动黄。
             "[${end}](fg:prev_bg)"
             "$fill"
             "$status"
@@ -108,7 +102,6 @@
             use_os_path_sep = true;
           };
 
-          # 与 directory 的分隔符放进 git 模块：不在仓库里时不会冒出孤立的绿色箭头。
           git_branch = {
             style = "bg:green fg:crust";
             format = "[${sep}](bg:green fg:blue)[ ${glyph "F113"} ${glyph "F126"} $branch ]($style)";
@@ -122,8 +115,6 @@
             format = "[$state( $progress_current/$progress_total) ]($style)";
           };
 
-          # ahead/behind 并入绿色分支块（与旧 p10k 一致，先 ⇣ 后 ⇡）；黄色状态块整段被 (...) 包住，
-          # 没有文件状态时黄块与分隔符一起消失。
           git_status = {
             style = "bg:yellow fg:crust";
             format = "([$ahead_behind ](bg:green fg:crust))([${sep}](bg:yellow fg:green)[ $all_status]($style))";
@@ -158,7 +149,6 @@
             format = "${rhead "teal"}[ ${glyph "F013"} $number ](bg:teal fg:crust)";
           };
 
-          # 只在 .envrc 未允许或被拒绝时出现：allowed_msg 为空，整段 (...) 不渲染。
           direnv = {
             disabled = false;
             allowed_msg = "";

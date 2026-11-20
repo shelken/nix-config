@@ -1,5 +1,3 @@
-# home-ops 的 mDNS：avahi 在主网与 IoT 网之间反射 mDNS，让 HomeKit、Home Assistant 能发现 IoT 设备。
-# 只写与默认值不同的项；nuci 只写文件，不重启服务，push 之后的重启由 just router::push 负责
 {
   # avahi-utils 依赖 dbus 版 avahi，与 nodbus 版互斥，固件构建会失败
   uci.packages = [ "avahi-nodbus-daemon" ];

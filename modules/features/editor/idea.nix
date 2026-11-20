@@ -1,4 +1,3 @@
-# IntelliJ IDEA：cask 与命令行包装（idea <path>），只在 workstation
 { config, ... }:
 {
   flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.idea ];

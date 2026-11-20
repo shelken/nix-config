@@ -1,8 +1,5 @@
 { config, ... }:
 {
-  # programs.ssh = {
-  #   inherit (myvars.networking.ssh) extraConfig;
-  # };
   shelken = {
     dotfiles.liveEdit = true;
 

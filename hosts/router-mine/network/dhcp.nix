@@ -1,6 +1,3 @@
-# DNS 与 DHCP。IP 优先取自 vars/networking.nix；静态租约的 MAC 取自 secrets.nix：
-# k8s 节点读各自 hosts/<节点>/network.nix 的 lanMac，其余实体设备读 hosts/router-mine/network.nix 的 dhcpMacs。
-# lan、viot 的网关与 DNS 选项（指向 hk1box）在 hk1box/dhcp.nix，viot 的基础段在 home-ops/iot.nix
 { inputs, lib, ... }:
 let
   net = import ../../../vars/networking.nix { inherit lib; };
@@ -18,7 +15,6 @@ in
           allservers = "1";
           authoritative = "1";
           cachesize = "8096";
-          # IoT 的 DNS 发到 hk1box，不能被劫持回路由器（passwall 开机会把它改回 1）
           dns_redirect = "0";
           dnsforwardmax = "4096";
           domain = "lan";

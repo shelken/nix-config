@@ -1,4 +1,3 @@
-# 按本地字典替换 omp/pi 会话里的脏话，手动执行；字典只在工作站上
 { config, ... }:
 {
   flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.scrub-words ];

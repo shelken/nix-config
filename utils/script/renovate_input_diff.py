@@ -94,13 +94,7 @@ def changed_inputs(base_lock: dict, head_lock: dict) -> list[tuple[str, dict | N
 def short(rev: str | None) -> str:
     return rev[:7] if rev else "?"
 
-
 def skill_dirs_for(name: str, base_dirs: dict, head_dirs: dict) -> list[str]:
-    """某个 input 的启用目录：base 与 head 的并集。
-
-    `discover = true` 的分组在上游删掉 skill 后，旧目录只存在于 base 侧；
-    只用 head 会把相应的删除记录全部过滤掉。
-    """
     return sorted({*base_dirs.get(name, []), *head_dirs.get(name, [])})
 
 
@@ -109,7 +103,6 @@ def in_dirs(path: str, dirs: list[str]) -> bool:
 
 
 def matches_dirs(file: dict, dirs: list[str]) -> bool:
-    """重命名记录只要新旧路径任一命中就保留（改动可能把文件挪出已启用目录）。"""
     paths = [file["filename"]]
     if file.get("previous_filename"):
         paths.append(file["previous_filename"])

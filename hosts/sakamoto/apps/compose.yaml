@@ -1,13 +1,5 @@
-# sakamoto 的业务容器，原先由 home-ops 的 compose/sakamoto 声明。
-# 运行时仍是 OrbStack + Compose：配置文件在 Nix store，路径由 default.nix 渲染的 env 文件提供（${CADDYFILE} 等），
-# 操作步骤见 README.md
-#
 # 配置文件一律写成 volumes 而不是 configs:：Compose 的服务 hash 不含 configs 的路径与内容，
 # 改了配置 up 不会重建容器；volumes 的源路径在 hash 里，store 路径随文件内容变，只有用到它的服务会重建
-#
-# 容器一律 restart: "no"：开机后由 sakamoto-compose 的 agent 在外接盘就绪时拉起，
-# 不能让 Docker 在盘没挂上时自己把容器带起来
-#
 # 项目名固定：命名卷带项目名前缀（homelab-compose_kopia_cache），
 # 不写它时项目名会跟着目录名变，等于新建两个空卷并丢掉 kopia 的对账缓存
 name: homelab-compose
@@ -21,7 +13,6 @@ volumes:
   kopia_local_cache:
 
 services:
-  # ==================== Caddy ====================
   caddy:
     image: ghcr.io/shelken/caddy:2.11.9
     container_name: caddy
@@ -46,7 +37,6 @@ services:
     deploy:
       replicas: 1
 
-  # ==================== Docker Proxy ====================
   dockerproxy:
     image: tecnativa/docker-socket-proxy:v0.5.0
     container_name: dockerproxy
@@ -69,7 +59,6 @@ services:
     deploy:
       replicas: 1
 
-  # ==================== RustFS ====================
   rustfs:
     image: rustfs/rustfs:1.0.6@sha256:ee717072290bec9b11abfc0365f8310b00df1cd9b3639943edae47bdef05044a
     container_name: rustfs
@@ -97,7 +86,6 @@ services:
     deploy:
       replicas: 1
 
-  # ==================== Nvidia DLS ====================
   nvidia-dls:
     image: collinwebdesigns/fastapi-dls:2.0.3
     container_name: nvidia-dls
@@ -122,7 +110,6 @@ services:
       - ${DOCKER_DATA_DIR}/nvidia-dls/cert:/app/cert
       - ${DOCKER_DATA_DIR}/nvidia-dls/db:/app/database
 
-  # ==================== Mirror - GHCR ====================
   mirror-ghcr:
     image: registry:3.1
     container_name: "mirror-ghcr"
@@ -146,7 +133,6 @@ services:
     deploy:
       replicas: 1
 
-  # ==================== Mirror - Quay ====================
   mirror-quay:
     image: registry:3.1
     container_name: "mirror-quay"
@@ -170,7 +156,6 @@ services:
     deploy:
       replicas: 1
 
-  # ==================== Mirror - GCR ====================
   mirror-gcr:
     image: registry:3.1
     container_name: "mirror-gcr"
@@ -194,7 +179,6 @@ services:
     deploy:
       replicas: 1
 
-  # ==================== Mirror - K8s ====================
   mirror-k8s:
     image: registry:3.1
     container_name: "mirror-k8s"
@@ -218,7 +202,6 @@ services:
     deploy:
       replicas: 1
 
-  # ==================== Kopia Backup (Cloud) ====================
   kopia:
     image: kopia/kopia:0.23.1
     container_name: kopia
@@ -226,7 +209,6 @@ services:
     networks:
       - homelab
     # 不用 on-failure：OrbStack 关闭时容器被杀、退出码非 0，下次 Docker 启动会绕过挂载检查把它拉起。
-    # 入口脚本连不上仓库就 exit 1，由 sakamoto-compose 的 up 每 15 分钟再拉起一次
     restart: "no"
     labels:
       - homepage.group=sakamoto
@@ -241,14 +223,10 @@ services:
       KOPIA_CACHE_DIRECTORY: /config/cache
       KOPIA_LOG_DIR: /config/logs
       KOPIA_PASSWORD: ${KOPIA_PASSWORD}
-      # 云端仓库配置由 entrypoint.sh 按这三项在启动时生成
-      # 用 compose 专属的 openlist 账号，它的根目录就是 kopia 目录，所以仓库在 /dav/main。
-      # 不能用 drive/webdav（客户端 kopia 的账号，根目录在上一级）：同一个仓库在那边是 /dav/backup/kopia/main
       KOPIA_WEBDAV_URL: https://drive.${MAIN_DOMAIN}/dav/main
       KOPIA_WEBDAV_USERNAME: ${OPENLIST_WEBDAV_USERNAME}
       KOPIA_WEBDAV_PASSWORD: ${OPENLIST_WEBDAV_PASSWORD}
       KOPIA_WEBHOOK_URL: ${KOPIA_WEBHOOK_URL}
-      # 仅在失败/警告时通知，成功时不通知 (可选值: report, warning, error)
       KOPIA_MIN_SEVERITY: warning
     volumes:
       - ${KOPIA_POLICY}:/config/policy.json:ro
@@ -262,15 +240,12 @@ services:
     deploy:
       replicas: 1
 
-  # ==================== Kopia Backup (Local) ====================
   kopia-local:
     image: kopia/kopia:0.23.1
     container_name: kopia-local
     hostname: sakamoto-local
     networks:
       - homelab
-    # 不用 on-failure：OrbStack 关闭时容器被杀、退出码非 0，下次 Docker 启动会绕过挂载检查把它拉起。
-    # 入口脚本连不上仓库就 exit 1，由 sakamoto-compose 的 up 每 15 分钟再拉起一次
     restart: "no"
     labels:
       - homepage.group=sakamoto
@@ -300,7 +275,6 @@ services:
       - ${KOPIA_ENTRYPOINT}:/app/scripts/entrypoint.sh:ro
       - kopia_local_cache:/config/cache
       - ${DOCKER_DATA_DIR}/kopia-local/logs:/config/logs
-      # 外接盘路径由 env 提供（default.nix 的 externalDisks）；盘没挂载时 sakamoto-compose 会拒绝启动
       - ${SAKAMOTO_DATA_DIR}:/backup/sakamoto-data:ro
       - ${LOCAL_REPO_DIR}:/repo
     ports:

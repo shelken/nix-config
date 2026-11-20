@@ -116,7 +116,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # homelab-1 的 vGPU guest 驱动（GRID），见 modules/features/homelab/k3s-nvidia-vgpu
     vgpu4nixos = {
       url = "github:shelken/vgpu4nixos";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -127,14 +126,12 @@
       flake = false;
     };
 
-    # nuci 的 Nix 模块（声明 → uci.json）；nuci 二进制由 mise 按这里的 Cargo.toml 版本安装，两边因此同版本
     # 钉 release tag：main 上的提交可能领先已发布的二进制
     openwrt-nix = {
       url = "github:lonerOrz/openwrt-nix/v0.1.2";
       flake = false;
     };
 
-    # 静态资源（flake = false）：他人维护、只锁版本的文件树，见 docs/adr/0006-static-assets-as-flake-inputs.md。
     # 用 git+https 而不是 github:：github fetcher 拒绝同时给 ref 与 rev，而 Renovate 要靠两者开 digest PR。
     anti-slop = {
       url = "git+https://github.com/dmmulroy/anti-slop?ref=main&rev=63dbb09f73438e550a6991dc6d778f979ffbf183&shallow=1";

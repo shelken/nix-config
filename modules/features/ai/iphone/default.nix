@@ -1,4 +1,3 @@
-# iPhone 控制：经宿主上的 Pinky（iphone）或 Swipt（swipt）操作 iPhone，只有工作站接着手机
 { config, inputs, ... }:
 {
   flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.iphone ];
@@ -11,13 +10,10 @@
         "${inputs.swipt-skills}/skills/swipt"
       ];
 
-      # iphone 与 skill 同源，软链到工作树源码即时生效
       home.file.".local/bin/iphone" = mylib.mkConfigFile config ./iphone-use-best-practice/scripts/iphone;
 
       shelken.dev.sandbox.hostCommands.iphone = "iphone 经宿主上的 Pinky 控制 iPhone，Pinky 只在宿主运行";
 
-      # Swipt CLI：侧载 Swipt 到 iPhone 并连接其开发者 API；npm 上只有 nightly，需跟最新
-      # 包名首发不足 30 天会被 aube 拦截；已核对官方文档与源码仓库，只对这个包放行
       programs.mise.globalConfig.tools."npm:@swipt/cli" = {
         version = "latest";
         minimum_release_age = "0h";

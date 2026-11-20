@@ -1,5 +1,3 @@
-# 窗口管理器：目前只有 omniwm；保留枚举，换实现时在这里加值
-# 加入 gui 角色；HM 侧经 osConfig 读同一选项，启动 OmniWM 并软链配置
 { config, ... }:
 {
   flake.modules.darwin.gui.imports = [ config.flake.modules.darwin.wm ];

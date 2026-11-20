@@ -18,7 +18,6 @@ let
     url."https://github.com/".insteadOf = "git@github.com:";
   };
 
-  # 沙箱基础环境（不登记为共享工具，理由见 ADR 0003）
   baseTools = with linuxPkgs; [
     bashInteractive
     coreutils
@@ -51,7 +50,6 @@ let
       lib.mapAttrsToList (name: reason: ''
         cat <<'EOF' > "$out/bin/${name}"
         #!/bin/sh
-        # 写 stdout：sb run 的上下文里 guest stderr 不回流，写 stderr 用户看不到原因
         echo "[-] 错误: ${name} 是宿主控制命令，沙箱内无法执行: ${reason}"
         exit 1
         EOF
@@ -101,7 +99,6 @@ let
     ++ lib.concatMap (tool: tool.sandboxDirs) (builtins.attrValues toolsCfg)
   );
 
-  # guest 里固定路径与环境的唯一出处，sync-guest、launcher、guest-status 都加载它
   guestEnvSh = pkgs.writeText "guest-env.sh" ''
     export HOME="''${HOME:-/root}"
     export SB_CONFIG_MOUNT=${guestPaths.configMount}
@@ -127,7 +124,6 @@ let
     mkdir -p ${guestDirs}
   '';
 
-  # 直接加载 store 里的 guest-env.sh，与脚本本身同版本，不依赖发布目录
   guestEnvPrelude = ''
     # shellcheck source=/dev/null
     source ${guestEnvSh}

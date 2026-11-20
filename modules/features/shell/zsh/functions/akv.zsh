@@ -1,9 +1,3 @@
-# akv - 查询 shelken-homelab Azure Key Vault 中的 secret
-# Usage:
-#   akv <secret-name>       获取指定 secret 的值
-#   akv --list | -l         列出所有 secret 名称
-#   akv --help | -h         显示帮助
-
 local vault_name="shelken-homelab"
 
 case "$1" in

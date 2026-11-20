@@ -1,16 +1,12 @@
 #!/usr/bin/env bash
-# 从 magpie /v1/models 差集同步 mp provider 的 modelOverrides
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 MODELS_FILE="${REPO_ROOT}/modules/features/ai/omp/models.yml"
 
-# 是否在生成的 override 里输出 reasoning: true（1=输出，0=不输出）
-# 宿主能从上游 supported_reasoning_levels 自行推导推理能力，故默认不输出
 EMIT_REASONING=0
 
-# 1. 提取 mp 的 baseUrl 与 apiKey
 BASE_URL=$(awk '/^  mp:/ { in_mp = 1 } in_mp && /baseUrl:/ { print $2; exit }' "$MODELS_FILE")
 API_KEY=$(awk '/^  mp:/ { in_mp = 1 } in_mp && /apiKey:/ { print $2; exit }' "$MODELS_FILE")
 
@@ -35,13 +31,11 @@ BLOCK_FILE=$(mktemp)
 BASE_DIR=$(mktemp -d /tmp/omp-agent-XXXXXX)
 trap 'rm -f "$MP_JSON" "$OMP_JSON" "$BLOCK_FILE" "$BASE_DIR"/* 2>/dev/null || true; rmdir "$BASE_DIR" 2>/dev/null || true' EXIT
 
-# 2. 获取 magpie 最新 /v1/models
 if ! curl -sf -m 10 "${AUTH_HEADER[@]}" "${BASE_URL}/models" -o "$MP_JSON"; then
   echo "Error: 无法从 ${BASE_URL}/models 获取模型列表" >&2
   exit 1
 fi
 
-# 3. 测量 omp 的原生发现能力（剥离已生成的同步块，避免自引用振荡）
 if command -v omp >/dev/null 2>&1; then
   sed '/# >>> mp-modelOverrides:auto-sync >>>/,/# <<< mp-modelOverrides:auto-sync <<</ {
     /# >>> mp-modelOverrides:auto-sync >>>/! {
@@ -53,7 +47,6 @@ else
   echo '{"models":[]}' > "$OMP_JSON"
 fi
 
-# 4. 用 jq 对比差集并生成 YAML 格式的 modelOverrides
 JQ_BIN="$(command -v jq 2>/dev/null || echo "/run/current-system/sw/bin/jq")"
 
 # shellcheck disable=SC2016
@@ -116,7 +109,6 @@ else
   : > "$BLOCK_FILE"
 fi
 
-# 5. 确保 models.yml 中存在锚点注释，存在则替换区域内容
 if ! grep -q '# >>> mp-modelOverrides:auto-sync >>>' "$MODELS_FILE"; then
   awk '
     /^  mp:/ { in_mp = 1 }
@@ -131,7 +123,6 @@ if ! grep -q '# >>> mp-modelOverrides:auto-sync >>>' "$MODELS_FILE"; then
   ' "$MODELS_FILE" > "${MODELS_FILE}.tmp" && mv "${MODELS_FILE}.tmp" "$MODELS_FILE"
 fi
 
-# 使用 awk 替换锚点区间
 awk -v block_file="$BLOCK_FILE" '
   BEGIN { in_block = 0 }
   /# >>> mp-modelOverrides:auto-sync >>>/ {

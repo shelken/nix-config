@@ -1,6 +1,3 @@
-# 无线：两个射频与主网、无 IPv6 网段的 SSID、热点中继。两个 IoT 的 SSID 在 home-ops/iot.nix。
-# SSID 与密码在 secrets.nix 的 sops（router-mine.yaml 的 wifi），部署时由 just router::* 解密渲染。射频的 band、path 等机型相关的值在 hardware.nix
-# 热点中继 hotspot 的开关在 LuCI 拨，声明里它是关闭的：开着热点时 just router::push 会拒绝下发，否则会把它关掉导致断网
 { ... }:
 let
   hw = import ../hardware.nix;

@@ -19,7 +19,6 @@ from concurrent.futures import ThreadPoolExecutor
 IFD_DISABLED = "allow-import-from-derivation' is disabled"
 DRV_PATH = re.compile(r"'(/nix/store/[^']+?\.drv)(?:\^[^']*)?'")
 
-# 配置类别 → 每台主机要求值的属性路径
 KINDS = {
     "nixosConfigurations": "config.system.build.toplevel.drvPath",
     "darwinConfigurations": "system.drvPath",
@@ -49,7 +48,6 @@ def error_summary(stderr: str) -> str:
 
 
 def check_host(flake: str, kind: str, host: str) -> tuple[str, str, str]:
-    """返回 (host, 状态, 详情)；状态为 ok、ifd、skip"""
     result = nix_eval(["--raw", f'{flake}#{kind}."{host}".{KINDS[kind]}'])
     if result.returncode == 0:
         return host, "ok", ""

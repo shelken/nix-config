@@ -1,9 +1,3 @@
-/**
- * subdir-context 扩展测试：纯内存 + 临时目录，不触碰真实会话。
- * 覆盖：注入链顺序、session 内去重、并发读取去重（上游 bug）、
- * 分支重置（omp 补强）、cwd 层排除、override 优先、直接读取、越界与 URI 拒绝。
- */
-
 import { expect, test } from "bun:test";
 import fs from "node:fs";
 import os from "node:os";
@@ -193,7 +187,6 @@ test("cwd 与 home 之外的路径与内部 URI 不注入", async () => {
 	const handlers = loadExtension();
 	fireSession(handlers, root);
 
-	// /etc/hosts 真实存在但在 cwd 与 home 之外，真正走到 searchRoot 为空的分支
 	const outside = await runRead(handlers, "/etc/hosts", root);
 	expect(outside).toBeUndefined();
 
@@ -249,7 +242,6 @@ test("omp 风格的 path：glob 取静态前缀、行选择器剥离、多条目
 		{ path: `${path.join(root, "src")} ${path.join(root, "lib")}`, pattern: "x" },
 		root,
 	);
-	// src override 与 lib 的上下文在前两次调用中已注入，多条目不应重复
 	expect(injectedTexts(multi)).toHaveLength(0);
 
 	const fresh = loadExtension();
@@ -284,7 +276,6 @@ test("带行选择器/容器语法的读取仍注入所在目录链", async () =
 	expect(rangedTexts).toHaveLength(1);
 	expect(rangedTexts[0]).toContain("COMPONENT-CONTEXT");
 
-	// 直接读取带选择器的 AGENTS 文件：剥离选择器后识别为 agents 文件，不重复注入
 	const direct = await runRead(handlers, `${path.join(root, "src/AGENTS.md")}:10-20`, root);
 	expect(injectedTexts(direct)).toHaveLength(0);
 	fs.rmSync(root, { recursive: true, force: true });
@@ -310,7 +301,6 @@ test("会话内 cwd 就地变更（/move 类）后按新 cwd 解析相对路径"
 
 test("AGENTS 文件读取失败时回滚占位并可重试", async () => {
 	const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "subdir-ctx-")));
-	// 用同名目录冒充 AGENTS.md 制造读取失败（EISDIR）
 	fs.mkdirSync(path.join(root, "pkg/AGENTS.md"), { recursive: true });
 	fs.writeFileSync(path.join(root, "pkg/f.txt"), "f");
 	const handlers = loadExtension();
@@ -332,13 +322,11 @@ test("home 目录下其他项目读取时注入其上下文，且 session 内去
 	fs.mkdirSync(path.join(proj, "lib"), { recursive: true });
 	fs.writeFileSync(path.join(proj, "AGENTS.md"), "HOMEPROJECT-CONTEXT");
 	fs.writeFileSync(path.join(proj, "lib", "m.ts"), "m");
-	// 会话 cwd 在 tmpdir（home 之外），proj 是外部项目，其根 AGENTS.md 不属于宿主已加载范围
 	const sessionCwd = fs.realpathSync(os.tmpdir());
 	const handlers = loadExtension();
 	fireSession(handlers, sessionCwd);
 
 	try {
-		// 用 ~/ 前缀写法覆盖 home 展开（omp read 同语义）
 		const tildePath = `~/${path.relative(home, path.join(proj, "lib/m.ts"))}`;
 		const first = await runRead(handlers, tildePath, sessionCwd);
 		expect(injectedTexts(first).some((t) => t.includes("HOMEPROJECT-CONTEXT"))).toBe(true);
@@ -355,7 +343,6 @@ test("宿主已加载的 cwd 祖先链与用户级 agent 文件不重复注入",
 	const proj = fs.realpathSync(fs.mkdtempSync(path.join(home, ".subdir-ctx-selftest-")));
 	const prevAgentDir = process.env.PI_CODING_AGENT_DIR;
 	try {
-		// 用户级 native agent 目录重定位到 proj/.agentdir
 		process.env.PI_CODING_AGENT_DIR = path.join(proj, ".agentdir");
 		fs.mkdirSync(path.join(proj, ".agentdir/sub"), { recursive: true });
 		fs.writeFileSync(path.join(proj, ".agentdir/AGENTS.md"), "USERLEVEL-CONTEXT");
@@ -369,7 +356,6 @@ test("宿主已加载的 cwd 祖先链与用户级 agent 文件不重复注入",
 		const sessionCwd = path.join(proj, "inner");
 		fireSession(handlers, sessionCwd);
 
-		// proj/AGENTS.md 是 cwd 的祖先、.agentdir/AGENTS.md 是用户级，两者宿主启动时已注入
 		const sibling = await runRead(handlers, path.join(proj, "other/x.ts"), sessionCwd);
 		const texts = injectedTexts(sibling);
 		expect(texts.some((t) => t.includes("PROJ-ROOT-CONTEXT"))).toBe(false);
@@ -378,7 +364,6 @@ test("宿主已加载的 cwd 祖先链与用户级 agent 文件不重复注入",
 		const agentRead = await runRead(handlers, path.join(proj, ".agentdir/sub/f.ts"), sessionCwd);
 		expect(injectedTexts(agentRead).some((t) => t.includes("USERLEVEL-CONTEXT"))).toBe(false);
 
-		// 防护不能误伤：不在 cwd 祖先链上的子目录上下文仍要注入
 		fs.writeFileSync(path.join(proj, "other/AGENTS.md"), "OTHER-CONTEXT");
 		fs.writeFileSync(path.join(proj, "other/y.ts"), "y");
 		const nested = await runRead(handlers, path.join(proj, "other/y.ts"), sessionCwd);

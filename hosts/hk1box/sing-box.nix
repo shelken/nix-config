@@ -5,31 +5,11 @@
   pkgs,
   ...
 }:
-#############################################################
-#
-#  sing-box：配置从订阅服务拉取，与 Mac / iOS 同一条链路
-#
-#  订阅 URL 由 Mac 上 `sbtools encode -c <路由器用的 yaml>` 生成，yaml 里
-#  template_url 指向 proxy 仓库的 template-router.json，节点与 clash API 的 secret
-#  写在 overlay 里，随载荷加密，不出现在任何仓库的明文中。
-#  设备白名单是公开 IP，不进载荷：overlay 里只留占位符，拉取后由下面的 whitelist 替换，
-#  所以改白名单只需部署，不用重新生成 URL。
-#  URL 本身等同凭据（能换出完整节点配置），放在 secrets 仓库的 sops 文件里。
-#
-#  拉取：开机一次 + 每 6 小时一次；先 `sing-box check`，内容有变化才原子替换并重启。
-#  拉取或校验失败时保留上一份，所以订阅服务暂时不可用也能正常开机。
-#
-#    /var/lib/sing-box-sub/config.json   ← 最近一次通过校验的配置（root:sing-box 0640）
-#    /etc/sing-box/config.json           → 软链到上面；nixpkgs 模块不写 settings 时用 -C /etc/sing-box
-#
-#############################################################
 let
   stateDir = "/var/lib/sing-box-sub";
   configFile = "${stateDir}/config.json";
   sing-box = config.services.sing-box.package;
 
-  # 旁路由白名单：名单内设备的透明 DNS 与流量走盒子，名单外由内核直接转发。
-  # 地址取 vars/networking.nix 的登记；没登记的设备写裸 IP（统一补 /32）
   lan = myvars.networking.hostAddress;
   whitelist = builtins.toJSON (
     map (ip: "${ip}/32") [
@@ -39,9 +19,8 @@ let
       lan."pve".address
       lan."yuuko".address
       lan."sakamoto".address
-      "192.168.6.125" # quest
+      "192.168.6.125"
     ]
-    # IoT 网段由主路由策略路由整段送来，隔离靠主路由防火墙
     ++ [ "192.168.50.0/24" ]
   );
   urlFile = config.sops.secrets.sing-box-sub-url.path;
@@ -67,7 +46,6 @@ let
         | curl --config - --fail --silent --show-error --location \
             --max-time 120 --retry 3 --retry-delay 10 --output "$raw"
 
-      # 订阅里的 "source_ip_cidr": "@whitelist@" 换成本机白名单（服务端内核 merge 把单元素数组写成标量）
       jq --argjson w ${lib.escapeShellArg whitelist} '
         def replace: walk(if type == "object" and .source_ip_cidr == "@whitelist@" then .source_ip_cidr = $w else . end);
         ([(.dns.rules? // []), (.route.rules? // []) | .. | select(type == "object" and .source_ip_cidr == "@whitelist@")] | length) as $n
@@ -85,7 +63,6 @@ let
 
       chgrp sing-box "$tmp"
       chmod 0640 "$tmp"
-      # 同一文件系统内 mv 是原子替换，sing-box 不会读到半份文件
       mv -f "$tmp" ${configFile}
       echo "订阅已更新，重启 sing-box"
       systemctl restart sing-box.service
@@ -103,7 +80,6 @@ in
       # system 栈的 TCP 经 TUN 回注内核，需在输入链的 conntrack 检查前放行。
       networking.firewall.trustedInterfaces = [ "tun0" ];
 
-      # 订阅 URL：secrets 仓库 sops/secrets/hosts/hk1box.yaml 的 sing-box-sub-url 键
       sops.secrets.sing-box-sub-url = { };
 
       systemd.tmpfiles.rules = [
@@ -112,17 +88,14 @@ in
         "L+ /etc/sing-box/config.json - - - - ${configFile}"
       ];
 
-      # 首次开机还没有配置时不启动，等拉取成功后由拉取脚本拉起，避免反复失败重启
       systemd.services.sing-box.unitConfig.ConditionPathExists = configFile;
 
       # 只由自己的 timer 触发，不挂到任何 target 上：挂上去的话，激活时会因为它是
       # 「完成即 inactive 的 oneshot」被当成没在运行而再拉一遍，订阅服务恰好不通就让
       # 激活失败、触发 deploy-rs 回滚。这里让激活路径完全没有入口启动它。
-      # 换了订阅 URL 后手动 `systemctl start sing-box-sub-update`，或等下一次定时
       systemd.services.sing-box-sub-update = {
         description = "拉取 sing-box 订阅配置";
         wants = [ "network-online.target" ];
-        # timer 触发时同样等网络就绪
         after = [ "network-online.target" ];
         restartIfChanged = false;
         serviceConfig = {
@@ -136,7 +109,6 @@ in
       systemd.timers.sing-box-sub-update = {
         wantedBy = [ "timers.target" ];
         timerConfig = {
-          # 开机拉一次（原来由 multi-user.target 负责），之后每 24 小时一次
           OnBootSec = "1min";
           OnUnitActiveSec = "24h";
           RandomizedDelaySec = "10min";
