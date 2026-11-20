@@ -247,7 +247,7 @@
 
         # skills CLI 由 mise 提供，版本钉死，不再用 npx/bunx 现取
         # renovate: datasource=npm depName=skills
-        programs.mise.globalConfig.tools."npm:skills" = "1.8.1";
+        programs.mise.globalConfig.tools."npm:skills" = "1.9.0";
 
         # 手动命令
         # skills update
