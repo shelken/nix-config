@@ -38,14 +38,13 @@ export type Policy = {
   paths: PathRule[];
 };
 
-type LayerOp =
-  | { type: "add"; value: string; reason?: string }
-  | { type: "remove"; value: string };
+type AddOp = { type: "add"; value: string; reason?: string };
+type GlobalOp = AddOp | { type: "remove"; value: string };
 
 type ParsedLayer = {
   default_reason?: string;
-  commandOps: LayerOp[];
-  pathOps: LayerOp[];
+  commandOps: GlobalOp[];
+  pathOps: GlobalOp[];
   errors: string[];
 };
 
@@ -186,11 +185,11 @@ function removalValue(raw: string): string | null {
 function parseListOps(
   list: unknown,
   valueKey: "pattern" | "path",
-): { ops: LayerOp[]; errors: string[] } {
+): { ops: GlobalOp[]; errors: string[] } {
   if (list == null) return { ops: [], errors: [] };
   if (!Array.isArray(list)) return { ops: [], errors: ["配置项必须为列表数组"] };
 
-  const ops: LayerOp[] = [];
+  const ops: GlobalOp[] = [];
   const errors: string[] = [];
   for (let idx = 0; idx < list.length; idx++) {
     const item = list[idx];
@@ -237,25 +236,14 @@ function parseLayerYaml(source: string, parseYaml: YamlParser): ParseLayerResult
   return { ok: true, layer };
 }
 
-/**
- * 叠加一层规则。全局层：`-值` 按规则原文删除同名规则，相同原文的新规则就地覆盖；
- * 路径规则与内置规则走同一条路径，`-值` 因此能撤掉内置例外或整条内置规则。
- * 项目层：只追加。
- */
-function applyRuleOps<T extends { value: string }>(
+/** 全局层：`-值` 按规则原文删除同名规则，相同原文的新规则就地覆盖；路径规则与内置规则同路，`-值` 可撤掉内置规则。 */
+function applyGlobalOps<T extends { value: string }>(
   rules: T[],
-  ops: LayerOp[],
-  make: (op: { value: string; reason?: string }) => T,
-  layer: { appendOnly: boolean; ignored: (value: string) => void },
+  ops: GlobalOp[],
+  make: (op: AddOp) => T,
 ): T[] {
   let out = rules.slice();
   for (const op of ops) {
-    // 项目权限文件随仓库克隆而来，不可信，不能放宽保护
-    if (layer.appendOnly) {
-      if (op.type === "remove") layer.ignored(op.value);
-      else out.push(make(op));
-      continue;
-    }
     if (op.type === "remove") {
       out = out.filter((r) => r.value !== op.value);
       continue;
@@ -264,6 +252,30 @@ function applyRuleOps<T extends { value: string }>(
     const i = out.findIndex((r) => r.value === op.value);
     if (i < 0) out.push(next);
     else out[i] = next;
+  }
+  return out;
+}
+
+/** 项目权限文件随仓库克隆而来，不可信：只追加，不能放宽保护。 */
+function appendProjectOps<T extends { value: string }>(
+  rules: T[],
+  ops: AddOp[],
+  make: (op: AddOp) => T,
+): T[] {
+  return [...rules, ...ops.map(make)];
+}
+
+function stripProjectRemovals(ops: GlobalOp[], layerName: string, errors: BuildError[]): AddOp[] {
+  const out: AddOp[] = [];
+  for (const op of ops) {
+    if (op.type === "remove") {
+      errors.push({
+        message: `${layerName}: '-${op.value}' 已忽略：项目层只能追加规则，删除规则只能写在全局权限文件`,
+        scope: "item",
+      });
+    } else {
+      out.push(op);
+    }
   }
   return out;
 }
@@ -289,44 +301,49 @@ export function buildPolicy(input: {
   let default_reason: string | undefined;
   const errors: BuildError[] = [];
 
-  const layers = [
-    { name: "全局配置", source: input.globalSource, config: permissionPaths.globalPath, appendOnly: false },
-    { name: "项目配置", source: input.projectSource, config: permissionPaths.projectPath, appendOnly: true },
-  ];
-  for (const { name, source, config, appendOnly } of layers) {
-    if (source == null) continue;
+  const makeCommand =
+    (config: string) =>
+    (op: AddOp): CommandRule => ({
+      value: op.value,
+      match: expandHomeInText(op.value, ctx.home),
+      reason: op.reason,
+      source: "user",
+      config: `${config}#deny_commands`,
+    });
+  const makePath =
+    (config: string) =>
+    (op: AddOp): PathRule =>
+      compilePathRule(op.value, op.reason, [], "user", `${config}#deny_paths`, ctx);
+
+  const loadLayer = (name: string, source: string | null | undefined): ParsedLayer | null => {
+    if (source == null) return null;
     const parsed = parseLayerYaml(source, parseYaml);
     if (!parsed.ok) {
       errors.push({ message: `${name}: ${parsed.error}`, scope: "layer" });
-      continue;
+      return null;
     }
     errors.push(...parsed.layer.errors.map((e) => ({ message: `${name}: ${e}`, scope: "item" as const })));
     if (parsed.layer.default_reason !== undefined) default_reason = parsed.layer.default_reason;
-    const layer = {
-      appendOnly,
-      ignored: (value: string) =>
-        errors.push({
-          message: `${name}: '-${value}' 已忽略：项目层只能追加规则，删除规则只能写在全局权限文件`,
-          scope: "item",
-        }),
-    };
-    commands = applyRuleOps(
+    return parsed.layer;
+  };
+
+  const globalLayer = loadLayer("全局配置", input.globalSource);
+  if (globalLayer) {
+    commands = applyGlobalOps(commands, globalLayer.commandOps, makeCommand(permissionPaths.globalPath));
+    paths = applyGlobalOps(paths, globalLayer.pathOps, makePath(permissionPaths.globalPath));
+  }
+
+  const projectLayer = loadLayer("项目配置", input.projectSource);
+  if (projectLayer) {
+    commands = appendProjectOps(
       commands,
-      parsed.layer.commandOps,
-      (op) => ({
-        value: op.value,
-        match: expandHomeInText(op.value, ctx.home),
-        reason: op.reason,
-        source: "user",
-        config: `${config}#deny_commands`,
-      }),
-      layer,
+      stripProjectRemovals(projectLayer.commandOps, "项目配置", errors),
+      makeCommand(permissionPaths.projectPath),
     );
-    paths = applyRuleOps(
+    paths = appendProjectOps(
       paths,
-      parsed.layer.pathOps,
-      (op) => compilePathRule(op.value, op.reason, [], "user", `${config}#deny_paths`, ctx),
-      layer,
+      stripProjectRemovals(projectLayer.pathOps, "项目配置", errors),
+      makePath(permissionPaths.projectPath),
     );
   }
 

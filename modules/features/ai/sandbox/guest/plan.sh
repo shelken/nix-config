@@ -11,8 +11,6 @@
 #   PLAN_IMPORT_STAGES   数组：每项 "<stage>\t<目标目录>"，按 stage 与目录去重
 #   PLAN_PATHS           数组：每项 "<绝对路径>\t<true|false>"，false 表示可写
 set -euo pipefail
-# 变量由 launcher 与 netns.sh 在内嵌后使用
-# shellcheck disable=SC2034
 
 parse_plan() {
   local plan_json="$1"
