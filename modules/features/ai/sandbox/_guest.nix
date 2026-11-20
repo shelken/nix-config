@@ -64,6 +64,7 @@ let
   };
 
   guestBinPath = "${guestEnv}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+  miseBin = "${linuxPkgs.mise}/bin/mise";
 
   postInstallHook = linuxPkgs.writeShellScript "sandbox-guest-postinstall-hook" (
     ''
@@ -120,7 +121,7 @@ let
     export MISE_GLOBAL_CONFIG_FILE="$SB_DATA_DIR/mise/config.toml"
     export GIT_CONFIG_GLOBAL=${gitConfig}
     export GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
-    ${toolEnvExports}export PATH="$MISE_SHIMS_DIR:${guestBinPath}"
+    ${toolEnvExports}export PATH="$MISE_SHIMS_DIR:$SB_CONFIG_DIR/bin:${guestBinPath}"
     mkdir -p ${guestDirs}
   '';
 
@@ -184,6 +185,7 @@ in
 {
   inherit
     guestEnvSh
+    miseBin
     syncGuestScript
     guestStatus
     launcher
