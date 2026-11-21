@@ -2,13 +2,14 @@
 
 日期: 2026-08-26
 
-定时任务（日志清理、垃圾回收等）散落在各模块里，书写繁琐、没有统一视图、环境隔离脆弱。现在一个任务即为 `hosts/<host>/tasks/<name>.nix` 里的一个属性集，添加后自动注册，主机配置零接线。脚本由 `writeShellApplication` 包装脚本启动，依赖映射为 `runtimeInputs`；任务正文单独打成 runner，构建期只过 `bash -n`（2026-09-21 引入 runner 后，shellcheck 只覆盖框架包装脚本）；`user = true` 映射为 Home Manager LaunchAgent，`user = false` 映射为 nix-darwin LaunchDaemon；日志自动重定向到标准 Logs 目录。每个任务指定 `when`（日历时间）或 `every`（固定间隔）之一。`task ls`、`task run`、`task log`、`task info` 在运行时读取 launchd plist，提供统一的查看与调试入口
+定时任务（日志清理、垃圾回收等）原先散落在各模块里，书写繁琐、没有统一视图、环境隔离脆弱。现在一个任务就是 `hosts/<host>/tasks/<name>.nix` 里的一个属性集，加文件即注册，主机配置零接线。框架实现在 `modules/features/system/tasks/`，`ntask` CLI 运行时读取 launchd plist 提供查看与调试入口
+
+## 规则
+
+- 任务 MUST 恰好声明 `when`（日历时间）或 `every`（固定间隔）之一
+- 具有复杂生命周期的服务 SHOULD 作为独立功能实现
 
 ## 考虑过的替代方案
 
-- **保留手动开关**：多一层间接和样板代码，违背「加文件即生效」
-- **自制 Cron 解析引擎**：增加维护负担，且丢失 launchd 唤醒后补跑的语义
-
-## 后果
-
-只适用于纯脚本型定时任务；具有复杂生命周期的服务仍作为独立功能实现
+- 保留手动开关：多一层间接与样板，违背「加文件即生效」
+- 自制 Cron 解析引擎：维护负担大，丢失 launchd 唤醒后补跑的语义
