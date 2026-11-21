@@ -16,13 +16,13 @@ let
   taskCfg = config.shelken.tasks;
   userTasks = tasksLib.userTasks taskCfg;
 
-  taskCli = pkgs.writers.writePython3Bin "task" { flakeIgnore = [ "E501" ]; } (
+  taskCli = pkgs.writers.writePython3Bin "ntask" { flakeIgnore = [ "E501" ]; } (
     builtins.replaceStrings [ "@labelPrefix@" ] [ tasksLib.labelPrefix ] (
       builtins.readFile ./_cli/task.py
     )
   );
-  taskCompletion = pkgs.writeTextDir "share/zsh/site-functions/_task" (
-    builtins.readFile ./_cli/_task
+  taskCompletion = pkgs.writeTextDir "share/zsh/site-functions/_ntask" (
+    builtins.readFile ./_cli/_ntask
   );
 in
 {

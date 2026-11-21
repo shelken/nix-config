@@ -53,10 +53,10 @@ just bd
 
 ### 3. 查看调度表
 
-`task ls` 读的是已部署的 launchd 任务（用户态 `~/Library/LaunchAgents`、root 态 `/Library/LaunchDaemons`），`just bd` 只构建不部署。应用后（用户态任务 `just hm`、root 任务 `just sw`，均需用户授权）检查任务是否正确列出:
+`ntask ls` 读的是已部署的 launchd 任务（用户态 `~/Library/LaunchAgents`、root 态 `/Library/LaunchDaemons`），`just bd` 只构建不部署。应用后（用户态任务 `just hm`、root 任务 `just sw`，均需用户授权）检查任务是否正确列出:
 
 ```bash
-task ls
+ntask ls
 ```
 
 状态表每行显示 LOADED（launchd 里是否已装载）、LAST RUN（上次运行时间）与 RESULT（上次结果）
@@ -67,19 +67,19 @@ task ls
 
 ```bash
 # 手动运行任务(root 任务自动引导 sudo)
-task run <name>
+ntask run <name>
 
 # 查看任务详情：调度、日志与 plist 路径、launchd 状态
-task info <name>
+ntask info <name>
 
 # 查看日志：默认只显示最近一次运行，-f 跟随实时输出
-task log <name>
-task log <name> -f
+ntask log <name>
+ntask log <name> -f
 ```
 
 ## 常见排坑指南
 
-- 新建任务在 `task ls` 中未列出：新建文件未执行 `git add`，Flake 处于未追踪状态忽略了该文件
+- 新建任务在 `ntask ls` 中未列出：新建文件未执行 `git add`，Flake 处于未追踪状态忽略了该文件
 - 调用 omp/pi 的任务报 `API key ending in _KEY`：任务不经 sec-run，环境里没有 provider 要的变量，变量名被当成字面量发出。在 `secrets` 里声明对应的 `op://` 引用
 - 脚本内命令报 `command not found`：在任务文件的 `packages` 列表中声明该工具包，避免硬编码 store 绝对路径
 - 时间格式解析报错：`when` 必须为 `"H:M"` 格式，不支持标准 cron 表达式
