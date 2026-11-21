@@ -2,23 +2,27 @@
 
 日期: 2026-10-31
 
-仓库长期只在 darwin 上用，NixOS 侧的 `core` 被塞进了笔记本与开发机才需要的东西（电源管理、mDNS 发布、监听 `0.0.0.0` 的 node_exporter、默认关闭的防火墙、X11 转发、无条件加入的 networkmanager 与 docker 组），无法作为公网 VPS 的起点，词汇表却把 `core` 定义为“常驻服务器”。现在 `core` 只是所有角色共有的基线（能登录、能用 nix、安全默认），多余的搬到 `gui`（电源管理）和 `tui`（avahi、node_exporter、诊断工具），NixOS 新增主角色 `server`：`core` 之上只加服务器职责，与 `tui` 并列，不含开发工具链。国内 NTP、docker 镜像源这类区域默认值留在 `core` 与可选功能里，位于国外的主机在自己的配置里覆盖，不为它们另立角色。
+仓库长期只在 darwin 上用，NixOS 侧 `core` 塞进了笔记本与开发机才需要的东西（电源管理、mDNS 发布、监听 `0.0.0.0` 的 node_exporter、默认关闭的防火墙、X11 转发、无条件加入的 networkmanager 与 docker 组），无法作为公网 VPS 的起点。现在 `core` 收敛为所有角色共有的基线，NixOS 新增主角色 `server`
 
-服务器的口令哈希走系统层 sops（可选功能 `nixos.sops`），与 `shelken.secrets.enable` 的用户态凭据无关：每台主机用自己单独生成的 age 密钥，只能解密给自己的那一个文件，不能解密 `default.yaml`；私钥在安装时用 `--extra-files` 放到固定路径，不从 SSH 主机密钥派生。服务商分配的网络参数不是密钥，且求值期就要用，sops 在激活期才解密、赶不上，所以放在私有 `secrets` 仓库里作为明文，经 flake 输入读取。
+## 规则
+
+- `core` MUST 只放所有主角色下全部主机都需要的基线（能登录、能用 nix、安全默认），但凡一台主机不需要就 MUST 移到对应角色或可选功能
+- `server` 为 NixOS 专用主角色：`core` 之上只加常驻服务器职责，与 `tui` 并列，MUST NOT 包含开发工具链
+- 区域默认值（国内 NTP、docker 镜像源）MAY 留在 `core` 与可选功能；位于国外的主机 SHOULD 在自己的配置里覆盖，MUST NOT 为区域另立角色
+- 服务器口令哈希走系统层 sops（可选功能 `nixos.sops`），与 `shelken.secrets.enable` 的用户态凭据无关：每台主机用单独生成的 age 密钥，只能解密给自己的那一个文件，MUST NOT 写进 `default.yaml`；私钥 MUST 在安装时用 `--extra-files` 放到固定路径，MUST NOT 从 SSH 主机密钥派生
+- 开机即需状态（age 私钥、tailscale 节点身份、SSH 主机密钥）MUST 在安装时放入新系统，MUST NOT 事后补，清单见 `hosts/vps/vps-cc/README.md`
+- 服务商分配的网络参数不是密钥且求值期就要用，sops 激活期才解密，MUST 放私有 `secrets` 仓库作明文，经 flake 输入读取
 
 ## 考虑过的替代方案
 
-- **不新增角色，直接用 `core`**：`core` 要继续被所有主机包含，把笔记本与开发机的东西留在里面，公网服务器就要靠一连串 `mkForce` 去关闭，每台服务器都重复一遍
-- **`server` 导入 `tui` 再去掉开发工具**：`tui` 的闭包约 7.8 GiB，包含 rust、ansible 等；Nix 模块无法只去掉“某个包”，只能反过来让开发机在 `core` 上加东西
-- **服务器口令哈希放进 `vars/` 明文**：公开仓库里任何人可离线爆破，哈希强度不能完全替代保密
-- **age 密钥由 SSH 主机密钥派生（sops-nix 默认）**：主机密钥泄露或轮换会同时影响密文，违背“登录归 SSH、解密归 age”
-- **把 vps 的 age 公钥加进现有的 `default.yaml` 规则**：公网服务器被入侵就能解密你全部凭据
+- 不新增角色直接用 `core`：公网服务器要靠一连串 `mkForce` 关闭笔记本配置，每台重复一遍
+- `server` 导入 `tui` 再去开发工具：`tui` 闭包约 7.8 GiB，Nix 模块删不掉「某个包」
+- 口令哈希放 `vars/` 明文：公开仓库可离线爆破
+- age 由 SSH 主机密钥派生：主机密钥泄露或轮换同时影响密文
+- age 公钥加进 `default.yaml`：公网服务器被入侵就能解密全部凭据
 
 ## 后果
 
-- 之前依赖 `core` 自带 avahi、node_exporter、诊断工具、关闭防火墙的主机要自行导入，或改用 `tui`
-- `docs/user-guide/02-features.md` 与 `GLOSSARY.md` 的角色表要带上 `server`；`AGENTS.md` 里的角色链描述也要更新
-- 新增 `hosts/vps/` 目录会让 `calcUniformSchedule` 的备份时段整体平移一次
-- 每台使用系统 sops 的服务器都要在 `secrets` 仓库里单独建一个 age 密钥和一个密文文件
-- 机器第一次开机就要读的状态（age 私钥、tailscale 节点身份、SSH 主机密钥）只能在安装时用 `--extra-files` 放进新系统，不能事后补；这份清单没有声明在配置里，见 `hosts/vps/vps-cc/README.md`
-- age 私钥可以替换：每台主机的密文同时写给了管理员公钥，丢了就换一把、`sops updatekeys`、刷新 `secrets` 输入，不需要另存备份
+- 原依赖 `core` 自带 avahi、node_exporter、诊断工具、关防火墙的主机 MUST 自行导入或改用 `tui`
+- 新增 `hosts/vps/` 目录会让 `calcUniformSchedule` 备份时段整体平移一次
+- 每台用系统 sops 的服务器 MUST 在 `secrets` 仓库单独建 age 密钥与密文文件；密文同时写给管理员公钥，密钥丢了换一把、`sops updatekeys`、刷新输入即可，MUST NOT 另存备份
