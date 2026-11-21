@@ -2,7 +2,7 @@
 
 日期: 2026-10-23
 
-同一功能的配置按层分散在 `modules/darwin/` 与 `home/` 两棵树，改一个功能要改两处，开关还要在主机配置里手动镜像。现在用 flake-parts 加 import-tree：一个功能一个目录，以 `flake.modules.<类>.<名>` 发布，类为 `darwin`、`nixos`、`homeManager`；`modules/flake/features.nix` 把 `homeManager.<名>` 自动挂到同名系统模块，功能文件不写接线代码。功能自己声明加入哪个角色，主机只导入角色。仓库没有独立运行的 Home Manager，`homeConfigurations` 从系统配置求值结果导出，HM 只能由系统模块经 `home-manager.sharedModules` 注入
+同一功能的配置按层分散在 `modules/darwin/` 与 `home/` 两棵树，改一个功能要改两处，开关还要在主机配置里手动镜像。现在用 flake-parts 加 import-tree：一个功能一处定义（文件形式见 ADR 0012），以 `flake.modules.<类>.<名>` 发布，类为 `darwin`、`nixos`、`homeManager`；`modules/flake/features.nix` 把 `homeManager.<名>` 自动挂到同名系统模块，功能文件不写接线代码。功能自己声明加入哪个角色，主机只导入角色。仓库没有独立运行的 Home Manager，`homeConfigurations` 从系统配置求值结果导出，HM 只能由系统模块经 `home-manager.sharedModules` 注入
 
 ## 规则
 
@@ -14,7 +14,7 @@
 - **可选功能**：没有主机启用的功能 MUST NOT 加入任何角色、MUST NOT 保留 `enable` 开关，要用的主机在 `imports` 里声明
 - **互斥实现** MUST 用 enum 选项（如 `shelken.wm.manager`），MUST NOT 拆成多个可选功能，否则各主机都要显式导入且拦不住同时导入
 - **接口放 core**：会被其他功能写入的选项 MUST 声明在 `darwin.core` 与 `nixos.core`，单平台选项声明在对应平台 core，否则未导入实现的主机求值失败
-- **密钥是主机属性**：sops 模块放 core，`shelken.secrets.enable` MUST 由主机设置；需要密钥的功能 MUST 声明 `sops.secrets.*` 并断言，MUST NOT 替主机打开
+- **密钥是主机属性**：用户态 sops 模块与 `shelken.secrets.enable` 接口放 core（系统层 `nixos.sops` 为可选功能，见 ADR 0005），`shelken.secrets.enable` MUST 由主机设置；需要密钥的功能 MUST 声明 `sops.secrets.*` 并断言，MUST NOT 替主机打开
 - **HM 配置跟随应用本体**：应用由系统侧安装时，其 HM 配置 MUST 并入同一功能，MUST NOT 整体挂到角色上
 - **软链路径字面量**：`mylib.mkConfigLink`、`mkConfigFile` MUST 接收 `./x` 路径字面量，文件挪动后求值即报错
 - 路径含 `/_` 的文件 MUST NOT 被自动导入，用于私有片段与数据
@@ -27,7 +27,7 @@
 
 ## 后果
 
-- `calcUniformSchedule` 按 `hosts/` 目录数排定备份时段，新增目录会平移所有主机的备份时段；无硬件配置的求值测试机 MUST NOT 建目录，角色直接声明在主机表
+- `calcUniformSchedule` 读 `hosts/default.nix` 中非 OpenWrt 主机名按哈希排序排定备份时段（见 `lib/default.nix`），增删主机登记可能影响排序靠后主机的时段
 - 功能名 MUST NOT 与 `modules/profiles/` 下任何角色同名，两者共用 `flake.modules.<类>` 命名空间
 - 同名挂接为每个 HM 功能生成 `nixos.<名>` 与 `darwin.<名>`，只适用于 darwin 的功能在 NixOS 上导入会因缺选项报错
 - 模块合并层级越深越靠前，角色链改变列表选项顺序；`system-path` 开了 `ignoreCollisions`，同优先级排前者胜出，迁移时 MUST 确认同路径文件无冲突

@@ -11,7 +11,7 @@
 - 无人值守需要、私有但不机密（实体设备的 MAC、内网拓扑、主域名）：MUST 存 secrets.nix 的明文 nix 文件，求值期 `import (inputs.secrets + "/…")` 读取
 - 只有人或用户交互工具在用：MUST 存 1Password，人直接查看，交互工具经 `sec-run` 注入环境变量（凭据基座）
 - 人也要用的机器值（如 Wi-Fi 密码）：源头 MUST 在 secrets.nix，1Password MAY 放一份副本并注明「副本，源在 secrets.nix」，改值以 secrets.nix 为准
-- 只有实体设备的标识算私密：值 MUST 由设备本身决定且不可再生成（MAC）；手动随机生成的配置值（k8s 工作负载 MAC 与其 IPv6 后缀）MUST NOT 当设备标识，直接明文写在 nix-config 里
+- 只有实体设备的标识（MAC 等）算私密；手动随机生成的服务配置（如 k8s 工作负载 MAC 与其 IPv6 后缀）MUST NOT 当设备标识，直接明文写在 nix-config 里
 - 主机的启动与部署 MUST NOT 依赖 1Password，无人值守机器上没有可用的 1Password 会话
 - 例外（2026-11-18）：用户态定时任务 MAY 经 service account 读 1Password（任务 `secrets` 写 `op://` 引用，用的是凭据基座里同一个 key），它不在启动与部署路径上，取不到值只让该任务失败，MUST NOT 为它在 sops 里再存一份
 
@@ -23,8 +23,8 @@
 
 ## 后果
 
-- 路由器（`hosts/router-mine`）的值已按规则搬完，声明与 `just/router.just` 里不再有 `op://`；Wi-Fi、ZeroTier 进 sops 密文，DHCP 保留的 MAC 与防火墙 IPv6 后缀进明文 nix
+- 路由器（`hosts/router-mine`）的值已按规则搬完，声明与 `just/router.just` 里不再有 `op://`：Wi-Fi 与 ZeroTier 进 `secrets.nix` 的 sops 密文，实体设备 DHCP MAC 进 `secrets.nix` 的明文 nix，服务防火墙 IPv6 后缀明文写在 `hosts/router-mine/home-ops/firewall.nix`
 - singbox-config 留在 1Password：模板值只在用户手动运行生成器时读取，机器要读的只有生成结果（旁路由订阅 URL），它已在 sops
 - 凭据基座（`opSecretMap`）服务交互工具；定时任务不经 sec-run 整份注入，按各自声明的 `op://` 引用逐个读取
-- 路由器的 sops 文件只有 admin_mio 能解密：路由器不跑 sops，部署 MUST 在 mio 上做
+- 路由器不跑 sops，部署 MUST 在持有对应解密密钥的部署机上执行（当前仅 `admin_mio` 可解密）
 - sops-nix 是否是主机侧解密的最佳实现另行评估，本规则只决定值的来源，不绑定解密工具
