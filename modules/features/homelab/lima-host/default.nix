@@ -1,4 +1,3 @@
-# lima-host：承载 Lima 节点的宿主（sakamoto、yuuko）。可选功能，宿主在 imports 里声明导入
 # 系统侧：以 root 常驻的桥接网卡 socket_vmnet，供 Lima 实例经 socket 路径连接（非托管模式）；
 # 托管模式要求二进制整条路径归 root 且组不可写，/nix/store 做不到，所以由 launchd 常驻。
 { ... }:

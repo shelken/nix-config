@@ -1,4 +1,3 @@
-# 可选功能：要用的主机在 imports 里加 self.modules.darwin.dnscontrol（NixOS 主机同理）
 {
   flake.modules.homeManager.dnscontrol =
     {

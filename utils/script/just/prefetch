@@ -19,7 +19,6 @@ nar_hash() {
   jq -r '.hash' <<<"$json"
 }
 
-# 一次 prefetch，成功时向 stdout 输出 JSON，失败时把诊断打到 stderr 并返回 1
 prefetch_json() {
   local ref=$1 out err
   err=$(mktemp)

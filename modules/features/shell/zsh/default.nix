@@ -188,13 +188,12 @@
         };
       };
 
-      # HM 的 batCache 每次激活都 `bat cache --build` 并打印三行。catppuccin 经 programs.bat.themes
-      # 注入了自定义主题，bat 只从缓存读自定义资源，缓存必须保留；构建只要约 0.3s，所以每次重建，只丢弃 stdout
+      # EXTERNAL: bat 只从缓存读 HM 注入的 catppuccin 主题，须每次重建；HM 默认脚本多打印三行，故覆写丢弃 stdout
       home.activation.batCache = lib.mkForce (
         lib.hm.dag.entryAfter [ "linkGeneration" ] ''
           (
             export XDG_CACHE_HOME=${lib.escapeShellArg config.xdg.cacheHome}
-            # 在空目录里构建，规避 ~/cache 存在时的失败：https://github.com/sharkdp/bat/issues/1726
+            # EXTERNAL: 上游 bat#1726 未修：cache 目录已存在时 bat cache --build 失败，只能在空目录构建
             cd "${pkgs.emptyDirectory}"
             run ${lib.getExe config.programs.bat.package} cache --build > /dev/null
           )

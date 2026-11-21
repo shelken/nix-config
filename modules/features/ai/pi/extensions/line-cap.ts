@@ -1,12 +1,3 @@
-/**
- * 为什么需要：pi 内置 bash 只限总量（50KB / 2000 行）、不限单行，且只留尾部。
- * 为什么 bash 结果挂 tool_result 并回读完整输出：这个钩子运行时 pi 已经把输出截成尾部，
- * 开头只存在于 details.fullOutputPath 指向的文件里，只处理钩子拿到的文本救不回开头。
- *
- * 为什么后台结果和 !cmd 挂 context：pi-background 的完成消息是 custom 消息，用户 !cmd 是
- * bashExecution 消息，都不经过 tool_result。context 只改发给模型的副本，会话存档不变。
- */
-
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -190,7 +181,6 @@ export function capText(text: string, save: (t: string) => string | undefined = 
 
 export function capMessage(m: Message, save: (t: string) => string | undefined = spill): Message {
 	if (m.role === "bashExecution") {
-		// 用户 !cmd 的输出由 bash-executor 截尾，和 tool_result 一样回读完整文件重排
 		if (m.excludeFromContext || typeof m.output !== "string") return m;
 		const replaced = capOutputText(m.output, m.truncated, m.fullOutputPath, undefined, save);
 		return replaced === undefined ? m : { ...m, output: replaced };

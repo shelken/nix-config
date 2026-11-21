@@ -199,7 +199,6 @@ function resolveBlockReason(rule: Rule, kind: "command" | "path", defaultReason?
   return lines.join("\n");
 }
 
-/** Git 全局选项；带独立取值的选项连同后一个词一起跳过 */
 const GIT_GLOBAL_VALUE_OPTIONS: Record<string, true> = lookup<true>({
   "-C": true,
   "-c": true,

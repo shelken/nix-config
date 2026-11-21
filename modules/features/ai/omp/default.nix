@@ -24,8 +24,6 @@
           }
         );
 
-      # 扩展目录内除 *.test.ts 外的 .ts 逐个软链；子目录整体软链（目录扩展的入口是 index.ts，
-      # omp 只加载 index.ts，目录里的测试、文档不会被当成扩展）
       extensionEntries = builtins.attrNames (
         lib.filterAttrs (
           name: type:
@@ -52,11 +50,9 @@
         };
 
         shelken.dev.tools.omp.files = {
-          # 插件清单不在此列：它必须是普通副本，软链会被 omp plugin install 写穿到仓库
           ".omp/agent/config.yml" = linkOmp "config.yml";
           ".omp/agent/keybindings.yml" = linkOmp "keybindings.yml";
           ".omp/agent/permissions.yaml" = linkOmp "permissions.yaml";
-          # 模型配置: provider 清单 + 自定义模型 (apiKey 为环境变量名, OMP resolveConfigValue 先查 env 后降级字面量)
           ".omp/agent/models.yml" = linkOmp "models.yml";
           ".omp/agent/context-prune/settings.json" =
             mylib.mkConfigFile config ../pi/configs/context-prune.json;

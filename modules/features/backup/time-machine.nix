@@ -1,9 +1,3 @@
-# 为什么不用 SkipPaths：它存在 /Library/Preferences/com.apple.TimeMachine.plist，`tmutil addexclusion -p`
-# 实测无 root 时报 "requires root privileges"（exit 80），有 root 时还要求 Full Disk Access；
-# 而激活脚本从终端跑（`just sw`），终端没有该权限，`-p` 这条路走不通。
-# 改用 `tmutil addexclusion <路径>`（不带 -p）：只给目标打 sticky xattr
-# com.apple.metadata:com_apple_backup_excludeItem，普通用户权限即可，不需要授权。
-# 可选功能：要用的主机在 imports 里加 self.modules.darwin.time-machine
 { lib, ... }:
 {
   flake.modules.darwin.time-machine =

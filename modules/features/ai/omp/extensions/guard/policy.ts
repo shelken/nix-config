@@ -218,7 +218,6 @@ function parseLayerYaml(source: string, parseYaml: YamlParser): ParseLayerResult
   return { ok: true, layer };
 }
 
-/** 全局层：`-值` 按规则原文删除同名规则，相同原文的新规则就地覆盖；路径规则与内置规则同路，`-值` 可撤掉内置规则。 */
 function applyGlobalOps<T extends { value: string }>(
   rules: T[],
   ops: GlobalOp[],
@@ -238,7 +237,6 @@ function applyGlobalOps<T extends { value: string }>(
   return out;
 }
 
-/** 项目权限文件随仓库克隆而来，不可信：只追加，不能放宽保护。 */
 function appendProjectOps<T extends { value: string }>(
   rules: T[],
   ops: AddOp[],

@@ -57,7 +57,6 @@
       lib.nameValuePair "docker-${name}" (
         {
           serviceConfig = {
-            # 模块在这条上给了 on-failure，覆盖它必须显式提优先级
             Restart = lib.mkForce "always";
             RestartSec = "10s";
           };

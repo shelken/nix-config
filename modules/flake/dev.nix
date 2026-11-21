@@ -66,10 +66,16 @@
             description = "功能的文件形式与模块名（ADR 0012）";
             files = "^(modules/features/|modules/profiles/|lint/feature-layout\\.py$)";
             pass_filenames = false;
-            entry = "${pkgs.python3}/bin/python3 lint/feature-layout.py";
+            entry = "env AST_GREP=${pkgs.ast-grep}/bin/ast-grep ${pkgs.python3}/bin/python3 lint/feature-layout.py";
           };
-          # 被平台属性禁用的 mod（如 macOS 上的 linux 模块）不会被 just 解析，错误要到另一个平台才暴露，
-          # 所以对每个模块文件单独解析。模块引用根变量也会在这里报错
+          no-comments = {
+            enable = true;
+            name = "no-comments";
+            description = "禁止新增代码注释，存量按棘轮基线自动收紧";
+            files = "^(lint/no-comments\\.py|lint/no-comments-baseline\\.json|.*\\.(nix|py|sh|ts|lua))$";
+            pass_filenames = false;
+            entry = "env AST_GREP=${pkgs.ast-grep}/bin/ast-grep ${pkgs.python3}/bin/python3 lint/no-comments.py --tighten";
+          };
           just-modules = {
             enable = true;
             name = "just-modules";
@@ -89,6 +95,7 @@
       devShells.default = pkgs.mkShellNoCC {
         name = "dots";
         packages = with pkgs; [
+          ast-grep
           bashInteractive
           deploy-rs
           nixfmt

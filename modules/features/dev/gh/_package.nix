@@ -11,7 +11,6 @@ let
 in
 pkgs.symlinkJoin {
   name = "gh-${pkgs.gh.version}";
-  # 排在前面的 bin/gh 生效
   paths = [
     wrapper
     pkgs.gh

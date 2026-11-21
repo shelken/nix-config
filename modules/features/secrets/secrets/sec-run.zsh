@@ -24,11 +24,6 @@ if ! command -v op >/dev/null 2>&1; then
   exec "$@"
 fi
 
-# 先让 op 把值解析回本进程，再自己 exec 目标命令，而不是 exec op run：
-# - op run 遇到一条解析不了的引用就整体失败，只有留在本进程才能剔除它后重试
-# - service account token 只出现在 op 那一次调用里，不会留给目标命令
-#   （留下会让其中所有 op 调用都被限制在 Agent vault）
-# - 目标命令直接拿到终端，不经 op run 代理（代理会破坏 TUI 的 tty 探测与 SIGWINCH）
 _work=$(mktemp -d) || exit 1
 trap 'rm -rf "$_work"' EXIT
 trap 'exit 130' INT TERM
@@ -59,7 +54,6 @@ resolve() {
   ) 2>"$_work/err"
 }
 
-# 从 op 的报错里认出解析不了的引用：条目名或带引号的 vault 名出现在报错文本中。
 culprits() {
   local err=" $1 " ref vault item
   local -a refs found

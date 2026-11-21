@@ -1,5 +1,3 @@
-# 上游 lib 的激活器从 deploy-rs 源码编译，公共 cache 没有，部署时要现编 Rust（#184）。
-# 照 deploy-rs README 的做法：保留它的 lib，只把激活器换成 nixpkgs 自带的包（cache.nixos.org 有）。
 {
   lib,
   nixpkgs,

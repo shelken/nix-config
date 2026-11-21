@@ -79,6 +79,8 @@ ip link show <网卡>         # MTU
 | `boot`          | `uefi` | `bios` 建 1M EF02 分区并启用 GRUB；`uefi` 建 1G ESP     |
 | `swapSize`      | `null` | 仅 `btrfs`：swapfile 大小。`server` 角色已开 `zramSwap` |
 
+`disko` 生成的 `fileSystems`/`swapDevices` 会写入系统配置，主机的硬件配置里不要再写这两项（用 `nixos-facter` 或 `nixos-generate-config --no-filesystems` 生成）
+
 `common.nix` 目前按 vps-cc 写：`sops.defaultSopsFile` 指向 `vps-cc.yaml`，sshd 端口、防火墙放行都是 vps-cc 的。加第二台时，把这些挪进各主机自己的 `default.nix`
 
 服务商会发 IPv6 路由通告时，保留 vps-cc 里那段 `accept_ra = 0`、`autoconf = 0`，否则自动地址会抢走 UDP 回包的源地址，原因见 `hosts/vps/vps-cc/default.nix` 的注释

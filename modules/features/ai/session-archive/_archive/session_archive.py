@@ -413,14 +413,12 @@ def restore(vol: Volume, key_file: str) -> None:
         for info in tf:
             if not info.isreg():
                 continue
-            # data_filter 拒绝会落到根目录外的成员路径，包括经已有符号链接绕出去的
             dest = os.path.join(vol.root, tarfile.data_filter(info, vol.root).name)
             if os.path.lexists(dest):
                 print(f"目标已存在，跳过: {dest}", file=sys.stderr)
                 continue
             parent = os.path.dirname(dest)
             os.makedirs(parent, exist_ok=True)
-            # 明文先写进唯一临时文件再 link：中断不留半截文件，link 不覆盖期间新建的同名文件
             with tempfile.NamedTemporaryFile(dir=parent, suffix=".part") as tmp:
                 shutil.copyfileobj(tf.extractfile(info), tmp, CHUNK)
                 tmp.flush()

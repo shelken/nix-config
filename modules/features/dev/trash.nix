@@ -11,7 +11,6 @@
     {
       config = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (
         let
-          # 在实际处理路径的位置补齐 -f，批量搬移仍只启动一个进程。
           macTrash = pkgs.darwin.trash.overrideAttrs (old: {
             postPatch = (old.postPatch or "") + ''
               substituteInPlace trash.m \

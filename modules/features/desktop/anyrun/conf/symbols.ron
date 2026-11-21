@@ -1,7 +1,0 @@
-Config(
-  prefix: "",
-  symbols: {
-    "shrug": "¯\\_(ツ)_/¯",
-  },
-  max_entries: 3,
-)

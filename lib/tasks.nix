@@ -159,7 +159,7 @@ rec {
 
       notifyOnExit =
         if !t.user || !(t.notify.failure || t.notify.success) then
-          "" # root daemon 通常无图形会话；开关全关则不需要通知
+          ""
         else
           ''
             if [ "''${${launchdEnv}:-}" = "1" ]; then

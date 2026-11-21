@@ -107,7 +107,6 @@
             format = "[${sep}](bg:green fg:blue)[ ${glyph "F113"} ${glyph "F126"} $branch ]($style)";
           };
 
-          # detached HEAD 时 $branch 为 HEAD，hash 接在后面。
           git_commit.format = "[$hash ](bg:green fg:crust)";
 
           git_state = {

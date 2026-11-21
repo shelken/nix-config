@@ -84,8 +84,6 @@
     in
     lib.mkMerge [
       (lib.mkIf (app == "typeswitch") {
-        # 变更原因: TypeSwitch >=0.5.x 读取 app-rules.json，不再使用 defaults
-        # 仅在 TypeSwitch 已启动并生成 app-rules.json 后才合并写入；首次部署不创建
         home.activation.typeswitchRules = ''
           file="$HOME/Library/Application Support/top.ygsgdbd.TypeSwitch/app-rules.json"
           if [ -f "$file" ]; then

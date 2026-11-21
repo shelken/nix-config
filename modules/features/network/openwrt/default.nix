@@ -1,4 +1,3 @@
-# 可选功能：要操作路由器的主机在 imports 里加 self.modules.darwin.openwrt
 {
   inputs,
   lib,

@@ -5,7 +5,6 @@
   flake.modules.homeManager.scrub-words =
     { pkgs, ... }:
     let
-      # 字典在 ~/.config/scrub-words/dict.txt，不能放进 nix store（全局可读）
       scrub-words = pkgs.writeShellApplication {
         name = "scrub-words";
         runtimeInputs = [

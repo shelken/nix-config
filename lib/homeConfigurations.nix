@@ -1,7 +1,5 @@
 { lib, myvars }:
 systemConfigurations:
-# Home 不是第二套配置，只导出系统结果中已经求值的 Home 子配置：
-# activationPackage 与系统激活用的是同一个 derivation，供 `nh home build/switch` 读取
 lib.mapAttrs (
   _: system:
   let

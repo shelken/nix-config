@@ -303,7 +303,7 @@ try:
     mk("proj6/noenter/f.jsonl", 500)
     noenter = os.path.join(root, "proj6/noenter")
     os.chmod(locked, 0)
-    os.chmod(noenter, stat.S_IRUSR)  # 可列出文件名、不可 lstat
+    os.chmod(noenter, stat.S_IRUSR)
     try:
         r = sa("run")
     finally:

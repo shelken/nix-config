@@ -1,5 +1,4 @@
-# odhcpd 2026.06.29 缓存 RA 的 link-local 源地址，br-lan.6 被重建（开机、push）后发送一直失败，
-# 局域网设备拿不到 IPv6，直到 odhcpd reload。上游 odhcpd 已在 2026-10-28 修复（提交 d6c15fb），固件带上修复后删除本文件（#369）
+# EXTERNAL: 固件 odhcpd 缓存 RA 源地址致局域网拿不到 IPv6，固件带修复后删除（#369）
 {
   uci.files = [
     {

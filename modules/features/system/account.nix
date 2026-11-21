@@ -36,8 +36,6 @@
       };
     };
 
-  # darwin 侧同样的 authorizedKeys 写入 /etc/ssh/nix_authorized_keys.d/<user>
-  # （nix-darwin 的 users.users.<user>.openssh 行为）
   flake.modules.darwin.account =
     { myvars, ... }:
     {
