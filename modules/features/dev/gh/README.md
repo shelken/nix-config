@@ -43,3 +43,12 @@ bash modules/features/dev/gh/test.sh
 ```
 
 用假 `gh` 打印收到的 `GH_TOKEN` 与参数，不联网。需要 bash 4 以上
+
+## 附带命令
+
+`gh-fetch` 直接按 GitHub 网页地址下载单个文件或目录到当前路径：
+
+```sh
+gh-fetch https://github.com/owner/repo/blob/branch/path/to/file
+gh-fetch https://github.com/owner/repo/tree/branch/path/to/dir
+```
