@@ -7,7 +7,6 @@ in
     desktop
     homelab
     ai
-    lima-host
   ];
 
   networking.hostName = hostname;
