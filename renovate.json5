@@ -51,6 +51,15 @@
       ],
       datasourceTemplate: "docker",
     },
+    {
+      customType: "regex",
+      description: "ImmortalWrt 路由器固件版本",
+      managerFilePatterns: ["/(^|/)hosts/[^/]+/firmware\\.nix$/"],
+      matchStrings: ['version = "(?<currentValue>[^"\\n]+)";'],
+      depNameTemplate: "immortalwrt/immortalwrt",
+      datasourceTemplate: "github-tags",
+      extractVersionTemplate: "^v(?<version>\\d+\\.\\d+\\.\\d+)$",
+    },
   ],
 
   packageRules: [
@@ -170,6 +179,14 @@
       matchDatasources: ["docker"],
       matchPackageNames: ["ghcr.io/shelken/mosdns"],
       enabled: false,
+    },
+    {
+      description: "路由器固件版本升级需手动刷新 firmware.lock.json 后再合并",
+      matchFileNames: ["hosts/**/firmware.nix"],
+      automerge: false,
+      prBodyNotes: [
+        "合并前请切到此 PR 分支运行 `just router::firmware-update` 更新 `firmware.lock.json` 并审查 diff；合并后再手动运行 `just router::acceptance` 与 `just router::upgrade` 刷机。",
+      ],
     },
   ],
 }
