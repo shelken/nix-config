@@ -42,4 +42,16 @@ in
     {
       fonts.packages = packages pkgs;
     };
+
+  flake.modules.homeManager.fonts =
+    { myvars, ... }:
+    {
+      fonts.fontconfig = {
+        enable = true;
+        defaultFonts.monospace = [
+          myvars.fontFamilies.monospace
+          myvars.fontFamilies.cjkMonospace
+        ];
+      };
+    };
 }

@@ -8,7 +8,6 @@
       pkgs,
       lib,
       config,
-      myvars,
       ...
     }:
     let
@@ -153,14 +152,6 @@
       };
 
 
-
-      fonts.fontconfig = {
-        enable = true;
-        defaultFonts.monospace = [
-          myvars.fontFamilies.monospace
-          myvars.fontFamilies.cjkMonospace
-        ];
-      };
 
       programs.bash = {
         enable = true;
