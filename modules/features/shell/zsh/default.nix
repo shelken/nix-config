@@ -15,25 +15,6 @@
       functionsDir = "${zshDotDir}/functions";
       functionFiles = lib.filesystem.listFilesRecursive ./functions;
 
-      proxy_fun = ''
-        function proxy() {
-          local default_proxy="http://127.1:7890"
-          local final_proxy="''${PROXY:-$default_proxy}"
-
-          export HTTP_PROXY="$final_proxy"
-          export HTTPS_PROXY="$final_proxy"
-          export http_proxy="$final_proxy"
-          export https_proxy="$final_proxy"
-
-          echo "✅ 代理设置完成："
-          echo "  HTTP_PROXY:  $HTTP_PROXY"
-          echo "  HTTPS_PROXY: $HTTPS_PROXY"
-        }
-        function unproxy() {
-          unset PROXY https_proxy http_proxy HTTPS_PROXY HTTP_PROXY
-        }
-      '';
-
       localBin = "${config.home.homeDirectory}/.local/bin";
       goBin = "${config.home.homeDirectory}/go/bin";
       rustBin = "${config.home.homeDirectory}/.cargo/bin";
@@ -44,10 +25,6 @@
 
       envExtra = ''
         export PATH="$PATH:${localBin}:${goBin}:${rustBin}:${bunBin}:${npmBin}:${krewBin}:${lmstudioBin}"
-      '';
-
-      initContent = ''
-        ${proxy_fun}
       '';
     in
     {
@@ -125,7 +102,6 @@
             firstInit
             functionsInit
             defaultInit
-            (lib.mkOrder 1001 initContent)
           ];
         plugins = [
           {
@@ -152,7 +128,6 @@
         enable = true;
         enableCompletion = true;
         bashrcExtra = envExtra;
-        initExtra = lib.mkOrder 1001 initContent;
       };
 
       programs.zsh.envExtra = envExtra;
