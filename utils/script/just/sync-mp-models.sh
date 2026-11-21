@@ -54,8 +54,6 @@ OVERRIDES=$("$JQ_BIN" -r -n \
   --slurpfile mp "$MP_JSON" \
   --slurpfile omp "$OMP_JSON" \
   --arg emit_reasoning "$EMIT_REASONING" '
-  # 名字比较忽略空格/连字符/大小写，避免为纯格式差异写回
-  def namekey: sub("[^a-zA-Z0-9]"; ""; "g") | ascii_downcase;
   ($emit_reasoning == "1") as $emit_reasoning |
   ($omp[0].models | INDEX(.id)) as $cur |
   ["minimal","low","medium","high","xhigh","max"] as $valid_efforts |
@@ -63,26 +61,18 @@ OVERRIDES=$("$JQ_BIN" -r -n \
     $mp[0].data[] |
     . as $m | ($cur[$m.id] // null) as $o |
     ($m.reasoning_levels // [] | map(select(. as $e | $valid_efforts | index($e)))) as $efforts |
-    ($m.modalities.input // [] | map(select(. == "text" or . == "image"))) as $input |
-    ((($m.display_name // "") | sub(" \\(latest\\)$"; "")) as $dn | if $dn != "" and $dn != $m.id then $dn else "" end) as $name |
-    ($name != "" and ($o == null or (($o.name // "" | namekey) != ($name | namekey)))) as $need_name |
     ($m.reasoning == true or ($efforts | length > 0)) as $is_reasoning |
     (($m.context_length // $m.context_window // $m.max_input_tokens) as $c | if ($c | type) == "number" and $c > 0 then $c else null end) as $ctx |
     (($m.max_output_tokens) as $x | if ($x | type) == "number" and $x > 0 then $x else null end) as $out |
     ($ctx != null and ($o == null or ($o.contextWindow // 0) < $ctx)) as $need_ctx |
     ($out != null and ($o == null or ($o.maxTokens // 0) < $out)) as $need_out |
     select(
-      $need_name or
       $need_ctx or
       $need_out or
       ($efforts | length > 0 and ($o == null or ($efforts != ($o.thinking // [])))) or
-      ($emit_reasoning and $is_reasoning and ($o == null or ($o.reasoning // false) != true)) or
-      (($input | length > 0) and ($o == null or (($input | sort) != ($o.input // [] | sort))))
+      ($emit_reasoning and $is_reasoning and ($o == null or ($o.reasoning // false) != true))
     ) |
     "      \($m.id):\n" +
-    (if $need_name then
-      "        name: \($name | tojson)\n"
-     else "" end) +
     (if $need_ctx then
       "        contextWindow: \($ctx)\n"
      else "" end) +
@@ -91,9 +81,6 @@ OVERRIDES=$("$JQ_BIN" -r -n \
      else "" end) +
     (if $emit_reasoning and $is_reasoning then
       "        reasoning: true\n"
-     else "" end) +
-    (if ($input | length > 0) and ($o == null or (($input | sort) != ($o.input // [] | sort))) then
-      "        input: [" + ($input | map("\"" + . + "\"") | join(", ")) + "]\n"
      else "" end) +
     (if ($efforts | length > 0) and ($o == null or ($efforts != ($o.thinking // []))) then
       "        thinking:\n          mode: effort\n          efforts: [" + ($efforts | join(", ")) + "]\n"
