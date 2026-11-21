@@ -7,6 +7,11 @@
 
 `plugins/package.json` 以普通文件副本部署而非软链：`omp plugin install` 会原地改写清单，软链会直接写穿到仓库工作树。
 
+## 部署接线
+
+- 扩展：单文件扩展逐个软链，目录扩展整体软链。omp 只加载目录内的 `index.ts`，目录里的测试与文档不会被当成扩展
+- `models.yml` 的 `apiKey` 填环境变量名：OMP 的 resolveConfigValue 先查环境变量，查不到才当字面量
+
 ## Guard 权限
 
 guard 同时用于 omp 与 pi。拦截范围、内置规则与实现结构见 `extensions/guard/README.md`

@@ -145,6 +145,7 @@ export default function subdirContext(pi: ExtensionAPI): void {
 		const pathInput = result.input?.path;
 		if (typeof pathInput !== "string" || pathInput === "") return undefined;
 
+		// EXTERNAL: /move、/wt 就地改 cwd 不触发会话事件，只能在 tool_result 逐次比对
 		if (sessionCwd !== ctx.cwd) resetSession(ctx.cwd);
 
 		const isRead = result.toolName === "read";

@@ -33,6 +33,7 @@ class Msb:
             if shutil.which("sec-run"):
                 cmd = ["sec-run", *cmd]
         rc = subprocess.run(cmd, stdout=sys.stderr if to_stderr else None, env=env).returncode
+        # EXTERNAL: subprocess 对被信号杀死的进程返回负数，按 shell 惯例折算 128+信号号
         return 128 - rc if rc < 0 else rc
 
     def _host_secrets(self) -> dict[str, str]:

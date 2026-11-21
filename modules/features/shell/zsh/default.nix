@@ -188,6 +188,7 @@
         };
       };
 
+      # EXTERNAL: bat 只从缓存读 HM 注入的 catppuccin 主题，须每次重建；HM 默认脚本多打印三行，故覆写丢弃 stdout
       home.activation.batCache = lib.mkForce (
         lib.hm.dag.entryAfter [ "linkGeneration" ] ''
           (

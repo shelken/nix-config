@@ -1,3 +1,4 @@
+# EXTERNAL: 固件 odhcpd 缓存 RA 源地址致局域网拿不到 IPv6，固件带修复后删除（#369）
 {
   uci.files = [
     {

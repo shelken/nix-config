@@ -74,6 +74,7 @@ in
       };
     };
 
+    # EXTERNAL: Lima plain 模式用实例自己的密钥做 SSH 就绪检查，需放行 hostKey
     users.users.${myvars.username}.openssh.authorizedKeys.keys = [ cfg.hostKey ];
     # 就绪检查的脚本写死 #!/bin/bash，NixOS 没有它时 limactl start 会等到超时（做法同 nixos-lima 的 lima-init）
     systemd.tmpfiles.rules = [ "L+ /bin/bash - - - - /run/current-system/sw/bin/bash" ];
@@ -101,6 +102,7 @@ in
     system.build.limaConfig = {
       vmType = "vz";
       inherit (cfg) cpus memory disk;
+      # EXTERNAL: guest 是 NixOS，没有 Lima guest agent，只能 plain 模式只留 SSH
       plain = true;
       ssh.localPort = cfg.sshPort;
       hostResolver.enabled = false;
@@ -112,6 +114,7 @@ in
           metric = 100;
         }
       ];
+      # EXTERNAL: images 仅在新建实例时生效，已建实例不随它重装
       images = [
         {
           location = "https://github.com/nixos-lima/nixos-lima/releases/download/v0.2.2/nixos-lima-v0.2.2-aarch64.qcow2";
