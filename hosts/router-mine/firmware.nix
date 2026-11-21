@@ -10,5 +10,7 @@
     "luci-theme-argon"
     "luci-i18n-argon-config-zh-cn"
     "luci-i18n-base-zh-cn"
+    "luci-i18n-firewall-zh-cn"
+    "luci-i18n-package-manager-zh-cn"
   ];
 }

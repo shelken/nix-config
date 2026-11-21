@@ -41,6 +41,7 @@ push $host=target:
     [ "$avahi_before" = "$(ssh -- "$host" 'md5sum /etc/avahi/avahi-daemon.conf')" ] || ssh -- "$host" '/etc/init.d/avahi-daemon restart'
 
 firmware_dir := env('XDG_DATA_HOME', home_directory() / '.local/share') / 'router-firmware/router-mine'
+builder := 'root@homelab-1'
 
 [private]
 _firmware mode:
@@ -49,18 +50,39 @@ _firmware mode:
 [doc('按软件源当前版本构建固件并重写锁文件，不改设备；审查 git diff 后提交')]
 firmware-update: (_firmware 'update')
 
+[doc('在本地构建节点用官方 ImageBuilder 构建固件并重写锁文件，不改设备；可指定 SSH 目标')]
+build-local $host=builder:
+    modules/features/network/openwrt/build-local "$(nix build .#router-mine-firmware --no-link --print-out-paths)" "$({{ uci }})" "$(nix eval --json .#router-mine-firmware.imagebuilder)" hosts/router-mine/firmware.lock.json '{{ firmware_dir }}' "$host"
+
 [doc('按锁文件构建并下载固件，包版本与锁文件不一致时失败，不改设备')]
 firmware-build: (_firmware 'build')
 
 # sysupgrade 刷写时会杀掉 dropbear，ssh 以断线（255）结束，其它非零退出码视为失败
 [doc('按锁文件刷入固件并保留配置，会重启路由器；先 just router::acceptance 采基线')]
-upgrade $host=target: (_firmware 'build')
+upgrade $host=target:
     #!/usr/bin/env bash
     set -euo pipefail
     lock=hosts/router-mine/firmware.lock.json
+    [[ -f $lock ]] || { echo '没有锁文件，先运行 just router::firmware-update 或 just router::build-local' >&2; exit 1; }
+    firmware=$(nix build .#router-mine-firmware --no-link --print-out-paths)
+    uci=$({{ uci }})
+    request=$(jq -n --slurpfile f "$firmware" --slurpfile u "$uci" '
+      $f[0] | del(.server) + {
+        packages: ($f[0].packages + $u[0].packages | unique),
+        client: "nix-config"
+      }')
+    [[ $(jq -S .request "$lock") == "$(jq -S . <<<"$request")" ]] || {
+      echo '声明与锁文件的请求不一致，先运行 just router::firmware-update 或 just router::build-local' >&2
+      exit 1
+    }
     image='{{ firmware_dir }}'/"$(jq -r .image.name "$lock")"
+    expected_sha=$(jq -r .image.sha256 "$lock")
+    if [[ ! -f $image ]] || [[ $(shasum -a 256 "$image" | cut -d' ' -f1) != "$expected_sha" ]]; then
+      echo "本机缺少与锁文件匹配的镜像: $image（先运行 just router::firmware-build 或 just router::build-local）" >&2
+      exit 1
+    fi
     ssh -- "$host" 'cat > /tmp/sysupgrade.bin' < "$image"
-    [ "$(ssh -- "$host" 'sha256sum /tmp/sysupgrade.bin' | cut -d' ' -f1)" = "$(jq -r .image.sha256 "$lock")" ] || { echo '上传后的镜像 sha256 与锁文件不符' >&2; exit 1; }
+    [ "$(ssh -- "$host" 'sha256sum /tmp/sysupgrade.bin' | cut -d' ' -f1)" = "$expected_sha" ] || { echo '上传后的镜像 sha256 与锁文件不符' >&2; exit 1; }
     ssh -- "$host" 'sysupgrade -T /tmp/sysupgrade.bin'
     rc=0
     ssh -- "$host" 'sysupgrade /tmp/sysupgrade.bin' || rc=$?

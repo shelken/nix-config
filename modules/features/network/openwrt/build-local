@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+firmware=$1 uci=$2 imagebuilder=$3 lock=$4 dir=$5 builder=$6
+keep=3
+
+request=$(jq -n --slurpfile f "$firmware" --slurpfile u "$uci" '
+  $f[0] | del(.server) + {
+    packages: ($f[0].packages + $u[0].packages | unique),
+    client: "nix-config"
+  }')
+
+input=$(jq -n --argjson req "$request" --argjson ib "$imagebuilder" '{
+  request: $req,
+  imagebuilder: $ib
+}')
+
+echo "build-local: 在 $builder 上构建"
+jq -c . <<<"$request"
+
+payload=$(ssh -- "$builder" openwrt-imagebuild <<<"$input")
+result=$(jq '.result' <<<"$payload")
+remote_image=$(jq -r '.remote_image' <<<"$payload")
+name=$(jq -r '.image.name' <<<"$result")
+sha=$(jq -r '.image.sha256' <<<"$result")
+
+mkdir -p "$dir"
+if [[ ! -f $dir/$name ]] || [[ $(shasum -a 256 "$dir/$name" | cut -d' ' -f1) != "$sha" ]]; then
+  scp -- "${builder}:${remote_image}" "$dir/$name.part"
+  mv -f "$dir/$name.part" "$dir/$name"
+fi
+[[ $(shasum -a 256 "$dir/$name" | cut -d' ' -f1) == "$sha" ]] || {
+  rm -f "$dir/$name"
+  echo "build-local: sha256 不符，已删除: $name" >&2
+  exit 1
+}
+
+jq . <<<"$result" >"$lock.tmp"
+mv -f "$lock.tmp" "$lock"
+
+shopt -s nullglob
+images=("$dir"/*-sysupgrade.bin)
+if ((${#images[@]} > keep)); then
+  ls -t "${images[@]}" | tail -n +$((keep + 1)) | while read -r old; do
+    if [[ $(basename "$old") != "$name" ]]; then
+      rm -f "$old"
+      echo "build-local: 清理 $(basename "$old")"
+    fi
+  done
+fi
+
+echo "build-local: $(jq -r '.version_code' <<<"$result") $dir/$name"

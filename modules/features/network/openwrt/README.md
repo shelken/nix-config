@@ -13,6 +13,7 @@
 | `just router::push [目标]`     | 下发声明，会改路由器；回滚范围见「已知问题」             |
 | `just router::upgrade [目标]`  | 按锁文件刷入固件并保留配置，会重启路由器；步骤见「固件」 |
 | `just router::firmware-update` | 按软件源当前版本构建固件并重写锁文件，不改设备           |
+| `just router::build-local [目标]` | 在本地构建节点（默认 `homelab-1`）用官方 ImageBuilder 构建并重写锁文件，不改设备 |
 | `just router::firmware-build`  | 按锁文件构建并下载固件，版本不一致时失败，不改设备       |
 | `just router::acceptance`      | 采集路由器状态与内网吞吐，只读，结果存本机               |
 | `just router::acceptance-diff` | 并排对比两份验收结果                                     |

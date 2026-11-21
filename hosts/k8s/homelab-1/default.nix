@@ -3,6 +3,7 @@
   imports = [
     ../common.nix
     self.modules.nixos.k3s-nvidia-vgpu
+    self.modules.nixos.openwrt-builder
     (modulesPath + "/profiles/qemu-guest.nix")
   ];
 
