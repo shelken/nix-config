@@ -8,9 +8,21 @@
       config,
       lib,
       myvars,
+      pkgs,
       ...
     }:
     {
+      home.packages = [
+        (pkgs.writeShellApplication {
+          name = "git-scan";
+          runtimeInputs = with pkgs; [
+            git
+            findutils
+            coreutils
+          ];
+          text = builtins.readFile ./git-scan.sh;
+        })
+      ];
       home.activation.removeExistingGitconfig = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
         rm -f ${config.home.homeDirectory}/.gitconfig
       '';
@@ -88,6 +100,8 @@
         enable = true;
         enableGitIntegration = true;
       };
+
+      programs.zsh.oh-my-zsh.plugins = [ "gitignore" ];
 
       home.packages = with pkgs; [
         onefetch

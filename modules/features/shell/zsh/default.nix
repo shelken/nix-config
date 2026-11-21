@@ -1,7 +1,6 @@
 { config, ... }:
 {
   flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.zsh ];
-  flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.zsh-dev ];
 
   flake.modules.homeManager.zsh =
     {
@@ -124,11 +123,4 @@
 
       programs.zsh.envExtra = envExtra;
     };
-
-  flake.modules.homeManager.zsh-dev = {
-    programs.zsh.oh-my-zsh.plugins = [
-      "gitignore"
-    ];
-
-  };
 }
