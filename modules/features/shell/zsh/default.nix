@@ -19,11 +19,10 @@
       rustBin = "${config.home.homeDirectory}/.cargo/bin";
       npmBin = "${config.home.homeDirectory}/.npm-global/bin";
       bunBin = "${config.home.homeDirectory}/.cache/.bun/bin";
-      krewBin = "${config.home.homeDirectory}/.krew/bin";
       lmstudioBin = "${config.home.homeDirectory}/.lmstudio/bin";
 
       envExtra = ''
-        export PATH="$PATH:${localBin}:${rustBin}:${bunBin}:${npmBin}:${krewBin}:${lmstudioBin}"
+        export PATH="$PATH:${localBin}:${rustBin}:${bunBin}:${npmBin}:${lmstudioBin}"
       '';
     in
     {
@@ -134,7 +133,6 @@
   flake.modules.homeManager.zsh-dev = {
     programs.zsh.oh-my-zsh.plugins = [
       "gitignore"
-      "kubectl"
     ];
 
   };
