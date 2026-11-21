@@ -4,22 +4,22 @@
 
 ## 写法对照
 
-| zsh                                       | nu                                      |
-| ----------------------------------------- | --------------------------------------- |
-| `a && b`                                  | `a; b`（外部命令失败会中止整行）        |
-| `a \|\| b`                                | `try { a } catch { b }`                 |
-| `$(cmd)`                                  | `(cmd)`                                 |
-| `export FOO=x`                            | `$env.FOO = "x"`                        |
-| `$FOO`                                    | `$env.FOO`                              |
-| `FOO=x cmd`                               | 不变                                    |
-| `$?`                                      | `$env.LAST_EXIT_CODE`                   |
-| `cmd > file`                              | `cmd \| save file` 或 `cmd o> file`     |
-| `cmd 2>&1 \| ...`                         | `cmd o+e>\| ...`                        |
-| `cmd > /dev/null`                         | `cmd \| ignore`                         |
-| `"hi $name"`                              | `$"hi ($name)"`                         |
-| `for f in *.txt; do ...; done`            | `for f in (glob *.txt) { ... }`         |
-| `-`（oh-my-zsh 别名）                     | `cd -`                                  |
-| zsh 函数（`proxy` / `unproxy`）           | 暂未移植，需临时切回 zsh                 |
-| 网上复制的 bash 一行命令                  | `bash -c '...'`                         |
+| zsh                             | nu                                  |
+| ------------------------------- | ----------------------------------- |
+| `a && b`                        | `a; b`（外部命令失败会中止整行）    |
+| `a \|\| b`                      | `try { a } catch { b }`             |
+| `$(cmd)`                        | `(cmd)`                             |
+| `export FOO=x`                  | `$env.FOO = "x"`                    |
+| `$FOO`                          | `$env.FOO`                          |
+| `FOO=x cmd`                     | 不变                                |
+| `$?`                            | `$env.LAST_EXIT_CODE`               |
+| `cmd > file`                    | `cmd \| save file` 或 `cmd o> file` |
+| `cmd 2>&1 \| ...`               | `cmd o+e>\| ...`                    |
+| `cmd > /dev/null`               | `cmd \| ignore`                     |
+| `"hi $name"`                    | `$"hi ($name)"`                     |
+| `for f in *.txt; do ...; done`  | `for f in (glob *.txt) { ... }`     |
+| `-`（oh-my-zsh 别名）           | `cd -`                              |
+| zsh 函数（`proxy` / `unproxy`） | 暂未移植，需临时切回 zsh            |
+| 网上复制的 bash 一行命令        | `bash -c '...'`                     |
 
 `ls`、`ps`、`rm`、`cp`、`mkdir` 是 nu 内置命令，输出表格、参数与 GNU 版不同，要原版用 `^ls`。

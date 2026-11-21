@@ -91,7 +91,7 @@
   "modules/features/secrets/secrets/default.nix": 3,
   "modules/features/secrets/secrets/sec-run.zsh": 3,
   "modules/features/shell/starship.nix": 6,
-  "modules/features/shell/zsh/default.nix": 3,
+  "modules/features/shell/zsh/default.nix": 2,
   "modules/features/system/disko.nix": 1,
   "modules/features/system/macos/_hotkeys.nix": 1,
   "modules/features/system/macos/_settings.nix": 1,
