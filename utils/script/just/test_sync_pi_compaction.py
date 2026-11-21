@@ -46,4 +46,5 @@ assert settings["compaction"]["modelOverrides"]["p/stale"] == {"reserveTokens": 
 
 again, _ = module.apply(result, windows, nodes, floor)
 assert again == result
+assert module.model_keys({"enabledModels": ["a/b:high", "a/b:low", "c/d:medium"]}) == {"a/b", "c/d"}
 print("ok")

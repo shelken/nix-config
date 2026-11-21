@@ -7,6 +7,8 @@ pi 的触发条件是「已用 token > 窗口 - reserveTokens」，所以想在�
 """
 import copy
 import json
+import os
+import shutil
 import subprocess
 import sys
 import threading
@@ -16,7 +18,8 @@ COMPACT_AT = (250_000, 300_000)
 MIN_RESERVE = 16_384
 RPC_TIMEOUT = 60
 
-SETTINGS = Path(__file__).resolve().parents[3] / "modules/features/ai/pi/settings.json"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+SETTINGS = REPO_ROOT / "modules/features/ai/pi/settings.json"
 
 
 def reserve_for(window, nodes, floor):
@@ -73,8 +76,23 @@ def fetch_windows():
         proc.kill()
 
 
-def main():
-    old = json.loads(SETTINGS.read_text())
+def model_keys(settings):
+    return {entry.rsplit(":", 1)[0] for entry in settings.get("enabledModels", [])}
+
+
+def head_settings():
+    proc = subprocess.run(
+        ["git", "show", "HEAD:modules/features/ai/pi/settings.json"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return None
+    return json.loads(proc.stdout)
+
+
+def sync(old):
     new, missing = apply(old, fetch_windows(), COMPACT_AT, MIN_RESERVE)
     before = old.get("compaction", {}).get("modelOverrides", {})
     after = new["compaction"]["modelOverrides"]
@@ -84,10 +102,32 @@ def main():
     for key in missing:
         print(f"警告: pi 的模型列表里没有 {key}，保持原值", file=sys.stderr)
     if new == old:
-        print("reserveTokens 已是最新")
-        return
+        return False
     SETTINGS.write_text(json.dumps(new, indent=2, ensure_ascii=False) + "\n")
     print(f"已写入 {SETTINGS}")
+    return True
+
+
+def main():
+    pre_commit = "--pre-commit" in sys.argv[1:]
+    old = json.loads(SETTINGS.read_text())
+    if pre_commit:
+        head = head_settings()
+        if head is None or model_keys(old) == model_keys(head):
+            return
+        if not os.environ.get("PI_COMPACTION_IN_SEC_RUN") and shutil.which("sec-run"):
+            env = {**os.environ, "PI_COMPACTION_IN_SEC_RUN": "1"}
+            os.execvpe(
+                "sec-run",
+                ["sec-run", sys.executable, str(Path(__file__).resolve()), "--pre-commit"],
+                env,
+            )
+        if sync(old):
+            print("已自动回填 reserveTokens，请检查 diff 并重新 git add 后提交", file=sys.stderr)
+            sys.exit(1)
+        return
+    if not sync(old):
+        print("reserveTokens 已是最新")
 
 
 if __name__ == "__main__":

@@ -89,6 +89,14 @@
               done
             ''}";
           };
+          pi-compaction = {
+            enable = true;
+            name = "pi-compaction";
+            description = "pi settings.json 的 enabledModels 变更时自动回填 reserveTokens";
+            files = "^modules/features/ai/pi/settings\\.json$";
+            pass_filenames = false;
+            entry = "${pkgs.python3}/bin/python3 utils/script/just/sync_pi_compaction.py --pre-commit";
+          };
         };
       };
 
