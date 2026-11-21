@@ -53,7 +53,6 @@
         oh-my-zsh = {
           enable = true;
           plugins = [
-            "docker"
             "sudo"
             "ssh"
           ];
