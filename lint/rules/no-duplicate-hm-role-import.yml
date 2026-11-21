@@ -1,0 +1,34 @@
+id: no-duplicate-hm-role-import
+language: nix
+severity: error
+message: 模块 $MOD 已通过系统侧挂接并自动带入同名 homeManager 模块，禁止重复挂进 homeManager.$HM_ROLE
+note: |
+  modules/flake/features.nix 会将与系统模块同名的 homeManager.<name> 自动挂到对应系统模块。
+  删掉多余的 flake.modules.homeManager.<role>.imports，只保留系统侧角色挂接即可。
+files:
+  - modules/features/**/*.nix
+rule:
+  all:
+    - pattern: config.flake.modules.homeManager.$MOD
+    - inside:
+        all:
+          - pattern:
+              context: "{ flake.modules.homeManager.$HM_ROLE.imports = $HM_VAL; }"
+              selector: binding
+          - inside:
+              kind: binding_set
+              has:
+                all:
+                  - any:
+                      - pattern:
+                          context: "{ flake.modules.darwin.$SYS_ROLE.imports = $SYS_VAL; }"
+                          selector: binding
+                      - pattern:
+                          context: "{ flake.modules.nixos.$SYS_ROLE.imports = $SYS_VAL; }"
+                          selector: binding
+                  - has:
+                      any:
+                        - pattern: config.flake.modules.darwin.$MOD
+                        - pattern: config.flake.modules.nixos.$MOD
+                      stopBy: end
+        stopBy: end

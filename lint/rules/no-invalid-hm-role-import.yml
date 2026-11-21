@@ -1,0 +1,30 @@
+id: no-invalid-hm-role-import
+language: nix
+severity: error
+message: 禁止向未声明 homeManager 模块的角色写入配置或 imports
+note: |
+  modules/profiles/ 中只有 core 与 tui 声明了 homeManager.<role>。
+  其他角色只挂系统侧（darwin/nixos），同名 homeManager 模块会由 modules/flake/features.nix 自动跟随载入。
+files:
+  - modules/features/**/*.nix
+rule:
+  any:
+    - all:
+        - pattern:
+            context: "{ flake.modules.homeManager.$ROLE.imports = $VAL; }"
+            selector: binding
+        - not:
+            any:
+              - pattern:
+                  context: "{ flake.modules.homeManager.core.imports = $VAL; }"
+                  selector: binding
+              - pattern:
+                  context: "{ flake.modules.homeManager.tui.imports = $VAL; }"
+                  selector: binding
+        - has:
+            pattern: config.flake.modules.homeManager.$MOD
+            stopBy: end
+    - kind: binding
+      has:
+        field: attrpath
+        regex: ^flake\.modules\.homeManager\."?(gui|desktop|workstation|homelab|server)"?(\.|$)

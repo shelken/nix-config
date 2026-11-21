@@ -1,0 +1,43 @@
+id: no-duplicate-hm-role-import
+valid:
+  - |
+    {
+      flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.ssh ];
+      flake.modules.nixos.core.imports = [ config.flake.modules.nixos.openssh ];
+    }
+  - |
+    {
+      flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.fzf ];
+      flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.fzf-dev ];
+    }
+  - |
+    {
+      flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.kopia ];
+      flake.modules.homeManager.kopia.imports = [ ./_hm.nix ];
+    }
+  - |
+    {
+      flake.modules.darwin.core.imports = [ inputs.foo.darwinModules.default ];
+      flake.modules.homeManager.core.imports = [ inputs.bar.homeManagerModules.default ];
+    }
+invalid:
+  - |
+    {
+      flake.modules.darwin.core.imports = [ config.flake.modules.darwin.foo ];
+      flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.foo ];
+    }
+  - |
+    {
+      flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.foo ];
+      flake.modules.nixos.gui.imports = [ config.flake.modules.nixos.foo ];
+    }
+  - |
+    {
+      flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin."1password" ];
+      flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager."1password" ];
+    }
+  - |
+    {
+      flake.modules.darwin.core.imports = [ config.flake.modules.darwin.a config.flake.modules.darwin.b ];
+      flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.c config.flake.modules.homeManager.b ];
+    }

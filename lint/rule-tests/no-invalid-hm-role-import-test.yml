@@ -1,0 +1,15 @@
+id: no-invalid-hm-role-import
+valid:
+  - "{ flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.foo ]; }"
+  - "{ flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.foo ]; }"
+  - "{ flake.modules.homeManager.kopia.imports = [ ./_hm.nix ]; }"
+  - "{ flake.modules.darwin.desktop.imports = [ config.flake.modules.darwin.foo ]; }"
+invalid:
+  - "{ flake.modules.homeManager.gui.imports = [ config.flake.modules.homeManager.foo ]; }"
+  - "{ flake.modules.homeManager.desktop.imports = [ ]; }"
+  - "{ flake.modules.homeManager.workstation.imports = [ config.flake.modules.homeManager.foo ]; }"
+  - "{ flake.modules.homeManager.homelab.imports = [ config.flake.modules.homeManager.foo ]; }"
+  - "{ flake.modules.homeManager.server.imports = [ config.flake.modules.homeManager.foo ]; }"
+  - "{ flake.modules.homeManager.mobile.imports = [ config.flake.modules.homeManager.foo ]; }"
+  - "{ flake.modules.homeManager.gui = { imports = [ config.flake.modules.homeManager.foo ]; }; }"
+  - "{ flake.modules.homeManager.desktop = { programs.foo.enable = true; }; }"
