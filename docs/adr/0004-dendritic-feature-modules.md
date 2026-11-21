@@ -6,18 +6,18 @@
 
 ## 规则
 
-- 一台主机上每个模块 MUST 只有一条导入路径。flake-parts 不给模块设 `key`，导入两次不会去重，列表选项会重复，声明选项的模块直接报错
-- 每台主机 MUST 恰好导入一个主角色，MAY 并列导入附加角色。darwin 主角色链为 `core ⊂ tui ⊂ gui ⊂ desktop ⊂ workstation`，NixOS 主角色链为 `core ⊂ tui ⊂ gui` 与并列的 `server`
-- 角色之间的包含关系 MUST 只写在 `darwin.<角色>` 与 `nixos.<角色>`，HM 侧 MUST NOT 写角色包含链
-- `homeManager.<角色>` MAY 声明本层的 HM 配置与 `imports`，纯 HM 功能 MAY 挂进 `homeManager.<角色>.imports` 同时覆盖两端。已有同名系统模块的功能 MUST NOT 再挂进 `homeManager.<角色>.imports`
-- 某角色全部主机都需要的功能 MUST 加入该角色，跨角色 2 台以上主机需要的功能 SHOULD 建附加角色，仅 1 台主机需要的功能 MUST 由主机直接导入。全部需要但参数不同时，功能声明选项由主机设值，HM 经 `osConfig` 读取
-- 没有主机启用的功能 MUST 做成可选功能，MUST NOT 加入任何角色，MUST NOT 保留 `enable` 开关
-- 互斥实现 MUST 用 enum 选项表达，MUST NOT 拆成多个可选功能
-- 会被其他功能写入的选项接口 MUST 声明在 `darwin.core` 与 `nixos.core`，单平台选项声明在对应平台 `core`
-- 用户态密钥是主机属性，`shelken.secrets.enable` MUST 由主机设置。依赖密钥的功能 MUST 声明并断言它，MUST NOT 替主机开启
-- 应用由系统侧安装时，其 HM 配置 MUST 并入同一功能，MUST NOT 按角色整体挂接
-- 功能名 MUST NOT 与 `modules/profiles/` 下任何角色同名
-- 路径含 `/_` 的文件 MUST NOT 被自动导入，用于功能私有片段与数据
+- 一台主机上每个模块必须只有一条导入路径。flake-parts 不给模块设 `key`，导入两次不会去重，列表选项会重复，声明选项的模块直接报错
+- 每台主机必须恰好导入一个主角色，可以并列导入附加角色。darwin 主角色链为 `core ⊂ tui ⊂ gui ⊂ desktop ⊂ workstation`，NixOS 主角色链为 `core ⊂ tui ⊂ gui` 与并列的 `server`
+- 角色之间的包含关系必须只写在 `darwin.<角色>` 与 `nixos.<角色>`，HM 侧不得写角色包含链
+- `homeManager.<角色>` 可以声明本层的 HM 配置与 `imports`，纯 HM 功能可以挂进 `homeManager.<角色>.imports` 同时覆盖两端。已有同名系统模块的功能不得再挂进 `homeManager.<角色>.imports`
+- 某角色全部主机都需要的功能必须加入该角色，跨角色 2 台以上主机需要的功能应当建附加角色，仅 1 台主机需要的功能必须由主机直接导入。全部需要但参数不同时，功能声明选项由主机设值，HM 经 `osConfig` 读取
+- 没有主机启用的功能必须做成可选功能，不得加入任何角色，不得保留 `enable` 开关
+- 互斥实现必须用 enum 选项表达，不得拆成多个可选功能
+- 会被其他功能写入的选项接口必须声明在 `darwin.core` 与 `nixos.core`，单平台选项声明在对应平台 `core`
+- 用户态密钥是主机属性，`shelken.secrets.enable` 必须由主机设置。依赖密钥的功能必须声明并断言它，不得替主机开启
+- 应用由系统侧安装时，其 HM 配置必须并入同一功能，不得按角色整体挂接
+- 功能名不得与 `modules/profiles/` 下任何角色同名
+- 路径含 `/_` 的文件不得被自动导入，用于功能私有片段与数据
 
 ## 考虑过的替代方案
 

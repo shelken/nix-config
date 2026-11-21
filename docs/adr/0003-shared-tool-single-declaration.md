@@ -6,10 +6,10 @@
 
 ## 规则
 
-- `shelken.dev.tools` MUST 只登记宿主与沙箱都需要的工具，宿主独有工具 MUST NOT 登记
-- 同一共享工具在两端 MUST 使用同一种安装方式
-- 共享工具默认走 Nix。需要较新版本且 mise 管理更方便的 CLI MAY 走 mise，由人工判断
-- 沙箱基础环境工具（bash、coreutils、curl、git、mise）MUST NOT 登记为共享工具，防止覆盖宿主 macOS 自带命令
+- `shelken.dev.tools` 必须只登记宿主与沙箱都需要的工具，宿主独有工具不得登记
+- 同一共享工具在两端必须使用同一种安装方式
+- 共享工具默认走 Nix。需要较新版本且 mise 管理更方便的 CLI 可以走 mise，由人工判断
+- 沙箱基础环境工具（bash、coreutils、curl、git、mise）不得登记为共享工具，防止覆盖宿主 macOS 自带命令
 
 ## 考虑过的替代方案
 

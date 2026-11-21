@@ -6,12 +6,12 @@
 
 ## 规则
 
-- `modules/features/` 的一级目录 MUST 只从领域白名单中选择（nix、system、shell、cli、dev、editor、terminal、virt、desktop、input、network、secrets、backup、homelab、media、browser、social、write、ai），MUST NOT 按平台、角色或杂项建目录。新增领域 MUST 同步更新本 ADR 与 `feature-domains` 钩子
-- 有非 nix 资源文件的功能 MUST 使用 `<名>/default.nix` 并将资源放在同一目录，没有资源文件的功能 MUST 使用单文件 `<名>.nix`
-- 同一功能的 darwin、NixOS、HM 三端 MUST 写在同一个文件中，MUST NOT 拆成 `darwin.nix`、`home.nix`、`nixos.nix`。入口繁杂时 SHOULD 拆出 `_` 开头的私有片段
-- 功能文件发布的模块名 MUST 与文件名一致，发布多个模块时主模块名 MUST 与文件名一致。文件名 MUST 全局唯一且脱离目录表意清晰
-- 与一级目录同名的领域聚合模块（如 `ai`）MAY 由该领域下多个文件共同写入，这些文件不必再发布与文件名同名的模块
-- MUST NOT 存在只做角色挂接、自身不定义模块的转发壳文件
+- `modules/features/` 的一级目录必须只从领域白名单中选择（nix、system、shell、cli、dev、editor、terminal、virt、desktop、input、network、secrets、backup、homelab、media、browser、social、write、ai），不得按平台、角色或杂项建目录。新增领域必须同步更新本 ADR 与 `feature-domains` 钩子
+- 有非 nix 资源文件的功能必须使用 `<名>/default.nix` 并将资源放在同一目录，没有资源文件的功能必须使用单文件 `<名>.nix`
+- 同一功能的 darwin、NixOS、HM 三端必须写在同一个文件中，不得拆成 `darwin.nix`、`home.nix`、`nixos.nix`。入口繁杂时应当拆出 `_` 开头的私有片段
+- 功能文件发布的模块名必须与文件名一致，发布多个模块时主模块名必须与文件名一致。文件名必须全局唯一且脱离目录表意清晰
+- 与一级目录同名的领域聚合模块（如 `ai`）可以由该领域下多个文件共同写入，这些文件不必再发布与文件名同名的模块
+- 不得存在只做角色挂接、自身不定义模块的转发壳文件
 
 ## 考虑过的替代方案
 

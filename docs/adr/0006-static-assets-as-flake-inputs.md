@@ -6,9 +6,9 @@
 
 ## 规则
 
-- 静态资源 input 的 URL MUST 采用 `git+https://<host>/<owner>/<repo>?ref=<默认分支>&rev=<sha>&shallow=1` 形式
-- `ref` MUST 写默认分支名且不带 `refs/heads/` 前缀，否则 Renovate 的 git-refs 数据源匹配不到更新
-- 静态资源 input MUST 带 `shallow=1`
+- 静态资源 input 的 URL 必须采用 `git+https://<host>/<owner>/<repo>?ref=<默认分支>&rev=<sha>&shallow=1` 形式
+- `ref` 必须写默认分支名且不带 `refs/heads/` 前缀，否则 Renovate 的 git-refs 数据源匹配不到更新
+- 静态资源 input 必须带 `shallow=1`
 
 ## 考虑过的替代方案
 

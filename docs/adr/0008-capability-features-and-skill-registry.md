@@ -6,9 +6,9 @@
 
 ## 规则
 
-- 拆分判据为执行节点沙箱内的 agent 是否用得到。用不到的能力 MUST 拆成独立功能并按 ADR 0004 声明角色，用得到的 MUST 留在 `ai` 本体
-- 只在宿主执行的命令 MUST 由所属功能声明 `shelken.dev.sandbox.hostCommands`，MUST NOT 集中堆在统一目录
-- `modules/features/ai/skills/` MUST 只放所有导入 `ai` 的机器共用的本地 skill，能力专属 skill MUST 放在该能力目录下并经 ADR 0009 的统一入口登记
+- 拆分判据为执行节点沙箱内的 agent 是否用得到。用不到的能力必须拆成独立功能并按 ADR 0004 声明角色，用得到的必须留在 `ai` 本体
+- 只在宿主执行的命令必须由所属功能声明 `shelken.dev.sandbox.hostCommands`，不得集中堆在统一目录
+- `modules/features/ai/skills/` 必须只放所有导入 `ai` 的机器共用的本地 skill，能力专属 skill 必须放在该能力目录下并经 ADR 0009 的统一入口登记
 
 ## 考虑过的替代方案
 
