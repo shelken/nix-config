@@ -34,11 +34,6 @@
         }
       '';
 
-      shellAliases = {
-        urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
-        urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
-      };
-
       localBin = "${config.home.homeDirectory}/.local/bin";
       goBin = "${config.home.homeDirectory}/go/bin";
       rustBin = "${config.home.homeDirectory}/.cargo/bin";
@@ -161,8 +156,6 @@
       };
 
       programs.zsh.envExtra = envExtra;
-
-      home.shellAliases = shellAliases;
     };
 
   flake.modules.homeManager.zsh-dev = {
