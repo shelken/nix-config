@@ -85,7 +85,6 @@
     after = [ "tailscaled.service" ];
     wants = [ "tailscaled.service" ];
   };
-  virtualisation.docker.daemon.settings.registry-mirrors = lib.mkForce [ ];
   systemd.tmpfiles.rules = [ "d /data/docker 0755 root root -" ];
 
   sops = {
