@@ -16,7 +16,6 @@
       functionFiles = lib.filesystem.listFilesRecursive ./functions;
 
       localBin = "${config.home.homeDirectory}/.local/bin";
-      goBin = "${config.home.homeDirectory}/go/bin";
       rustBin = "${config.home.homeDirectory}/.cargo/bin";
       npmBin = "${config.home.homeDirectory}/.npm-global/bin";
       bunBin = "${config.home.homeDirectory}/.cache/.bun/bin";
@@ -24,7 +23,7 @@
       lmstudioBin = "${config.home.homeDirectory}/.lmstudio/bin";
 
       envExtra = ''
-        export PATH="$PATH:${localBin}:${goBin}:${rustBin}:${bunBin}:${npmBin}:${krewBin}:${lmstudioBin}"
+        export PATH="$PATH:${localBin}:${rustBin}:${bunBin}:${npmBin}:${krewBin}:${lmstudioBin}"
       '';
     in
     {
@@ -136,7 +135,6 @@
   flake.modules.homeManager.zsh-dev = {
     programs.zsh.oh-my-zsh.plugins = [
       "gitignore"
-      "golang"
       "kubectl"
       "mvn"
     ];
