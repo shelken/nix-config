@@ -12,10 +12,23 @@
           inherit pkgs;
           owner = myvars.username;
         };
-      home.packages = with pkgs; [
-        gh-markdown-preview
-        gh-stack
-      ];
+      home.packages =
+        (with pkgs; [
+          gh-markdown-preview
+          gh-stack
+        ])
+        ++ [
+          (pkgs.writeShellApplication {
+            name = "gh-fetch";
+            runtimeInputs = with pkgs; [
+              gh
+              curl
+              git
+              coreutils
+            ];
+            text = builtins.readFile ./gh-fetch.sh;
+          })
+        ];
       programs.git.settings.credential = {
         # 加空白是先清除system定义的osxkeychain
         "https://github.com" = {
