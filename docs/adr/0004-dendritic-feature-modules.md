@@ -1,33 +1,26 @@
 # 按功能内聚的 Dendritic 模块结构
 
-日期: 2026-10-23
+日期 2026-10-23
 
-同一功能的配置按层分散在 `modules/darwin/` 与 `home/` 两棵树，改一个功能要改两处，开关还要在主机配置里手动镜像。现在用 flake-parts 加 import-tree：一个功能一处定义（文件形式见 ADR 0012），以 `flake.modules.<类>.<名>` 发布，类为 `darwin`、`nixos`、`homeManager`；`modules/flake/features.nix` 把 `homeManager.<名>` 自动挂到同名系统模块，功能文件不写接线代码。功能自己声明加入哪个角色，主机只导入角色。仓库没有独立运行的 Home Manager，`homeConfigurations` 从系统配置求值结果导出，HM 只能由系统模块经 `home-manager.sharedModules` 注入
+旧结构把同一功能的配置拆在 `modules/darwin/` 与 `home/` 两棵树，改动要同步两处，开关也要在主机配置里镜像。现在仓库用 flake-parts 加 import-tree 组织功能，每个功能在一处以 `flake.modules.<类>.<名>` 发布 `darwin`、`nixos`、`homeManager` 三类模块。`modules/flake/features.nix` 自动将 `homeManager.<名>` 挂到同名系统模块。功能自己声明加入的角色，主机只导入角色。仓库没有独立运行的 Home Manager，`homeConfigurations` 从系统配置求值结果导出
 
 ## 规则
 
-- **一条导入路径**：一台主机上每个模块 MUST 只有一条导入路径。flake-parts 不为模块设 key，导入两次不去重，列表选项重复、声明选项的模块直接报错
-- **角色链**：darwin 为 `core ⊂ tui ⊂ gui ⊂ desktop ⊂ workstation`，NixOS 为 `core ⊂ tui ⊂ gui`；每台主机 MUST 恰好导入一个主角色，MAY 并列导入附加角色
-- **包含关系只写在系统侧**：角色间的 imports MUST 只出现在 `darwin.<角色>` 与 `nixos.<角色>`，HM 侧 MUST NOT 写角色包含链
-- **HM 锚点**：`homeManager.<角色>` MAY 声明本层的 HM 配置与 imports，纯 HM 功能 MAY 一行挂进 `homeManager.<角色>.imports` 同时覆盖两端；已有同名系统模块的功能 MUST NOT 再挂，会重复导入
-- **差异落点**：某个角色的所有主机需要 MUST 加入该角色；跨角色的 2 台以上主机需要 SHOULD 建附加角色；只有一台主机需要 MUST 由主机直接导入；都需要但参数不同，功能声明选项、主机设值，HM 部分经 `osConfig` 读取
-- **可选功能**：没有主机启用的功能 MUST NOT 加入任何角色、MUST NOT 保留 `enable` 开关，要用的主机在 `imports` 里声明
-- **互斥实现** MUST 用 enum 选项（如 `shelken.wm.manager`），MUST NOT 拆成多个可选功能，否则各主机都要显式导入且拦不住同时导入
-- **接口放 core**：会被其他功能写入的选项 MUST 声明在 `darwin.core` 与 `nixos.core`，单平台选项声明在对应平台 core，否则未导入实现的主机求值失败
-- **密钥是主机属性**：用户态 sops 模块与 `shelken.secrets.enable` 接口放 core（系统层 `nixos.sops` 为可选功能，见 ADR 0005），`shelken.secrets.enable` MUST 由主机设置；需要密钥的功能 MUST 声明 `sops.secrets.*` 并断言，MUST NOT 替主机打开
-- **HM 配置跟随应用本体**：应用由系统侧安装时，其 HM 配置 MUST 并入同一功能，MUST NOT 整体挂到角色上
-- **软链路径字面量**：`mylib.mkConfigLink`、`mkConfigFile` MUST 接收 `./x` 路径字面量，文件挪动后求值即报错
-- 路径含 `/_` 的文件 MUST NOT 被自动导入，用于私有片段与数据
+- 一台主机上每个模块 MUST 只有一条导入路径。flake-parts 不给模块设 `key`，导入两次不会去重，列表选项会重复，声明选项的模块直接报错
+- 每台主机 MUST 恰好导入一个主角色，MAY 并列导入附加角色。darwin 主角色链为 `core ⊂ tui ⊂ gui ⊂ desktop ⊂ workstation`，NixOS 主角色链为 `core ⊂ tui ⊂ gui` 与并列的 `server`
+- 角色之间的包含关系 MUST 只写在 `darwin.<角色>` 与 `nixos.<角色>`，HM 侧 MUST NOT 写角色包含链
+- `homeManager.<角色>` MAY 声明本层的 HM 配置与 `imports`，纯 HM 功能 MAY 挂进 `homeManager.<角色>.imports` 同时覆盖两端。已有同名系统模块的功能 MUST NOT 再挂进 `homeManager.<角色>.imports`
+- 某角色全部主机都需要的功能 MUST 加入该角色，跨角色 2 台以上主机需要的功能 SHOULD 建附加角色，仅 1 台主机需要的功能 MUST 由主机直接导入。全部需要但参数不同时，功能声明选项由主机设值，HM 经 `osConfig` 读取
+- 没有主机启用的功能 MUST 做成可选功能，MUST NOT 加入任何角色，MUST NOT 保留 `enable` 开关
+- 互斥实现 MUST 用 enum 选项表达，MUST NOT 拆成多个可选功能
+- 会被其他功能写入的选项接口 MUST 声明在 `darwin.core` 与 `nixos.core`，单平台选项声明在对应平台 `core`
+- 用户态密钥是主机属性，`shelken.secrets.enable` MUST 由主机设置。依赖密钥的功能 MUST 声明并断言它，MUST NOT 替主机开启
+- 应用由系统侧安装时，其 HM 配置 MUST 并入同一功能，MUST NOT 按角色整体挂接
+- 功能名 MUST NOT 与 `modules/profiles/` 下任何角色同名
+- 路径含 `/_` 的文件 MUST NOT 被自动导入，用于功能私有片段与数据
 
 ## 考虑过的替代方案
 
-- 保留两棵树、系统模块顺带写 HM：共用文件要按平台判断，`homebrew` 等选项不存在时报错
-- 保留 `enable` 开关用 suite 批量打开：同一职责在 suite 与主机两处管理
-- 按 `key` 包装模块自动去重：每次加入角色多一层包装；真实多路径需求出现再引入
-
-## 后果
-
-- `calcUniformSchedule` 读 `hosts/default.nix` 中非 OpenWrt 主机名按哈希排序排定备份时段（见 `lib/default.nix`），增删主机登记可能影响排序靠后主机的时段
-- 功能名 MUST NOT 与 `modules/profiles/` 下任何角色同名，两者共用 `flake.modules.<类>` 命名空间
-- 同名挂接为每个 HM 功能生成 `nixos.<名>` 与 `darwin.<名>`，只适用于 darwin 的功能在 NixOS 上导入会因缺选项报错
-- 模块合并层级越深越靠前，角色链改变列表选项顺序；`system-path` 开了 `ignoreCollisions`，同优先级排前者胜出，迁移时 MUST 确认同路径文件无冲突
+- 保留两棵树并在系统模块里顺带写 HM。跨平台文件要到处判断平台，角色组合仍依赖开关
+- 保留 `enable` 开关用 suite 批量开启。同一职责在 suite 和主机两处维护，容易失配
+- 给每个发布模块包装 `key` 自动去重。每次挂接都要包一层，等出现真实多路径需求再引入
