@@ -86,7 +86,7 @@
   "modules/features/network/singbox-config/singbox-config.sh": 1,
   "modules/features/network/ssh.nix": 2,
   "modules/features/nix/nix-gc.nix": 3,
-  "modules/features/nix/nix-icache.nix": 2,
+  "modules/features/nix/nix-icache/default.nix": 2,
   "modules/features/nix/nix-settings.nix": 4,
   "modules/features/secrets/secrets/default.nix": 3,
   "modules/features/secrets/secrets/sec-run.zsh": 3,
