@@ -7,7 +7,6 @@ in
     desktop
     homelab
     utm
-    lima-host
   ];
 
   networking.hostName = hostname;
