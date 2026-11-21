@@ -5,6 +5,8 @@
       "bird2c",
       "luci-i18n-argon-config-zh-cn",
       "luci-i18n-base-zh-cn",
+      "luci-i18n-firewall-zh-cn",
+      "luci-i18n-package-manager-zh-cn",
       "luci-i18n-watchcat-zh-cn",
       "luci-i18n-zerotier-zh-cn",
       "luci-theme-argon",
@@ -17,8 +19,8 @@
   },
   "version_code": "r38135-0c4cd0f9920a",
   "image": {
-    "name": "immortalwrt-25.12.2-a9c9bd70ac9d-ramips-mt7621-xiaomi_mi-router-cr6608-squashfs-sysupgrade.bin",
-    "sha256": "c6702a589fc38b0d5a8150f3ea335a54049c359c8b267fa7a5137b7d16d46db9"
+    "name": "immortalwrt-25.12.2-bc6b2f49ae03-ramips-mt7621-xiaomi_mi-router-cr6608-squashfs-sysupgrade.bin",
+    "sha256": "88d93bb77e425da2fbb711e633a02d08099d112b60d98e2a2c69e73d7927608c"
   },
   "manifest": {
     "apk-openssl": "3.0.5-r3",
@@ -158,6 +160,8 @@
     "luci-base": "26.298.29275~c84adb9",
     "luci-i18n-argon-config-zh-cn": "26.298.29275~c84adb9",
     "luci-i18n-base-zh-cn": "26.298.29275~c84adb9",
+    "luci-i18n-firewall-zh-cn": "26.298.29275~c84adb9",
+    "luci-i18n-package-manager-zh-cn": "26.298.29275~c84adb9",
     "luci-i18n-watchcat-zh-cn": "26.298.29275~c84adb9",
     "luci-i18n-zerotier-zh-cn": "26.298.29275~c84adb9",
     "luci-lib-uqr": "26.298.29275~c84adb9",
