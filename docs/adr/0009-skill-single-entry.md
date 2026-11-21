@@ -6,10 +6,10 @@ skill 原先分散在目录自动扫描、外部 skill 中心清单和功能登�
 
 ## 规则
 
-- 所有 skill 声明 MUST 写在 Home Manager 模块的 `shelken.dev.ai.skills` 列表中，谁需要就由谁声明
-- 部署形态 MUST 平铺，MUST NOT 按来源分组
-- 同一主机上出现重名 skill 时求值 MUST 失败
-- CI 追踪外部 skill 上游变更 MUST 从主机求值结果 `flake.skillUpstreams` 获取，MUST NOT 维护平行中心清单。CI MAY 跳过因私有输入求值失败的主机，跳过时 MUST 输出告警
+- 所有 skill 声明必须写在 Home Manager 模块的 `shelken.dev.ai.skills` 列表中，谁需要就由谁声明
+- 部署形态必须平铺，不得按来源分组
+- 同一主机上出现重名 skill 时求值必须失败
+- CI 追踪外部 skill 上游变更必须从主机求值结果 `flake.skillUpstreams` 获取，不得维护平行中心清单。CI 可以跳过因私有输入求值失败的主机，跳过时必须输出告警
 
 ## 考虑过的替代方案
 

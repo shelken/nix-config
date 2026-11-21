@@ -6,8 +6,8 @@
 
 ## 规则
 
-- Nix 求值期 MUST NOT 读取任何 derivation 的构建输出，MUST NOT 解析 YAML
-- 依赖 YAML 或生成结果的产物 MUST 移到构建期（`runCommand`）或运行时生成
+- Nix 求值期不得读取任何 derivation 的构建输出，不得解析 YAML
+- 依赖 YAML 或生成结果的产物必须移到构建期（`runCommand`）或运行时生成
 
 ## 后果
 

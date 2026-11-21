@@ -23,7 +23,7 @@
 - 执行任何 nix 操作（eval/build）前，确保自己新增或删除的文件已被 git 跟踪
 - 新增或调整软件配置前，先读 `docs/agents/software-config.md`
 - 根目录 `GLOSSARY.md` 记录共享领域知识，架构决策记录放在 `docs/adr/`
-- `docs/adr/` 只放与 nix、本仓库、dotconfig 有关的决策；ADR 规范句使用 RFC 2119 关键词（MUST、MUST NOT、SHOULD、MAY）书写；具体软件或脚本的设计放在其代码目录的 `README.md`
+- `docs/adr/` 只放与 nix、本仓库、dotconfig 有关的决策；ADR 规范句按 RFC 2119 使用中文限定词（必须、不得、应当、可以）书写；具体软件或脚本的设计放在其代码目录的 `README.md`
 - 创建、修改或测试机器特定定时任务时使用 `.agents/skills/create-task/`
 - 修改或新增本地技能（`modules/features/ai/skills/` 下，或功能目录下经 `shelken.dev.ai.skills` 登记的）前，先读 `modules/features/ai/skills/README.md`，其中规定外部拷贝技能的来源记录
 - 项目为公开项目, 不要在 ISSUE/PR/提交中/代码中 包含任何个人敏感信息/设备运行环境数据
