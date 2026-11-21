@@ -12,74 +12,10 @@ providers:
       timeoutMs: 3000
     # >>> mp-modelOverrides:auto-sync >>>
     modelOverrides:
-      codex/gpt-6.2-sol:
-        name: "GPT-6.2-Sol"
-        input: ["text", "image"]
-      codex/gpt-6.2-astra:
-        name: "GPT-6.2-Astra"
-        input: ["text", "image"]
-      loomy/deepseek-v4-flash-0731:
-        name: "DeepSeek V4 Flash 0731 (x3.0)"
-      loomy/MiniMax-M3:
-        name: "MiniMax M3 (x4.0)"
-      loomy/Kimi-k2.6:
-        name: "Kimi k2.6 (x6.5)"
-      loomy/qwen-3.8-max:
-        name: "Qwen 3.8 Max (x12.0)"
-        input: ["text", "image"]
-      loomy/spark-x:
-        name: "Spark-X2.5 (限时免费) (x0.0)"
-      loomy/auto:
-        name: "自动 · 均衡"
-      loomy/spark-x2.6:
-        name: "Spark-X2.6 正式版"
-      loomy/deepseek-v4-flash-1017:
-        name: "DeepSeek V4.1 Flash 1017"
-        input: ["text", "image"]
-      loomy/Hy-Image-3.5-preview:
-        name: "Hy image 3.5 preview"
-        input: ["text", "image"]
-      loomy/doubao-seedream-5-lite:
-        name: "Doubao seedream 5 lite"
-        input: ["text", "image"]
-      loomy/qwen-image-3.0-pro:
-        name: "qwen image 3.0 pro"
-        input: ["text", "image"]
-      qoder-cn/qfmodel:
-        name: "Qwen3.8-Flash"
-        input: ["text", "image"]
-      qoder-cn/dfmodel:
-        name: "DeepSeek-Flash"
-        input: ["text", "image"]
-      qoder-cn/gmodel:
-        name: "GLM-5.3"
-        input: ["text", "image"]
-      qoder-cn/gfmodel:
-        name: "GLM-5.3-Flash"
-        input: ["text", "image"]
-      workbuddy/glm-5.3:
-        input: ["text", "image"]
-      workbuddy/glm-5.2:
-        input: ["text", "image"]
-      workbuddy/kimi-k3-1:
-        name: "Kimi-K3"
-        input: ["text", "image"]
-      workbuddy-ai/deepseek-v4.1-flash-sg:
-        name: "Deepseek-V4.1-Flash"
-        input: ["text", "image"]
-      workbuddy-ai/glm-5.3-flash:
-        input: ["text"]
-      opencode-zen-free/inkling-2-small-free:
+      opencode-zen/gemini-3.5-flash-lite:
         thinking:
           mode: effort
-          efforts: [minimal, low, medium, high, max]
-      opencode-zen-free/nemotron-3.5-super-vl-free:
-        thinking:
-          mode: effort
-          efforts: [minimal, low, medium, high, xhigh]
-      opencode-zen-free/hy4-flash-free:
-        name: "Hy4 flash Free"
-        input: ["text", "image"]
+          efforts: [minimal, low, medium, high]
     # <<< mp-modelOverrides:auto-sync <<<
   cpa:
     baseUrl: https://cpa.int.ooooo.space/v1

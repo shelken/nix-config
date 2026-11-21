@@ -5,6 +5,12 @@
   "compaction": {
     "reserveTokens": 22000,
     "modelOverrides": {
+      "cpa/gemini-4-hydrogen-high": {
+        "reserveTokens": 748576
+      },
+      "mp/workbuddy/glm-5.3-flash": {
+        "reserveTokens": 700000
+      },
       "cpa/gemini-4-hydrogen-xhigh": {
         "reserveTokens": 748576
       },
@@ -35,9 +41,6 @@
       "anthropic/claude-fable-5-2": {
         "reserveTokens": 700000
       },
-      "cpa/claude-fable-5-2": {
-        "reserveTokens": 700000
-      },
       "mp/loomy/GLM-5.3-Flash": {
         "reserveTokens": 748576
       },
@@ -57,6 +60,10 @@
     "+codemode"
   ],
   "enabledModels": [
+    "cpa/gemini-4-hydrogen-high:high",
+    "mp/workbuddy/glm-5.3-flash:max",
+    "mp/opencode-zen/deepseek-v4.1-flash-free:high",
+    "mp/opencode-zen-free/deepseek-v4.1-flash-free:high",
     "cpa/gemini-4-hydrogen-xhigh:xhigh",
     "cpa/gemini-4-neon-medium:medium",
     "cpa/gemini-4-neon-xhigh:xhigh",
@@ -67,7 +74,6 @@
     "cpa/workbuddy/glm-5.2:high",
     "anthropic/claude-opus-5-5:medium",
     "anthropic/claude-fable-5-2:low",
-    "cpa/claude-fable-5-2:medium",
     "mp/loomy/GLM-5.3-Flash:high",
     "anthropic/claude-sonnet-5-5:high",
     "mp/loomy/DeepSeek-V4.1-Flash:high",
@@ -108,7 +114,7 @@
     "npm:@shelken/pi-command-history@0.1.7",
     "npm:@shelken/simple-plannotator@0.1.11",
     "npm:@shelken/copy-cut@0.2.3",
-    "npm:@shelken/pi-sounds@0.1.0",
+    "npm:@shelken/pi-sounds@0.1.2",
     "npm:@ssk_dev/rpiv-todo-lean@2.15.0",
     "npm:@ssk_dev/rpiv-ask-user-question-lean@2.15.0",
     "npm:@ff-labs/pi-fff@0.11.0",
@@ -145,8 +151,8 @@
   "theme": "catppuccin",
   "transport": "auto",
   "tuiMode": "fullscreen",
-  "defaultProvider": "mp",
-  "defaultModel": "loomy/DeepSeek-V4.1-Flash",
+  "defaultProvider": "cpa",
+  "defaultModel": "gemini-4-neon-medium",
   "extensionChangelogVersions": {
     "{\"source\":\"npm:pi-better@0.2.0\",\"scope\":\"user\"}": "0.2.0",
     "{\"source\":\"npm:pi-inspect\",\"scope\":\"project\"}": "0.6.0",

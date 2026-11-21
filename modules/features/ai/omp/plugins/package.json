@@ -10,6 +10,6 @@
     "@shelken/simple-plannotator": "npm:@shelken/simple-plannotator@0.1.11",
     "@shelken/pi-auto-model-prompts": "npm:@shelken/pi-auto-model-prompts@0.4.0",
     "pi-intercom": "npm:pi-intercom@0.18.1",
-    "@shelken/pi-sounds": "npm:@shelken/pi-sounds@0.1.0"
+    "@shelken/pi-sounds": "npm:@shelken/pi-sounds@0.1.2"
   }
 }
