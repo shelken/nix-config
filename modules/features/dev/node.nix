@@ -5,6 +5,11 @@
   flake.modules.homeManager.node =
     { pkgs, ... }:
     {
+      home.sessionPath = [
+        "$HOME/.npm-global/bin"
+        "$HOME/.cache/.bun/bin"
+      ];
+
       home.packages = [ pkgs.pnpm ];
       programs.npm.enable = true;
       programs.npm.package = null;
