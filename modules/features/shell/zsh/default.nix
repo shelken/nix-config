@@ -192,7 +192,7 @@
         lib.hm.dag.entryAfter [ "linkGeneration" ] ''
           (
             export XDG_CACHE_HOME=${lib.escapeShellArg config.xdg.cacheHome}
-            # 在空目录里构建，规避 ~/cache 存在时的失败：https://github.com/sharkdp/bat/issues/1726
+            # EXTERNAL: 上游 bat#1726 未修：cache 目录已存在时 bat cache --build 失败，只能在空目录构建
             cd "${pkgs.emptyDirectory}"
             run ${lib.getExe config.programs.bat.package} cache --build > /dev/null
           )
