@@ -44,7 +44,7 @@
    | 想让它出现在                  | 写法                                              |
    | ----------------------------- | ------------------------------------------------- |
    | 所有 darwin 主机              | `flake.modules.darwin.core.imports`               |
-   | 所有桌面机（含 ling）         | `flake.modules.darwin.gui.imports`                |
+   | 所有 darwin 桌面机（含 ling） | `flake.modules.darwin.gui.imports`                |
    | mio、yuuko、sakamoto          | `flake.modules.darwin.desktop.imports`            |
    | 只有 mio                      | `flake.modules.darwin.workstation.imports`        |
    | yuuko、sakamoto（服务器职责） | `flake.modules.darwin.homelab.imports`            |
@@ -104,4 +104,4 @@ NixOS 主机用 `self.modules.nixos.<名>`
 3. 若需要 sops 密钥，参考根目录 README「初始化」将新机器公钥加入 secrets 仓库，并在 `default.nix` 中配置 `shelken.secrets.enable = true;`
 4. 执行 `git add hosts/<主机>`，运行 `just b <主机>` 验证构建
 
-新增 `hosts/` 目录会改变其他主机的 kopia 备份时段：`mylib.calcUniformSchedule` 按 `hosts/` 下的目录数平均分配时间
+在 `hosts/default.nix` 登记新主机可能改变其他主机的 kopia 备份时段：`mylib.calcUniformSchedule` 读取非 OpenWrt 主机表按主机名哈希排序分配时间

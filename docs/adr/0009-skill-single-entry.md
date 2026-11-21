@@ -8,7 +8,7 @@ skill 原有三个入口：`ai/skills/` 目录自动扫描、`_skill-sources.nix
 
 - 声明 MUST 写在 Home Manager 模块里：`shelken.dev.ai.skills = [ <来源> … ]`，来源是路径字面量、input 里的目录字符串或派生
 - skill 名 MUST 默认取来源的目录名；要改 frontmatter 或名字时写 `{ source; name; frontmatter; }`，派生来源 MUST 写 `name`
-- 路径字面量指本仓库内的本地 skill，部署 MUST 走 `mylib.mkConfigLink`（liveEdit 时软链回工作树）；字符串与派生原样部署
+- 路径字面量指本仓库内的本地 skill，未改写 `frontmatter` 时部署 MUST 走 `mylib.mkConfigLink`（liveEdit 时软链回工作树），改写 `frontmatter` 时构建补丁副本；字符串与派生原样部署
 - 批量登记用 `mylib.discoverSkills <目录> { exclude; frontmatter; }`：递归查找含 `SKILL.md` 的目录，嵌套目录名的 `/` 换成 `--`；`exclude` 与 `frontmatter` 写不存在的名字时求值失败
 - 重名时求值失败（部署前断言）
 - 派生来源 MUST 手写 `upstream`（上游目录），CI 据此展示上游改动；字符串来源自动取 `source`

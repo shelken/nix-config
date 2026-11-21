@@ -8,7 +8,7 @@ icache 只在内网可达且随时可能关闭，写进系统静态配置会让�
 
 - 用户级开关状态等价于 `~/.config/nix/icache.conf` 是否存在，靠用户级 `nix.conf` 的 `!include icache.conf` 生效，改文件即生效，不必重启 daemon
 - `substituters` MUST 用覆盖语义：Nix 先按各源 `nix-cache-info` 的 Priority 排序，icache 原样透传上游 Priority 与原站同级，MUST 排在原站前面；开启时 MUST 动态读取系统列表把 icache 拼在最前，MUST NOT 在代码里重复维护列表；`extra-substituters` 只追加到末尾，MUST NOT 用来挂 icache
-- MUST 关闭 `builders-use-substituters`：置 `true` 时远端 builder 自己拉输入碰不到 icache，置 `false` 后本机先经 icache 拉取再推给 builder
+- 开启 icache 时的用户级覆盖文件 MUST 将 `builders-use-substitutes` 覆写为 `false`（系统层 `nix-settings.nix` 保持 `true`）：置 `true` 时远端 builder 自己拉输入碰不到 icache，置 `false` 后本机先经 icache 拉取再推给 builder
 - mise 规则 MUST 只写入开关管理的 `~/.config/mise/conf.d/icache.toml`，MUST NOT 进 Home Manager 生成的 mise 全局配置（mise 对被改写的下载失败不回退原站）；MUST 只改写 `https://github.com/<owner>/<repo>/releases/download/...` 下载地址，其他下载路径 MUST NOT 受影响
 - Homebrew 开启时 MUST 同时写 `~/.config/homebrew/brew.env` 与 `~/.homebrew/brew.env`（交互 shell 设了 `XDG_CONFIG_HOME` 读前者，激活跑 `brew bundle` 时未设读后者），把 `ghcr.io` 的 bottle 与 portable-ruby 指到 `icache/ghcr.io`，保留匿名认证 token
 - 远端装机 MUST 显式传 `--no-use-machine-substituters`（默认行为会把本机源追加进 `extra-substituters`，icache 不会优先命中），MUST 从目标 NixOS 主机的 `nix.settings` 求值并写入目标机 root 的 `~/.config/nix/nix.conf`；大体积稀疏数据 MUST NOT 经 `--extra-files`（`nixos-anywhere` 的 tar 未启用 `--sparse`），用 `PHASES=disko,install` 装完后手动写入 `/mnt` 再重启
