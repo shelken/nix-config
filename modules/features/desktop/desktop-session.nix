@@ -21,9 +21,6 @@
           };
         };
 
-        # Sets environment variable NIXOS_XDG_OPEN_USE_PORTAL to 1
-        # This will make xdg-open use the portal to open programs,
-        # which resolves bugs involving programs opening inside FHS envs or with unexpected env vars set from wrappers.
         xdgOpenUsePortal = true;
 
         extraPortals = lib.mkBefore (
@@ -71,7 +68,6 @@
         ];
       };
 
-      # fix for `sudo xxx` in kitty/wezterm/foot and other modern terminal emulators
       security.sudo.keepTerminfo = true;
     };
 }

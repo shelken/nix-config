@@ -31,7 +31,7 @@ def apply(settings, windows, nodes, floor):
     new = {}
     missing = []
     for entry in settings["enabledModels"]:
-        key = entry.rsplit(":", 1)[0]  # 去掉 :thinking 后缀
+        key = entry.rsplit(":", 1)[0]
         if key not in windows:
             missing.append(key)
             if key in old:

@@ -1,4 +1,3 @@
-# 可选功能，需要时主机 imports = [ self.modules.nixos.nvidia ]
 {
   flake.modules.nixos.nvidia =
     { config, ... }:

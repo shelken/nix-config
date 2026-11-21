@@ -8,12 +8,14 @@ case "$0" in */activate)
   unset BASH_ENV
   trap 'case "$BASH_COMMAND" in
     "_iNote \"Activating %s\" "*) printf "HM_TIMING %s %s\n" "$EPOCHREALTIME" "${BASH_COMMAND##* }" >&2 ;;
-    # shortcut: 末项结束依赖当前 HM 的 GC-root 尾声，升级 HM 后需核对。
-    run\ --silence\ nix-store\ --realise*currentGenGcPath*) printf "HM_TIMING %s END\n" "$EPOCHREALTIME" >&2 ;;
   esac' DEBUG
 esac
 BASH
 status=0
 env BASH_ENV="$hook" just hm "$@" 2>&1 | tee "$trace" | awk '$1 != "HM_TIMING" { print; fflush() }' || status=$?
+if grep -q '^HM_TIMING ' "$trace"; then
+  end_ts="${EPOCHREALTIME:-$(perl -MTime::HiRes=time -e 'printf "%.6f\n", time' 2>/dev/null || date +%s)}"
+  printf '\nHM_TIMING %s END\n' "$end_ts" >> "$trace"
+fi
 awk '$1 == "HM_TIMING" { if(p) printf "%8.1f ms  %s\n",($2-p)*1000,n; p=$2; n=$3; gsub(/"/,"",n) }' "$trace" | sort -k1 -rn
 exit "$status"

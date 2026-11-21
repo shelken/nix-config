@@ -47,7 +47,6 @@ nix build "$installable" --dry-run 2>"$log" || {
   exit 1
 }
 
-# 两段清单：will be built 下的 .drv，will be fetched 下的路径
 built_drvs=()
 while IFS= read -r drv; do
   [[ -n $drv ]] && built_drvs+=("$drv")

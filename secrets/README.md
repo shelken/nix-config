@@ -15,6 +15,11 @@
 - **配置集中收敛**：
   - 系统内所有用户态凭据与 SOPS 选项统一收敛在 `modules/features/secrets/secrets/default.nix`
   - 明确声明密钥路径：`sops.age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt"`
+- **`sec-run` 本进程解析后 `exec` 目标命令**（不直接 `exec op run`）：
+  - `op run` 遇到一条无法解析的引用即整体失败；留在本进程解析可以剔除失效引用后重试
+  - 从 SOPS 文件读取的 service account token 只在子 shell 中暴露给 `op` 那一次调用，不经脚本注入残留给目标命令（残留会把子命令的 `op` 调用限制在 Agent vault；若调用方环境本身已导出 `OP_SERVICE_ACCOUNT_TOKEN`，`exec` 仍按常规环境变量继承）
+  - 目标命令直接接管终端，不经 `op run` 代理（代理会破坏 TUI 的 tty 探测与 `SIGWINCH`）
+- **敏感明文字典不进 Nix store**：`scrub-words` 默认从 `~/.config/scrub-words/dict.txt` 读取字典（可用 `--dict` 覆写），因为 Nix store 全局可读
 
 ---
 

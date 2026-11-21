@@ -22,8 +22,6 @@
         (
           { modulesPath, ... }:
           {
-            # Important! We disable home-manager's module to avoid option
-            # definition collisions
             disabledModules = [ "${modulesPath}/programs/anyrun.nix" ];
           }
         )
@@ -32,7 +30,6 @@
 
       programs.anyrun = {
         enable = true;
-        # The package should come from the same flake as all the plugins to avoid breakage.
         package = anyrunPackages.anyrun;
         config = {
           x.fraction = 0.5;

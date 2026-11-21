@@ -1,6 +1,3 @@
-# 可选功能：要用的 NixOS 主机在 imports 里加 self.modules.nixos.disko，并设置 shelken.disko.*
-# disko 生成的 fileSystems/swapDevices 会写入系统配置，所以主机的硬件配置
-# （nixos-facter 报告或 nixos-generate-config --no-filesystems）里不要再写 fileSystems。
 { inputs, ... }:
 {
   flake.modules.nixos.disko =
@@ -128,7 +125,6 @@
           }
         ];
 
-        # bios：启用 GRUB；安装位置由 disko 根据 EF02 分区所在的磁盘自动加入 boot.loader.grub.devices
         boot.loader.grub.enable = lib.mkIf (cfg.boot == "bios") true;
 
         disko.devices.disk.main = {

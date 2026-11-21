@@ -23,16 +23,24 @@
     primaryUser = "${myvars.username}";
 
     defaults = {
-      dock = {
-        autohide = true;
-        show-recents = false;
-        mru-spaces = false;
+      dock =
+        let
+          hotCorner = {
+            none = 1;
+            showDesktop = 4;
+            launchpad = 11;
+          };
+        in
+        {
+          autohide = true;
+          show-recents = false;
+          mru-spaces = false;
 
-        wvous-tl-corner = 1; # 左上：无操作
-        wvous-tr-corner = 4; # 右上：显示桌面
-        wvous-bl-corner = 11;
-        wvous-br-corner = 1;
-      };
+          wvous-tl-corner = hotCorner.none;
+          wvous-tr-corner = hotCorner.showDesktop;
+          wvous-bl-corner = hotCorner.launchpad;
+          wvous-br-corner = hotCorner.none;
+        };
 
       finder = {
         _FXShowPosixPathInTitle = true;

@@ -39,7 +39,6 @@ in
         withPython3 = false;
         viAlias = true;
         vimAlias = true;
-        # init.lua 属于 config/；HM 的 initLua（catppuccin、语言表）经 wrapper 的 --cmd 先于它执行
         sideloadInitLua = true;
         plugins =
           with pkgs.vimPlugins;

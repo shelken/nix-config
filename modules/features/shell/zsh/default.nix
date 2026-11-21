@@ -188,8 +188,6 @@
         };
       };
 
-      # HM 的 batCache 每次激活都 `bat cache --build` 并打印三行。catppuccin 经 programs.bat.themes
-      # 注入了自定义主题，bat 只从缓存读自定义资源，缓存必须保留；构建只要约 0.3s，所以每次重建，只丢弃 stdout
       home.activation.batCache = lib.mkForce (
         lib.hm.dag.entryAfter [ "linkGeneration" ] ''
           (

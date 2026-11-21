@@ -1,4 +1,3 @@
-# 可选功能：节点主机经 hosts/k8s/common.nix 导入，并设置 shelken.k3s.*
 { ... }:
 {
   flake.modules.nixos.k3s-node =

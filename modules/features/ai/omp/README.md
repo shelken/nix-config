@@ -3,6 +3,10 @@
 - `/export`：在 Web 页面查看完整上下文信息
 - `/hub`：查看 subagent 活动状态，深入分析子代理运行上下文
 
+## 插件清单
+
+`plugins/package.json` 以普通文件副本部署而非软链：`omp plugin install` 会原地改写清单，软链会直接写穿到仓库工作树。
+
 ## Guard 权限
 
 guard 同时用于 omp 与 pi。拦截范围、内置规则与实现结构见 `extensions/guard/README.md`

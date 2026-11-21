@@ -1,16 +1,3 @@
-# mise 下载失败不回退原站，所以规则只能跟开关走，不能写进 Home Manager 生成的 mise 配置。
-# 也管 Homebrew：on 时写 ~/.config/homebrew/brew.env 与 ~/.homebrew/brew.env，把 ghcr.io 的 bottle 与 portable-ruby
-# 经 HOMEBREW_ARTIFACT_DOMAIN 指到 icache/ghcr.io，并保留 HOMEBREW_DOCKER_REGISTRY_TOKEN=QQ== 让失败回退原站时仍带匿名认证。
-# 同时写两处：交互 shell 设了 XDG_CONFIG_HOME 读前者，nix-darwin 激活跑 brew bundle 时未设它读后者。
-# 状态 = ~/.config/nix/icache.conf 是否存在，靠用户级 nix.conf 的 `!include icache.conf` 生效
-# （被包含文件不存在时 nix 静默忽略；用户级设置由客户端转发给 daemon，改文件即生效，不用重启）。
-# 必须用覆盖语义的 `substituters`：nix 先按各源 nix-cache-info 里的 Priority 排序，同级才按列表顺序。
-# icache 原样透传上游的 Priority，与原站同级，所以必须排在原站前面；`extra-substituters` 只会追加到末尾，
-# 等于 icache 永不命中。列表不在这里重复维护 —— on 时现取系统列表拼在前面。
-# 关闭 builders-use-substitutes：置 true 时 builder 自己去 substitute 输入，碰不到内网 icache；
-# 置 false 则本机经 icache 取输入，再推给 builder。
-# daemon 不重读系统 nix.conf，首次 switch 后用 `sudo launchctl kickstart -k system/systems.determinate.nix-daemon`
-# 重启一次，之后 on/off 即时生效。root 跑的 nix（sudo / nixos-rebuild）读不到用户级配置，仍走系统列表。
 { config, ... }:
 let
   icache = "https://icache.int.ooooo.space";

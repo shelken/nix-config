@@ -45,7 +45,6 @@ fi
 
 write_webhook_template() {
     # Kopia 模板必须包含 Subject: 头 + 空行 + 正文
-    # 正文部分是企业微信 Webhook 接受的 JSON
     cat <<'TEMPLATE_EOF'
 Subject: Kopia Backup {{.EventArgs.OverallStatus}}
 
@@ -86,10 +85,6 @@ fi
 if [ -n "${KOPIA_WEBHOOK_URL:-}" ] && [ "$SKIP_RECONCILE" != "1" ]; then
     echo "正在配置企业微信 Webhook 通知..."
 
-    # KOPIA_MIN_SEVERITY 选项:
-    #   - report: 每次备份完成都通知（包括成功）（默认值）
-    #   - warning: 仅在失败/警告时通知（成功时不通知）
-    #   - error: 仅在错误时通知
     KOPIA_MIN_SEVERITY="${KOPIA_MIN_SEVERITY:-report}"
     kopia notification profile configure webhook \
         --profile-name="wecom_webhook" \

@@ -28,7 +28,6 @@ def main():
         for files in hosts.values():
             loaded.update(f[len(root):].split(",")[0] for f in files if f.startswith(root))
 
-    # 路径含 /_ 的文件不被自动导入，不是候选
     tracked = run("git", "ls-files", "modules/features", "modules/profiles").split()
     candidates = {f for f in tracked if f.endswith(".nix") and "/_" not in f}
 

@@ -62,13 +62,13 @@
 
 ## 给某台主机加可选功能
 
-可选功能没有加入任何角色，导入了才生效。列出带「可选功能」标记的功能：
+可选功能没有写入任何 `flake.modules.<平台>.<角色>.imports`，在主机里显式导入才生效。查看当前尚未被任何主机导入的功能文件：
 
 ```bash
-grep -rlE '^# .*可选功能' modules/features
+just unused
 ```
 
-打开对应文件，模块名就是文件名（`backup/time-machine.nix` 是 `time-machine`，`homelab/lima-host/default.nix` 是 `lima-host`），加到主机的 `imports`：
+打开对应文件确认模块名（通常与文件名或目录名一致；同一文件也可额外发布可选扩展模块，例如 `nix/nix-icache.nix` 的 `nixos.nix-icache-system`），加到主机的 `imports`：
 
 ```nix
 # hosts/sakamoto/default.nix

@@ -112,7 +112,6 @@ function heredocDelimiter(input: string, start: number): { delim: string; quoted
   return { delim, quoted, end: i };
 }
 
-/** 消费 heredoc 正文直到分隔符行；<<- 允许分隔符前有制表符 */
 function heredocBody(input: string, start: number, delim: string, dash: boolean): { body: string; end: number } {
   let i = start;
   const lines: string[] = [];
@@ -152,7 +151,6 @@ export function tokenizeShell(input: string): ShellToken[] {
     pending = [];
   };
 
-  // 命令替换在单引号之外始终会执行（包括双引号内）：正文交给递归判定，词标记为动态取值
   const readSub = (open: number): number => {
     const sub = input[open] === "`" ? scanBacktick(input, open) : scanCommandSub(input, open);
     if (sub.body.trim() !== "") tokens.push({ kind: "sub", value: sub.body });
@@ -208,7 +206,6 @@ export function tokenizeShell(input: string): ShellToken[] {
       i += redir[0].length;
       continue;
     }
-    // 反斜杠换行是续行符：两个字符都不存在，前后两段拼成同一个词
     if (ch === "\\" && input[i + 1] === "\n") {
       i += 2;
       continue;
@@ -480,7 +477,6 @@ export function executesStdinProgram(words: ShellWord[], shellsOnly = false): bo
   const rest = args.slice(1).map((w) => w.value);
   const flags = rest.filter((a) => a.startsWith("-"));
   const operands = rest.filter((a) => !a.startsWith("-"));
-  // 内联程序优先于 `-` 与 /dev/stdin 操作数
   if (hasInlineProgram(head, flags)) return false;
   if (rest.some((a) => STDIN_PATHS[a] === true || a === "-")) return true;
   // shell 的 -s 表示从 stdin 读程序，其后即使跟位置参数也仍然是 stdin 程序；

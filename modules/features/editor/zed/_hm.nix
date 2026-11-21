@@ -18,8 +18,6 @@ in
     package = null;
     mutableUserSettings = true;
     mutableUserKeymaps = true;
-    # 注意：
-    # 列表不要直接传入，会直接覆盖
     userSettings = {
 
       file_scan_exclusions = [
@@ -175,7 +173,6 @@ in
         "catppuccin-icons" = true;
         "color-highlight" = true;
         csv = true;
-        "docker-compose" = false; # https://github.com/zed-industries/zed/issues/12122#issuecomment-2613014716
         dockerfile = true;
         env = true;
         "git-firefly" = true;

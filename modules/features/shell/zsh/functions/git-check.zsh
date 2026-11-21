@@ -27,7 +27,6 @@ _check_repo() {
 
     local issues=()
 
-    # 全部用 git -C，不 cd，不触发 direnv
     local unstaged staged untracked
     unstaged=$(git -C "$repo" diff --name-only 2>/dev/null)
     staged=$(git -C "$repo" diff --cached --name-only 2>/dev/null)

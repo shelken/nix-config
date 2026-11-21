@@ -9,9 +9,6 @@ niri: {
     in
     [
       (plain "binds" [
-        # "Mod" is a special modifier equal to Super when running on a TTY, and to Alt
-        # when running as a winit window.
-
         (plain "Mod+Shift+Slash" [ (flag "show-hotkey-overlay") ])
 
         (plain "Mod+Return" [ (leaf "spawn" [ "foot" ]) ])
@@ -93,11 +90,6 @@ niri: {
         (plain "Mod+Shift+U" [ (flag "move-workspace-down") ])
         (plain "Mod+Shift+I" [ (flag "move-workspace-up") ])
 
-        # You can refer to workspaces by index. However, keep in mind that
-        # niri is a dynamic workspace system, so these commands are kind of
-        # "best effort". Trying to refer to a workspace index bigger than
-        # the current workspace count will instead refer to the bottommost
-        # (empty) workspace.
         (plain "Mod+1" [ (leaf "focus-workspace" "1terminal") ])
         (plain "Mod+2" [ (leaf "focus-workspace" "2browser") ])
         (plain "Mod+3" [ (leaf "focus-workspace" "3chat") ])

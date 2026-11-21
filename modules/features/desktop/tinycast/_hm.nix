@@ -64,10 +64,15 @@ let
       name = "Helium (Debug)";
       command = ''open -a "Helium" --args "--remote-debugging-port=9333"'';
       iconSymbol = "globe";
-      hotkey = {
-        keyCode = 11; # b
-        modifiers = 2048; # alt
-      };
+      hotkey =
+        let
+          carbonKeyB = 11;
+          carbonOptionMod = 2048;
+        in
+        {
+          keyCode = carbonKeyB;
+          modifiers = carbonOptionMod;
+        };
     }
     {
       name = "New Kitty Window";

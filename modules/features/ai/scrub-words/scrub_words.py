@@ -525,7 +525,6 @@ def lock_cache(cache):
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
         sys.exit("另一个 scrub-words 正在执行 run/undo/purge")
-    # fd 保持打开，进程退出时自动释放
 
 
 def main():

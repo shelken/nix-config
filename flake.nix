@@ -70,7 +70,6 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    # 走 nixpkgs-unstable 分支：发布不等 NixOS 测试套件，darwin 修复不被 NixOS 测试失败阻塞
     nixpkgs-darwin.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-parts = {
       url = "github:hercules-ci/flake-parts";

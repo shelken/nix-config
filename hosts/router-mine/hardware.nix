@@ -20,6 +20,5 @@
     };
   };
 
-  # 热点中继的 sta 设备名，随 5G 射频的 phy 序号而定
   hotspotDevice = "phy1-sta0";
 }

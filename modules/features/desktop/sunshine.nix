@@ -14,13 +14,15 @@
         autoStart = true;
         capSysAdmin = true;
         openFirewall = true;
-        settings = {
-          # pc  - Only localhost may access the web ui
-          origin_web_ui_allowed = "pc";
-          # 2   -	encryption is mandatory and unencrypted connections are rejected
-          lan_encryption_mode = 2;
-          wan_encryption_mode = 2;
-        };
+        settings =
+          let
+            mandatoryEncryption = 2;
+          in
+          {
+            origin_web_ui_allowed = "pc";
+            lan_encryption_mode = mandatoryEncryption;
+            wan_encryption_mode = mandatoryEncryption;
+          };
       };
     };
 }

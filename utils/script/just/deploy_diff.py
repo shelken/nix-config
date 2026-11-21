@@ -88,9 +88,9 @@ def probe(host):
     refs = {}
     for line in graph.splitlines():
         if m := EDGE.match(line):
-            # 边 A -> B 表示 B 引用 A
-            refs.setdefault(m.group(2), set()).add(m.group(1))
-            refs.setdefault(m.group(1), set())
+            target, referrer = m.group(1), m.group(2)
+            refs.setdefault(referrer, set()).add(target)
+            refs.setdefault(target, set())
         elif m := NODE.match(line):
             refs.setdefault(m.group(1), set())
     current = first.strip()

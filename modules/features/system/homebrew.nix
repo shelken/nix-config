@@ -77,7 +77,6 @@
       };
     };
 
-  # Homebrew 装在 /opt/homebrew（Apple Silicon）或 /usr/local（Intel），两处都加进 PATH
   flake.modules.homeManager.homebrew =
     let
       envExtra = ''

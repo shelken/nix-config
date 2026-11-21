@@ -1,7 +1,6 @@
 local map = vim.keymap.set
 
 local snacks = require("snacks")
--- 启动画面：chafa 把 gif 实时渲染成盲文字符画；ttl = 0 不缓存，保留动画
 local logo = vim.fn.stdpath("config") .. "/assets/mio.gif"
 snacks.setup({
   picker = { enabled = true },

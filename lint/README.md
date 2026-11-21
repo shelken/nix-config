@@ -7,7 +7,10 @@
 
 pre-commit 的 `ast-grep` 钩子扫描提交的文件，`ast-grep-test` 钩子在规则或样例变化时跑样例，定义见 `modules/flake/dev.nix`
 
-只看路径、不看内容的规则不放这里：ast-grep 的样例只有代码片段，测不了路径。这类规则用 pre-commit 的 `language = "fail"` 钩子写在 `modules/flake/dev.nix`，现有 `feature-domains`、`feature-platform-split`（ADR 0012）。要同时看路径与目录内容的规则写成脚本，现有 `feature-layout.py`（无资源单文件目录、转发壳、模块名即文件名），由同名钩子调用
+只看路径、不看内容的规则不放这里：ast-grep 的样例只有代码片段，测不了路径。这类规则用 pre-commit 的 `language = "fail"` 钩子写在 `modules/flake/dev.nix`，现有 `feature-domains`、`feature-platform-split`（ADR 0012）。要同时看路径、目录内容或维护跨语言棘轮基线的规则写成脚本：
+
+- `feature-layout.py`：用 `ast-grep` 检查无资源单文件目录、转发壳、模块名即文件名，由同名钩子调用
+- `no-comments.py` 与 `no-comments-baseline.json`：单次调用 `ast-grep` 扫描 `.nix`/`.py`/`.sh`/`.ts`/`.lua` 注释，按文件行数棘轮只减不增；提交时由 `--tighten` 自动收紧基线，只读校验用 `--check`。无法改变的外部约束注释以 `EXTERNAL: <原因>` 开头豁免（多行逐行标注，或用块注释）；`#!`、`#compdef`、`# renovate:` 单行豁免
 
 ## 新增规则
 

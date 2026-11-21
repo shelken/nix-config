@@ -27,9 +27,9 @@ let
     increaseDisplayBrightnessDedicatedKey = 56;
     moveFocusToStatusMenus = 57;
     selectPreviousInputSource = 60;
-    selectNextInputSource = 61; # '^ + Option + Space' for selecting the next input source
-    showSpotlightSearch = 64; # Command-Space bar
-    showSpotlightSearchInFinder = 65; # 访达搜索窗口 Disable 'Cmd + Alt + Space' for Finder search window
+    selectNextInputSource = 61;
+    showSpotlightSearch = 64;
+    showSpotlightSearchInFinder = 65;
     moveLeftASpace = 79;
     moveLeftASpaceDedicatedKey = 80;
     moveRightASpace = 81;

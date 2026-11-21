@@ -1,4 +1,3 @@
-# 放行规则的目的地址只写后缀（IPv6 EUI-64，掩码 ::ffff:ffff:ffff:ffff 只匹配后 64 位）。
 { ... }:
 let
   ext = {

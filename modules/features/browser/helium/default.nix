@@ -21,7 +21,6 @@
       webstoreUpdateUrl = "https://update-url-to-be-replaced.qjz9zk";
 
       extensions = {
-        # 最小化原则; 一旦引入再注释 会立刻在下次重新打开时移除掉.
         pejdijmoenmkgeppbflobdenhhabjlaj = "iCloud 密码";
         dgdbdodafgaeifgajaajohkjjgobcgje = "GeoSpoof";
         pkehgijcmpdhfbdbbnkijodmdjhbjlgp = "隐私獾";
