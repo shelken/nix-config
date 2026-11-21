@@ -19,7 +19,7 @@
 | `"hi $name"`                              | `$"hi ($name)"`                         |
 | `for f in *.txt; do ...; done`            | `for f in (glob *.txt) { ... }`         |
 | `-`（oh-my-zsh 别名）                     | `cd -`                                  |
-| zsh 函数（`akv`、`cpa-eval` 等）、`proxy` | 暂未移植：`zsh -ic 'akv x'`，或先回 zsh |
+| zsh 函数（`proxy` / `unproxy`）           | 暂未移植，需临时切回 zsh                 |
 | 网上复制的 bash 一行命令                  | `bash -c '...'`                         |
 
 `ls`、`ps`、`rm`、`cp`、`mkdir` 是 nu 内置命令，输出表格、参数与 GNU 版不同，要原版用 `^ls`。

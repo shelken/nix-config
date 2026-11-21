@@ -11,8 +11,6 @@
     }:
     let
       zshDotDir = "${config.xdg.configHome}/zsh";
-      functionsDir = "${zshDotDir}/functions";
-      functionFiles = lib.filesystem.listFilesRecursive ./functions;
 
       localBin = "${config.home.homeDirectory}/.local/bin";
 
@@ -21,15 +19,6 @@
       '';
     in
     {
-      xdg.configFile = lib.listToAttrs (
-        map (f: {
-          name = "zsh/functions/${lib.removeSuffix ".zsh" (baseNameOf f)}";
-          value = {
-            source = f;
-          };
-        }) (lib.filter (f: lib.hasSuffix ".zsh" (toString f)) functionFiles)
-      );
-
       programs.zsh = {
         enable = true;
         dotDir = zshDotDir;
@@ -70,15 +59,6 @@
               setopt EXTENDED_HISTORY
               unsetopt AUTO_REMOVE_SLASH
             '';
-            functionsInit = ''
-              fpath=( ${functionsDir} $fpath )
-              autoload -Uz ${functionsDir}/*(:t)
-              # compinit 已由 oh-my-zsh 提前运行，手动注册 functions/_* 补全函数
-              for _hmf in ${functionsDir}/_*(N:t); do
-                compdef "$_hmf" "''${_hmf#_}"
-              done
-              unset _hmf
-            '';
             defaultInit = ''
               bindkey '^f' autosuggest-accept
               zstyle ':completion:*:just:*' sort false
@@ -91,7 +71,6 @@
           in
           lib.mkMerge [
             firstInit
-            functionsInit
             defaultInit
           ];
         plugins = [
