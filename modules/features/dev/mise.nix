@@ -7,11 +7,13 @@ in
   flake.modules.darwin.gui.imports = [ config.flake.modules.darwin.mise ];
   flake.modules.nixos.gui.imports = [ config.flake.modules.nixos.mise ];
 
-  flake.modules.homeManager.mise = {
-    programs.mise = {
-      enable = true;
-      enableZshIntegration = true;
-      enableBashIntegration = true;
+  flake.modules.homeManager.mise =
+    { config, ... }:
+    {
+      programs.mise = {
+        enable = true;
+        enableZshIntegration = config.programs.zsh.enable;
+        enableBashIntegration = config.programs.bash.enable;
 
       globalConfig = {
         settings.activate_aggressive = true;

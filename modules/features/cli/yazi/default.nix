@@ -12,8 +12,8 @@
     {
       programs.yazi = {
         enable = true;
-        enableZshIntegration = true;
-        enableBashIntegration = true;
+        enableZshIntegration = config.programs.zsh.enable;
+        enableBashIntegration = config.programs.bash.enable;
         shellWrapperName = "yy";
         plugins = {
           piper = pkgs.yaziPlugins.piper;
