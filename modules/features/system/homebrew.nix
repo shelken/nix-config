@@ -78,12 +78,29 @@
     };
 
   flake.modules.homeManager.homebrew =
+    { pkgs, ... }:
     let
       envExtra = ''
         export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
       '';
     in
     {
+      home.packages = [
+        (pkgs.writeShellApplication {
+          name = "brew-diff";
+          runtimeInputs = with pkgs; [
+            gawk
+          ];
+          text = ''
+            brewfile=$(nix path-info /run/current-system --recursive 2>/dev/null | awk '/Brewfile/ && !found { print; found = 1 }')
+            if [[ -z $brewfile ]]; then
+              echo "Error: 未在 /run/current-system 中找到 Brewfile" >&2
+              exit 1
+            fi
+            brew bundle cleanup --file="$brewfile"
+          '';
+        })
+      ];
       programs.bash = {
         enable = true;
         bashrcExtra = envExtra;
