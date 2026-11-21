@@ -11,14 +11,10 @@
     }:
     let
       zshDotDir = "${config.xdg.configHome}/zsh";
-
-      localBin = "${config.home.homeDirectory}/.local/bin";
-
-      envExtra = ''
-        export PATH="$PATH:${localBin}"
-      '';
     in
     {
+      home.sessionPath = [ "$HOME/.local/bin" ];
+
       programs.zsh = {
         enable = true;
         dotDir = zshDotDir;
@@ -97,9 +93,6 @@
       programs.bash = {
         enable = true;
         enableCompletion = true;
-        bashrcExtra = envExtra;
       };
-
-      programs.zsh.envExtra = envExtra;
     };
 }
