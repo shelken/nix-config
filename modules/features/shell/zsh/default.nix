@@ -84,10 +84,8 @@
           enable = true;
           plugins = [
             "docker"
-            "rsync"
             "sudo"
             "ssh"
-            "tailscale"
           ];
           # 禁用 oh-my-zsh 的 self-insert/bracketed-paste magic，避免长输入触发 ZLE 重算烧 CPU。
           extraConfig = ''
@@ -121,6 +119,12 @@
             '';
             defaultInit = ''
               bindkey '^f' autosuggest-accept
+              zstyle ':completion:*:just:*' sort false
+              zstyle ':completion:*:git-checkout:*' sort false
+              zstyle ':completion:*:descriptions' format '[%d]'
+              zstyle ':completion:*:*:*:*:*' menu no
+              zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
+              zstyle ':fzf-tab:*' switch-group '<' '>'
             '';
           in
           lib.mkMerge [
@@ -210,18 +214,10 @@
 
   flake.modules.homeManager.zsh-dev = {
     programs.zsh.oh-my-zsh.plugins = [
-      "azure"
-      "fluxcd"
       "gitignore"
       "golang"
-      "helm"
-      "httpie"
       "kubectl"
       "mvn"
-      "pip"
-      "qrcode"
-      "rclone"
-      "terraform"
     ];
     programs.fzf.defaultCommand = "fd --type f";
   };
