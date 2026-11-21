@@ -16,11 +16,10 @@
       functionFiles = lib.filesystem.listFilesRecursive ./functions;
 
       localBin = "${config.home.homeDirectory}/.local/bin";
-      rustBin = "${config.home.homeDirectory}/.cargo/bin";
       lmstudioBin = "${config.home.homeDirectory}/.lmstudio/bin";
 
       envExtra = ''
-        export PATH="$PATH:${localBin}:${rustBin}:${lmstudioBin}"
+        export PATH="$PATH:${localBin}:${lmstudioBin}"
       '';
     in
     {
