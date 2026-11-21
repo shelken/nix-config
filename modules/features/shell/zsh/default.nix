@@ -16,10 +16,9 @@
       functionFiles = lib.filesystem.listFilesRecursive ./functions;
 
       localBin = "${config.home.homeDirectory}/.local/bin";
-      lmstudioBin = "${config.home.homeDirectory}/.lmstudio/bin";
 
       envExtra = ''
-        export PATH="$PATH:${localBin}:${lmstudioBin}"
+        export PATH="$PATH:${localBin}"
       '';
     in
     {
