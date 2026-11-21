@@ -13,6 +13,10 @@
         home.sessionVariables = {
         };
 
+        home.sessionPath = [ "$HOME/go/bin" ];
+
+        programs.zsh.oh-my-zsh.plugins = [ "golang" ];
+
         home.packages = with pkgs; [
           go
         ];
