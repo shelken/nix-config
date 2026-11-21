@@ -26,7 +26,6 @@
       '';
     in
     {
-      home.file.".proxychains/proxychains.conf".source = ./proxychains.conf;
       programs.zsh.initContent = lib.mkIf config.programs.zsh.enable (lib.mkOrder 1001 proxyFunctions);
       programs.bash.initExtra = lib.mkIf config.programs.bash.enable (lib.mkOrder 1001 proxyFunctions);
     };
