@@ -50,7 +50,6 @@
           enable = true;
           plugins = [
             "sudo"
-            "ssh"
           ];
           # 禁用 oh-my-zsh 的 self-insert/bracketed-paste magic，避免长输入触发 ZLE 重算烧 CPU。
           extraConfig = ''

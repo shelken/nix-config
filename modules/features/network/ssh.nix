@@ -10,6 +10,8 @@
       # 这里起一个路径可推导的 agent，本地与远程会话共用同一份已解锁的钥匙
       services.ssh-agent.enable = pkgs.stdenv.hostPlatform.isDarwin;
 
+      programs.zsh.oh-my-zsh.plugins = [ "ssh" ];
+
       programs.ssh = {
         enable = true;
         enableDefaultConfig = false;
