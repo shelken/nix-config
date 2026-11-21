@@ -69,7 +69,6 @@
           "aria2"
           "xh"
           "m-cli"
-          "proxychains-ng"
           "gnu-sed"
           "gnu-tar"
           "git-trim"
