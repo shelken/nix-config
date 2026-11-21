@@ -1,6 +1,6 @@
 { config, ... }:
 {
-  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.carapace ];
+  flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.carapace ];
 
   flake.modules.homeManager.carapace =
     { config, ... }:

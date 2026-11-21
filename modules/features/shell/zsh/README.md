@@ -1,7 +1,7 @@
 ## 说明
 
 - prompt 由 `../starship.nix` 管理（Starship，配色来自 catppuccin/nix）
-- 补全由 `../carapace.nix` 配合 `fzf-tab` 管理
+- 补全由 `fzf-tab` 管理，`tui` 及以上角色同时启用 `../carapace.nix`
 
 ## 特定配置
 
