@@ -9,6 +9,8 @@
       jdk = pkgs.jdk17;
     in
     {
+      programs.zsh.oh-my-zsh.plugins = [ "mvn" ];
+
       programs.java = {
         enable = true;
         package = jdk;

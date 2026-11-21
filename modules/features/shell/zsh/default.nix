@@ -136,7 +136,6 @@
     programs.zsh.oh-my-zsh.plugins = [
       "gitignore"
       "kubectl"
-      "mvn"
     ];
 
   };
