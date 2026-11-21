@@ -34,8 +34,8 @@
 
         shellIntegration = {
           mode = "no-rc no-cursor";
-          enableZshIntegration = true;
-          enableBashIntegration = true;
+          enableZshIntegration = config.programs.zsh.enable;
+          enableBashIntegration = config.programs.bash.enable;
         };
 
         extraConfig = "";
