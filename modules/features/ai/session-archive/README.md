@@ -37,7 +37,7 @@ session-archive run               # 封存
 session-archive list              # 列出全部归档卷
 session-archive restore <归档卷>  # 整卷还原到所在根目录，已存在的文件不覆盖
 session-archive rekey             # 用密钥文件里的当前全部公钥重新加密全部归档卷
-task run session-archive          # 以任务方式手动跑一次
+ntask run session-archive         # 以任务方式手动跑一次
 ```
 
 首次启用前先跑 `--dry-run`

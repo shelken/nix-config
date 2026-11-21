@@ -1,4 +1,4 @@
-#compdef task
+#compdef ntask
 
 local -a _task_commands _task_names
 _task_commands=(
@@ -8,7 +8,7 @@ _task_commands=(
   'info:调度、日志与 plist 路径、launchd 状态'
   'help:显示帮助；-v 完整说明'
 )
-_task_names=(${(f)"$(task ls --names 2>/dev/null)"})
+_task_names=(${(f)"$(ntask ls --names 2>/dev/null)"})
 
 _arguments -C \
   '--debug[输出各阶段耗时]' \

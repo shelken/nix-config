@@ -33,14 +33,14 @@ RED = "\x1b[31m"
 YELLOW = "\x1b[33m"
 RESET = "\x1b[0m"
 
-HELP = """task —— 声明式定时任务的查看与调试入口
+HELP = """ntask —— 声明式定时任务的查看与调试入口
 
 用法:
-  task [ls]              任务状态表（上次运行、结果、是否已装载）
-  task log <名>          最近一次运行的日志；-n N 最近 N 次，-f 跟随，--all 全部
-  task run <名> [参数]   前台执行，输出同时写入日志
-  task info <名>         调度、日志与 plist 路径、launchd 状态
-  task help -v           完整说明
+  ntask [ls]             任务状态表（上次运行、结果、是否已装载）
+  ntask log <名>         最近一次运行的日志；-n N 最近 N 次，-f 跟随，--all 全部
+  ntask run <名> [参数]  前台执行，输出同时写入日志
+  ntask info <名>        调度、日志与 plist 路径、launchd 状态
+  ntask help -v          完整说明
 
 全局选项:
   --debug                输出各阶段耗时"""
@@ -48,14 +48,14 @@ HELP = """task —— 声明式定时任务的查看与调试入口
 HELP_VERBOSE = HELP + """
 
 任务与日志:
-  task 运行时读取已安装的 space.ooooo.task-* launchd plist，只列出真正部署的任务。
+  ntask 运行时读取已安装的 space.ooooo.task-* launchd plist，只列出真正部署的任务。
   用户任务日志在 ~/Library/Logs/task-<名>.log，root 任务在 /Library/Logs/task-<名>.log。
   每次运行以 "===== Task '<名>' Started (launchd|manual) =====" 开始、
   "===== Task '<名>' Finished (exit code: N) =====" 结束；旧日志没有括号里的触发来源。
   SHELKEN_TASK_LAUNCHD=1 由 launchd 注入，任务据此区分调度唤起与手动运行。
 
 补充:
-  task ls --names        每行一个任务名（供 shell 补全使用）
+  ntask ls --names       每行一个任务名（供 shell 补全使用）
   NO_COLOR=1             关闭 ✓/✗/running 的 ANSI 着色；管道输出本身无色"""
 
 
@@ -378,11 +378,11 @@ def resolve_log_path(tasks, name):
 
 def cmd_log(tasks, name, count, follow, all_lines):
     if not name:
-        print("task: 需要任务名\n用法: task log <名>", file=sys.stderr)
+        print("ntask: 需要任务名\n用法: ntask log <名>", file=sys.stderr)
         return 1
     path = resolve_log_path(tasks, name)
     if not os.path.isfile(path):
-        print(f"task: '{name}' 尚未运行过（无日志文件 {path}）", file=sys.stderr)
+        print(f"ntask: '{name}' 尚未运行过（无日志文件 {path}）", file=sys.stderr)
         return 1
     if follow:
         os.execvp("tail", ["tail", "-n", "50", "-f", path])
@@ -393,17 +393,17 @@ def cmd_log(tasks, name, count, follow, all_lines):
 
 def cmd_run(tasks, name, args):
     if not name:
-        print("task: 需要任务名\n用法: task run <名> [参数]", file=sys.stderr)
+        print("ntask: 需要任务名\n用法: ntask run <名> [参数]", file=sys.stderr)
         return 1
     task = tasks.get(name)
     command = shutil.which(f"task-{name}")
     if command is None and task is None:
-        print(f"task: 未知任务 '{name}'", file=sys.stderr)
+        print(f"ntask: 未知任务 '{name}'", file=sys.stderr)
         return 1
     if task is not None and task.tier == "root" and os.geteuid() != 0:
         os.execvp("sudo", ["sudo", os.path.abspath(sys.argv[0]), "run", name, *args])
     if command is None:
-        print(f"task: 找不到 task-{name} 命令", file=sys.stderr)
+        print(f"ntask: 找不到 task-{name} 命令", file=sys.stderr)
         return 1
     log_path = task.log_path if task is not None else default_log_path(name, "user")
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
@@ -439,7 +439,7 @@ def log_display(path):
 def cmd_info(tasks, name, debug):
     task = tasks.get(name)
     if task is None:
-        print(f"task: 未知任务 '{name}'", file=sys.stderr)
+        print(f"ntask: 未知任务 '{name}'", file=sys.stderr)
         return 1
     with debug.phase("launchctl", count=1):
         status = launchd_status(task)
@@ -466,7 +466,7 @@ def cmd_info(tasks, name, debug):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(prog="task", add_help=False)
+    parser = argparse.ArgumentParser(prog="ntask", add_help=False)
     subparsers = parser.add_subparsers(dest="command")
 
     parser_ls = subparsers.add_parser("ls", add_help=False)
@@ -512,7 +512,7 @@ def main(argv=None):
         return cmd_run(tasks, args.name, args.args)
     if args.command == "info":
         return cmd_info(tasks, args.name, debug)
-    print(f"task: 未知命令 '{argv[0]}'\n{HELP}", file=sys.stderr)
+    print(f"ntask: 未知命令 '{argv[0]}'\n{HELP}", file=sys.stderr)
     return 1
 
 

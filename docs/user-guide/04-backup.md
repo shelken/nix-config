@@ -56,10 +56,10 @@ shelken.backup.policySyncWhen = "5:30";
 ## 手动跑一次
 
 ```bash
-task run kopia-backup      # 手动触发一次快照
+ntask run kopia-backup     # 手动触发一次快照
 kopia-backup               # 同上
 kopia-backup --dry-run     # 只读预估所有备份来源的文件数与原始大小
-task log kopia-backup      # 跟随日志
+ntask log kopia-backup     # 跟随日志
 kopia-policy-sync          # 只收敛策略，让 ignores 改动立刻生效
 kopia-maintenance          # 全量维护，只有仓库的维护所有者能执行
 ```

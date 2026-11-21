@@ -1,6 +1,6 @@
 # 声明式定时任务
 
-声明一处任务，得到 `task-<名>` 命令、统一管理入口 `task`，以及自动落盘的日志；配置调度后，再由 launchd 自动触发
+声明一处任务，得到 `task-<名>` 命令、统一管理入口 `ntask`，以及自动落盘的日志；配置调度后，再由 launchd 自动触发
 
 两个声明位置，效果一致：
 
@@ -26,7 +26,7 @@
 }
 ```
 
-执行 `git add` 暂存该文件，再运行 `just sw`（新文件未进 git 无法被 flake 识别）；之后使用 `task ls` 确认它已注册
+执行 `git add` 暂存该文件，再运行 `just sw`（新文件未进 git 无法被 flake 识别）；之后使用 `ntask ls` 确认它已注册
 
 文件名去掉 `.nix` 即为任务名，上面的任务名为 `backup-check`，日志写入 `~/Library/Logs/task-backup-check.log`
 
@@ -69,7 +69,7 @@ shelken.tasks.kopia-backup = {
 
 - `when = "3:15"`：每天的日历时间，对应 launchd 的 `StartCalendarInterval`
 - `every = 7200`：间隔秒数，对应 `StartInterval`
-- 都不提供：纯手动任务，`task ls` 显示 `manual`，通过 `task run <名>` 执行
+- 都不提供：纯手动任务，`ntask ls` 显示 `manual`，通过 `ntask run <名>` 执行
 
 `when` 在睡眠期间错过的触发会在唤醒后补跑，多次错过合并为一次补跑；`every` 不补跑，关机期间错过的日历触发亦不补跑
 
@@ -80,11 +80,11 @@ when = "5:00";
 weekday = [ 0 ]; # 每周日 5:00，睡眠错过后在唤醒时补跑
 ```
 
-`weekday` 必须配合非空的 `when` 使用，与 `every` 共用会在构建期报错；`task ls` 会显示具体星期（例如 `Sun 05:00`）
+`weekday` 必须配合非空的 `when` 使用，与 `every` 共用会在构建期报错；`ntask ls` 会显示具体星期（例如 `Sun 05:00`）
 
 ## 临时禁用
 
-在任务声明中配置 `enable = false`，应用配置后 launchd job 与 `task-<名>` 命令会被移除，`task ls` 不再列出该任务
+在任务声明中配置 `enable = false`，应用配置后 launchd job 与 `task-<名>` 命令会被移除，`ntask ls` 不再列出该任务
 
 声明依然保留；需要恢复时改回 `enable = true` 重新应用配置即可
 
@@ -96,7 +96,7 @@ weekday = [ 0 ]; # 每周日 5:00，睡眠错过后在唤醒时补跑
 jitter = 600; # 唤起后随机等待 0 到 599 秒
 ```
 
-手动执行 `task run` 不等待，抖动仅在 launchd 唤起时生效
+手动执行 `ntask run` 不等待，抖动仅在 launchd 唤起时生效
 
 ## 通知
 
@@ -109,7 +109,7 @@ notify = {
 };
 ```
 
-`title` 同时替换成功与失败两种通知的标题；仅 launchd 唤起的运行会发送通知，手动 `task run` 保持安静；root 任务不发送通知，图形会话不在席时亦不发送
+`title` 同时替换成功与失败两种通知的标题；仅 launchd 唤起的运行会发送通知，手动 `ntask run` 保持安静；root 任务不发送通知，图形会话不在席时亦不发送
 
 ## 日志
 
@@ -120,9 +120,9 @@ notify = {
 
 每次运行在日志里以 `===== Task '<名>' Started (launchd) =====` 开始、`===== Task '<名>' Finished (exit code: N) =====` 结束；手动运行标注 `(manual)`，旧记录没有括号部分
 
-`task log <名>` 默认只显示最近一次运行；`-n N` 显示最近 N 次，`-f` 跟随实时输出，`--all` 显示整个文件
+`ntask log <名>` 默认只显示最近一次运行；`-n N` 显示最近 N 次，`-f` 跟随实时输出，`--all` 显示整个文件
 
-`task run` 的输出同时写入上述日志文件；直接执行 `task-<名>` 只在终端输出，不写日志
+`ntask run` 的输出同时写入上述日志文件；直接执行 `task-<名>` 只在终端输出，不写日志
 
 日志由 macOS newsyslog 轮转：超过 1MB 轮转，保留 5 份 gzip 旧档（`task-<名>.log.0.gz` 最新），更早的自动删除；配置在 `/etc/newsyslog.d/space.ooooo.tasks.conf`，由 `modules/features/system/tasks/_framework.nix` 生成，需 `just sw` 生效
 
@@ -131,17 +131,17 @@ notify = {
 ## 命令
 
 ```bash
-task              # 等同于 task ls
-task ls           # 状态表：上次运行、结果、是否已装载
-task ls --names   # 每行一个任务名，供 shell 补全使用
-task log <名>     # 查看日志；默认最近一次，-n N 最近 N 次，-f 跟随，--all 全部
-task run <名>     # 前台执行，输出同时写入日志，root 任务自动引导 sudo
-task info <名>    # 调度、日志与 plist 路径、launchd 状态
-task help -v      # 完整说明；--debug 输出各阶段耗时
-task-<名>         # 绕过 task CLI 直接执行底层脚本
+ntask             # 等同于 ntask ls
+ntask ls          # 状态表：上次运行、结果、是否已装载
+ntask ls --names  # 每行一个任务名，供 shell 补全使用
+ntask log <名>    # 查看日志；默认最近一次，-n N 最近 N 次，-f 跟随，--all 全部
+ntask run <名>    # 前台执行，输出同时写入日志，root 任务自动引导 sudo
+ntask info <名>   # 调度、日志与 plist 路径、launchd 状态
+ntask help -v     # 完整说明；--debug 输出各阶段耗时
+task-<名>         # 绕过 ntask CLI 直接执行底层脚本
 ```
 
-`task` 运行时读取已安装的 `space.ooooo.task-*` launchd plist，仅展示真正部署到当前机器的任务
+`ntask` 运行时读取已安装的 `space.ooooo.task-*` launchd plist，仅展示真正部署到当前机器的任务
 
 ## 任务存放约定
 
@@ -157,7 +157,7 @@ task-<名>         # 绕过 task CLI 直接执行底层脚本
 ```text
 lib/tasks.nix                                  # 字段契约与脚本包装：mkTaskType、taskDefaults、mkPackage
 modules/features/system/tasks/_framework.nix   # root 任务转 LaunchDaemon
-modules/features/system/tasks/_user-tasks.nix  # 用户任务转 LaunchAgent，并构建 task CLI
-modules/features/system/tasks/_cli/            # task CLI（Python）与 zsh 补全
+modules/features/system/tasks/_user-tasks.nix  # 用户任务转 LaunchAgent，并构建 ntask CLI
+modules/features/system/tasks/_cli/            # ntask CLI（Python）与 zsh 补全
 modules/features/system/tasks/_notify.nix      # 通知组件 terminal-notifier
 ```
