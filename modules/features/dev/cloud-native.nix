@@ -119,6 +119,14 @@
         };
       };
 
+      home.sessionPath = [ "$HOME/.krew/bin" ];
+
+      programs.zsh.oh-my-zsh.plugins = [
+        "kubectl"
+      ];
+
+      programs.nushell.shellAliases.k = "kubectl";
+
       programs.kubecolor = {
         enable = true;
         enableAlias = true;

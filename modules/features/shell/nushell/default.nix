@@ -4,7 +4,6 @@
       enable = true;
       loadSessionVariables = false;
       settings.show_banner = false;
-      shellAliases.k = "kubectl";
     };
   };
 }
