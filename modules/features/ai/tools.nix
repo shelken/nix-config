@@ -6,7 +6,7 @@
 {
   flake.modules.homeManager.ai.shelken.dev.tools = {
     # renovate: datasource=github-releases depName=oven-sh/bun extractVersion=^bun-v(?<version>.+)$
-    bun.mise = "1.4.4";
+    bun.mise = "1.4.5";
     omp = {
       sandboxCommand = "omp";
       mise = {
