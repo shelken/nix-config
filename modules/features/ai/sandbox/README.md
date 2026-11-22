@@ -4,7 +4,7 @@
 
 威胁模型只防 Agent 误操作（越界删除、误连其他项目的私网服务），不防恶意逃逸。项目内的误删靠启动前的宿主快照撤销。设计原因见文末「设计决策」；共享工具登记表的决策见 [ADR 0003](../../../../docs/adr/0003-shared-tool-single-declaration.md)
 
-由 `shelken.dev.ai.sandbox.enable` 控制，默认关闭
+随 `ai` 能力默认启用，无需额外开关
 
 ## 架构
 
