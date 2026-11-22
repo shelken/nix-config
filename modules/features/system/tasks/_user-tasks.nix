@@ -10,7 +10,9 @@ let
   tasksLib = mylib.mkTasksLib {
     inherit lib pkgs;
     homeDir = config.home.homeDirectory;
-    opTokenFile = config.sops.secrets."op/service-account-token".path;
+    secretsEnabled = config.shelken.secrets.enable;
+    opTokenFile =
+      if config.shelken.secrets.enable then config.sops.secrets."op/service-account-token".path else null;
   };
 
   taskCfg = config.shelken.tasks;
@@ -36,7 +38,7 @@ in
     shelken.tasks = lib.filterAttrs (_: t: t.user or true) (
       mylib.loadTasks (mylib.relativeToRoot "hosts/${hostname}/tasks") {
         inherit pkgs lib;
-        secretPath = secret: config.sops.secrets.${secret}.path;
+        secretPath = tasksLib.mkSecretPath (secret: config.sops.secrets.${secret}.path);
       }
     );
 

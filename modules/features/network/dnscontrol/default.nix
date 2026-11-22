@@ -22,15 +22,25 @@
       };
     in
     {
-      config = lib.mkIf config.shelken.secrets.enable {
-        sops.secrets.dnscontrol-cloudflare-api-token = mylib.mkDefaultSecret {
-          key = "dnscontrol/cloudflare-api-token";
-        };
+      config = lib.mkMerge [
+        {
+          assertions = [
+            {
+              assertion = config.shelken.secrets.enable;
+              message = "dnscontrol: 需要主机启用 secrets (shelken.secrets.enable = true)";
+            }
+          ];
+        }
+        (lib.mkIf config.shelken.secrets.enable {
+          sops.secrets.dnscontrol-cloudflare-api-token = mylib.mkDefaultSecret {
+            key = "dnscontrol/cloudflare-api-token";
+          };
 
-        home.packages = [ dnscontrolCf ];
+          home.packages = [ dnscontrolCf ];
 
-        # renovate: datasource=github-releases depName=DNSControl/dnscontrol
-        programs.mise.globalConfig.tools."github:DNSControl/dnscontrol" = "5.10.1";
-      };
+          # renovate: datasource=github-releases depName=DNSControl/dnscontrol
+          programs.mise.globalConfig.tools."github:DNSControl/dnscontrol" = "5.10.1";
+        })
+      ];
     };
 }

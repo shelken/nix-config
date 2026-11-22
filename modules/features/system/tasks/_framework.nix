@@ -13,7 +13,9 @@ let
   tasksLib = mylib.mkTasksLib {
     inherit lib pkgs;
     homeDir = userHome;
-    opTokenFile = userSops.secrets."op/service-account-token".path;
+    secretsEnabled = config.shelken.secrets.enable;
+    opTokenFile =
+      if config.shelken.secrets.enable then userSops.secrets."op/service-account-token".path else null;
   };
 
   userHome = config.users.users.${myvars.username}.home;
@@ -34,7 +36,7 @@ in
     {
       shelken.tasks = mylib.loadTasks (mylib.relativeToRoot "hosts/${config.networking.hostName}/tasks") {
         inherit pkgs lib;
-        secretPath = secret: userSops.secrets.${secret}.path;
+        secretPath = tasksLib.mkSecretPath (secret: userSops.secrets.${secret}.path);
       };
 
       assertions = tasksLib.mkAssertions taskCfg;
