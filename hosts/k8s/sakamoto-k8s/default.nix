@@ -25,6 +25,10 @@
     nodeLabels = [ "node.longhorn.io/create-default-disk=true" ];
   };
 
+  services.k3s.nodeTaint = [
+    "node-role.kubernetes.io/control-plane=true:PreferNoSchedule"
+  ];
+
   # Lima 附加盘 longhorn：Longhorn 的 defaultDataPath。按 UUID 挂，装机后设备名会变
   fileSystems."/mnt/lima-longhorn" = {
     device = "/dev/disk/by-uuid/02a38758-3122-4715-836a-2f1c8a32d906";
