@@ -5,9 +5,8 @@
   flake.modules.darwin.ai-apps.homebrew = {
     taps = [ ];
     casks = [
-
       "openusage"
-
+      "antigravity"
       "alma"
     ];
   };

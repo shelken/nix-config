@@ -5,38 +5,38 @@
   "compaction": {
     "reserveTokens": 22000,
     "modelOverrides": {
-      "mp/agy-cli/gemini-4-neon": {
-        "reserveTokens": 648576
+      "mp/agy-cli/gemini-4-hydrogen": {
+        "reserveTokens": 698576
       },
-      "cpa/gemini-4-hydrogen-high": {
-        "reserveTokens": 648576
+      "mp/agy-cli/gemini-4-neon": {
+        "reserveTokens": 698576
       },
       "mp/workbuddy/glm-5.3-flash": {
-        "reserveTokens": 600000
+        "reserveTokens": 650000
       },
       "cpa/workbuddy/glm-5.3": {
-        "reserveTokens": 600000
+        "reserveTokens": 650000
       },
       "cpa/workbuddy/glm-5.2": {
-        "reserveTokens": 600000
+        "reserveTokens": 650000
       },
       "anthropic/claude-opus-5-5": {
-        "reserveTokens": 600000
+        "reserveTokens": 650000
       },
       "anthropic/claude-fable-5-2": {
-        "reserveTokens": 600000
+        "reserveTokens": 650000
       },
       "mp/loomy/GLM-5.3-Flash": {
-        "reserveTokens": 648576
+        "reserveTokens": 698576
       },
       "anthropic/claude-sonnet-5-5": {
-        "reserveTokens": 600000
+        "reserveTokens": 650000
       },
       "mp/loomy/DeepSeek-V4.1-Flash": {
-        "reserveTokens": 648576
+        "reserveTokens": 698576
       },
       "mp/codex/gpt-6.2-sol": {
-        "reserveTokens": 100000
+        "reserveTokens": 150000
       }
     }
   },
@@ -45,8 +45,8 @@
     "+codemode"
   ],
   "enabledModels": [
+    "mp/agy-cli/gemini-4-hydrogen:high",
     "mp/agy-cli/gemini-4-neon:medium",
-    "cpa/gemini-4-hydrogen-high:high",
     "mp/workbuddy/glm-5.3-flash:max",
     "mp/opencode-zen/deepseek-v4.1-flash-free:high",
     "cpa/workbuddy/glm-5.3:high",
