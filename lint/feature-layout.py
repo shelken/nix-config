@@ -9,6 +9,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 AST_GREP = os.environ.get("AST_GREP", "ast-grep")
 FEATURES = "modules/features"
+PLATFORM_FRAGMENTS = {"_hm.nix", "_home.nix", "_darwin.nix", "_nixos.nix"}
+LEGACY_PLATFORM_FRAGMENTS = {
+    "modules/features/backup/kopia/_hm.nix",
+    "modules/features/desktop/tinycast/_hm.nix",
+}
 ATTR = re.compile(r'^flake\.modules\.(?:darwin|nixos|homeManager)\."?([A-Za-z0-9_-]+)"?')
 RULE = (
     "id: flake-module\n"
@@ -55,10 +60,19 @@ for d, members in sorted(dirs.items()):
     if members == [str(d / "default.nix")]:
         errors.append(f"{d}/default.nix：目录里没有资源，改成 {d}.nix")
 
+entry_names: dict[str, list[str]] = defaultdict(list)
+
 for f in files:
     p = Path(f)
+    if p.name in PLATFORM_FRAGMENTS and f not in LEGACY_PLATFORM_FRAGMENTS:
+        errors.append(f"{f}：不得新增按平台命名的私有片段，请合入入口文件或按职责命名")
     if p.suffix != ".nix" or any(part.startswith("_") for part in p.parts):
         continue
+    rel = p.relative_to(FEATURES)
+    if not (len(rel.parts) == 2 or (len(rel.parts) == 3 and rel.parts[2] == "default.nix")):
+        errors.append(f"{f}：功能入口必须在 <领域>/<名>.nix 或 <领域>/<名>/default.nix，私有片段请以 _ 开头")
+    name = p.parent.name if p.name == "default.nix" else p.stem
+    entry_names[name].append(f)
     all_names = published.get(f, set())
     if not all_names:
         continue
@@ -66,10 +80,13 @@ for f in files:
     if not names:
         errors.append(f"{f}：只把功能挂进角色、自己不发布模块，挂接写回功能本身")
         continue
-    name = p.parent.name if p.name == "default.nix" else p.stem
-    domain = p.relative_to(FEATURES).parts[0]
+    domain = rel.parts[0]
     if name not in names and domain not in names:
         errors.append(f"{f}：发布的模块 {', '.join(sorted(names))} 里没有与文件名同名的 {name}")
+
+for name, paths in sorted(entry_names.items()):
+    if len(paths) > 1:
+        errors.append(f"功能文件名 {name} 重复：{', '.join(sorted(paths))}")
 
 for e in errors:
     print(e)

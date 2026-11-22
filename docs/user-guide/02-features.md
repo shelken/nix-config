@@ -58,7 +58,7 @@
 - 只有 Home Manager 部分的软件：纯 HM 功能可直接挂 `homeManager.<角色>.imports`（`core` 与 `tui` 有锚点，一行同时进入 darwin 与 nixos）；也可走系统侧 `darwin.<角色>.imports` / `nixos.<角色>.imports`，同名 `homeManager.<名>` 自动跟进；已有同名系统模块的功能不要再挂 `homeManager.<角色>.imports`，会重复导入
 - 同一个功能只能有一条导入路径：加入角色后勿在主机中重复导入，反之亦然；重复导入会导致 option 重复声明或列表重复
 - 配置文件使用 `mylib.mkConfigFile config ./文件`，路径相对当前文件；开启 `shelken.dotfiles.liveEdit` 的主机会软链到仓库源文件，修改后无需重新构建
-- 功能带脚本、配置模板等非 nix 文件时用目录：`modules/features/<分类>/<名>/default.nix` 作为入口，资源放在同一目录；没有资源的功能用 `<名>.nix`。入口过于繁杂时才拆出 `_` 开头的私有片段（如 `_hm.nix`），它们不会被自动导入。规则见 [ADR 0012](../adr/0012-feature-domains-and-file-form.md)
+- 功能带脚本、配置模板等非 nix 文件时用目录：`modules/features/<分类>/<名>/default.nix` 作为入口，资源放在同一目录；没有资源的功能用 `<名>.nix`。入口过于繁杂时才按职责拆出 `_` 开头的私有片段（如 `_settings.nix`，不得按平台命名），它们与 `README.md` 均视作目录成员，不会被自动导入。规则见 [ADR 0012](../adr/0012-feature-domains-and-file-form.md)
 
 ## 给某台主机加可选功能
 

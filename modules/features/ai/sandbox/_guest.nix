@@ -27,7 +27,6 @@ let
     bubblewrap
     iproute2
     iptables
-    jq
     gnused
     findutils
     gawk

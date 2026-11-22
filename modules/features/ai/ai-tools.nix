@@ -14,7 +14,7 @@
         version = "latest";
         minimum_release_age = "0h";
       };
-      # OMP 只在 $XDG_DATA_HOME/omp 已存在时才把插件放进 XDG 目录
+      # EXTERNAL: OMP 只在 $XDG_DATA_HOME/omp 已存在时才把插件放进 XDG 目录
       sandboxDirs = [
         "$XDG_DATA_HOME/omp"
         "$XDG_STATE_HOME/omp"
