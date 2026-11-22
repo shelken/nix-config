@@ -27,11 +27,9 @@
 
       users.users = {
         ${myvars.username} = {
-          initialHashedPassword = lib.mkForce null;
           hashedPasswordFile = lib.mkDefault config.sops.secrets."${myvars.username}-password-hash".path;
         };
         root = {
-          initialHashedPassword = lib.mkForce null;
           hashedPasswordFile = lib.mkDefault config.sops.secrets.root-password-hash.path;
         };
       };
