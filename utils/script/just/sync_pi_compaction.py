@@ -14,7 +14,7 @@ import sys
 import threading
 from pathlib import Path
 
-COMPACT_AT = (250_000, 300_000)
+COMPACT_AT = (250_000, 400_000)
 MIN_RESERVE = 16_384
 RPC_TIMEOUT = 60
 

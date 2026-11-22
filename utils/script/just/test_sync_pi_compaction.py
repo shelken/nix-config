@@ -6,7 +6,7 @@ spec = importlib.util.spec_from_file_location("sync_pi_compaction", SCRIPT)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
-nodes = (250_000, 300_000)
+nodes = (250_000, 400_000)
 floor = 16_384
 reserve = lambda window: module.reserve_for(window, nodes, floor)
 

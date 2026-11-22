@@ -20,7 +20,9 @@ deny_commands:
   - pattern: "pip install"
     reason: "不准使用pip,不准直接安装任何包在全局,使用uv并且经过用户允许"
   - pattern: "gh auth token"
-    reason: "你他妈有病吗"
+    reason: "......"
+  - pattern: "find /nix/store"
+    reason: "......"
 
 
 # 路径规则：值为拒绝目标；`-值` 删除同名规则（内置规则同样可删）。

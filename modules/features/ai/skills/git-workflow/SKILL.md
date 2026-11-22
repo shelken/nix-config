@@ -13,4 +13,4 @@ description: Git 提交规范：提交前的文档、隐私与验证检查，提
 - 环境中有 eval 工具时，仍使用 bash 执行 Git 提交
 - 自己的项目默认使用中文提交消息(标题英文)，按 remote 是否归属于 `shelken` 判断；其他项目(或者Fork的项目)先看仓库历史来判断, 项目另有约定时以项目为准
 - 提交消息必须使用 `HEREDOC`，先说明原因，再总结变更；沿用仓库现有格式，无既有格式时使用 Conventional Commits
-- 不自行添加或清除 commit message 中的 `Co-Authored-By` trailer
+- 不自行添加或清除 commit message 中的 `Co-Authored-By` trailer; 有插件保证
