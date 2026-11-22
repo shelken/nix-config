@@ -9,6 +9,7 @@ in
     {
       config,
       lib,
+      myvars,
       modulesPath,
       ...
     }:
@@ -34,6 +35,8 @@ in
 
       services.sing-box.enable = lib.mkForce false;
       sops.secrets = lib.mkForce { };
+      users.users.${myvars.username}.hashedPasswordFile = lib.mkForce null;
+      users.users.root.hashedPasswordFile = lib.mkForce null;
 
       system.disableInstallerTools = lib.mkForce false;
     };

@@ -1,6 +1,5 @@
 {
   self,
-  config,
   lib,
   myvars,
   modulesPath,
@@ -12,6 +11,7 @@
     self.modules.nixos.server
     self.modules.nixos.disko
     self.modules.nixos.sops
+    self.modules.nixos.sops-passwords
     self.modules.nixos.docker
     # 开机时内核要先认出系统盘才能挂根分区，而 virtio 磁盘与网卡驱动在内核里是模块，必须列进 initrd；
     # 没有硬件报告（nixos-facter）时，靠它声明这些驱动，缺了就会开机找不到根分区
@@ -88,23 +88,7 @@
   };
   systemd.tmpfiles.rules = [ "d /data/docker 0755 root root -" ];
 
-  sops = {
-    defaultSopsFile = inputs.secrets + "/sops/secrets/hosts/vps-cc.yaml";
-    secrets = {
-      shelken-password-hash.neededForUsers = true;
-      root-password-hash.neededForUsers = true;
-    };
-  };
-  users.users = {
-    shelken = {
-      initialHashedPassword = lib.mkForce null;
-      hashedPasswordFile = config.sops.secrets.shelken-password-hash.path;
-    };
-    root = {
-      initialHashedPassword = lib.mkForce null;
-      hashedPasswordFile = config.sops.secrets.root-password-hash.path;
-    };
-  };
+  sops.defaultSopsFile = inputs.secrets + "/sops/secrets/hosts/vps-cc.yaml";
 
   system.stateVersion = "26.05";
 }
