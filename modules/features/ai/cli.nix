@@ -11,7 +11,6 @@
         };
 
         home.packages = [
-          pkgs.agent-browser
           pkgs.ast-grep
           pkgs.imagemagick
         ];
@@ -27,8 +26,6 @@
           };
           # renovate: datasource=npm depName=@llamaindex/liteparse
           "npm:@llamaindex/liteparse" = "2.19.0";
-          # renovate: datasource=npm depName=@playwright/cli
-          "npm:@playwright/cli" = "0.1.24";
           # renovate: datasource=github-releases depName=rtk-ai/rtk
           rtk = "1.2";
         };

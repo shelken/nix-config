@@ -28,10 +28,7 @@
 
 ## 场景一：第一次用起来
 
-1. 在主机的 Home Manager 配置里打开开关（`mio` 已开），例如 `hosts/<机器>/home.nix`
-   ```nix
-   shelken.dev.ai.sandbox.enable = true;
-   ```
+1. 导入 `ai` 能力的主机（`mio`、`yuuko`）默认启用沙箱，无需额外开关
 2. 应用配置，然后新开一个终端
    ```bash
    just hm
