@@ -17,7 +17,6 @@
 
       users.users.${myvars.username} = {
         description = myvars.userfullname;
-        initialHashedPassword = lib.mkDefault myvars.initialHashedPassword;
         home = "/home/${myvars.username}";
         isNormalUser = true;
         extraGroups = [
@@ -31,7 +30,6 @@
       };
 
       users.users.root = {
-        initialHashedPassword = lib.mkDefault myvars.initialHashedPassword;
         openssh.authorizedKeys.keys = myvars.mainSshAuthorizedKeys;
       };
     };
