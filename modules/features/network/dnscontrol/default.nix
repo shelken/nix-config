@@ -30,7 +30,7 @@
         home.packages = [ dnscontrolCf ];
 
         # renovate: datasource=github-releases depName=DNSControl/dnscontrol
-        programs.mise.globalConfig.tools."github:DNSControl/dnscontrol" = "5.8.2";
+        programs.mise.globalConfig.tools."github:DNSControl/dnscontrol" = "5.10.1";
       };
     };
 }
