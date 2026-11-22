@@ -1,7 +1,9 @@
 { config, ... }:
 {
-  flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.gh ];
-  flake.modules.darwin.core.imports = [ config.flake.modules.darwin.gh-dash ];
+  flake.modules.homeManager.tui.imports = [
+    config.flake.modules.homeManager.gh
+    config.flake.modules.homeManager.gh-dash
+  ];
 
   flake.modules.homeManager.gh =
     { pkgs, myvars, ... }:

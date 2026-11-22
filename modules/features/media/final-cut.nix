@@ -1,6 +1,6 @@
 { config, ... }:
 {
-  flake.modules.darwin.core.imports = [ config.flake.modules.darwin.final-cut ];
+  flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.final-cut ];
 
   flake.modules.homeManager.final-cut =
     { pkgs, ... }:

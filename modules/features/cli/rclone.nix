@@ -1,6 +1,6 @@
 { config, ... }:
 {
-  flake.modules.homeManager.core.imports = [ config.flake.modules.homeManager.rclone ];
+  flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.rclone ];
 
   flake.modules.homeManager.rclone =
     {
@@ -16,7 +16,7 @@
     in
     {
       config = lib.mkMerge [
-        { home.packages = lib.optionals pkgs.stdenv.hostPlatform.isDarwin [ pkgs.rclone ]; }
+        { home.packages = [ pkgs.rclone ]; }
         (mkIf cfg.enable {
           sops.secrets."drive/s3/url" = mylib.mkDefaultSecret { };
           sops.secrets."drive/url" = mylib.mkDefaultSecret { };

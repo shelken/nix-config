@@ -3,8 +3,7 @@
   ...
 }:
 {
-  flake.modules.darwin.gui.imports = [ config.flake.modules.darwin.singbox-config ];
-  flake.modules.nixos.gui.imports = [ config.flake.modules.nixos.singbox-config ];
+  flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.singbox-config ];
 
   flake.modules.homeManager.singbox-config =
     {
