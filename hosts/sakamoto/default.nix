@@ -7,6 +7,7 @@ in
     desktop
     homelab
     utm
+    node-exporter
   ];
 
   networking.hostName = hostname;
