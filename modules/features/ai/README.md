@@ -12,7 +12,7 @@ Agent 相关配置，按能力组织（ADR 0008）。`ai` 是跑 agent 的机器
 | `skill.nix`、`skills/` | skill 唯一入口 `shelken.dev.ai.skills`：选项挂在 core、部署、`ai` 需要的通用 skill（本地 `skills/` 与外部 input），以及 CI 读的 `flake.skillUpstreams`（ADR 0009） |
 | `tools.nix` | 共享工具登记表中 omp、pi、bun 的条目（ADR 0003） |
 | `plugins.nix`、`auto-model-prompts/` | omp 与 pi 共用的插件配置、按模型注入的提示词 |
-| `cli.nix` | skill 与 harness 依赖的 CLI（ctx7、deepwiki、lit、agent-browser、herdr、rtk 等） |
+| `cli.nix` | skill 与 harness 依赖的 CLI（ctx7、deepwiki、lit、herdr、rtk 等） |
 | `sandbox/` | Agent 沙箱（sb），设计见其 README |
 
 ## 独立功能（只在工作站）
@@ -21,6 +21,7 @@ Agent 相关配置，按能力组织（ADR 0008）。`ai` 是跑 agent 的机器
 |---|---|---|
 | `iphone/` | `iphone` | 控制 USB 连接的 iPhone：skill、`iphone` 命令、swipt |
 | `computer-use/` | `computer-use` | 控制宿主桌面：skill、cua-driver cask |
+| `browser-automation/` | `browser-automation` | 浏览器自动化：Chrome cask、agent-browser 与 playwright-cli、2 个 skill 与沙箱桩 |
 | `ai-apps.nix` | `ai-apps` | AI 桌面 App（openusage、alma）与宿主专用客户端（codex、claude-code、antigravity-cli） |
 | `scrub-words/` | `scrub-words` | 按本地字典替换会话里的脏话 |
 | `orca/` | `orca` | Orca 键位 |

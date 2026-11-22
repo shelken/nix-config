@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BASELINE = Path(__file__).resolve().with_name("no-comments-baseline.json")
 AST_GREP = os.environ.get("AST_GREP", "ast-grep")
 LANGS = ("nix", "python", "bash", "typescript", "lua")
-IGNORES = '["lint/rule-tests/**", "modules/features/ai/skills/agent-browser/templates/**"]'
+IGNORES = '["lint/rule-tests/**", "modules/features/ai/browser-automation/agent-browser/templates/**"]'
 RULES = "\n---\n".join(
     f"id: {lang}\nlanguage: {lang}\nignores: {IGNORES}\nrule: {{ kind: comment }}"
     for lang in LANGS
