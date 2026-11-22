@@ -25,18 +25,28 @@
       };
     in
     {
-      config = lib.mkIf config.shelken.secrets.enable {
-        sops.secrets.singbox-main-domain = mylib.mkDefaultSecret { key = "main-domain"; };
+      config = lib.mkMerge [
+        {
+          assertions = [
+            {
+              assertion = config.shelken.secrets.enable;
+              message = "singbox-config: 需要主机启用 secrets (shelken.secrets.enable = true)";
+            }
+          ];
+        }
+        (lib.mkIf config.shelken.secrets.enable {
+          sops.secrets.singbox-main-domain = mylib.mkDefaultSecret { key = "main-domain"; };
 
-        programs.mise.globalConfig.tools = {
-          "github:shelken/proxy" = {
-            version = "latest";
-            matching = "sbtools";
-            minimum_release_age = "0h";
+          programs.mise.globalConfig.tools = {
+            "github:shelken/proxy" = {
+              version = "latest";
+              matching = "sbtools";
+              minimum_release_age = "0h";
+            };
           };
-        };
 
-        home.packages = [ script ];
-      };
+          home.packages = [ script ];
+        })
+      ];
     };
 }

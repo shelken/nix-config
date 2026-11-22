@@ -16,7 +16,15 @@
     in
     {
       config = lib.mkMerge [
-        { home.packages = [ pkgs.rclone ]; }
+        {
+          assertions = [
+            {
+              assertion = cfg.enable;
+              message = "rclone: 需要主机启用 secrets (shelken.secrets.enable = true)";
+            }
+          ];
+          home.packages = [ pkgs.rclone ];
+        }
         (mkIf cfg.enable {
           sops.secrets."drive/s3/url" = mylib.mkDefaultSecret { };
           sops.secrets."drive/url" = mylib.mkDefaultSecret { };

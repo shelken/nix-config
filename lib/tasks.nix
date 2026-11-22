@@ -2,6 +2,7 @@
   lib,
   pkgs,
   homeDir,
+  secretsEnabled,
   opTokenFile,
 }:
 let
@@ -45,6 +46,9 @@ rec {
     }
     // mkTrigger t;
 
+  mkSecretPath =
+    getPath: secret: if secretsEnabled then getPath secret else "<secrets-disabled:${secret}>";
+
   mkAssertions =
     tasks:
     lib.concatLists (
@@ -56,6 +60,10 @@ rec {
         {
           assertion = t.weekday == [ ] || (t.when != [ ] && t.every == null);
           message = "shelken.tasks.${name}: weekday 必须配合 when 使用，不能与 every 共用";
+        }
+        {
+          assertion = !t.enable || builtins.attrNames t.secrets == [ ] || secretsEnabled;
+          message = "shelken.tasks.${name}: 声明了 secrets，需要主机启用 secrets (shelken.secrets.enable = true)";
         }
       ]) tasks
     );
@@ -111,10 +119,18 @@ rec {
         export ${var}
       '';
 
-      secretExports = lib.concatStringsSep "\n" (
-        lib.mapAttrsToList (
-          var: value: if isOpRef value then readOpSecret var value else readFileSecret var value
-        ) t.secrets
+      secretExports = lib.optionalString (builtins.attrNames t.secrets != [ ]) (
+        if secretsEnabled then
+          lib.concatStringsSep "\n" (
+            lib.mapAttrsToList (
+              var: value: if isOpRef value then readOpSecret var value else readFileSecret var value
+            ) t.secrets
+          )
+        else
+          ''
+            echo "Task '${name}': secrets disabled" >&2
+            exit 1
+          ''
       );
 
       # 不用单引号包裹是为了避开 shellcheck 的 SC2016（连 info 级都会让构建失败）

@@ -47,7 +47,12 @@
         mylib.mkBoolOpt false "Whether to install the agent sandbox.";
 
       config = lib.mkIf config.shelken.dev.ai.sandbox.enable {
-        inherit (manifest) assertions;
+        assertions = manifest.assertions ++ [
+          {
+            assertion = config.shelken.secrets.enable;
+            message = "sandbox: 需要主机启用 secrets (shelken.secrets.enable = true)";
+          }
+        ];
 
         shelken.dev.sandbox.hostCommands = {
           sb = "sb 是宿主沙箱管理 CLI，沙箱内部无法嵌套管理沙箱 VM";
