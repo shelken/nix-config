@@ -1,6 +1,6 @@
 { config, ... }:
 {
-  flake.modules.darwin.core.imports = [ config.flake.modules.darwin.loon-ctl ];
+  flake.modules.darwin.workstation.imports = [ config.flake.modules.darwin.loon-ctl ];
 
   flake.modules.homeManager.loon-ctl =
     { pkgs, ... }:
