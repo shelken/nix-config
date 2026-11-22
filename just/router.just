@@ -57,7 +57,7 @@ build-local $host=builder:
 [doc('按锁文件构建并下载固件，包版本与锁文件不一致时失败，不改设备')]
 firmware-build: (_firmware 'build')
 
-# sysupgrade 刷写时会杀掉 dropbear，ssh 以断线（255）结束，其它非零退出码视为失败
+# sysupgrade 刷写时会杀掉 ubusd（246）或 dropbear（255），两者均属正常断连；其它非零退出码视为失败
 [doc('按锁文件刷入固件并保留配置，会重启路由器；先 just router::acceptance 采基线')]
 upgrade $host=target:
     #!/usr/bin/env bash
@@ -86,7 +86,7 @@ upgrade $host=target:
     ssh -- "$host" 'sysupgrade -T /tmp/sysupgrade.bin'
     rc=0
     ssh -- "$host" 'sysupgrade /tmp/sysupgrade.bin' || rc=$?
-    [ "$rc" -eq 0 ] || [ "$rc" -eq 255 ] || exit "$rc"
+    [ "$rc" -eq 0 ] || [ "$rc" -eq 246 ] || [ "$rc" -eq 255 ] || exit "$rc"
     echo '路由器正在刷写并重启，约 3 分钟后跑 just router::acceptance 与 acceptance-diff'
 
 acceptance_dir := firmware_dir / 'acceptance'
