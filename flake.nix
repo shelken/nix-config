@@ -41,7 +41,7 @@
     inputs.flake-parts.lib.mkFlake
       {
         inherit inputs;
-        specialArgs = { inherit mylib hosts; };
+        specialArgs = { inherit mylib myvars hosts; };
       }
       {
         imports = [

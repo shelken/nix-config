@@ -1,6 +1,7 @@
 {
   inputs,
   lib,
+  myvars,
   hosts,
   ...
 }:
@@ -15,7 +16,9 @@ in
   flake.modules.nixos.openwrt-builder =
     { pkgs, ... }:
     let
-      runner = pkgs.writeShellScript "openwrt-imagebuild-runner" (builtins.readFile ./imagebuild-remote.sh);
+      runner = pkgs.writeShellScript "openwrt-imagebuild-runner" (
+        builtins.readFile ./imagebuild-remote.sh
+      );
 
       openwrtImagebuild = pkgs.buildFHSEnv {
         name = "openwrt-imagebuild";
@@ -72,7 +75,7 @@ in
           name: host:
           lib.nameValuePair "${name}-uci" (
             (uci.writeUci {
-              imports = host.uci-modules ++ [ { _module.args = { inherit inputs; }; } ];
+              imports = host.uci-modules ++ [ { _module.args = { inherit inputs myvars; }; } ];
             }).json.overrideAttrs
               (old: {
                 passthru = (old.passthru or { }) // {

@@ -1,6 +1,6 @@
-{ lib, ... }:
+{ myvars, ... }:
 let
-  net = import ../../../vars/networking.nix { inherit lib; };
+  net = myvars.networking;
 in
 {
   uci.settings.network = {
