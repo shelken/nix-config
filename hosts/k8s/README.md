@@ -6,26 +6,26 @@
 
 ## 组成
 
-- `common.nix`：三台共有：`server` 角色、disko（ext4）、sops、网络（networkd 按 MAC 命名网卡、`eth1` DHCP、VLAN 子接口 `eth1.50`）、`k3s-node` 功能
+- `common.nix`：三台共有：`server` 角色、disko（ext4）、网络（networkd 按 MAC 命名网卡、`eth1` DHCP、VLAN 子接口 `eth1.50`）、`k3s-node` 功能
 - `lima.nix`：两台 Lima（vz）节点共有：引导、usernet 网卡 `eth0`、`shelken.lima.*` 选项与 `system.build.limaConfig`（Lima 实例声明的数据，宿主据此生成 `lima.yaml`）
-- `<节点>/default.nix`：主机名、磁盘设备、k3s 角色与标签；`sakamoto-k8s` 另有 Longhorn 数据盘的挂载；`homelab-1` 另有 Longhorn 数据分区（与系统同盘）、qemu 驱动与 Intel 核显
+- `<节点>/default.nix`：主机名、磁盘设备、k3s 角色与标签；worker（`yuuko-k8s`、`homelab-1`）导入 `self.modules.nixos.sops`，控制面 `sakamoto-k8s` 不导入 `sops`；`sakamoto-k8s` 另有 Longhorn 数据盘的挂载；`homelab-1` 另有 Longhorn 数据分区（与系统同盘）、qemu 驱动与 Intel 核显
 - `modules/features/homelab/k3s-node/`：k3s 配置、Longhorn 所需的 iSCSI/NFS、sysctl、chrony，见该目录 README
 - `modules/features/homelab/lima-host/`：Lima 宿主（`sakamoto`、`yuuko`）的功能：常驻的桥接 socket_vmnet、`lima.yaml` 与附加盘软链、实例自启动，见该目录 README 与下文「宿主的 socket_vmnet」
 - `modules/features/homelab/k3s-nvidia-vgpu/`：`homelab-1` 的 vGPU 驱动与 nvidia 运行时，内核固定 6.12 的原因见该目录 README
-- 私有 `secrets` 仓库两类文件：`hosts/<节点>/network.nix`（网卡 MAC，明文，求值期读取）、`sops/secrets/hosts/<节点>.yaml`（`k3s-token`；`homelab-1` 另有 `nvidia-client-token`），只有管理员和该节点自己的 age 密钥能解
+- 私有 `secrets` 仓库两类文件：`hosts/<节点>/network.nix`（网卡 MAC，明文，求值期读取），以及 sops 密文——共享的 `sops/secrets/k8s.yaml`（`k3s-token`，授权给 worker 与管理员）与 `homelab-1` 独有的 `sops/secrets/hosts/homelab-1.yaml`（`nvidia-client-token`）；控制面不导入 `sops`，也不需要 age 密钥
 
 ## 要带过去的状态
 
 装机抹盘。不在 Nix 配置里、又要保留的东西，自己带过去：
 
-| 状态                         | 节点           | 目标路径                                        | 怎么带                                             |
-| ---------------------------- | -------------- | ----------------------------------------------- | -------------------------------------------------- |
-| 解密钥匙：该节点的 age 私钥  | 全部           | `/var/lib/sops-nix/key.txt`                     | `--extra-files`                                    |
-| SSH 主机密钥                 | 全部           | `/etc/ssh/ssh_host_*_key{,.pub}`                | `--extra-files`                                    |
-| 节点口令                     | 全部           | `/etc/rancher/node/password`                    | `--extra-files`                                    |
-| etcd、CA、加密密钥           | `sakamoto-k8s` | `/var/lib/rancher/k3s/server`                   | `--extra-files`                                    |
-| Longhorn 数据盘              | `sakamoto-k8s` | `/mnt/lima-longhorn`                            | Lima 附加盘，装机时不接触                          |
-| Longhorn 与 OpenEBS 本地数据 | `homelab-1`    | `/mnt/lima-longhorn`、`/var/mnt/local-hostpath` | 与系统同盘，整盘重装会擦掉：装机前打包，装好后恢复 |
+| 状态                         | 节点                               | 目标路径                                        | 怎么带                                             |
+| ---------------------------- | ---------------------------------- | ----------------------------------------------- | -------------------------------------------------- |
+| 解密钥匙：该节点的 age 私钥  | worker（`yuuko-k8s`、`homelab-1`） | `/var/lib/sops-nix/key.txt`                     | `--extra-files`                                    |
+| SSH 主机密钥                 | 全部                               | `/etc/ssh/ssh_host_*_key{,.pub}`                | `--extra-files`                                    |
+| 节点口令                     | 全部                               | `/etc/rancher/node/password`                    | `--extra-files`                                    |
+| etcd、CA、加密密钥           | `sakamoto-k8s`                     | `/var/lib/rancher/k3s/server`                   | `--extra-files`                                    |
+| Longhorn 数据盘              | `sakamoto-k8s`                     | `/mnt/lima-longhorn`                            | Lima 附加盘，装机时不接触                          |
+| Longhorn 与 OpenEBS 本地数据 | `homelab-1`                        | `/mnt/lima-longhorn`、`/var/mnt/local-hostpath` | 与系统同盘，整盘重装会擦掉：装机前打包，装好后恢复 |
 
 - k3s 在集群里为每个节点存一个 `<节点名>.node-password.k3s` Secret，口令不匹配会拒绝同名节点加入，所以 `/etc/rancher/node/password` 必须带过去
 - `--extra-files <目录>` 把目录原样复制到新系统根目录，目录结构就是目标路径，只在安装时单向复制一次
@@ -42,8 +42,9 @@
    ```bash
    EXTRA=$(mktemp -d)
    # 随装目录经 tar -p 拷贝，每层目录的权限会覆盖目标系统：系统目录用 755，只有放密钥的末级目录用 700
-   install -d -m 700 "$EXTRA/var/lib/sops-nix"
    install -d -m 755 "$EXTRA/etc/ssh" "$EXTRA/etc/rancher/node"
+   # 仅 worker 需要 sops-nix/key.txt（控制面不导入 sops）
+   install -d -m 700 "$EXTRA/var/lib/sops-nix"
    install -m 600 ~/k8s-<节点>-age.txt "$EXTRA/var/lib/sops-nix/key.txt"
    # SSH 主机密钥与 /etc/rancher/node/password：从旧系统取（sudo cat）
    ```
@@ -68,7 +69,7 @@
 
 - 取 `/var/lib/rancher/k3s/server` 前，**不带数据盘**启动原系统：Lima 里先 `limactl stop`，再把 `~/.lima/<节点>/lima.yaml` 临时换成去掉 `additionalDisks` 的普通文件（先 `cp` 一份到别处，`rm` 掉软链，再放回编辑过的副本）后启动，用 `sudo tar` 打包 server 目录并校验；打完删掉这个普通文件，`just deploy <宿主>` 重新链回声明
 - 装机时 disko 绝不能看到数据盘：Lima 实例此时仍不挂 `longhorn` 盘，装完、换上声明的 `lima.yaml` 后再挂
-- `k3s` 的 server 配置不含令牌：令牌在恢复的 server 目录里；`secrets` 仓库里的 `k3s-token` 只为灾难恢复保存
+- `k3s` 的 server 配置不含令牌且控制面不导入 `sops`：令牌在恢复的 server 目录里；灾备来源为共享文件 `sops/secrets/k8s.yaml` 中的 `k3s-token`（同时加密给管理员公钥）
 - k3s 版本不低于集群当前版本：k3s 不支持降级 server
 
 ## 更新 Lima 实例配置
@@ -117,4 +118,4 @@ ssh root@sakamoto-k8s cat /etc/rancher/k3s/k3s.yaml | sed 's#https://127.0.0.1:6
 - 更新：`just k8s::deploy [节点...]`，不带参数部署全部。agent 在前、控制面最后，每台健康（k3s 在运行、系统不是 degraded、kubelet healthz 为 ok）后再继续，否则停下。单台底层是 `just deploy <节点>`（deploy-rs，30 秒内新 SSH 连不上自动回滚；构建在节点上；每台输一次 sudo 密码）
 - k3s 升级：`k3s-node` 里的 `package` 写死了 minor，升 minor 要有意修改；先 `sakamoto-k8s` 后 worker
 - `homelab-1` 的内核固定在 6.12：原因与期限见 `k3s-nvidia-vgpu/README.md`
-- 加节点：secrets 仓库建 age 密钥、`network.nix`、密文；`hosts/k8s/<节点>/`；`hosts/default.nix` 加一条
+- 加节点：secrets 仓库补 `hosts/<节点>/network.nix`；worker 另需生成独立 age 密钥、在 `.sops.yaml` 注册公钥并加入 `sops/secrets/k8s.yaml` 规则后执行 `sops updatekeys sops/secrets/k8s.yaml`（有单机独有机密时再建单机 yaml），并在 `hosts/k8s/<节点>/default.nix` 导入 `self.modules.nixos.sops`；server 无需 sops。随后新建 `hosts/k8s/<节点>/` 并在 `hosts/default.nix` 加一条
