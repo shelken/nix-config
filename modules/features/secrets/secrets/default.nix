@@ -49,6 +49,7 @@
 
       # 条目必须放在 Agent vault：sec-run 用的 service account 只能读它（1Password 不允许授权 Personal）
       opSecretMap = {
+        AGENT_GITHUB_TOKEN = "Agent/AGENT_GITHUB_TOKEN";
         BRAVE_API_KEY = "Agent/BRAVE_API_KEY";
         BRAVE_SEARCH_API_KEY = "Agent/BRAVE_SEARCH_API_KEY";
         CONTEXT_API_KEY = "Agent/CONTEXT_API_KEY";
@@ -71,27 +72,13 @@
         + "\n"
       );
 
-      secretEnvMap = {
-        AGENT_GITHUB_TOKEN = "github/agent-token";
-      };
-
-      enabledSecrets = lib.unique (lib.attrValues secretEnvMap);
-
       opTokenSecret = "op/service-account-token";
       opTokenFile = config.sops.secrets."${opTokenSecret}".path;
 
-      shellInit = lib.concatStringsSep "\n" (
-        lib.mapAttrsToList (var: secret: ''
-          if [[ -r "${config.sops.secrets."${secret}".path}" ]]; then
-            export ${var}="$(<"${config.sops.secrets."${secret}".path}")"
-          fi
-        '') secretEnvMap
-      );
       # -f：不读启动文件。调用者环境里没有 __NIX_DARWIN_SET_ENVIRONMENT_DONE 时（hc 守护进程启动的子代理），
       # /etc/zshenv 会把 PATH 重置成系统默认，mise 装的目标命令就找不到了
       secRun = pkgs.writeScriptBin "sec-run" ''
         #!${pkgs.zsh}/bin/zsh -f
-        ${shellInit}
         SEC_RUN_BASE=${opEnvBase}
         SEC_RUN_TOKEN_FILE=${opTokenFile}
         ${builtins.readFile ./sec-run.zsh}
@@ -204,13 +191,10 @@
         home.sessionVariables.SOPS_AGE_KEY_FILE = config.sops.age.keyFile;
 
         sops.secrets =
-          (mylib.mkSopsSecrets (
-            enabledSecrets
-            ++ [
-              opTokenSecret
-              "github/cli-token"
-            ]
-          ))
+          (mylib.mkSopsSecrets [
+            opTokenSecret
+            "github/cli-token"
+          ])
           // {
             "wakatime/conf" = mylib.mkDefaultSecret {
               path = "${config.home.homeDirectory}/.wakatime.cfg";

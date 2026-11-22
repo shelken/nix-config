@@ -14,15 +14,15 @@
 
 ## 接线
 
-| 位置 | 作法                                                                                                                                           |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| 密钥 | [secrets.nix](../../secrets/secrets.nix) 的 `secretEnvMap` 把 sops 的 `github/agent-token` 导出成 `AGENT_GITHUB_TOKEN`，经 `sec-run` 注入      |
-| 声明 | [default.nix](./default.nix) 让登记表 `shelken.dev.tools.gh.package` 是包装（[_package.nix](./_package.nix)）；宿主与沙箱共用，不需要改 `PATH` |
-| 启动 | harness 经 `sec-run` 启动即带上 token（shell 别名、`spawn-subagent`）                                                                          |
+| 位置 | 作法                                                                                                                                              |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 密钥 | [secrets/default.nix](../../secrets/secrets/default.nix) 的 `opSecretMap` 从 1Password `Agent` vault 取出 `AGENT_GITHUB_TOKEN`，经 `sec-run` 注入 |
+| 声明 | [default.nix](./default.nix) 让登记表 `shelken.dev.tools.gh.package` 是包装（[_package.nix](./_package.nix)）；宿主与沙箱共用，不需要改 `PATH`    |
+| 启动 | harness 经 `sec-run` 启动即带上 token（shell 别名、`spawn-subagent`）                                                                             |
 
 沙箱里 [sb.yaml](../../ai/sandbox/sb.yaml) 声明 secret `AGENT_GITHUB_TOKEN`，guest 只有占位符，msb 发往 `github.com`、`api.github.com` 的请求时才换成真实值。创建或启动 VM 时 msb 必须拿到 `AGENT_GITHUB_TOKEN`，缺失时拒绝创建；`sb` 在这两个动作上经 `sec-run` 自动带上，没有 sops 密钥的主机启动不了沙箱。secret 集合属于能力上限，主 VM 下次启动会重建一次
 
-token 由用户写进外部 secrets 仓库的 `github/agent-token`，本仓库不含任何 token 值。这个键必须先存在于 `secrets` 输入，否则主机激活时读不到它
+token 存放在 1Password `Agent` vault 的 `AGENT_GITHUB_TOKEN`（字段 `credential`），本仓库不含任何 token 值。若该条目在 1Password 中缺失，`sec-run` 会输出警告并跳过该变量，此时 `agent-gh` 按上述「无 `AGENT_GITHUB_TOKEN`」规则保持宽松处理，直接回落到真实 `gh`
 
 ## 限制
 

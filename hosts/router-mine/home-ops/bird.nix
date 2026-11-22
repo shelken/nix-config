@@ -1,6 +1,6 @@
-{ lib, ... }:
+{ myvars, ... }:
 let
-  net = import ../../../vars/networking.nix { inherit lib; };
+  net = myvars.networking;
   ip = name: net.hostAddress.${name}.address;
 in
 {

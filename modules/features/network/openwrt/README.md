@@ -6,17 +6,17 @@
 
 ## 用法
 
-| 命令                           | 作用                                                     |
-| :----------------------------- | :------------------------------------------------------- |
-| `just router::import <配置>`   | 只读：把路由器上一个配置文件的现状转成 nuci 写法并打印   |
-| `just router::preview [目标]`  | 对比声明与路由器现状，显示待变更的差异，不改设备         |
-| `just router::push [目标]`     | 下发声明，会改路由器；回滚范围见「已知问题」             |
-| `just router::upgrade [目标]`  | 按锁文件刷入固件并保留配置，会重启路由器；步骤见「固件」 |
-| `just router::firmware-update` | 按软件源当前版本构建固件并重写锁文件，不改设备           |
+| 命令                              | 作用                                                                             |
+| :-------------------------------- | :------------------------------------------------------------------------------- |
+| `just router::import <配置>`      | 只读：把路由器上一个配置文件的现状转成 nuci 写法并打印                           |
+| `just router::preview [目标]`     | 对比声明与路由器现状，显示待变更的差异，不改设备                                 |
+| `just router::push [目标]`        | 下发声明，会改路由器；回滚范围见「已知问题」                                     |
+| `just router::upgrade [目标]`     | 按锁文件刷入固件并保留配置，会重启路由器；步骤见「固件」                         |
+| `just router::firmware-update`    | 按软件源当前版本构建固件并重写锁文件，不改设备                                   |
 | `just router::build-local [目标]` | 在本地构建节点（默认 `homelab-1`）用官方 ImageBuilder 构建并重写锁文件，不改设备 |
-| `just router::firmware-build`  | 按锁文件构建并下载固件，版本不一致时失败，不改设备       |
-| `just router::acceptance`      | 采集路由器状态与内网吞吐，只读，结果存本机               |
-| `just router::acceptance-diff` | 并排对比两份验收结果                                     |
+| `just router::firmware-build`     | 按锁文件构建并下载固件，版本不一致时失败，不改设备                               |
+| `just router::acceptance`         | 采集路由器状态与内网吞吐，只读，结果存本机                                       |
+| `just router::acceptance-diff`    | 并排对比两份验收结果                                                             |
 
 - `preview` 与 `push` 每次按最新声明重新编译，改完声明不用单独构建
 - 声明里的 `{{ sops.… }}` 占位符由 `sops -d` 解密后在临时目录展开，需要 `SOPS_AGE_KEY_FILE` 指向 admin_mio 的 age 密钥；解不开，或占位符在 sops 里没有值时报错退出，不会把占位符下发
@@ -81,7 +81,7 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 | 内容                                                     | 位置                                                                                                                                                                     |
 | :------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 结构与通用选项                                           | `hosts/router-mine/`                                                                                                                                                     |
-| 网段与已登记主机的 IP                                    | `vars/networking.nix`，声明里用 `net.hostAddress.<名>.address` 引用                                                                                                      |
+| 网段与已登记主机的 IP                                    | `vars/networking.nix`，声明里用 `myvars.networking.hostAddress.<名>.address` 引用                                                                                        |
 | 实体设备的 MAC（DHCP 静态租约）                          | secrets.nix 的明文 nix：k8s 节点读 `hosts/<节点>/network.nix` 的 `lanMac`，其余读 `hosts/router-mine/network.nix` 的 `dhcpMacs`，声明里 `import (inputs.secrets + "/…")` |
 | SSID、WiFi 密码、ZeroTier 的 secret、network-id 与设备名 | secrets.nix 的 sops 密文 `sops/secrets/hosts/router-mine.yaml`（`wifi`、`zerotier`），声明里写 `{{ sops.<路径> }}` 占位符                                                |
 | 对外放行规则的 IPv6 后缀                                 | `hosts/router-mine/home-ops/firewall.nix`：后缀由 home-ops 里服务的 Multus 固定 MAC 推出，是手动随机生成的服务配置，不算私密，明文写在声明里                             |

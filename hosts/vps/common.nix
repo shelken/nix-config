@@ -2,6 +2,7 @@
   self,
   config,
   lib,
+  myvars,
   modulesPath,
   inputs,
   ...
@@ -51,7 +52,7 @@
   # 而 127.0.0.1 要等 docker 里的 dnsmasq 起来才有人应答，起来之前（包括首次拉镜像）整机解析不了域名
   networking.resolvconf.extraConfig = "resolv_conf_local_only=NO";
 
-  services.openssh.ports = [ 60223 ];
+  services.openssh.ports = [ myvars.networking.hostAddress.vps-cc-ts.port ];
 
   # 防火墙只管宿主进程与 network_mode: host 的容器（derp、hysteria2、anytls）；
   # docker 用 ports 发布的端口走 NAT/FORWARD，绕过这里，是否对外取决于 compose 里有没有映射。
