@@ -1,7 +1,0 @@
----
-name: local/jellyfin-exclusions
-# Jellyfin 播放进度接口会携带客户端状态，CRS 932370 曾将其误判为 RCE。
-pre_eval:
-  - filter: IsOutBand == true && req.URL.Path == "/Sessions/Playing/Progress"
-    apply:
-      - RemoveOutBandRuleByID(932370)

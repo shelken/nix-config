@@ -28,13 +28,11 @@
         "crowdsecurity/http-cve"
         "crowdsecurity/appsec-virtual-patching"
         "crowdsecurity/appsec-generic-rules"
-        "crowdsecurity/appsec-crs"
       ];
     };
     environmentFiles = [ config.sops.templates."crowdsec-agent.env".path ];
     volumes = [
       "${./acquis-all.yaml}:/etc/crowdsec/acquis.d/all.yaml:ro"
-      "${./jellyfin-exclusions.yaml}:/etc/crowdsec/appsec-configs/jellyfin-exclusions.yaml:ro"
       "/var/log:/var/log:ro"
     ];
     networks = [ "homelab" ];
