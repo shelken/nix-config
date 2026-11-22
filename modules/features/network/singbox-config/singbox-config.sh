@@ -12,6 +12,7 @@ URL 由 sbtools 写进剪切板。私密值只落在临时目录，退出即删�
   vps-hy2            \
   vps-hy2-v6          > 私有节点 URI（三个变体各三条）
   vps-anytls         /
+  1024-tr            iOS 二跳 SOCKS 节点 URI（含 ?detour=1024proxy#1024-tr）
   clash-secret       router 的 clash API secret
 
 订阅服务地址取 sops 的 main-domain，脚本里拼成 https://subs.<main-domain>。

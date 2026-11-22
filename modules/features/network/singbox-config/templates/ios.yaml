@@ -4,4 +4,5 @@ nodes:
   - "{{ op://Projects/proxy/vps-hy2 }}"
   - "{{ op://Projects/proxy/vps-hy2-v6 }}"
   - "{{ op://Projects/proxy/vps-anytls }}"
+  - "{{ op://Projects/proxy/1024-tr }}"
 template_url: https://raw.githubusercontent.com/shelken/proxy/main/config/sing-box/template-ios.json
