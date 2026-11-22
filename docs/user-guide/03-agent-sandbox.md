@@ -187,7 +187,7 @@ Agent 在上下文里也可以自己执行这两条命令。装好的工具放�
 
 所有项目都要用的工具，登记到共享工具表，宿主和沙箱同时获得：
 
-1. 在 `modules/features/ai/tools.nix`（AI 工具）或 `modules/features/dev/tools-base.nix`（基础 CLI）里加一条
+1. 在 `modules/features/ai/ai-tools.nix`（AI 工具）或 `modules/features/dev/tools-base.nix`（基础 CLI）里加一条
    ```nix
    shelken.dev.tools = {
      yq.package = "yq-go";   # Nix 提供

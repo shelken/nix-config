@@ -9,6 +9,7 @@
 - 静态资源 input 的 URL 必须采用 `git+https://<host>/<owner>/<repo>?ref=<默认分支>&rev=<sha>&shallow=1` 形式
 - `ref` 必须写默认分支名且不带 `refs/heads/` 前缀，否则 Renovate 的 git-refs 数据源匹配不到更新
 - 静态资源 input 必须带 `shallow=1`
+- 需要严格跟随 release tag 而非默认分支的外部工具源码（如 `openwrt-nix`）可以钉 tag，不适用本规则；私有自有仓库（如 `secrets`）不适用本规则
 
 ## 考虑过的替代方案
 
