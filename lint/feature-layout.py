@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 AST_GREP = os.environ.get("AST_GREP", "ast-grep")
 FEATURES = "modules/features"
-PLATFORM_FRAGMENTS = {"_hm.nix", "_darwin.nix", "_nixos.nix"}
+PLATFORM_FRAGMENTS = {"_hm.nix", "_home.nix", "_darwin.nix", "_nixos.nix"}
 LEGACY_PLATFORM_FRAGMENTS = {
     "modules/features/backup/kopia/_hm.nix",
     "modules/features/desktop/tinycast/_hm.nix",
