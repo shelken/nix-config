@@ -1,8 +1,9 @@
-{ myvars, ... }:
+{ myvars, self, ... }:
 {
   imports = [
     ../common.nix
     ../lima.nix
+    self.modules.nixos.sops
   ];
 
   networking.hostName = "yuuko-k8s";

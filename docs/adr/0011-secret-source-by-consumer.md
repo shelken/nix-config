@@ -8,6 +8,8 @@
 
 - 每个私密值必须只有一个权威来源
 - 无人值守需要且机密的值必须存放在 `secrets.nix` 的 sops 密文中，由主机用自身 age 密钥解密，不支持 sops 的设备由持有对应密钥的部署机解密渲染
+- 多台主机共享的无人值守机密必须存放在按共享范围命名的单个 sops 文件中（如 `sops/secrets/k8s.yaml`），通过 `.sops.yaml` 多 recipient 授权给对应主机解密，不得按主机复制同一份机密
+- 不需要读取任何 sops 机密的主机不得空载导入 `nixos.sops`
 - 无人值守需要、私有但不机密的值（实体设备 MAC、主域名）必须存放在 `secrets.nix` 的明文 nix 文件中，在求值期读取
 - 仅由人或交互式工具使用的值必须存放在 1Password 中：Agent 凭据经凭据基座（`Agent` vault）注入，高危人工交互工具（如 `dnscontrol`、`singbox-config`）应当存放在独立非 `Agent` vault 并经桌面 App 授权按需读取
 - 人也要查阅的机器值，权威来源必须在 `secrets.nix`，1Password 可以保留副本并标注来源
@@ -21,3 +23,4 @@
 - 按变化频率划分。边界模糊，同一类值会落入两处
 - 全部放 1Password。主机启动路径多出网络与 service account token 外部依赖
 - 全部放 `secrets.nix`。纯个人凭据不应进仓库，高频轮换的 API key 在 1Password 中维护更直接
+- 多台虚拟节点共享同一把 age 私钥，或复用 SSH 主机密钥派生 age 密钥。前者放宽了单机吊销边界，后者违背 SSH 与解密密钥隔离原则

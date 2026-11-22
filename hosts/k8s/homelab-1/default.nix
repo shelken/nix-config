@@ -1,11 +1,19 @@
-{ self, modulesPath, ... }:
+{
+  inputs,
+  self,
+  modulesPath,
+  ...
+}:
 {
   imports = [
     ../common.nix
+    self.modules.nixos.sops
     self.modules.nixos.k3s-nvidia-vgpu
     self.modules.nixos.openwrt-builder
     (modulesPath + "/profiles/qemu-guest.nix")
   ];
+
+  sops.defaultSopsFile = inputs.secrets + "/sops/secrets/hosts/homelab-1.yaml";
 
   networking.hostName = "homelab-1";
 
