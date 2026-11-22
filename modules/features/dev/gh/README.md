@@ -22,7 +22,7 @@
 
 沙箱里 [sb.yaml](../../ai/sandbox/sb.yaml) 声明 secret `AGENT_GITHUB_TOKEN`，guest 只有占位符，msb 发往 `github.com`、`api.github.com` 的请求时才换成真实值。创建或启动 VM 时 msb 必须拿到 `AGENT_GITHUB_TOKEN`，缺失时拒绝创建；`sb` 在这两个动作上经 `sec-run` 自动带上，没有 sops 密钥的主机启动不了沙箱。secret 集合属于能力上限，主 VM 下次启动会重建一次
 
-token 存放在 1Password `Agent` vault 的 `AGENT_GITHUB_TOKEN`（字段 `credential`），本仓库不含任何 token 值
+token 存放在 1Password `Agent` vault 的 `AGENT_GITHUB_TOKEN`（字段 `credential`），本仓库不含任何 token 值。若该条目在 1Password 中缺失，`sec-run` 会输出警告并跳过该变量，此时 `agent-gh` 按上述「无 `AGENT_GITHUB_TOKEN`」规则保持宽松处理，直接回落到真实 `gh`
 
 ## 限制
 
