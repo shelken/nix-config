@@ -140,15 +140,9 @@ http://:2019 {
   # 没有这条指令 Caddy 不产生访问日志，不经反代的请求（被封禁、被 Caddy 直接应答）也就看不到
   log
 
-  # 机器对机器的 WebDAV（Basic 认证）不经 AppSec：PROPFIND 的 XML body 会命中 CRS 901340，out-of-band 事件累计后封出口 IP（#1705）
-  @waf not {
-    host drive.{$MAIN_DOMAIN}
-    path /dav /dav/*
-  }
-
   route {
     crowdsec
-    appsec @waf
+    appsec
 
     import service_docker subs      sbtools-server 8080  robots_ban
     import service2       derp      to_host       8666  empty

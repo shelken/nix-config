@@ -13,8 +13,6 @@ labels:
 ---
 appsec_configs:
   - crowdsecurity/appsec-default
-  - crowdsecurity/crs
-  - local/jellyfin-exclusions
 labels:
   type: appsec
 listen_addr: 0.0.0.0:7422
