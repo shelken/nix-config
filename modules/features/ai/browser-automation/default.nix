@@ -24,7 +24,7 @@
 
       programs.mise.globalConfig.tools = {
         # renovate: datasource=npm depName=@playwright/cli
-        "npm:@playwright/cli" = "0.1.24";
+        "npm:@playwright/cli" = "0.1.25";
       };
 
       home.file.".agent-browser/config.json".text = builtins.toJSON { executablePath = chrome; };
