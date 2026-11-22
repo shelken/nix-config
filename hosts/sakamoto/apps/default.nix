@@ -131,6 +131,13 @@ let
           die "OrbStack 的 docker 守护进程 120 秒内没就绪"
         orbctl config set app.start_at_login false ||
           echo "警告：关不掉 OrbStack 的「登录时启动」，盘没挂上时它可能自己启动" >&2
+        if [ "$(orbctl config get memory_mib 2>/dev/null || true)" != "4096" ]; then
+          if orbctl config set memory_mib 4096; then
+            echo "提示：OrbStack 内存上限已设置为 4096 MiB，将在重启 OrbStack 后生效" >&2
+          else
+            echo "警告：无法设置 OrbStack 内存上限 memory_mib=4096" >&2
+          fi
+        fi
       }
 
       preflight() {
