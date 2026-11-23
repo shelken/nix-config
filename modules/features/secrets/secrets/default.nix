@@ -24,13 +24,22 @@
     };
 
   flake.modules.nixos.secrets =
-    { lib, ... }:
+    {
+      lib,
+      config,
+      pkgs,
+      ...
+    }:
     {
       options.shelken.secrets.enable = lib.mkOption {
         type = lib.types.bool;
         default = false;
         description = "Whether or not this host holds age secrets";
       };
+
+      config.environment.systemPackages = lib.mkIf config.shelken.secrets.enable [
+        pkgs._1password-cli
+      ];
     };
 
   flake.modules.homeManager.secrets =
