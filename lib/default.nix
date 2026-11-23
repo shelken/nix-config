@@ -150,6 +150,7 @@ rec {
     map (skill: skill // { frontmatter = frontmatter.${skill.name} or { }; }) (
       builtins.filter (skill: !(builtins.elem skill.name exclude)) found
     );
+  # EXTERNAL: 参数须为仓库内存在的 Nix 路径值（通常写 ./文件）；liveEdit 校验求值输入树存在性但软链指向 ~/nix-config 工作树，输入快照与工作树不同步时仍可能悬空
   mkConfigLink =
     config: path:
     let

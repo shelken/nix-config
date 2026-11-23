@@ -30,6 +30,7 @@ let
     gnused
     findutils
     gawk
+    (lib.lowPrio jq)
     openssh
     dig
   ];

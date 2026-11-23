@@ -10,7 +10,7 @@
 - 无人值守需要且机密的值必须存放在 `secrets.nix` 的 sops 密文中，由主机用自身 age 密钥解密，不支持 sops 的设备由持有对应密钥的部署机解密渲染
 - 多台主机共享的无人值守机密必须存放在按共享范围命名的单个 sops 文件中（如 `sops/secrets/k8s.yaml`），通过 `.sops.yaml` 多 recipient 授权给对应主机解密，不得按主机复制同一份机密
 - 不需要读取任何 sops 机密的主机不得空载导入 `nixos.sops`
-- 无人值守需要、私有但不机密的值（实体设备 MAC、主域名）必须存放在 `secrets.nix` 的明文 nix 文件中，在求值期读取
+- 无人值守需要、私有但不机密的值（实体设备 MAC、主域名、服务商分配的网络参数）必须存放在 `secrets.nix` 的明文 nix 文件中，在求值期读取
 - 仅由人或交互式工具使用的值必须存放在 1Password 中：Agent 凭据经凭据基座（`Agent` vault）注入，高危人工交互工具（如 `dnscontrol`、`singbox-config`）应当存放在独立非 `Agent` vault 并经桌面 App 授权按需读取
 - 人也要查阅的机器值，权威来源必须在 `secrets.nix`，1Password 可以保留副本并标注来源
 - 只有实体设备标识算私密，手动随机生成的服务配置（如 k8s 工作负载 MAC 与其 IPv6 后缀）不得当作私密值，直接明文写在公开仓库中
