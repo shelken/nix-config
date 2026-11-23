@@ -59,6 +59,7 @@
         # external-builders 由 determinate-nixd 写入 /etc/nix/nix.conf，手写会绕过开通检查。
       '';
 
+      # EXTERNAL: Determinate Nix（nix.enable = false）下 nix-darwin 不接管 registry，需手写 /etc/nix/registry.json 锁定 nixpkgs-darwin；且其 getRegistries() 仍先调 getGlobalRegistry()，无法彻底屏蔽远端查询
       environment.etc."nix/registry.json".text = builtins.toJSON {
         version = 2;
         flakes = [

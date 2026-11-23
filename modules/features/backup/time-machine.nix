@@ -110,6 +110,7 @@
         };
       }
       (lib.mkIf (paths != [ ]) {
+        # EXTERNAL: 不用 tmutil addexclusion -p（SkipPaths）：无 root 报 exit 80，有 root 仍要求终端具备 Full Disk Access；不带 -p 只写目录 sticky xattr，普通用户可用但目录重建后丢失
         home.activation.timeMachineExclusions = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
           excludeFromBackup() {
             _tm_path="$1"
