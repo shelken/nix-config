@@ -100,6 +100,7 @@
           mylib.mkConfigFile config ../omp/extensions/subdir-context.ts;
         ".pi/agent/extensions/guard" = mylib.mkConfigFile config ../omp/extensions/guard;
         ".pi/agent/extensions/line-cap.ts" = linkPi "extensions/line-cap.ts";
+        ".pi/agent/extensions/fff-override-guard.ts" = linkPi "extensions/fff-override-guard.ts";
       };
 
       shelken.backup.app.pi = [
