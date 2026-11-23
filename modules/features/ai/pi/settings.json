@@ -11,9 +11,6 @@
       "mp/agy-cli/gemini-4-neon": {
         "reserveTokens": 698576
       },
-      "mp/workbuddy/glm-5.3-flash": {
-        "reserveTokens": 650000
-      },
       "cpa/workbuddy/glm-5.3": {
         "reserveTokens": 650000
       },
@@ -47,7 +44,6 @@
   "enabledModels": [
     "mp/agy-cli/gemini-4-hydrogen:high",
     "mp/agy-cli/gemini-4-neon:medium",
-    "mp/workbuddy/glm-5.3-flash:max",
     "mp/opencode-zen/deepseek-v4.1-flash-free:high",
     "cpa/workbuddy/glm-5.3:high",
     "cpa/workbuddy/glm-5.2:high",

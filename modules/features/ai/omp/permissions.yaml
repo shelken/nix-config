@@ -12,17 +12,15 @@ deny_commands:
   - pattern: "/bin/rm"
     reason: "不要尝试绕过rm"
   - pattern: "find /"
-    reason: "全盘遍历改为用 find 工具，或指定具体子目录"
+    reason: "应该指定具体子目录"
   - pattern: "find ~"
-    reason: "全盘遍历改为用 find 工具，或指定具体子目录"
+    reason: "应该指定具体子目录"
   - pattern: "pip3 install"
     reason: "不准使用pip,不准直接安装任何包在全局,使用uv并且经过用户允许"
   - pattern: "pip install"
     reason: "不准使用pip,不准直接安装任何包在全局,使用uv并且经过用户允许"
   - pattern: "gh auth token"
-    reason: "......"
-  - pattern: "find /nix/store"
-    reason: "......"
+    reason: "如无必要,不要执行这个"
 
 
 # 路径规则：值为拒绝目标；`-值` 删除同名规则（内置规则同样可删）。
