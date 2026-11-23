@@ -27,11 +27,12 @@ let
     bubblewrap
     iproute2
     iptables
-    gnugrep
+    (lib.lowPrio gnugrep)
     gnused
     findutils
     gawk
-    jq
+    (lib.lowPrio jq)
+    util-linux
     openssh
     dig
   ];
@@ -167,17 +168,6 @@ let
   launcher = "${
     linuxPkgs.writeShellApplication {
       name = "sb-launcher";
-      runtimeInputs = with linuxPkgs; [
-        bashInteractive
-        bubblewrap
-        coreutils
-        gawk
-        gnugrep
-        iproute2
-        iptables
-        jq
-        util-linux
-      ];
       text = ''
         ${guestEnvPrelude}
         ${lib.concatStringsSep "\n        " (
