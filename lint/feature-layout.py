@@ -50,6 +50,9 @@ for m in json.loads(raw or "[]"):
         published[Path(m["file"]).as_posix().removeprefix("./")].add(hit.group(1))
 
 errors = []
+for f in sorted(LEGACY_PLATFORM_FRAGMENTS - set(files)):
+    errors.append(f"{f}：已不存在，请从 lint/feature-layout.py 的 LEGACY_PLATFORM_FRAGMENTS 白名单中移除")
+
 dirs: dict[Path, list[str]] = {}
 for f in files:
     for parent in Path(f).parents:
@@ -69,8 +72,12 @@ for f in files:
     if p.suffix != ".nix" or any(part.startswith("_") for part in p.parts):
         continue
     rel = p.relative_to(FEATURES)
-    if not (len(rel.parts) == 2 or (len(rel.parts) == 3 and rel.parts[2] == "default.nix")):
+    if not (
+        (len(rel.parts) == 2 and rel.parts[1] != "default.nix")
+        or (len(rel.parts) == 3 and rel.parts[2] == "default.nix")
+    ):
         errors.append(f"{f}：功能入口必须在 <领域>/<名>.nix 或 <领域>/<名>/default.nix，私有片段请以 _ 开头")
+        continue
     name = p.parent.name if p.name == "default.nix" else p.stem
     entry_names[name].append(f)
     all_names = published.get(f, set())
