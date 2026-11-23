@@ -27,12 +27,10 @@ let
     bubblewrap
     iproute2
     iptables
-    (lib.lowPrio gnugrep)
     gnused
     findutils
     gawk
     (lib.lowPrio jq)
-    util-linux
     openssh
     dig
   ];

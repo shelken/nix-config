@@ -66,7 +66,6 @@
             description = "功能的文件形式与模块名（ADR 0012）";
             files = "^(modules/features/|modules/profiles/|lint/feature-layout\\.py$)";
             pass_filenames = false;
-            always_run = true;
             entry = "env AST_GREP=${pkgs.ast-grep}/bin/ast-grep ${pkgs.python3}/bin/python3 lint/feature-layout.py";
           };
           no-comments = {
