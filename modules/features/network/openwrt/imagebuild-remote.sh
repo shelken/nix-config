@@ -7,8 +7,8 @@ die() { echo "openwrt-imagebuild: $*" >&2; exit 1; }
 work=""
 part=""
 cleanup() {
-  [[ -n $part ]] && rm -f "$part"
-  [[ -n $work ]] && rm -rf "$work"
+  if [[ -n $part ]]; then rm -f "$part"; fi
+  if [[ -n $work ]]; then rm -rf "$work"; fi
 }
 trap cleanup EXIT
 
@@ -36,7 +36,7 @@ if [[ ! -f $tarball_path ]]; then
   expected_sha=$(awk -v f="*$tarball" '$2 == f {print $1; exit}' <<<"$sums")
   [[ -n $expected_sha ]] || die "sha256sums 中未找到 $tarball"
 
-  part="$tarball_path.part"
+  part=$(mktemp "${tarball_path}.part.XXXXXX")
   curl -fL --progress-bar -o "$part" "$tarball_url" >&2
   actual_sha=$(sha256sum "$part" | awk '{print $1}')
   [[ $actual_sha == "$expected_sha" ]] || die "tarball sha256 不符"

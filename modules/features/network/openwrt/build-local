@@ -39,27 +39,46 @@ if [[ $mode == build ]]; then
 $drift"
 fi
 
-name=$(jq -r '.image.name' <<<"$result")
-sha=$(jq -r '.image.sha256' <<<"$result")
+if [[ $mode == build ]]; then
+  lock_name=$(jq -r '.image.name' "$lock")
+  lock_sha=$(jq -r '.image.sha256' "$lock")
+  [[ -n $lock_name && $lock_name != null && -n $lock_sha && $lock_sha != null ]] ||
+    die "锁文件缺少 image.name 或 image.sha256"
+  target_name=$lock_name
+  expected_sha=$lock_sha
+else
+  target_name=$(jq -r '.image.name' <<<"$result")
+  expected_sha=$(jq -r '.image.sha256' <<<"$result")
+fi
 
 part=""
-trap '[[ -n $part ]] && rm -f "$part"' EXIT
+lock_tmp=""
+cleanup() {
+  if [[ -n $part ]]; then rm -f "$part"; fi
+  if [[ -n $lock_tmp ]]; then rm -f "$lock_tmp"; fi
+}
+trap cleanup EXIT
 
 mkdir -p "$dir"
-if [[ ! -f $dir/$name ]] || [[ $(shasum -a 256 "$dir/$name" | cut -d' ' -f1) != "$sha" ]]; then
-  part="$dir/$name.part"
+if [[ $mode == build ]] || [[ ! -f $dir/$target_name ]] || [[ $(shasum -a 256 "$dir/$target_name" | cut -d' ' -f1) != "$expected_sha" ]]; then
+  part=$(mktemp "$dir/${target_name}.part.XXXXXX")
   scp -- "${builder}:${remote_image}" "$part"
-  mv -f "$part" "$dir/$name"
+  actual_sha=$(shasum -a 256 "$part" | cut -d' ' -f1)
+  if [[ $actual_sha != "$expected_sha" ]]; then
+    if [[ $mode == build ]]; then
+      die "构建镜像 sha256 与锁文件不符（换后端构建需先 update）: 期望 $expected_sha，实际 $actual_sha"
+    fi
+    die "sha256 不符: $target_name"
+  fi
+  mv -f "$part" "$dir/$target_name"
   part=""
 fi
-[[ $(shasum -a 256 "$dir/$name" | cut -d' ' -f1) == "$sha" ]] || {
-  rm -f "$dir/$name"
-  die "sha256 不符，已删除: $name"
-}
 
 if [[ $mode == update ]]; then
-  jq . <<<"$result" >"$lock.tmp"
-  mv -f "$lock.tmp" "$lock"
+  lock_tmp=$(mktemp "${lock}.tmp.XXXXXX")
+  jq . <<<"$result" >"$lock_tmp"
+  mv -f "$lock_tmp" "$lock"
+  lock_tmp=""
 fi
 
 current=$(jq -r .image.name "$lock")
@@ -83,4 +102,4 @@ if ((${#images[@]} > keep)); then
   done
 fi
 
-echo "build-local: $(jq -r '.version_code' <<<"$result") $dir/$name"
+echo "build-local: $(jq -r '.version_code' <<<"$result") $dir/$target_name"

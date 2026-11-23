@@ -57,7 +57,7 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 
 验收采集路由器状态（网口协商速率与断线次数、PPE 硬件卸载条目、mt7915 固件版本、射频参数）与本机 WiFi 到 sakamoto 有线口的 iperf3 双向吞吐。WiFi 吞吐先看 `client_*` 的信道、信号与协商速率是否相近，再比较数字。结果含设备运行数据，只放本机镜像目录下的 `acceptance/`
 
-`firmware-build` 与 `firmware-build-local` 只在声明与锁文件的请求一致时构建，构建出的包版本与锁文件逐个对照，漂移即报错且不改写锁文件，用于镜像丢了时按锁文件重建。ASU 构建失败的结果按请求 hash 缓存，服务端故障（如 Redis 连不上）导致的失败要等缓存过期再试，也可直接改跑本地构建节点；网关 502 由脚本自动重试。ASU 镜像会按 hash 缓存在公共服务器上，请求里不放机密，机密仍由 `push` 下发
+`firmware-build` 与 `firmware-build-local` 只在声明与锁文件的请求一致时构建，构建出的包版本与锁文件逐个对照，漂移即报错且不改写锁文件，用于镜像丢了时按锁文件重建。ASU 与本地 ImageBuilder 因镜像文件名与哈希生成规则不同，无法跨后端用 `build` 复用另一后端生成的锁文件；切换后端需走对应的 `update`（`firmware-update` / `firmware-update-local`）重写锁文件。ASU 构建失败的结果按请求 hash 缓存，服务端故障（如 Redis 连不上）导致的失败要等缓存过期再试，也可改跑 `firmware-update-local` 切换至本地构建节点；网关 502 由脚本自动重试。ASU 镜像会按 hash 缓存在公共服务器上，请求里不放机密，机密仍由 `push` 下发
 
 ## 目录与包
 
@@ -117,7 +117,7 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 - `default.nix`：`homeManager.openwrt` 用 mise 安装 nuci，版本读自 flake 输入 `openwrt-nix` 的 `Cargo.toml`，编译声明的 Nix 模块与执行它的二进制同版本，并断言主机已启用 `secrets`；`nixos.openwrt-builder` 在 x86_64-linux 构建节点上用 `buildFHSEnv` 封装 `openwrt-imagebuild` 并配置 `/var/cache/openwrt-imagebuilder` 缓存目录；`perSystem` 为每台 `type = "openwrt"` 的机器产出 `<机器>-uci` 包，有 `firmware` 字段时另产出 `<机器>-firmware`（固件定义转 JSON，附带 `passthru.imagebuilder` 下载地址）
 - `acceptance`：`run` 经 SSH 只读采集路由器状态（sysfs、logread、dmesg、iw，不依赖 ethtool），在有线主机起一次性 `iperf3 -s -1` 测双向吞吐；`diff` 并排打印，有变化的项标 `*`
 - `asu`：把 `<机器>-firmware` 与 `<机器>-uci` 的 `packages` 合成 ASU 请求，支持 `update` / `build` 双模式，轮询、下载、校验 sha256、写锁文件、清理旧镜像；版本校验在本地对照 manifest，不用 ASU 的 `packages_versions`（它会把列出的包都当作要装的包）
-- `build-local`：与 `asu` 对称的本地构建客户端，支持 `update` / `build` 双模式；把请求与 `imagebuilder` 元数据经 SSH 传给构建节点（默认 `root@homelab-1`）的 `openwrt-imagebuild`，`build` 模式下校验请求与 manifest 漂移，随后 `scp` 拉回镜像、校验 sha256 并清理旧镜像
+- `build-local`：与 `asu` 对称的本地构建客户端，支持 `update` / `build` 双模式；把请求与 `imagebuilder` 元数据经 SSH 传给构建节点（默认 `root@homelab-1`）的 `openwrt-imagebuild`，`build` 模式下校验请求与 manifest 漂移，并将镜像先下载到临时文件核对锁定 sha256，校验通过才原子落盘，不符即中止且不覆盖原有本地镜像，随后按需清理旧镜像
 - `imagebuild-remote.sh`：运行在 `nixos.openwrt-builder` 节点 FHS 环境里的远端构建脚本，下载并校验官方 ImageBuilder tarball（缓存于 `/var/cache/openwrt-imagebuilder`），执行 `make image` 与 `make manifest` 后返回与 ASU 同构的结果 JSON
 - `uci2nix`：经 `ubus call uci get` 取 JSON，jq 转成 nuci 结构，由 `nix eval` 打印成 Nix
 - `mask.jq`：从未展开的声明里找出写了 `{{ sops.… }}` 的位置，生成输出打码规则
@@ -147,7 +147,7 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 
 ### 固件用 ImmortalWrt，支持 ASU 云端与本地 x86_64 节点构建
 
-argon 主题与 `luci-app-zerotier` 是必需的，只有 ImmortalWrt 的源里都有。它的分支每天合并 OpenWrt 源码，mt76 驱动与 mt7915 固件和同期 OpenWrt 是同一提交。构建路径提供两条等价通道：一是官方 ASU 云端按需构建，省去本机 x86 环境，但公共服务偶发 502 与内部故障；二是在局域网 x86_64-linux 节点（当前为 `homelab-1`，导入 `nixos.openwrt-builder`）上用官方 ImageBuilder 构建，与 ASU 产出完全同构的 `firmware.lock.json` 与镜像。代价：ImmortalWrt 正式版约两个月一发，内核小版本落后 OpenWrt
+argon 主题与 `luci-app-zerotier` 是必需的，只有 ImmortalWrt 的源里都有。它的分支每天合并 OpenWrt 源码，mt76 驱动与 mt7915 固件和同期 OpenWrt 是同一提交。构建路径提供两条通道：一是官方 ASU 云端按需构建，省去本机 x86 环境，但公共服务偶发 502 与内部故障；二是在局域网 x86_64-linux 节点（当前为 `homelab-1`，导入 `nixos.openwrt-builder`）上用官方 ImageBuilder 构建，产出结构同构的 `firmware.lock.json`（两者因镜像文件名与哈希生成规则不同，不能跨后端用 `build` 复用另一后端的锁文件，切换后端需走对应 `update` 重写锁文件）。代价：ImmortalWrt 正式版约两个月一发，内核小版本落后 OpenWrt
 
 - **OpenWrt 官方**：没有 argon 与 `luci-app-zerotier`；官方 ASU 拒绝外部源（`Repository not allowed`），只能刷完再装，镜像与锁文件就覆盖不到全部包
 - **Kwrt（openwrt.ai）**：同样是云端 ImageBuilder，但包不校验签名（`CONFIG_SIGNED_PACKAGES=n`），软件源不分小版本滚动更新，没有公开 API
