@@ -1,13 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
-firmware=$1 uci=$2 imagebuilder=$3 lock=$4 dir=$5 builder=$6
+mode=$1 firmware=$2 uci=$3 imagebuilder=$4 lock=$5 dir=$6 builder=$7
 keep=3
+
+die() { echo "build-local: $*" >&2; exit 1; }
+[[ $mode == update || $mode == build ]] || die "未知模式 $mode"
 
 request=$(jq -n --slurpfile f "$firmware" --slurpfile u "$uci" '
   $f[0] | del(.server) + {
     packages: ($f[0].packages + $u[0].packages | unique),
     client: "nix-config"
   }')
+
+if [[ $mode == build ]]; then
+  [[ -f $lock ]] || die "没有锁文件，先 update"
+  [[ $(jq -S .request "$lock") == "$(jq -S . <<<"$request")" ]] ||
+    die "声明与锁文件的请求不一致，先 update 并审查锁文件的 diff"
+fi
 
 input=$(jq -n --argjson req "$request" --argjson ib "$imagebuilder" '{
   request: $req,
@@ -20,28 +29,54 @@ jq -c . <<<"$request"
 payload=$(ssh -- "$builder" openwrt-imagebuild <<<"$input")
 result=$(jq '.result' <<<"$payload")
 remote_image=$(jq -r '.remote_image' <<<"$payload")
+
+if [[ $mode == build ]]; then
+  drift=$(jq -rn --slurpfile l "$lock" --argjson r "$result" '
+    ($l[0].manifest) as $a | ($r.manifest) as $b
+    | ($a + $b | keys[]) as $k | select($a[$k] != $b[$k])
+    | "\($k): \($a[$k] // "-") -> \($b[$k] // "-")"')
+  [[ -z $drift ]] || die "构建出的包版本与锁文件不一致，软件源已更新；要接受就 update：
+$drift"
+fi
+
 name=$(jq -r '.image.name' <<<"$result")
 sha=$(jq -r '.image.sha256' <<<"$result")
 
+part=""
+trap '[[ -n $part ]] && rm -f "$part"' EXIT
+
 mkdir -p "$dir"
 if [[ ! -f $dir/$name ]] || [[ $(shasum -a 256 "$dir/$name" | cut -d' ' -f1) != "$sha" ]]; then
-  scp -- "${builder}:${remote_image}" "$dir/$name.part"
-  mv -f "$dir/$name.part" "$dir/$name"
+  part="$dir/$name.part"
+  scp -- "${builder}:${remote_image}" "$part"
+  mv -f "$part" "$dir/$name"
+  part=""
 fi
 [[ $(shasum -a 256 "$dir/$name" | cut -d' ' -f1) == "$sha" ]] || {
   rm -f "$dir/$name"
-  echo "build-local: sha256 不符，已删除: $name" >&2
-  exit 1
+  die "sha256 不符，已删除: $name"
 }
 
-jq . <<<"$result" >"$lock.tmp"
-mv -f "$lock.tmp" "$lock"
+if [[ $mode == update ]]; then
+  jq . <<<"$result" >"$lock.tmp"
+  mv -f "$lock.tmp" "$lock"
+fi
 
+current=$(jq -r .image.name "$lock")
 shopt -s nullglob
 images=("$dir"/*-sysupgrade.bin)
 if ((${#images[@]} > keep)); then
-  ls -t "${images[@]}" | tail -n +$((keep + 1)) | while read -r old; do
-    if [[ $(basename "$old") != "$name" ]]; then
+  for ((i = 1; i < ${#images[@]}; i++)); do
+    cur=${images[i]}
+    j=$((i - 1))
+    while ((j >= 0)) && [[ $cur -nt ${images[j]} ]]; do
+      images[j + 1]=${images[j]}
+      j=$((j - 1))
+    done
+    images[j + 1]=$cur
+  done
+  for old in "${images[@]:keep}"; do
+    if [[ $(basename "$old") != "$current" ]]; then
       rm -f "$old"
       echo "build-local: 清理 $(basename "$old")"
     fi

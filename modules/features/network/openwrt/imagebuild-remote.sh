@@ -1,7 +1,16 @@
+#!/usr/bin/env bash
 set -euo pipefail
 umask 022
 
 die() { echo "openwrt-imagebuild: $*" >&2; exit 1; }
+
+work=""
+part=""
+cleanup() {
+  [[ -n $part ]] && rm -f "$part"
+  [[ -n $work ]] && rm -rf "$work"
+}
+trap cleanup EXIT
 
 input=$(cat)
 request=$(jq '.request' <<<"$input")
@@ -27,16 +36,17 @@ if [[ ! -f $tarball_path ]]; then
   expected_sha=$(awk -v f="*$tarball" '$2 == f {print $1; exit}' <<<"$sums")
   [[ -n $expected_sha ]] || die "sha256sums 中未找到 $tarball"
 
-  curl -fL --progress-bar -o "$tarball_path.part" "$tarball_url" >&2
-  actual_sha=$(sha256sum "$tarball_path.part" | awk '{print $1}')
-  [[ $actual_sha == "$expected_sha" ]] || { rm -f "$tarball_path.part"; die "tarball sha256 不符"; }
-  mv -f "$tarball_path.part" "$tarball_path"
+  part="$tarball_path.part"
+  curl -fL --progress-bar -o "$part" "$tarball_url" >&2
+  actual_sha=$(sha256sum "$part" | awk '{print $1}')
+  [[ $actual_sha == "$expected_sha" ]] || die "tarball sha256 不符"
+  mv -f "$part" "$tarball_path"
+  part=""
 fi
 
 find "$dl_dir" -maxdepth 1 -type f ! -name '*.apk' -delete
 
 work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
 
 echo "openwrt-imagebuild: 解压 ImageBuilder" >&2
 tar --zstd -xf "$tarball_path" --strip-components=1 -C "$work"

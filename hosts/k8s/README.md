@@ -8,7 +8,7 @@
 
 - `common.nix`：三台共有：`server` 角色、disko（ext4）、网络（networkd 按 MAC 命名网卡、`eth1` DHCP、VLAN 子接口 `eth1.50`）、`k3s-node` 功能
 - `lima.nix`：两台 Lima（vz）节点共有：引导、usernet 网卡 `eth0`、`shelken.lima.*` 选项与 `system.build.limaConfig`（Lima 实例声明的数据，宿主据此生成 `lima.yaml`）
-- `<节点>/default.nix`：主机名、磁盘设备、k3s 角色与标签；worker（`yuuko-k8s`、`homelab-1`）导入 `self.modules.nixos.sops`，控制面 `sakamoto-k8s` 不导入 `sops`；`sakamoto-k8s` 另有 Longhorn 数据盘的挂载；`homelab-1` 另有 Longhorn 数据分区（与系统同盘）、qemu 驱动与 Intel 核显
+- `<节点>/default.nix`：主机名、磁盘设备、k3s 角色与标签；worker（`yuuko-k8s`、`homelab-1`）导入 `self.modules.nixos.sops`，控制面 `sakamoto-k8s` 不导入 `sops`；`sakamoto-k8s` 另有 Longhorn 数据盘的挂载；`homelab-1` 另有 Longhorn 数据分区（与系统同盘）、qemu 驱动、Intel 核显，并导入 `self.modules.nixos.openwrt-builder` 兼职 OpenWrt 固件本地构建节点（提供 `openwrt-imagebuild` 与 `/var/cache/openwrt-imagebuilder` 缓存，详见 `modules/features/network/openwrt/README.md`）
 - `modules/features/homelab/k3s-node/`：k3s 配置、Longhorn 所需的 iSCSI/NFS、sysctl、chrony，见该目录 README
 - `modules/features/homelab/lima-host/`：Lima 宿主（`sakamoto`、`yuuko`）的功能：常驻的桥接 socket_vmnet、`lima.yaml` 与附加盘软链、实例自启动，见该目录 README 与下文「宿主的 socket_vmnet」
 - `modules/features/homelab/k3s-nvidia-vgpu/`：`homelab-1` 的 vGPU 驱动与 nvidia 运行时，内核固定 6.12 的原因见该目录 README

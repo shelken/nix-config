@@ -47,15 +47,21 @@ builder := 'root@homelab-1'
 _firmware mode:
     modules/features/network/openwrt/asu {{ mode }} "$(nix build .#router-mine-firmware --no-link --print-out-paths)" "$({{ uci }})" hosts/router-mine/firmware.lock.json '{{ firmware_dir }}'
 
+[private]
+_firmware-local mode $host=builder:
+    modules/features/network/openwrt/build-local {{ mode }} "$(nix build .#router-mine-firmware --no-link --print-out-paths)" "$({{ uci }})" "$(nix eval --json .#router-mine-firmware.imagebuilder)" hosts/router-mine/firmware.lock.json '{{ firmware_dir }}' "$host"
+
 [doc('按软件源当前版本构建固件并重写锁文件，不改设备；审查 git diff 后提交')]
 firmware-update: (_firmware 'update')
 
-[doc('在本地构建节点用官方 ImageBuilder 构建固件并重写锁文件，不改设备；可指定 SSH 目标')]
-build-local $host=builder:
-    modules/features/network/openwrt/build-local "$(nix build .#router-mine-firmware --no-link --print-out-paths)" "$({{ uci }})" "$(nix eval --json .#router-mine-firmware.imagebuilder)" hosts/router-mine/firmware.lock.json '{{ firmware_dir }}' "$host"
-
 [doc('按锁文件构建并下载固件，包版本与锁文件不一致时失败，不改设备')]
 firmware-build: (_firmware 'build')
+
+[doc('在本地构建节点用官方 ImageBuilder 构建固件并重写锁文件，不改设备；可指定 SSH 目标')]
+firmware-update-local $host=builder: (_firmware-local 'update' host)
+
+[doc('在本地构建节点按锁文件构建并下载固件，包版本与锁文件不一致时失败，不改设备；可指定 SSH 目标')]
+firmware-build-local $host=builder: (_firmware-local 'build' host)
 
 # sysupgrade 刷写时会杀掉 ubusd（246）或 dropbear（255），两者均属正常断连；其它非零退出码视为失败
 [doc('按锁文件刷入固件并保留配置，会重启路由器；先 just router::acceptance 采基线')]
@@ -63,7 +69,7 @@ upgrade $host=target:
     #!/usr/bin/env bash
     set -euo pipefail
     lock=hosts/router-mine/firmware.lock.json
-    [[ -f $lock ]] || { echo '没有锁文件，先运行 just router::firmware-update 或 just router::build-local' >&2; exit 1; }
+    [[ -f $lock ]] || { echo '没有锁文件，先运行 just router::firmware-update 或 just router::firmware-update-local' >&2; exit 1; }
     firmware=$(nix build .#router-mine-firmware --no-link --print-out-paths)
     uci=$({{ uci }})
     request=$(jq -n --slurpfile f "$firmware" --slurpfile u "$uci" '
@@ -72,13 +78,13 @@ upgrade $host=target:
         client: "nix-config"
       }')
     [[ $(jq -S .request "$lock") == "$(jq -S . <<<"$request")" ]] || {
-      echo '声明与锁文件的请求不一致，先运行 just router::firmware-update 或 just router::build-local' >&2
+      echo '声明与锁文件的请求不一致，先运行 just router::firmware-update 或 just router::firmware-update-local' >&2
       exit 1
     }
     image='{{ firmware_dir }}'/"$(jq -r .image.name "$lock")"
     expected_sha=$(jq -r .image.sha256 "$lock")
     if [[ ! -f $image ]] || [[ $(shasum -a 256 "$image" | cut -d' ' -f1) != "$expected_sha" ]]; then
-      echo "本机缺少与锁文件匹配的镜像: $image（先运行 just router::firmware-build 或 just router::build-local）" >&2
+      echo "本机缺少与锁文件匹配的镜像: $image（先运行 just router::firmware-build 或 just router::firmware-build-local）" >&2
       exit 1
     fi
     ssh -- "$host" 'cat > /tmp/sysupgrade.bin' < "$image"

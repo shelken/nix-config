@@ -10,8 +10,18 @@ let
   openwrtHosts = lib.filterAttrs (_: host: host.type == "openwrt") hosts;
 in
 {
-  flake.modules.homeManager.openwrt.programs.mise.globalConfig.tools."github:lonerOrz/openwrt-nix" =
-    nuciVersion;
+  flake.modules.homeManager.openwrt =
+    { config, ... }:
+    {
+      assertions = [
+        {
+          assertion = config.shelken.secrets.enable;
+          message = "openwrt: 需要主机启用 secrets（sops 解密路由器机密依赖本机 age 密钥）";
+        }
+      ];
+
+      programs.mise.globalConfig.tools."github:lonerOrz/openwrt-nix" = nuciVersion;
+    };
 
   flake.modules.nixos.openwrt-builder =
     { pkgs, ... }:
@@ -54,6 +64,13 @@ in
       };
     in
     {
+      assertions = [
+        {
+          assertion = pkgs.stdenv.hostPlatform.isx86_64;
+          message = "openwrt-builder: ImmortalWrt 官方 ImageBuilder 仅提供 x86_64-linux 二进制，当前平台不支持";
+        }
+      ];
+
       environment.systemPackages = [ openwrtImagebuild ];
 
       systemd.tmpfiles.rules = [
