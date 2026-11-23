@@ -11,13 +11,13 @@
     }:
     let
       zshDotDir = "${config.xdg.configHome}/zsh";
+      pathExtra = ''export PATH="$PATH:$HOME/.local/bin"'';
     in
     {
-      home.sessionPath = [ "$HOME/.local/bin" ];
-
       programs.zsh = {
         enable = true;
         dotDir = zshDotDir;
+        envExtra = pathExtra;
         # Home Manager 默认早于 oh-my-zsh/fzf-tab 加载；改为 plugins 控制 ZLE 包装顺序。
         autosuggestion.enable = false;
         syntaxHighlighting.enable = true;
@@ -44,7 +44,7 @@
             firstInit = lib.mkBefore ''
 
               # mise 的 shim 目录全局共用一份，但版本声明是项目级的。
-              # oh-my-zsh 的 helm/fluxcd 等插件在加载时探测命令，项目外调用会命中
+              # oh-my-zsh 的 fluxcd/kubectl 等插件在加载时探测命令，项目外调用会命中
               # 孤儿 shim 并报 "No version is set for shim"。此处先剔除，插件即跳过。
               path=(''${path:#''${HOME}/.local/share/mise/shims})
 
@@ -87,5 +87,7 @@
           }
         ];
       };
+
+      programs.bash.bashrcExtra = lib.mkIf config.programs.bash.enable pathExtra;
     };
 }

@@ -8,9 +8,17 @@ in
   flake.modules.nixos.gui.imports = [ config.flake.modules.nixos.mise ];
 
   flake.modules.homeManager.mise =
-    { config, ... }:
     {
-      home.sessionPath = [ "$HOME/.cargo/bin" ];
+      lib,
+      config,
+      ...
+    }:
+    let
+      pathExtra = ''export PATH="$PATH:$HOME/.cargo/bin"'';
+    in
+    {
+      programs.zsh.envExtra = lib.mkIf config.programs.zsh.enable pathExtra;
+      programs.bash.bashrcExtra = lib.mkIf config.programs.bash.enable pathExtra;
 
       programs.mise = {
         enable = true;

@@ -3,12 +3,18 @@
   flake.modules.homeManager.tui.imports = [ config.flake.modules.homeManager.node ];
 
   flake.modules.homeManager.node =
-    { pkgs, ... }:
     {
-      home.sessionPath = [
-        "$HOME/.npm-global/bin"
-        "$HOME/.cache/.bun/bin"
-      ];
+      pkgs,
+      lib,
+      config,
+      ...
+    }:
+    let
+      pathExtra = ''export PATH="$PATH:$HOME/.cache/.bun/bin:$HOME/.npm-global/bin"'';
+    in
+    {
+      programs.zsh.envExtra = lib.mkIf config.programs.zsh.enable pathExtra;
+      programs.bash.bashrcExtra = lib.mkIf config.programs.bash.enable pathExtra;
 
       home.packages = [ pkgs.pnpm ];
       programs.npm.enable = true;
