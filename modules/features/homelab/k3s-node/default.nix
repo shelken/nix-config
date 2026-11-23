@@ -174,9 +174,16 @@
 
         (lib.mkIf (!isServer) (
           {
+            assertions = [
+              {
+                assertion = options ? sops;
+                message = "k3s-node: agent 节点必须导入 sops 模块（用于解密 k3s-token）";
+              }
+            ];
+
             services.k3s = {
               serverAddr = "https://${myvars.networking.hostAddress."sakamoto-k8s".address}:6443";
-              tokenFile = config.sops.secrets.k3s-token.path;
+              tokenFile = lib.mkIf (options ? sops) config.sops.secrets.k3s-token.path;
             };
           }
           // lib.optionalAttrs (options ? sops) {

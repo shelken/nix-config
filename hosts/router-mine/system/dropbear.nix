@@ -1,9 +1,6 @@
 # 授权密钥与其他主机共用 vars.mainSshAuthorizedKeys。nuci 整份覆盖 authorized_keys，
 # 部署者（本机 ssh-agent）的公钥不在列表里时会被追加，防止下发后把自己锁在外面
-{ lib, ... }:
-let
-  myvars = import ../../../vars { inherit lib; };
-in
+{ myvars, ... }:
 {
   uci.sshKeys = myvars.mainSshAuthorizedKeys;
 

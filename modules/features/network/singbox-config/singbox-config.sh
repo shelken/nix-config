@@ -41,7 +41,7 @@ yaml="$work/$variant.yaml"
 template="$TEMPLATES_DIR/$variant.yaml"
 
 echo "→ 填充模板：$template"
-sec-run op inject -i "$template" -o "$yaml"
+env -u OP_SERVICE_ACCOUNT_TOKEN op inject -i "$template" -o "$yaml"
 chmod 600 "$yaml"
 
 # 不跑 sbtools check：那一步要启动 sing-box 内核，本机没装就报「启动内核失败（sing-box）」。
