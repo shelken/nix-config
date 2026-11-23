@@ -34,7 +34,7 @@ git grep -n "just <旧名>"
 
 ## 自动检查
 
-平台属性禁用的模块在本机不会被 just 解析，语法错误或引用根变量要到另一个平台才暴露。所以 pre-commit 的 `just-modules` 钩子对 `justfile` 和每个 `just/*.just` 单独解析，定义见 `flake.nix` 的 `pre-commit-check`。手动检查某个模块
+平台属性禁用的模块在本机不会被 just 解析，语法错误或引用根变量要到另一个平台才暴露。所以 pre-commit 的 `just-modules` 钩子对 `justfile` 和每个 `just/*.just` 单独解析，定义见 `.pre-commit-config.yaml`。手动检查某个模块
 
 ```bash
 just --justfile just/<名>.just --summary

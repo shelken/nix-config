@@ -1,0 +1,68 @@
+default_stages: [pre-commit]
+repos:
+  - repo: local
+    hooks:
+      - id: nixfmt
+        name: nixfmt
+        entry: nixfmt --width=100
+        language: system
+        files: \.nix$
+        types: [file]
+      - id: prettier
+        name: prettier
+        entry: prettier --config ./.prettierrc.yaml --ignore-unknown --list-different --write
+        language: system
+        types: [text]
+      - id: ast-grep
+        name: ast-grep
+        description: 仓库自定义 lint 规则
+        entry: ast-grep scan
+        language: system
+        files: \.nix$
+      - id: ast-grep-test
+        name: ast-grep-test
+        description: lint 规则的正反样例
+        entry: ast-grep test --skip-snapshot-tests
+        language: system
+        files: ^(sgconfig\.yml|lint/.*\.yml)$
+        pass_filenames: false
+      - id: feature-domains
+        name: feature-domains
+        description: modules/features 的一级目录只能是 ADR 0012 列出的领域
+        entry: 一级目录不是领域（ADR 0012）；放进所属领域，或先改 ADR 与本钩子的领域清单
+        language: fail
+        files: ^modules/features/(?!(nix|system|shell|cli|dev|editor|terminal|virt|desktop|input|network|secrets|backup|homelab|media|browser|social|write|ai)/)
+      - id: feature-platform-split
+        name: feature-platform-split
+        description: 功能不按平台拆成 darwin.nix/home.nix/nixos.nix
+        entry: 三端写在同一个文件（ADR 0012）；繁杂时拆出 _ 开头的私有片段
+        language: fail
+        files: ^modules/features/.*/(darwin|home|nixos)\.nix$
+      - id: feature-layout
+        name: feature-layout
+        description: 功能的文件形式与模块名（ADR 0012）
+        entry: python3 lint/feature-layout.py
+        language: system
+        files: ^(modules/features/|modules/profiles/|lint/feature-layout\.py$)
+        pass_filenames: false
+      - id: no-comments
+        name: no-comments
+        description: 禁止新增代码注释，存量按棘轮基线自动收紧
+        entry: python3 lint/no-comments.py --tighten
+        language: system
+        files: ^(lint/no-comments\.py|lint/no-comments-baseline\.json|.*\.(nix|py|sh|ts|lua))$
+        pass_filenames: false
+      - id: just-modules
+        name: just-modules
+        description: justfile 与 just/*.just 逐个解析
+        entry: sh -eu -c 'for f in justfile just/*.just; do just --justfile "$f" --summary > /dev/null; done'
+        language: system
+        files: ^(justfile|just/.*\.just)$
+        pass_filenames: false
+      - id: pi-compaction
+        name: pi-compaction
+        description: pi settings.json 的 enabledModels 变更时自动回填 reserveTokens
+        entry: python3 utils/script/just/sync_pi_compaction.py --pre-commit
+        language: system
+        files: ^modules/features/ai/pi/settings\.json$
+        pass_filenames: false
