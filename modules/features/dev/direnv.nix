@@ -9,6 +9,7 @@
         enable = true;
         nix-direnv.enable = true;
         enableZshIntegration = config.programs.zsh.enable;
+        enableBashIntegration = config.programs.bash.enable;
         config = {
           global = {
             hide_env_diff = true;

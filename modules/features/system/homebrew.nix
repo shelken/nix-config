@@ -77,11 +77,14 @@
     };
 
   flake.modules.homeManager.homebrew =
-    { pkgs, ... }:
+    {
+      pkgs,
+      lib,
+      config,
+      ...
+    }:
     let
-      envExtra = ''
-        export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
-      '';
+      envExtra = ''export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"'';
     in
     {
       home.packages = [
@@ -91,8 +94,7 @@
             gawk
           ];
           text = ''
-            brewfile=$(nix path-info /run/current-system --recursive 2>/dev/null | awk '/Brewfile/ && !found { print; found = 1 }')
-            if [[ -z $brewfile ]]; then
+            if ! brewfile=$(nix path-info /run/current-system --recursive 2>/dev/null | awk '/Brewfile/ && !found { print; found = 1 }') || [[ -z $brewfile ]]; then
               echo "Error: 未在 /run/current-system 中找到 Brewfile" >&2
               exit 1
             fi
@@ -100,13 +102,7 @@
           '';
         })
       ];
-      programs.bash = {
-        enable = true;
-        bashrcExtra = envExtra;
-      };
-      programs.zsh = {
-        enable = true;
-        inherit envExtra;
-      };
+      programs.bash.bashrcExtra = lib.mkIf config.programs.bash.enable envExtra;
+      programs.zsh.envExtra = lib.mkIf config.programs.zsh.enable envExtra;
     };
 }

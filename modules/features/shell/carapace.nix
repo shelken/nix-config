@@ -11,7 +11,7 @@
         enableBashIntegration = config.programs.bash.enable;
         enableNushellIntegration = config.programs.nushell.enable;
         environment = {
-          CARAPACE_BRIDGES = "zsh,bash";
+          CARAPACE_EXCLUDES = "kubectl";
         };
       };
     };

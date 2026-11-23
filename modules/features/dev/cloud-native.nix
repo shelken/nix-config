@@ -10,6 +10,7 @@
       ...
     }:
     let
+      pathExtra = ''export PATH="$PATH:$HOME/.krew/bin"'';
       skopeo-image-size = pkgs.writeShellScriptBin "skopeo-image-size" ''
         #!/usr/bin/env bash
         set -euo pipefail
@@ -119,11 +120,15 @@
         };
       };
 
-      home.sessionPath = [ "$HOME/.krew/bin" ];
+      programs.zsh = {
+        envExtra = lib.mkIf config.programs.zsh.enable pathExtra;
+        oh-my-zsh.plugins = [
+          "kubectl"
+          "fluxcd"
+        ];
+      };
 
-      programs.zsh.oh-my-zsh.plugins = [
-        "kubectl"
-      ];
+      programs.bash.bashrcExtra = lib.mkIf config.programs.bash.enable pathExtra;
 
       programs.nushell.shellAliases.k = "kubectl";
 
