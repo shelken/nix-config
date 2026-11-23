@@ -30,6 +30,9 @@ payload=$(ssh -- "$builder" openwrt-imagebuild <<<"$input")
 result=$(jq '.result' <<<"$payload")
 remote_image=$(jq -r '.remote_image' <<<"$payload")
 
+name=$(jq -r '.image.name' <<<"$result")
+sha=$(jq -r '.image.sha256' <<<"$result")
+
 if [[ $mode == build ]]; then
   drift=$(jq -rn --slurpfile l "$lock" --argjson r "$result" '
     ($l[0].manifest) as $a | ($r.manifest) as $b
@@ -37,48 +40,25 @@ if [[ $mode == build ]]; then
     | "\($k): \($a[$k] // "-") -> \($b[$k] // "-")"')
   [[ -z $drift ]] || die "构建出的包版本与锁文件不一致，软件源已更新；要接受就 update：
 $drift"
-fi
-
-if [[ $mode == build ]]; then
-  lock_name=$(jq -r '.image.name' "$lock")
-  lock_sha=$(jq -r '.image.sha256' "$lock")
-  [[ -n $lock_name && $lock_name != null && -n $lock_sha && $lock_sha != null ]] ||
-    die "锁文件缺少 image.name 或 image.sha256"
-  target_name=$lock_name
-  expected_sha=$lock_sha
-else
-  target_name=$(jq -r '.image.name' <<<"$result")
-  expected_sha=$(jq -r '.image.sha256' <<<"$result")
+  [[ $(jq -r '.image.name' "$lock") == "$name" && $(jq -r '.image.sha256' "$lock") == "$sha" ]] ||
+    die "构建镜像与锁文件不符（换后端构建需先 update）"
 fi
 
 part=""
-lock_tmp=""
-cleanup() {
-  if [[ -n $part ]]; then rm -f "$part"; fi
-  if [[ -n $lock_tmp ]]; then rm -f "$lock_tmp"; fi
-}
-trap cleanup EXIT
+trap 'if [[ -n $part ]]; then rm -f "$part"; fi' EXIT
 
 mkdir -p "$dir"
-if [[ $mode == build ]] || [[ ! -f $dir/$target_name ]] || [[ $(shasum -a 256 "$dir/$target_name" | cut -d' ' -f1) != "$expected_sha" ]]; then
-  part=$(mktemp "$dir/${target_name}.part.XXXXXX")
+if [[ ! -f $dir/$name ]] || [[ $(shasum -a 256 "$dir/$name" | cut -d' ' -f1) != "$sha" ]]; then
+  part="$dir/$name.part"
   scp -- "${builder}:${remote_image}" "$part"
-  actual_sha=$(shasum -a 256 "$part" | cut -d' ' -f1)
-  if [[ $actual_sha != "$expected_sha" ]]; then
-    if [[ $mode == build ]]; then
-      die "构建镜像 sha256 与锁文件不符（换后端构建需先 update）: 期望 $expected_sha，实际 $actual_sha"
-    fi
-    die "sha256 不符: $target_name"
-  fi
-  mv -f "$part" "$dir/$target_name"
+  [[ $(shasum -a 256 "$part" | cut -d' ' -f1) == "$sha" ]] || die "sha256 不符: $name"
+  mv -f "$part" "$dir/$name"
   part=""
 fi
 
 if [[ $mode == update ]]; then
-  lock_tmp=$(mktemp "${lock}.tmp.XXXXXX")
-  jq . <<<"$result" >"$lock_tmp"
-  mv -f "$lock_tmp" "$lock"
-  lock_tmp=""
+  jq . <<<"$result" >"$lock.tmp"
+  mv -f "$lock.tmp" "$lock"
 fi
 
 current=$(jq -r .image.name "$lock")
@@ -102,4 +82,4 @@ if ((${#images[@]} > keep)); then
   done
 fi
 
-echo "build-local: $(jq -r '.version_code' <<<"$result") $dir/$target_name"
+echo "build-local: $(jq -r '.version_code' <<<"$result") $dir/$name"

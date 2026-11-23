@@ -117,7 +117,7 @@ nuci 只管声明里出现的配置文件，没声明的文件原样保留。一
 - `default.nix`：`homeManager.openwrt` 用 mise 安装 nuci，版本读自 flake 输入 `openwrt-nix` 的 `Cargo.toml`，编译声明的 Nix 模块与执行它的二进制同版本，并断言主机已启用 `secrets`；`nixos.openwrt-builder` 在 x86_64-linux 构建节点上用 `buildFHSEnv` 封装 `openwrt-imagebuild` 并配置 `/var/cache/openwrt-imagebuilder` 缓存目录；`perSystem` 为每台 `type = "openwrt"` 的机器产出 `<机器>-uci` 包，有 `firmware` 字段时另产出 `<机器>-firmware`（固件定义转 JSON，附带 `passthru.imagebuilder` 下载地址）
 - `acceptance`：`run` 经 SSH 只读采集路由器状态（sysfs、logread、dmesg、iw，不依赖 ethtool），在有线主机起一次性 `iperf3 -s -1` 测双向吞吐；`diff` 并排打印，有变化的项标 `*`
 - `asu`：把 `<机器>-firmware` 与 `<机器>-uci` 的 `packages` 合成 ASU 请求，支持 `update` / `build` 双模式，轮询、下载、校验 sha256、写锁文件、清理旧镜像；版本校验在本地对照 manifest，不用 ASU 的 `packages_versions`（它会把列出的包都当作要装的包）
-- `build-local`：与 `asu` 对称的本地构建客户端，支持 `update` / `build` 双模式；把请求与 `imagebuilder` 元数据经 SSH 传给构建节点（默认 `root@homelab-1`）的 `openwrt-imagebuild`，`build` 模式下校验请求与 manifest 漂移，并将镜像先下载到临时文件核对锁定 sha256，校验通过才原子落盘，不符即中止且不覆盖原有本地镜像，随后按需清理旧镜像
+- `build-local`：与 `asu` 对称的本地构建客户端，支持 `update` / `build` 双模式；把请求与 `imagebuilder` 元数据经 SSH 传给构建节点（默认 `root@homelab-1`）的 `openwrt-imagebuild`，`build` 模式下校验请求、manifest 与锁定镜像 sha256，随后 `scp` 拉回镜像、校验 sha256 并清理旧镜像
 - `imagebuild-remote.sh`：运行在 `nixos.openwrt-builder` 节点 FHS 环境里的远端构建脚本，下载并校验官方 ImageBuilder tarball（缓存于 `/var/cache/openwrt-imagebuilder`），执行 `make image` 与 `make manifest` 后返回与 ASU 同构的结果 JSON
 - `uci2nix`：经 `ubus call uci get` 取 JSON，jq 转成 nuci 结构，由 `nix eval` 打印成 Nix
 - `mask.jq`：从未展开的声明里找出写了 `{{ sops.… }}` 的位置，生成输出打码规则
