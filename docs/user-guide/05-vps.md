@@ -34,7 +34,7 @@ flowchart LR
 | `secrets` 仓库 `sops/secrets/hosts/<主机>.yaml` | 口令哈希，只加密给管理员与这台主机的 age 公钥                                     |
 | `~/.ssh/specific`                               | 与主机同名的 SSH 别名（地址、端口），deploy-rs 按主机名连接，公网地址不进公开仓库 |
 
-为什么网络参数是明文、口令走 sops、age 密钥不从 SSH 主机密钥派生，见 `docs/adr/0005-server-role-and-core-baseline.md`
+为什么网络参数是明文、口令走 sops、age 密钥不从 SSH 主机密钥派生，见 `docs/adr/0011-secret-source-by-consumer.md`
 
 ## 加一台新 VPS
 
