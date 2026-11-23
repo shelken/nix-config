@@ -94,8 +94,7 @@
             gawk
           ];
           text = ''
-            brewfile=$(nix path-info /run/current-system --recursive 2>/dev/null | awk '/Brewfile/ && !found { print; found = 1 }' || true)
-            if [[ -z $brewfile ]]; then
+            if ! brewfile=$(nix path-info /run/current-system --recursive 2>/dev/null | awk '/Brewfile/ && !found { print; found = 1 }') || [[ -z $brewfile ]]; then
               echo "Error: 未在 /run/current-system 中找到 Brewfile" >&2
               exit 1
             fi
