@@ -19,6 +19,9 @@ for id in "${ids[@]}"; do
     [ -f "$profile/Preferences" ] || continue
     to="$profile/Local Extension Settings/$id"
     mkdir -p "${to%/*}"
+    if [ ! -e "$to" ] && [ -e "$to.bak" ]; then
+      mv "$to.bak" "$to"
+    fi
     rm -rf "$to.tmp" "$to.bak"
     cp -R "$from" "$to.tmp"
     rm -f "$to.tmp/LOCK"
