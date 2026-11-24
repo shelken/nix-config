@@ -69,11 +69,10 @@ in
       delegate = "0";
       device = hw.wanDevice;
       dns = [
-        "2400:3200::1"
-        "2400:3200:baba::1"
+        "223.5.5.5"
         "223.6.6.6"
         "119.29.29.29"
-        "223.5.5.5"
+        "2400:3200::1"
       ];
       metric = "10";
       peerdns = "0";
@@ -84,10 +83,6 @@ in
       _type = "interface";
       delegate = "0";
       device = hw.wanDevice;
-      dns = [
-        "2001:4860:4860::8888"
-        "240c::6666"
-      ];
       metric = "11";
       norelease = "1";
       peerdns = "0";
