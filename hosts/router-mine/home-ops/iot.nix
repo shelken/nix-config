@@ -11,6 +11,7 @@
   };
 
   uci.settings.wireless = {
+    # EXTERNAL: 天猫精灵音箱等老旧 IoT 设备写死连接方式，仅支持 psk-mixed（WPA/WPA2 混合），不可升为纯 psk2 或 sae
     wifinet4 = {
       _type = "wifi-iface";
       device = "radio0";
