@@ -3,13 +3,17 @@ providers:
     baseUrl: https://cpa.int.ooooo.space
     apiKey: CPA_PI_API_KEY
     api: anthropic-messages
-  mp:
-    baseUrl: https://magpie.int.ooooo.space/v1
-    api: openai-responses
+  mp-agy: &mp-common
+    baseUrl: https://magpie.int.ooooo.space
+    api: anthropic-messages
     apiKey: MAGPIE_API_KEY
     discovery:
       type: openai-models-list
       timeoutMs: 3000
+  mp:
+    <<: *mp-common
+    baseUrl: https://magpie.int.ooooo.space/v1
+    api: openai-responses
     # >>> mp-modelOverrides:auto-sync >>>
     modelOverrides:
       opencode-zen/tidepool-alpha-free:
@@ -37,13 +41,6 @@ providers:
           mode: effort
           efforts: [minimal, low, medium, high, xhigh, max]
     # <<< mp-modelOverrides:auto-sync <<<
-  mp-agy:
-    baseUrl: https://magpie.int.ooooo.space
-    api: anthropic-messages
-    apiKey: MAGPIE_API_KEY
-    discovery:
-      type: openai-models-list
-      timeoutMs: 3000
   cpa:
     baseUrl: https://cpa.int.ooooo.space/v1
     apiKey: CPA_PI_API_KEY

@@ -7,8 +7,9 @@ MODELS_FILE="${REPO_ROOT}/modules/features/ai/omp/models.yml"
 
 EMIT_REASONING=0
 
-BASE_URL=$(awk '/^  mp:/ { in_mp = 1 } in_mp && /baseUrl:/ { print $2; exit }' "$MODELS_FILE")
-API_KEY=$(awk '/^  mp:/ { in_mp = 1 } in_mp && /apiKey:/ { print $2; exit }' "$MODELS_FILE")
+YQ_BIN="$(command -v yq 2>/dev/null || echo "/run/current-system/sw/bin/yq")"
+BASE_URL=$("$YQ_BIN" --yaml-fix-merge-anchor-to-spec=true -r 'explode(.) | .providers.mp.baseUrl // ""' "$MODELS_FILE")
+API_KEY=$("$YQ_BIN" --yaml-fix-merge-anchor-to-spec=true -r 'explode(.) | .providers.mp.apiKey // ""' "$MODELS_FILE")
 
 if [ -z "$BASE_URL" ]; then
   echo "Error: 未在 models.yml 找到 mp 的 baseUrl" >&2
@@ -98,15 +99,19 @@ fi
 
 if ! grep -q '# >>> mp-modelOverrides:auto-sync >>>' "$MODELS_FILE"; then
   awk '
-    /^  mp:/ { in_mp = 1 }
-    in_mp && /timeoutMs:/ {
-      print
+    /^  mp:/ { in_mp = 1; print; next }
+    in_mp && /^  [^ ]/ {
       print "    # >>> mp-modelOverrides:auto-sync >>>"
       print "    # <<< mp-modelOverrides:auto-sync <<<"
       in_mp = 0
-      next
     }
     { print }
+    END {
+      if (in_mp) {
+        print "    # >>> mp-modelOverrides:auto-sync >>>"
+        print "    # <<< mp-modelOverrides:auto-sync <<<"
+      }
+    }
   ' "$MODELS_FILE" > "${MODELS_FILE}.tmp" && mv "${MODELS_FILE}.tmp" "$MODELS_FILE"
 fi
 
