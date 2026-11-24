@@ -152,8 +152,6 @@ in
       limit = "150";
       ndp = "relay";
       ra = "relay";
-      ra_dns = "0";
-      ra_management = "1";
       ra_useleasetime = "1";
       start = "100";
     };

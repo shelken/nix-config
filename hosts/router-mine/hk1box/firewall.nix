@@ -7,7 +7,7 @@ in
     {
       _type = "rule";
       dest = "wan";
-      dest_port = "53";
+      dest_port = "53 853";
       family = "ipv6";
       name = "Block-LAN-IPv6-DNS";
       proto = "tcp udp";
