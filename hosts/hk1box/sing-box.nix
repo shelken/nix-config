@@ -88,15 +88,43 @@ in
         "L+ /etc/sing-box/config.json - - - - ${configFile}"
       ];
 
-      systemd.services.sing-box.unitConfig.ConditionPathExists = configFile;
+      # EXTERNAL: HK1 Box 无硬件 RTC，断电重启后时钟从旧值起步，需等待首次 NTP 同步（30s 超时兜底不阻塞无网启动）
+      systemd.services.systemd-time-wait-sync = {
+        description = "等待内核时钟完成首次 NTP 同步";
+        after = [
+          "network-online.target"
+          "systemd-timesyncd.service"
+        ];
+        wants = [ "network-online.target" ];
+        before = [ "time-sync.target" ];
+        wantedBy = [ "time-sync.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${config.systemd.package}/lib/systemd/systemd-time-wait-sync";
+          RemainAfterExit = true;
+          TimeoutStartSec = "30s";
+        };
+      };
+
+      systemd.services.sing-box = {
+        after = [ "time-sync.target" ];
+        wants = [ "time-sync.target" ];
+        unitConfig.ConditionPathExists = configFile;
+      };
 
       # 只由自己的 timer 触发，不挂到任何 target 上：挂上去的话，激活时会因为它是
       # 「完成即 inactive 的 oneshot」被当成没在运行而再拉一遍，订阅服务恰好不通就让
       # 激活失败、触发 deploy-rs 回滚。这里让激活路径完全没有入口启动它。
       systemd.services.sing-box-sub-update = {
         description = "拉取 sing-box 订阅配置";
-        wants = [ "network-online.target" ];
-        after = [ "network-online.target" ];
+        wants = [
+          "network-online.target"
+          "time-sync.target"
+        ];
+        after = [
+          "network-online.target"
+          "time-sync.target"
+        ];
         restartIfChanged = false;
         serviceConfig = {
           Type = "oneshot";
