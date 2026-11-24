@@ -34,7 +34,7 @@
         automatic = true;
         options = "--delete-older-than 7d";
       };
-      launchd.agents.nix-gc.config.ProgramArguments = lib.mkIf pkgs.stdenv.isDarwin (
+      launchd.agents.nix-gc.config.ProgramArguments = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (
         lib.mkForce [
           "/nix/var/nix/profiles/default/bin/nix-collect-garbage"
           "--delete-older-than"
