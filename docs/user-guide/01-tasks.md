@@ -96,7 +96,15 @@ weekday = [ 0 ]; # 每周日 5:00，睡眠错过后在唤醒时补跑
 jitter = 600; # 唤起后随机等待 0 到 599 秒
 ```
 
-手动执行 `ntask run` 不等待，抖动仅在 launchd 唤起时生效
+手动执行 `ntask run` 不等待，抖动仅在 launchd 唤起（或 `ntask run --as-launchd`）时生效
+
+## 环境隔离
+
+所有 `task-<名>` 包装脚本默认按 launchd 裸环境运行：锁死 `PATH`（仅含 `packages` 与 `/usr/bin:/bin:/usr/sbin:/sbin`）、经 `env -i` 清除终端泄漏的变量、工作目录固定为 `/`、标准输入重定向到 `/dev/null`
+
+手动执行 `ntask run` 即可当场暴露缺包或漏环境变量，无需等到定时触发
+
+任务涉及外部项目且项目自带 `mise.toml` 时，优先只在 `packages` 声明 `mise` 与宿主机基础工具（如 `git`），脚本里 `cd` 进项目目录后用 `mise exec --` 执行命令，避免跨仓同步工具列表
 
 ## 通知
 
@@ -135,7 +143,8 @@ ntask             # 等同于 ntask ls
 ntask ls          # 状态表：上次运行、结果、是否已装载
 ntask ls --names  # 每行一个任务名，供 shell 补全使用
 ntask log <名>    # 查看日志；默认最近一次，-n N 最近 N 次，-f 跟随，--all 全部
-ntask run <名>    # 前台执行，输出同时写入日志，root 任务自动引导 sudo
+ntask run <名>                # 前台执行（环境同 launchd，无 jitter 与通知），输出写入日志，root 任务自动引导 sudo
+ntask run --as-launchd <名>   # 完整模拟 launchd 唤起（含 jitter、通知与 launchd 日志标记）
 ntask info <名>   # 调度、日志与 plist 路径、launchd 状态
 ntask help -v     # 完整说明；--debug 输出各阶段耗时
 task-<名>         # 绕过 ntask CLI 直接执行底层脚本

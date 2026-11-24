@@ -200,11 +200,17 @@ rec {
             fi
           '';
 
+      defaultHome = if t.user then homeDir else "/var/root";
+      taskPath = lib.concatStringsSep ":" (
+        lib.optional (t.packages != [ ]) (lib.makeBinPath t.packages) ++ [ "/usr/bin:/bin:/usr/sbin:/sbin" ]
+      );
+
     in
     pkgs.writeShellApplication {
       name = "task-${name}";
-      runtimeInputs = t.packages;
       text = ''
+        export PATH="${taskPath}"
+
         __on_exit() {
           local code=$?
           local end_time
@@ -215,7 +221,20 @@ rec {
         trap __on_exit EXIT
 
         ${jitterBlock}
-        "${runnerBin}"
+
+        cd /
+        user_name=$(id -un)
+        env_args=(
+          "HOME=${defaultHome}"
+          "USER=$user_name"
+          "LOGNAME=$user_name"
+          "TMPDIR=''${TMPDIR:-/tmp}"
+          "PATH=${taskPath}"
+        )
+        if [ "''${${launchdEnv}:-}" = "1" ]; then
+          env_args+=("${launchdEnv}=1")
+        fi
+        /usr/bin/env -i "''${env_args[@]}" "${runnerBin}" "$@" </dev/null
       '';
     };
 

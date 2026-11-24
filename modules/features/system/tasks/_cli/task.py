@@ -38,7 +38,7 @@ HELP = """ntask —— 声明式定时任务的查看与调试入口
 用法:
   ntask [ls]             任务状态表（上次运行、结果、是否已装载）
   ntask log <名>         最近一次运行的日志；-n N 最近 N 次，-f 跟随，--all 全部
-  ntask run <名> [参数]  前台执行，输出同时写入日志
+  ntask run [--as-launchd] <名> [参数]  前台执行（默认隔离环境同 launchd），输出同时写入日志
   ntask info <名>        调度、日志与 plist 路径、launchd 状态
   ntask help -v          完整说明
 
@@ -52,7 +52,8 @@ HELP_VERBOSE = HELP + """
   用户任务日志在 ~/Library/Logs/task-<名>.log，root 任务在 /Library/Logs/task-<名>.log。
   每次运行以 "===== Task '<名>' Started (launchd|manual) =====" 开始、
   "===== Task '<名>' Finished (exit code: N) =====" 结束；旧日志没有括号里的触发来源。
-  SHELKEN_TASK_LAUNCHD=1 由 launchd 注入，任务据此区分调度唤起与手动运行。
+  SHELKEN_TASK_LAUNCHD=1 由 launchd 或 `ntask run --as-launchd` 注入，控制 jitter、系统通知与日志触发标记。
+  所有 task-* 包装脚本都会以隔离 PATH、纯净环境变量、工作目录 / 与空 stdin 执行，手动与 launchd 环境一致。
 
 补充:
   ntask ls --names       每行一个任务名（供 shell 补全使用）
@@ -391,9 +392,9 @@ def cmd_log(tasks, name, count, follow, all_lines):
     return 0
 
 
-def cmd_run(tasks, name, args):
+def cmd_run(tasks, name, args, as_launchd=False):
     if not name:
-        print("ntask: 需要任务名\n用法: ntask run <名> [参数]", file=sys.stderr)
+        print("ntask: 需要任务名\n用法: ntask run [--as-launchd] <名> [参数]", file=sys.stderr)
         return 1
     task = tasks.get(name)
     command = shutil.which(f"task-{name}")
@@ -401,14 +402,28 @@ def cmd_run(tasks, name, args):
         print(f"ntask: 未知任务 '{name}'", file=sys.stderr)
         return 1
     if task is not None and task.tier == "root" and os.geteuid() != 0:
-        os.execvp("sudo", ["sudo", os.path.abspath(sys.argv[0]), "run", name, *args])
+        sudo_args = ["sudo", os.path.abspath(sys.argv[0]), "run"]
+        if as_launchd:
+            sudo_args.append("--as-launchd")
+        sudo_args.extend([name, *args])
+        os.execvp("sudo", sudo_args)
     if command is None:
         print(f"ntask: 找不到 task-{name} 命令", file=sys.stderr)
         return 1
     log_path = task.log_path if task is not None else default_log_path(name, "user")
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    run_env = os.environ.copy()
+    if as_launchd:
+        run_env["SHELKEN_TASK_LAUNCHD"] = "1"
+    else:
+        run_env.pop("SHELKEN_TASK_LAUNCHD", None)
     with open(log_path, "ab") as log_file:
-        process = subprocess.Popen([command, *args], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        process = subprocess.Popen(
+            [command, *args],
+            env=run_env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
         try:
             for chunk in iter(lambda: process.stdout.read(4096), b""):
                 sys.stdout.buffer.write(chunk)
@@ -420,6 +435,9 @@ def cmd_run(tasks, name, args):
             # 否则 Python 会打印 traceback
             process.wait()
             return process.returncode if process.returncode is not None else 130
+        finally:
+            if process.stdout is not None:
+                process.stdout.close()
     # 读到 EOF 不会设置 returncode，必须 wait() 才会拿到子进程退出码，否则永远返回 None
     return process.wait()
 
@@ -479,6 +497,7 @@ def build_parser():
     parser_log.add_argument("--all", dest="all_lines", action="store_true")
 
     parser_run = subparsers.add_parser("run", add_help=False)
+    parser_run.add_argument("--as-launchd", action="store_true")
     parser_run.add_argument("name", nargs="?")
     parser_run.add_argument("args", nargs=argparse.REMAINDER)
 
@@ -509,7 +528,7 @@ def main(argv=None):
     if args.command == "log":
         return cmd_log(tasks, args.name, args.count, args.follow, args.all_lines)
     if args.command == "run":
-        return cmd_run(tasks, args.name, args.args)
+        return cmd_run(tasks, args.name, args.args, as_launchd=args.as_launchd)
     if args.command == "info":
         return cmd_info(tasks, args.name, debug)
     print(f"ntask: 未知命令 '{argv[0]}'\n{HELP}", file=sys.stderr)

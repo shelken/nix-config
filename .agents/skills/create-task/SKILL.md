@@ -66,8 +66,11 @@ ntask ls
 调用统一管理 CLI 验证执行与排障:
 
 ```bash
-# 手动运行任务(root 任务自动引导 sudo)
+# 手动运行任务（默认环境与 launchd 一致；root 任务自动引导 sudo）
 ntask run <name>
+
+# 完整模拟 launchd 唤起（额外启用 jitter、通知与 launchd 日志标记）
+ntask run --as-launchd <name>
 
 # 查看任务详情：调度、日志与 plist 路径、launchd 状态
 ntask info <name>
@@ -81,6 +84,6 @@ ntask log <name> -f
 
 - 新建任务在 `ntask ls` 中未列出：新建文件未执行 `git add`，Flake 处于未追踪状态忽略了该文件
 - 调用 omp/pi 的任务报 `API key ending in _KEY`：任务不经 sec-run，环境里没有 provider 要的变量，变量名被当成字面量发出。在 `secrets` 里声明对应的 `op://` 引用
-- 脚本内命令报 `command not found`：在任务文件的 `packages` 列表中声明该工具包，避免硬编码 store 绝对路径
+- 脚本内命令报 `command not found`：在任务文件的 `packages` 列表中声明该工具包，避免硬编码 store 绝对路径；若任务调用外部项目且项目已有 `mise.toml`，优先只声明 `mise`（加必要基础工具如 `git`），脚本内 `cd` 进项目目录后经 `mise exec --` 执行
 - 时间格式解析报错：`when` 必须为 `"H:M"` 格式，不支持标准 cron 表达式
 - root 任务清理日志失败：检查日志目录权限，确认 `user = false`，并在手动测试时使用 `sudo task-<name>`
