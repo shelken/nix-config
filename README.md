@@ -31,17 +31,9 @@
 
 # 结构
 
-一个软件一个「功能」，nix-darwin、NixOS、Home Manager 的配置写在同一处；主机只选一个「角色」，功能自己声明属于哪个角色
+按功能组织配置，同一软件的 nix-darwin、NixOS 与 Home Manager 声明写在同一处；主机只选一个主角色与按需附加角色，功能自行声明归属
 
-```text
-modules/
-├── features/<分类>/<功能>   # 一个软件的系统侧与用户态配置
-├── profiles/                # 角色链 core ⊂ tui ⊂ gui ⊂ desktop ⊂ workstation，并列的 server，附加角色 homelab
-└── flake/                   # homeManager.<名> 自动挂到同名系统模块
-hosts/<主机>/                # 选角色、少数单机功能与参数
-```
-
-加软件、启用可选功能、新增主机的步骤见 [功能与角色](docs/user-guide/02-features.md)，设计原因见 [ADR 0004](docs/adr/0004-dendritic-feature-modules.md)
+加软件、启用可选功能与新增主机的步骤见 [功能与角色](docs/user-guide/02-features.md)，设计原因见 [ADR 0004](docs/adr/0004-dendritic-feature-modules.md)
 
 # darwin
 
@@ -50,36 +42,29 @@ hosts/<主机>/                # 选角色、少数单机功能与参数
 ## 初始化
 
 ```bash
-# 0. 如果有用到secrets，将新机器加入secrets.nix，并在 hosts/<host>/default.nix 写 shelken.secrets.enable = true;
+# 0. 启用 secrets 时，将新机器公钥加入 secrets.nix，并在 hosts/<host>/default.nix 设 shelken.secrets.enable = true
 ssh-keygen -t ed25519 -C "shelken@[host]"
-cat ~/.ssh/id_ed25519.pub
-## 将公钥放到github上
+cat ~/.ssh/id_ed25519.pub   # 公钥添加到 GitHub
 
-# 1. install homebrew
+# 1. 安装 Homebrew
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-## 将brew命令加入path
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
-# 2. install nix
-## macOS 使用 Determinate Nix；NixOS 使用系统 NixOS 配置管理。
-## note：在此说明，linux目前使用nixos源，mac使用determinate的管理。此项配置分别在 modules/features/nix/nix-settings.nix 中有体现
+# 2. 安装 Nix（macOS 用 Determinate Nix，配置见 modules/features/nix/nix-settings.nix）
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix \
   | sh -s -- install --determinate
 
-# 3. clone repo
+# 3. 克隆仓库
 git clone https://github.com/shelken/nix-config.git ~/nix-config && cd ~/nix-config
 
-# 4. 选择 hosts/default.nix 中登记的机器配置
-# Darwin: mio / sakamoto / yuuko / ling
-# NixOS: vps-cc / hk1box / yuuko-k8s / sakamoto-k8s / homelab-1
+# 4. 选择 hosts/default.nix 中登记的机器名
 PROFILE=mio
 printf 'PROFILE=%s\n' "$PROFILE" > .host-profile
 
-# 5. 首次应用
-# note: sudo launchctl stop systems.determinate.nix-daemon && sudo launchctl start systems.determinate.nix-daemon
+# 5. 首次应用（守护进程异常可重启 systems.determinate.nix-daemon）
 sudo nix run nix-darwin/master#darwin-rebuild -- switch --flake ".#$PROFILE"
 
-# 6. 日常应用：打开新 shell 后执行
+# 6. 打开新 shell 后日常应用
 just sw
 ```
 
@@ -90,112 +75,32 @@ just sw
 ## 卸载
 
 ```bash
-
-# on mac
 sudo darwin-uninstaller
-# uninstall nix
 /nix/nix-installer uninstall
-
 ```
 
 ## 常见问题
 
-### 切换 Homebrew 远程仓库为官方源
-
-```bash
-git -C "$(brew --repo)" remote set-url origin https://github.com/Homebrew/brew
-```
-
-### 启用 secret 时无法拉取私有仓库
-
-优先使用 Git + HTTPS 协议：将 flake input 修改为 `git+https://github.com/shelken/secrets.nix.git`，走本机 Git HTTPS 凭据
-
-若保留 `github:shelken/secrets.nix` 写法，私有仓库需配置 Nix access token，在 Determinate Nix 自定义配置中声明：
-
-```text
-/etc/nix/nix.custom.conf
-```
-
-### Font 文件提示等待 lock 锁
-
-清理 store 锁文件：
-
-```bash
-sudo rm -rf /nix/store/**.lock
-```
-
-### WezTerm 在 macOS 上颜色渲染异常
-
-在 `wezterm.lua` 中配置前端引擎：`front_end = "WebGpu"`
-
-### 提示 `Operation not permitted`
-
-![](assets/imgs/README_2024-09-19_01-08-46.png)
-
-给 nix 完整的磁盘访问权限
-
-### 安装 Homebrew 错误（即使设置 http 代理）
-
-尝试使用热点数据和使用 Quantumult X 来代理
-
-### Homebrew Cask 已安装，但每次 `brew bundle` 仍然重复安装
-
-因包更名（例如 `squirrel` 改为 `squirrel-app`）导致 `Caskroom` 残留历史目录时，Homebrew 会判定未安装。清理旧目录：
-
-```bash
-rm -rf "$(brew --prefix)/Caskroom/squirrel"
-brew info squirrel-app
-```
-
-### Go 模块拉取失败
-
-![](assets/imgs/README_2024-11-16_21-25-22.png)
-
-尝试使用热点数据和使用 Quantumult X 来代理
-
-### 手动删除 `/nix/store` 条目后提示 `No such file or directory`
-
-```shell
-sudo darwin-rebuild switch --flake .#sakamoto --show-trace --verbose
-building the system configuration...
-Using saved setting for 'experimental-features = nix-command flakes' from ~/.local/share/nix/trusted-settings.json.
-/run/current-system/sw/bin/darwin-rebuild: line 248: /nix/store/8jfid13h8p5gmy7llb4kvp0m357lswd0-darwin-system-25.11.8df64f8/activate: No such file or directory
-```
-
-解决：理论上不是问题，只要随便加个小改动让版本切换，然后 gc 掉所有版本，随后执行：
-
-```shell
-nix store delete /nix/store/8jfid13h8p5gmy7llb4kvp0m357lswd0-darwin-system-25.11.8df64f8
-```
-
-然后把改动撤销，重新 switch
+- **切换 Homebrew 为官方源**：`git -C "$(brew --repo)" remote set-url origin https://github.com/Homebrew/brew`
+- **私有 `secrets` 拉取失败**：私有 `secrets` 走 Git + HTTPS，初始化前确保本机 Git 凭据可用
+- **Font 文件提示等待 lock 锁**：`sudo rm -rf /nix/store/**.lock`
+- **Homebrew Cask 已安装仍重复安装**：因包更名（如 `squirrel` 改为 `squirrel-app`）导致 `Caskroom` 残留旧目录，清理 `$(brew --prefix)/Caskroom/<旧名>` 后重试
+- **手动删除 `/nix/store` 条目后提示 `No such file or directory`**：做一次小改动切换新代并 GC 旧代，执行 `nix store delete <缺失路径>`，再撤销改动重新 switch
+- **提示 `Operation not permitted`**：在系统设置给 nix 完整磁盘访问权限
+  ![](assets/imgs/README_2024-09-19_01-08-46.png)
+- **安装 Homebrew 或拉取 Go 模块失败（即使设置了代理）**：尝试使用手机热点配合 Quantumult X 代理
+  ![](assets/imgs/README_2024-11-16_21-25-22.png)
 
 # 部署
 
-> 在本地部署其他机器
-
-## example
-
 ```bash
-# 哪些主机需要部署、部署后会变什么（只求值不构建；主机表里 deployDiff = false 的不查）
-just deploy-diff
-
-# 先 deploy-diff，回车确认后逐台部署有差异的主机；k3s 节点交给 just k8s::deploy 滚动部署
-just deploy-all
-
-# 远程部署：主机表里带 deploy 标记的主机
-just deploy vps-cc
+just deploy-diff                         # 检查各主机待部署差异
+just deploy-all                          # 确认后逐台部署有差异的主机
+just deploy <主机>                       # 远程部署单台主机
+just linux::gen-image <host> <variant>   # 构建镜像变体（iso / qemu 等）
 ```
 
-# 构建镜像
-
-镜像变体由 nixpkgs 提供（`system.build.images.*`；`iso` / `iso-installer` / `qemu` / `proxmox` / `sd-card` …），
-等价入口是 `nixos-rebuild build-image --image-variant <变体> --flake .#<host>`
-
-```bash
-# 构建镜像并上传到 pve 的 iso 目录
-just linux::gen-image <host> <variant>   # variant 如 iso、qemu
-```
+完整配方见 `just --list`，远程装机与回滚见 [VPS 指南](docs/user-guide/05-vps.md)
 
 # 引用
 
@@ -206,7 +111,7 @@ just linux::gen-image <host> <variant>   # variant 如 iso、qemu
 - [mightyiam/dendritic](https://github.com/mightyiam/dendritic) `*`当前按功能组织的 Dendritic 模式
 - [flake-parts modules](https://flake.parts/options/flake-parts-modules.html) 与 [import-tree](https://github.com/denful/import-tree)：Dendritic 的实现基础
 - [catppuccin/catppuccin](https://github.com/catppuccin/catppuccin) `*`主题配色
-- [Web结构化展示nix-darwin,home-manager,nixos等所有的选项（很实用直观）](https://mynixos.com/flakes)
+- [Web结构化展示nix-darwin,home-manager,nixos等所有的选项](https://mynixos.com/flakes)
 - [Home Manager Options](https://home-manager-options.extranix.com)
 - [Nix Darwin Configuration Options](https://daiderd.com/nix-darwin/manual/index.html)
 - [NixOS Packages Search](https://search.nixos.org/packages)

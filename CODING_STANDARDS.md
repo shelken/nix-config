@@ -7,16 +7,13 @@
 - 注释与文档使用中文
 - commit 前先 `git add`，然后运行一次 `prek run`
 - 优先使用 Conventional Commits 格式提交，标题英文，正文中文
+- 项目级 skill 放仓库根 `.agents/skills/`，全局与按功能 skill 的放置规则见 `modules/features/ai/skills/README.md`
 
 ## 验证
 
-- 修改配置后，只有本机情况（检查 `.host-profile` 对应的 PROFILE）才使用 `just bd`（nix-darwin 范围验证）/ `just hm-build`（home-manager 范围验证）等命令进行验证；其他机器的情况仅使用轻量化的命令进行校验
+- 修改配置后，仅本机（`.host-profile` 对应的 PROFILE）使用 `just bd`（nix-darwin 范围）或 `just hm-build`（home-manager 范围）验证，其他机器只做轻量求值校验
 - 求值期不得依赖构建（IFD），也不得读 YAML，排查入口为 `just check-ifd`，决策见 `docs/adr/0010-no-ifd-at-eval-time.md`
 
 ## 工具
 
 - 一般使用 `nh search` 搜索 nixpkgs 中的包
-
-## 放置约定
-
-- 项目级 skill 必须放在仓库根 `.agents/skills/` 下，不要放到 `modules/features/ai/skills/`（那里是部署到所有导入 `ai` 的机器的全局 skill）；只在部分机器需要的 skill 放进所属功能目录，登记到 `shelken.dev.ai.skills`（ADR 0008）

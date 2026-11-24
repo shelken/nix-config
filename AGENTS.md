@@ -4,26 +4,19 @@
 
 ## 布局
 
-- `modules/features/<分类>/<功能>`: 一个软件或服务一个功能，同时写 nix-darwin、NixOS、Home Manager 部分；结构规则见 `docs/adr/0004-dendritic-feature-modules.md`，领域与文件形式见 `docs/adr/0012-feature-domains-and-file-form.md`
-- `modules/profiles/`: 角色链 `core ⊂ tui ⊂ gui ⊂ desktop ⊂ workstation`，与它并列的服务器角色 `server`（只含 `core`，NixOS 专用，主机放在 `hosts/vps/`），以及附加角色 `homelab`
-- `modules/flake/`: flake-parts 胶水（`homeManager.<名>` 自动挂到同名系统模块）
-- `hosts/<hostname>/default.nix`: 机器配置，`.host-profile` 记录当前机器对应 flake 中的名字
-- `vars/`: 全局变量（用户名、邮箱、设备IP、ssh网络、主题选择等）
-- `lib/`: 自定义函数（`mylib.mkConfigFile`、`mylib.relativeToRoot` 等）
-- `secrets/`: 引用外部 secrets flake，通过 sops-nix 做秘密管理
-- `modules/features/network/dnscontrol`: 手动管理DNS
-- `hosts/router-mine`: 主路由配置, 由nuci管理; 见`just/router.just`
+- `modules/features/<分类>/<功能>`：按功能内聚的跨平台配置，结构规则见 `docs/adr/0004-dendritic-feature-modules.md`，领域与文件形式见 `docs/adr/0012-feature-domains-and-file-form.md`
+- `modules/profiles/` 与 `modules/flake/`：主机角色、附加角色定义（见 `docs/adr/0004-dendritic-feature-modules.md`）与 flake-parts 胶水模块
+- `hosts/`：主机与主路由配置入口（`hosts/router-mine/` 由 nuci 管理，见 `just/router.just`），`.host-profile` 记录本机 flake 名
+- `vars/`、`lib/`、`secrets/`：全局变量、自定义函数与 sops-nix 秘密管理
+- `GLOSSARY.md`、`CODING_STANDARDS.md`、`docs/adr/`：共享领域词表、编码提交与验证规范、架构决策记录
 
 ## 约束
 
-日常编码、提交与验证规范见 `CODING_STANDARDS.md`
-
 - 未经用户允许，不使用 `just sw`（nix-darwin 范围变更）与 `just hm`（home-manager 范围变更）
 - 安装包的方式必须与用户确认
-- 执行任何 nix 操作（eval/build）前，确保自己新增或删除的文件已被 git 跟踪
+- 执行任何 nix 操作（eval/build）前，确保新增或删除的文件已被 git 跟踪
 - 新增或调整软件配置前，先读 `docs/agents/software-config.md`
-- 根目录 `GLOSSARY.md` 记录共享领域知识，架构决策记录放在 `docs/adr/`
-- `docs/adr/` 只放与 nix、本仓库、dotconfig 有关的决策；ADR 规范句按 RFC 2119 使用中文限定词（必须、不得、应当、可以）书写；具体软件或脚本的设计放在其代码目录的 `README.md`
+- `docs/adr/` 只放与 nix、本仓库、dotconfig 有关的决策，规范句按 RFC 2119 使用中文限定词（必须、不得、应当、可以）；具体软件或脚本的设计放其代码目录的 `README.md`
 - 创建、修改或测试机器特定定时任务时使用 `.agents/skills/create-task/`
-- 修改或新增本地技能（`modules/features/ai/skills/` 下，或功能目录下经 `shelken.dev.ai.skills` 登记的）前，先读 `modules/features/ai/skills/README.md`，其中规定外部拷贝技能的来源记录
-- 项目为公开项目, 不要在 ISSUE/PR/提交中/代码中 包含任何个人敏感信息/设备运行环境数据
+- 修改或新增本地技能（`modules/features/ai/skills/` 或功能目录下经 `shelken.dev.ai.skills` 登记的）前，先读 `modules/features/ai/skills/README.md`
+- 公开项目，不得在 Issue、PR、提交或代码中包含任何个人敏感信息或设备运行环境数据

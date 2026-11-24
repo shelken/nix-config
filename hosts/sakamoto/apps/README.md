@@ -1,72 +1,16 @@
 # sakamoto：Compose 服务的声明与启动
 
-`sakamoto` 的业务容器声明在本目录。
-运行时是 OrbStack + Compose：macOS 侧没有 `oci-containers` 这类原生模块，容器、命名卷与 `homelab` 网络都在 OrbStack 里。声明进 Nix store、口令由 sops 模板渲染、启动交给 launchd agent。
+`sakamoto` 的业务容器基于 OrbStack + Compose，声明在同目录 `compose.yaml`、`configs/` 与 `default.nix`；机密由 sops 渲染为 env，由 launchd agent `space.ooooo.sakamoto-compose` 在登录、外接盘挂载与每 15 分钟收敛启动
 
-## 组成
+## 跨文件与运维约束
 
-| 文件           | 作用                                                                                    |
-| -------------- | --------------------------------------------------------------------------------------- |
-| `compose.yaml` | 服务声明                                                                                |
-| `configs/`     | Caddyfile、镜像 registry 配置、kopia 的策略与入口脚本：不含机密                         |
-| `default.nix`  | sops 密钥与 env 模板、launchd agent、`sakamoto-compose` 命令行、各配置文件的 store 路径 |
+- `configs/caddy/Caddyfile` 中 `internal-access` 站点须与路由器 `hosts/router-mine/home-ops/dns.nix` 的自举名一一对应
+- 配置文件必须经独立 store 路径写入 env 后用 `volumes:` 挂载（`configs:` 不计入 Compose 服务 hash，修改不会触发重建）；含机密文件不直接挂盘，改由环境变量交由入口脚本生成，避免 sops 换代后符号链接导致容器读失败
+- `configs/kopia/local/` 将本地仓库内容与元数据缓存压到 500M（硬上限 1G）：本地仓库就在外接盘上，更大缓存只是重复占用内置盘
+- `compose.yaml` 由 `~/.config/sakamoto-compose/compose.yaml` 固定路径引用，避免 store 路径变动导致 OrbStack 拆分服务分组；外接盘未挂载时 `up` 提前中止，不启动 OrbStack 也不让 Docker 建空目录
 
-渲染出来的 `~/.config/sops-nix/secrets/rendered/sakamoto-compose.env`（权限 0400，明文不进 Nix store）是 compose 的唯一 `--env-file`：
+## 验证与日常操作
 
-- 域名、数据目录、口令与 token（来自 sops），外接盘的两个固定路径（明文，`default.nix` 的 `externalDisks`）
-- `CADDYFILE`、`MIRROR_CONFIG` 等变量：`configs/` 里每个文件各自的 store 路径，`compose.yaml` 用 `volumes:` 把它们挂进容器
-
-入口脚本 `modules/features/backup/kopia/server/entrypoint.sh` 在 git 里是 100755，进 store 后保留执行位，容器可以直接执行。
-
-`configs/caddy/Caddyfile` 里 `internal-access` 的站点要与路由器 `hosts/router-mine/home-ops/dns.nix` 的自举名一一对应：这里加一个站点，那边加一个名字。
-
-## 配置怎么触发重建
-
-Compose 的服务 hash 不包含 `configs:` 的文件路径与内容，所以配置文件**不能**用 `configs:` 挂：改了文件，`up` 也不会重建容器。`volumes:` 的源路径在 hash 里，所以这里的约定是：
-
-- 每个配置文件单独进 store，路径随内容变
-- 路径写进 env 文件，`compose.yaml` 用 `volumes: - ${CADDYFILE}:...:ro` 引用
-- 改哪个文件，只重建用到它的服务（改 `mirror-config.yaml` 重建四个 mirror，改共用的 `entrypoint.sh` 重建两个 kopia）
-
-kopia 的 `entrypoint.sh` 与云端仓库的 `policy.json` 和 vps-cc 共用同一份（`modules/features/backup/kopia/server/`），改动两台主机一起生效；`configs/kopia/local/` 是只有 sakamoto 用的本地仓库配置。本地仓库就在外接盘上，缓存只是把它再复制一份到内置盘，所以内容与元数据缓存都压到 500M（硬上限 1G）；容器的 `KOPIA_CACHE_DIRECTORY` 优先于配置里的 `cacheDirectory`，配置里不写。
-
-含机密的内容不挂文件：kopia 云端仓库的 WebDAV 地址与凭据以环境变量交给容器，`entrypoint.sh` 启动时生成 `repository.config`。原因是 sops 渲染文件在符号链接下面，密钥轮换换代后，运行中的容器挂着旧目录，读文件会得到 `Operation not permitted`。
-
-## 启动与收敛
-
-launchd agent（Label `space.ooooo.sakamoto-compose`，`gui` 域）负责拉起与对账。触发时机：登录（`RunAtLoad`）、外接盘挂载（`StartOnMount`，盘晚于登录挂上时立刻再跑一次）、每 15 分钟（`StartInterval`）
-
-**OrbStack 与容器都只由这个 agent 启动**：`compose.yaml` 里的容器是 `restart: "no"`（kopia 也是：`on-failure` 会在 OrbStack 重启后绕过挂载检查拉起它，失败重试交给 15 分钟一次的 `up`），OrbStack 自己的「登录时启动」由 `up` 在 OrbStack 就绪后用 `orbctl config set app.start_at_login false` 关掉（每轮都设，被改回去会自愈）。外接盘没挂上时，agent 在启动 OrbStack 之前就停下，什么都不起。
-
-| 改了什么                                      | 收敛                                                                                                              |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `compose.yaml`、`configs/` 里的文件、密钥的值 | plist 不变，下一轮 `StartInterval`（≤15 分钟）的 `up` 重建受影响的容器；`default.nix` 里 CLI 本身变了才会立刻重载 |
-| 都没有变化                                    | `StartInterval` 15 分钟兜底                                                                                       |
-
-改了 `compose.yaml`、配置或密钥想立刻生效：`sakamoto-compose up`。
-
-`docker compose -f` 用的是固定路径 `~/.config/sakamoto-compose/compose.yaml`（符号链接，指向 store）。Compose 创建容器时把这个路径写进 `config_files` 与 `working_dir` 标签，OrbStack 按它分组；用 store 路径的话，每改一次 `compose.yaml` 路径就变，没被重建的容器保留旧标签，会多出一组。
-
-没有用 `WatchPaths` 监视渲染目录：它在符号链接下面，sops 换代后 launchd 的监视时灵时不灵（实测三轮换代只触发一轮）。
-
-`up` 的顺序：等渲染出的 env → 逐个检查数据目录 → `open -ga OrbStack`（对已运行的 OrbStack 没有副作用）→ 等 `docker info` → 关掉「登录时启动」→ `docker compose up -d`。外接盘没挂载时在第二步直接失败，既不启动 OrbStack，也不让 Docker 以 root 新建空目录。日志在 `~/Library/Logs/sakamoto-compose.log`。
-
-改 `restart` 策略会改变服务 hash：部署后第一次 `up` 会重建全部 10 个容器（含两个 kopia，备份短暂中断），之后不再变。
-
-## 验证改动
-
-- 在 sakamoto 上 `just hm-build`；从别的机器只做轻量求值 `nix eval .#darwinConfigurations.sakamoto.config.home-manager.users.shelken.home.activationPackage.drvPath`
-- 新增机密：先在私有 `secrets` 仓库补上 `default.nix` 中 `secretNames` 列出的键，推送后在本仓库 `just upp secrets` 刷新 lock
-- 应用后确认 agent：`launchctl list | grep sakamoto-compose`、`tail -f ~/Library/Logs/sakamoto-compose.log`
-
-## 日常操作
-
-```bash
-sakamoto-compose up         # agent 每 15 分钟跑的就是它
-sakamoto-compose recreate   # 无条件重建全部容器，排障用
-sakamoto-compose status
-sakamoto-compose logs
-sakamoto-compose check      # 只校验解析与插值，不动容器
-```
-
-镜像升级：`compose.yaml` 里的 tag 由 renovate 的 `homelab container images` 规则（与 vps-cc 的镜像同一个 PR）合成一个 PR，合并后 `just hm`（或 `just deploy sakamoto`），再 `sakamoto-compose up`（或等 15 分钟的 agent），只重建 tag 变了的容器。
+- 验证改动：本机执行 `just hm-build`，异机求值 `nix eval .#darwinConfigurations.sakamoto.config.home-manager.users.shelken.home.activationPackage.drvPath`；新增机密先更新 `secrets` 仓库再 `just upp secrets`
+- 排查状态：`launchctl list | grep sakamoto-compose` 与 `tail -f ~/Library/Logs/sakamoto-compose.log`；完整子命令见 `sakamoto-compose --help`
+- 镜像升级：`compose.yaml` tag 由 Renovate `homelab container images` 规则（与 `vps-cc` 合并 PR）更新，合并后 `just hm`（或 `just deploy sakamoto`）并运行 `sakamoto-compose up`（或等待 15 分钟自动收敛）
