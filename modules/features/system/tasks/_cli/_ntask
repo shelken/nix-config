@@ -28,7 +28,12 @@ case $state in
           '-f[跟随日志输出]' \
           '--all[显示整个日志文件]'
         ;;
-      run|info)
+      run)
+        _arguments \
+          '--as-launchd[模拟 launchd 唤起（注入 SHELKEN_TASK_LAUNCHD=1，启用 jitter 与通知）]' \
+          "2:task name:($_task_names)"
+        ;;
+      info)
         _arguments "2:task name:($_task_names)"
         ;;
     esac

@@ -5,11 +5,8 @@
     "12:04"
   ];
   packages = with pkgs; [
-    bun
     git
-    just
-    nodejs
-    openssh
+    mise
   ];
   secrets = {
     GH_TOKEN = secretPath "github/cli-token";
@@ -21,11 +18,12 @@
       echo "Profile repository $REPO not found, skipping."
       exit 0
     fi
-    if [ ! -f "$REPO/node_modules/.bin/ccusage" ]; then
-      bun install --cwd "$REPO" --frozen-lockfile 2>/dev/null || bun install --cwd "$REPO"
+
+    cd "$REPO"
+    if [ ! -d "$REPO/node_modules" ]; then
+      mise exec -- bun install --frozen-lockfile 2>/dev/null || mise exec -- bun install
     fi
 
-
-    just -f "$REPO/justfile" -d "$REPO" sync-push
+    mise exec -- just sync-push
   '';
 }
