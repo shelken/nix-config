@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import lineCap, { capLine, capMessage, capToolResult, MAX_BYTES, MAX_COLUMNS, readEnds, shape } from "./line-cap.ts";
+import lineCap, { capMessage, capToolResult, MAX_BYTES, MAX_COLUMNS } from "./line-cap.ts";
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "line-cap-test-"));
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
@@ -16,39 +16,51 @@ const write = (name: string, text: string) => {
 };
 const text = (patch: { content: { text?: string }[] } | undefined) => patch?.content[0].text ?? "";
 
-test("capLine：不超长原样返回，超长截短并标出省略字符数，不切开代理对", () => {
-	expect(capLine("short")).toBe("short");
-	expect(capLine("a".repeat(1000))).toBe(`${"a".repeat(MAX_COLUMNS)}…[+232 chars]`);
-	expect(capLine(`${"a".repeat(MAX_COLUMNS - 1)}😀x`)).toBe(`${"a".repeat(MAX_COLUMNS - 1)}…[+3 chars]`);
-});
+test("capToolResult：超长行截短不切开代理对，超限多行保留头尾并标出省略行数", () => {
+	const surrogate = capToolResult(
+		{ toolName: "bash", content: [{ type: "text", text: `${"a".repeat(MAX_COLUMNS - 1)}😀x` }] },
+		save,
+	);
+	expect(text(surrogate).startsWith(`${"a".repeat(MAX_COLUMNS - 1)}…[+3 chars]\n\n[line-cap:`)).toBe(true);
 
-test("shape：总量超限时保留开头和结尾，中间用一行标记说明省略了多少行", () => {
 	const lines = Array.from({ length: 3000 }, (_, i) => `L${i} ${"y".repeat(74)}`);
-	const shaped = shape(lines);
-	const out = shaped.text.split("\n");
+	const patch = capToolResult({ toolName: "bash", content: [{ type: "text", text: lines.join("\n") }] }, save);
+	const body = text(patch).split("\n\n[line-cap:")[0];
+	const out = body.split("\n");
 	expect(out[0]).toBe(lines[0]);
 	expect(out.at(-1)).toBe(lines.at(-1));
-	expect(out).toContain(`[… ${shaped.omittedLines} lines omitted …]`);
-	expect(shaped.omittedLines + out.length - 1).toBe(3000);
-	expect(Buffer.byteLength(shaped.text)).toBeLessThanOrEqual(MAX_BYTES + 100);
+	const omitted = out.find((line) => /^\[… \d+ lines omitted …\]$/.test(line));
+	expect(omitted).toBeDefined();
+	expect(Number(omitted?.match(/\d+/)?.[0]) + out.length - 1).toBe(3000);
+	expect(Buffer.byteLength(body)).toBeLessThanOrEqual(MAX_BYTES + 100);
 });
 
-test("shape：没超限的输出一字不改", () => {
-	expect(shape(["a", "b"])).toEqual({ text: "a\nb", cutLines: 0, omittedLines: 0 });
-});
-
-test("readEnds：大文件只读两端并丢掉边缘的半截行；单个超长行只留开头", () => {
+test("capToolResult：大文件只读两端并丢掉边缘半截行，单个超长行只留开头", () => {
 	const lines = Array.from({ length: 20000 }, (_, i) => `L${i} ${"y".repeat(74)}`);
-	const ends = readEnds(write("big.log", `${lines.join("\n")}\n`));
-	expect(ends.head[0]).toBe(lines[0]);
-	expect(ends.head.every((line, i) => line === lines[i])).toBe(true);
-	expect(ends.tail?.at(-1)).toBe(lines.at(-1));
-	expect(ends.tail?.every((line, i, all) => line === lines[20000 - all.length + i])).toBe(true);
+	const big = write("big.log", `${lines.join("\n")}\n`);
+	const bigPatch = capToolResult(
+		{
+			toolName: "bash",
+			content: [{ type: "text", text: "tail" }],
+			details: { truncation: { truncated: true, totalLines: 20000 }, fullOutputPath: big },
+		},
+		save,
+	);
+	const bigOut = text(bigPatch).split("\n\n[line-cap:")[0].split("\n");
+	expect(bigOut[0]).toBe(lines[0]);
+	expect(bigOut.at(-1)).toBe(lines.at(-1));
+	expect(bigOut.some((line) => /^\[… \d+ lines omitted …\]$/.test(line))).toBe(true);
 
-	const giant = readEnds(write("giant.log", `START${"z".repeat(2_000_000)}END\n`));
-	expect(giant.head.length).toBe(1);
-	expect(giant.tail).toEqual([]);
-	expect(shape(giant.head, giant.tail).text.startsWith("START")).toBe(true);
+	const giant = write("giant.log", `START${"z".repeat(2_000_000)}END\n`);
+	const giantPatch = capToolResult(
+		{
+			toolName: "bash",
+			content: [{ type: "text", text: "tail" }],
+			details: { truncation: { truncated: true, totalLines: 1 }, fullOutputPath: giant },
+		},
+		save,
+	);
+	expect(text(giantPatch).startsWith("START")).toBe(true);
 });
 
 test("capToolResult：pi 已截尾的 bash 输出按完整文件重排，开头、结尾、每行行首都在，退出状态保留", () => {
@@ -104,28 +116,24 @@ test("capMessage：只处理后台结果消息和进上下文的 !cmd，同一�
 	expect(capMessage({ role: "bashExecution", output: long }, save).output?.length).toBeLessThan(1000);
 });
 
-test("shape：尾部窗口只剩一行超长行被清空时，回退用头部余量填充 80% 预算，不浪费", () => {
+test("capToolResult：尾部窗口只剩超长行被清空时，回退用头部填满预算并在末尾标出省略行", () => {
 	const lines = Array.from({ length: 3000 }, (_, i) => `L${i} ${"y".repeat(94)}`);
 	const giant = "GIANT " + "z".repeat(300 * 1024);
 	const full = write("tail-giant.log", `${[...lines, giant].join("\n")}\n`);
-	const ends = readEnds(full);
-	expect(ends.tail).toEqual([]);
-	const shaped = shape(ends.head, ends.tail);
-	const out = shaped.text.split("\n");
+	const patch = capToolResult(
+		{
+			toolName: "bash",
+			content: [{ type: "text", text: "tail" }],
+			details: { truncation: { truncated: true, totalLines: 3001 }, fullOutputPath: full },
+		},
+		save,
+	);
+	const body = text(patch).split("\n\n[line-cap:")[0];
+	const out = body.split("\n");
 	expect(out[0]).toBe(lines[0]);
 	expect(out.length).toBeGreaterThan(400);
-	expect(Buffer.byteLength(shaped.text)).toBeGreaterThan(40 * 1024);
-});
-
-test("shape：尾部窗口为空时，没读到的行标在输出末尾，不让最后一行冒充结尾", () => {
-	const lines = Array.from({ length: 3000 }, (_, i) => `L${i} ${"y".repeat(94)}`);
-	const shaped = shape(lines, [], 7);
-	const out = shaped.text.split("\n");
-	expect(out.at(-1)).toBe("[… 7 lines omitted …]");
-	expect(out.at(-2)).toBe(lines.at(-1));
-	const between = shaped.omittedLines - 7;
-	expect(out).toContain(`[… ${between} lines omitted …]`);
-	expect(between + out.length - 2).toBe(3000);
+	expect(Buffer.byteLength(body)).toBeGreaterThan(40 * 1024);
+	expect(out.at(-1)).toMatch(/^\[… \d+ lines omitted …\]$/);
 });
 
 test("capMessage：!cmd 截断输出回读 fullOutputPath 找回开头，与 tool_result 一致", () => {

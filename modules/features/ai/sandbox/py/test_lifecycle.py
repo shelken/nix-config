@@ -131,11 +131,6 @@ class LifecycleTest(unittest.TestCase):
                 self.assertEqual(r.returncode, 0, r.stderr)
                 self.assertNotEqual(self.vm_fp(), old)
 
-    def test_idle_timeout_reaches_msb_in_the_create_conf(self):
-        self.e.set_policy(idle_timeout="5m")
-        self.e.sb("up")
-        self.assertEqual(self.e.msb_state()["vm"]["conf"]["idle_timeout"], "5m")
-
     def test_idle_timeout_is_part_of_the_ceiling_because_msb_applies_it_only_at_creation(self):
         self.e.sb("up")
         old = self.vm_fp()

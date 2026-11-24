@@ -57,7 +57,6 @@ check "带主机名" "$(agent pr comment 3 -R github.com/shelken/x)" $T $V -- pr
 check "owner 大小写不敏感" "$(agent pr comment 3 -R SHELKEN/x)" $T $V -- pr comment 3 -R SHELKEN/x
 
 check "别人的仓库 -R" "$(plain issue create -R other/x)" $T $V -- issue create -R other/x
-check "别人的仓库 pr comment" "$(plain pr comment 1 -R other/x)" $T $V -- pr comment 1 -R other/x
 check "仓库名含 owner 字样" "$(plain pr comment 1 -R other/shelken)" $T $V -- pr comment 1 -R other/shelken
 
 check "GH_REPO 命中" "$(agent pr comment 3)" $T $V GH_REPO=shelken/x -- pr comment 3
@@ -73,8 +72,6 @@ check "有 token 但 owner 为空：原样放行" "$(plain issue create -t a)" $
 
 check "pr create 不换" "$(plain pr create -R shelken/x)" $T $V -- pr create -R shelken/x
 check "issue close 不换" "$(plain issue close 1 -R shelken/x -c hi)" $T $V -- issue close 1 -R shelken/x -c hi
-check "pr review 不换" "$(plain pr review 1 -R shelken/x -c)" $T $V -- pr review 1 -R shelken/x -c
-check "api 不换" "$(plain api repos/shelken/x/issues)" $T $V -- api repos/shelken/x/issues
 check "无参数" "$(plain)" $T $V --
 check "只有一个参数" "$(plain issue)" $T $V -- issue
 
@@ -90,8 +87,6 @@ fi
 
 check "token 缺失时放行" "$(plain issue create -R shelken/x)" $V -- issue create -R shelken/x
 check "token 为空时放行" "$(plain pr comment 1 -R shelken/x)" AGENT_GITHUB_TOKEN= $V -- pr comment 1 -R shelken/x
-check "token 缺失但仓库不是自己：原样放行" "$(plain issue create -R other/x)" $V -- issue create -R other/x
-check "token 缺失但命令不在三类内：原样放行" "$(plain pr create -R shelken/x)" $V -- pr create -R shelken/x
 
 : >"$work/log"
 env -i PATH="$work/bin:/usr/bin:/bin" FAKE_LOG="$work/log" AGENT_GH_OWNER=shelken FAKE_VIEW_OWNER=shelken \

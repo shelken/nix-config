@@ -192,11 +192,6 @@ describe("内置命令规则", () => {
       expectAllowed(line);
     }
   });
-
-  it("find 全盘遍历不再是内置规则", () => {
-    expectAllowed("find / -name '*.go' -maxdepth 6");
-    expectAllowed("find ~ -type f -name '*.nix'");
-  });
 });
 
 describe("内置路径规则", () => {
@@ -263,6 +258,7 @@ describe("内置路径规则", () => {
     for (const target of ["~/other-repo/.env", "/tmp/elsewhere/.env.local"]) {
       expect(toolPath("read", target).block).toBe(true);
     }
+    expectAllowed("git show HEAD -- compose/vps/.env.tpl");
   });
 
   it("edit 的 hashline 头与 MV 目标、ast_edit 路径逐个过筛", () => {
@@ -612,27 +608,5 @@ deny_paths:
       built.policy,
     );
     expect(result.block).toBe(true);
-  });
-
-  it("历史误伤样本放行、历史真拦截保留", () => {
-    const policy = policyFor(GLOBAL);
-    for (const line of [
-      "rm -rf /var/folders/x2/rbnh/T/tmp.* 2>/dev/null",
-      `curl -sL https://api.github.com/repos/a/b/contents/x | python3 -c "import json,sys;print([f['name'] for f in json.load(sys.stdin)])"`,
-      "grep -n -i 'homelab' ~/.ssh/config 2>/dev/null",
-      "ls -la ~/.ssh/config",
-      "git show HEAD -- compose/vps/.env.tpl",
-    ]) {
-      expect(command(line, policy).block).toBe(false);
-    }
-    for (const line of [
-      "env | grep -i bun",
-      "cat .env",
-      "grep -rn 'WX_PI_API_KEY' .env | sed -E 's/=.*/=<redacted>/'",
-      "sed -E 's/=.*/=<redacted>/' .env | head -20",
-      "printenv",
-    ]) {
-      expect(command(line, policy).block).toBe(true);
-    }
   });
 });

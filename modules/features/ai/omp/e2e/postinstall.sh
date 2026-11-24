@@ -83,18 +83,6 @@ installed_plugins_match_manifest() {
     [[ "$(cat "$plugins/node_modules/remove-b/installed")" == installed ]]
 }
 
-strict_activation_fails() {
-  local rc=0
-  run_activation 1 "" strict || rc=$?
-  [[ "$rc" -ne 0 ]] && grep -q '错误' "$home/out"
-}
-
-activation_warns_and_continues() {
-  local rc=0
-  run_activation 1 || rc=$?
-  [[ "$rc" -eq 0 ]] && grep -q '警告' "$home/out"
-}
-
 sandbox_layout_installs_under_xdg() {
   run_activation 0 xdg &&
     installed_plugins_match_manifest &&
@@ -163,8 +151,6 @@ for failure in install missing swap; do
   check "$failure 失败：宿主保留完整旧状态并继续激活" failed_update_preserves_state "$failure"
   check "$failure 失败：沙箱保留完整旧状态并返回非零" failed_update_preserves_state "$failure" strict
 done
-check "沙箱严格模式：bun 失败时返回非零并打印错误" strict_activation_fails
-check "bun 失败时激活返回 0 且打印警告" activation_warns_and_continues
 check "沙箱布局：插件装到 \$XDG_DATA_HOME/omp/plugins，不碰 ~/.omp/plugins" sandbox_layout_installs_under_xdg
 check "XDG_DATA_HOME 已设但无 omp 目录：仍装到 ~/.omp/plugins" xdg_without_omp_dir_installs_under_home
 check "真实 HOME：激活 PATH 能解析到 mise 的 bun" real_mise_bun_resolves

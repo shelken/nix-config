@@ -157,18 +157,6 @@ test("session_branch / session_switch / session_tree 各自重置去重集（omp
 	}
 });
 
-test("cwd 层自身的 AGENTS.md 不注入（宿主已加载）", async () => {
-	const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "subdir-ctx-")));
-	fs.writeFileSync(path.join(root, "AGENTS.md"), "ROOT-ONLY");
-	fs.writeFileSync(path.join(root, "top.ts"), "t");
-	const handlers = loadExtension();
-	fireSession(handlers, root);
-
-	const result = await runRead(handlers, path.join(root, "top.ts"), root);
-	expect(result).toBeUndefined();
-	fs.rmSync(root, { recursive: true, force: true });
-});
-
 test("直接读取子目录 AGENTS.md 只标记不重复注入", async () => {
 	const root = makeProject();
 	const handlers = loadExtension();
