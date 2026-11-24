@@ -10,19 +10,7 @@ let
   configFile = "${stateDir}/config.json";
   sing-box = config.services.sing-box.package;
 
-  lan = myvars.networking.hostAddress;
-  whitelist = builtins.toJSON (
-    map (ip: "${ip}/32") [
-      lan."sakamoto-k8s".address
-      lan."yuuko-k8s".address
-      lan."homelab-1".address
-      lan."pve".address
-      lan."yuuko".address
-      lan."sakamoto".address
-      "192.168.6.125"
-    ]
-    ++ [ "192.168.50.0/24" ]
-  );
+  whitelist = builtins.toJSON myvars.networking.hk1boxWhitelist.cidrs;
   urlFile = config.sops.secrets.sing-box-sub-url.path;
 
   update = pkgs.writeShellApplication {

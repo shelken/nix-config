@@ -13,7 +13,6 @@
   "hosts/mio/tasks/pi-ping.nix": 1,
   "hosts/router-mine/firmware.nix": 2,
   "hosts/router-mine/hardware.nix": 1,
-  "hosts/router-mine/hk1box/dhcp.nix": 2,
   "hosts/router-mine/home-ops/avahi.nix": 1,
   "hosts/router-mine/home-ops/dns.nix": 3,
   "hosts/router-mine/home-ops/iot.nix": 1,
