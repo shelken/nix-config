@@ -176,7 +176,7 @@ function usage() {
   spawn-subagent close <id>                   关闭子代理（含已结束的）；旧 Herdr 另聚焦回主 pane
   spawn-subagent close --finished | --all     批量关闭当前终端派发的子代理：仅已结束的 / 全部（仅 Herdr.app(hc)）
   spawn-subagent ps [--json]                  列出当前终端派发的子代理（含已结束）：
-                                              ID|PROFILE|STATE|AGE，末行 N running, M finished（仅 Herdr.app(hc)）
+                                              ID|PROFILE|SLUG|STATE|AGE，末行 N running, M finished（仅 Herdr.app(hc)）
   spawn-subagent -h | --help                  显示本帮助
 
 命令选择:
@@ -201,7 +201,7 @@ slug:    任务语义标识（小写字母/数字/连字符；agent 名 profile-
 task:    子代理任务描述，支持多行；结论经 intercom 回传，不写文件
 
 退出码与输出:
-  exit 0: 派发成功。单发输出 ID；batch 每 agent 一行 profile\tid\tok
+  exit 0: 派发成功。单发输出 ID；batch 每 agent 一行 profile\tslug\tid\tok
   exit 1: 失败（batch 为全部失败，或 manifest 校验失败/上下文无效，此时零派发）。失败原因输出在 stderr，reason 带分类前缀:
       context-error: 当前终端上下文无效（派发前检查，整体零派发，与模型无关，修环境后重试）
       config-error: 模型/认证配置错/额度用尽（400/401/403/404/429）
@@ -209,7 +209,7 @@ task:    子代理任务描述，支持多行；结论经 intercom 回传，不�
       launch-error: pane/session/prompt 启动失败
   后三类直接跳过该模型；失败的 pane/终端已由脚本自动关闭，不残留
   exit 2: 仅 batch，部分失败——健康的 agent 已在运行，只需对失败项重新派发，不要整体重试（会重复派发）
-  batch --json: stdout 只输出一个数组 [{profile, id, status: "ok"|"failed", reason?}]（失败项 id 为 null），
+  batch --json: stdout 只输出一个数组 [{profile, slug, id, status: "ok"|"failed", reason?}]（失败项 id 为 null），
       进度与逐行结果走 stderr；派发前失败（exit 1）时 stdout 无输出，原因在 stderr
   派发命令阻塞至健康判定完成（最长约 1 分钟），返回 ≠ 任务完成:
   结论经 intercom 回传，派发成功后应结束回合等待
@@ -234,7 +234,7 @@ manifest (batch，文件路径，不支持内联 JSON 或 stdin):
 终端后端（按环境变量择一，派发前验证，失效即 context-error，不回退到其他后端或聚焦 pane）:
   1. Herdr.app（HC_TERMINAL_ID，hc 0.1.x）: 后台启动，不分屏不聚焦，在 Agents 列表可见且挂在当前终端下；
      ID 为 hc 终端地址（如 t7）；close 对 hc 终端执行 kill + rm，只清理当前终端的子终端；
-     派发时给终端打标签 spawned-by=spawn-subagent 与 profile=<profile>，ps/close --finished/--all 靠标签与
+     派发时给终端打标签 spawned-by=spawn-subagent、profile=<profile> 与 slug=<slug>，ps/close --finished/--all 靠标签与
      parent 找回本终端派发的子代理，状态只来自 hc，不写派发记录；
      窗口展示由用户或 herdr-app 决定。hc/herdr-app 的权威说明见 hc --skill、herdr-app --skill
   2. 旧 Herdr（HERDR_PANE_ID）: 右列分屏，ID 为 pane ID（如 w1A:p3）
@@ -426,7 +426,7 @@ function agyLaunch(g: Agent, agentName: string, intercom: string, promptFile?: s
 
 type Term = {
   validate(): void;
-  start(o: { agentName: string; profile: string; launch: Launch; prompt: string }): { pane: string; alive?: () => boolean };
+  start(o: { agentName: string; profile: string; slug: string; launch: Launch; prompt: string }): { pane: string; alive?: () => boolean };
   send(pane: string, text: string): boolean;
   close(pane: string): void;
   focusMain?(): void;
@@ -602,7 +602,7 @@ function hcGet(id: string): any | null {
 
 const HC_SPAWN_LABEL = "spawned-by=spawn-subagent";
 
-type HcSubagent = { id: string; name: string; profile: string; state: "running" | "finished"; ageMs: number };
+type HcSubagent = { id: string; name: string; profile: string; slug: string; state: "running" | "finished"; ageMs: number };
 
 function hcSubagents(): HcSubagent[] {
   const { terminals } = hcOut(["ls", "--all", "--json", "--label", HC_SPAWN_LABEL]);
@@ -611,7 +611,7 @@ function hcSubagents(): HcSubagent[] {
     const t = hcGet(x.address);
     if (!t || t.parent !== process.env.HC_TERMINAL_ID) return [];
     return [{
-      id: t.address, name: t.name, profile: t.labels?.profile ?? "-",
+      id: t.address, name: t.name, profile: t.labels?.profile ?? "-", slug: t.labels?.slug ?? "-",
       state: t.state === "live" ? "running" : "finished", ageMs: now - t.created_ms,
     }];
   });
@@ -635,12 +635,12 @@ const hcTerm: Term = {
     if (!t) throw new Error(`HC_TERMINAL_ID='${id}' 不存在`);
     if (t.state !== "live") throw new Error(`HC_TERMINAL_ID='${id}' 已结束`);
   },
-  start({ agentName, profile, launch, prompt }) {
+  start({ agentName, profile, slug, launch, prompt }) {
     let pane: string;
     try {
       const out = hcOut([
         "run", "--bg", "--json", "--name", agentName, "--parent", process.env.HC_TERMINAL_ID!, "--cwd", process.cwd(),
-        "--label", HC_SPAWN_LABEL, "--label", `profile=${profile}`,
+        "--label", HC_SPAWN_LABEL, "--label", `profile=${profile}`, "--label", `slug=${slug}`,
         "env", ...envPairs(launch.env), `PATH=${process.env.PATH}`,
         ...launch.cmd, ...launch.args, ...launch.promptArgs(prompt),
       ]);
@@ -737,15 +737,16 @@ function psAgents(json: boolean) {
   const running = agents.filter((a) => a.state === "running").length;
   if (json) {
     console.log(JSON.stringify(agents.map((a) => ({
-      id: a.id, name: a.name, profile: a.profile, state: a.state, ageSeconds: Math.floor(a.ageMs / 1000),
+      id: a.id, name: a.name, profile: a.profile, slug: a.slug, state: a.state, ageSeconds: Math.floor(a.ageMs / 1000),
     })), null, 2));
     return;
   }
   const wId = Math.max(2, ...agents.map((a) => a.id.length));
   const wProfile = Math.max(7, ...agents.map((a) => a.profile.length));
-  const line = (...c: string[]) => `${c[0].padEnd(wId)}  ${c[1].padEnd(wProfile)}  ${c[2].padEnd(8)}  ${c[3]}`;
-  console.log(line("ID", "PROFILE", "STATE", "AGE"));
-  for (const a of agents) console.log(line(a.id, a.profile, a.state, formatAge(a.ageMs)));
+  const wSlug = Math.max(4, ...agents.map((a) => a.slug.length));
+  const line = (...c: string[]) => `${c[0].padEnd(wId)}  ${c[1].padEnd(wProfile)}  ${c[2].padEnd(wSlug)}  ${c[3].padEnd(8)}  ${c[4]}`;
+  console.log(line("ID", "PROFILE", "SLUG", "STATE", "AGE"));
+  for (const a of agents) console.log(line(a.id, a.profile, a.slug, a.state, formatAge(a.ageMs)));
   console.log(`${running} running, ${agents.length - running} finished`);
 }
 
@@ -756,7 +757,7 @@ function closeAgents(scope: "finished" | "all") {
   for (const a of targets) {
     try {
       hcTerm.close(a.id);
-      console.log(`closed ${a.id} (${a.profile}, ${a.state})`);
+      console.log(`closed ${a.id} (${a.profile}, ${a.slug}, ${a.state})`);
     } catch (e: any) {
       failed++;
       console.error(`spawn-subagent: 关闭失败（${cliError(e)}）: ${a.id}`);
@@ -938,6 +939,7 @@ async function agyHook(event: string) {
 
 type DispatchResult = {
   profile: string;
+  slug: string;
   pane: string;
   agentName: string;
   healthy: boolean;
@@ -947,6 +949,7 @@ type DispatchResult = {
 type Launched = {
   term: Term;
   profile: string;
+  slug: string;
   pane: string;
   agentName: string;
   observe: () => HealthObservation;
@@ -999,8 +1002,8 @@ ${task}
 ${task}
 ---`;
   }
-  const { pane, alive } = term.start({ agentName, profile: p, launch, prompt });
-  return { term, profile, pane, agentName, observe: launch.observe, onHealthy: launch.onHealthy, alive };
+  const { pane, alive } = term.start({ agentName, profile: p, slug, launch, prompt });
+  return { term, profile, slug, pane, agentName, observe: launch.observe, onHealthy: launch.onHealthy, alive };
 }
 
 function classifyFailure(reason: string): string {
@@ -1014,10 +1017,10 @@ async function gateAgent(l: Launched, timeoutMs: number): Promise<DispatchResult
   const reason = gate && !gate.healthy ? classifyFailure(gate.reason ?? "") : (gate ? undefined : "transient: health-check timeout (no model response)");
   if (reason) {
     try { l.term.close(l.pane); } catch {}
-    return { profile: l.profile, pane: "-", agentName: l.agentName, healthy: false, reason };
+    return { profile: l.profile, slug: l.slug, pane: "-", agentName: l.agentName, healthy: false, reason };
   }
   l.onHealthy?.();
-  return { profile: l.profile, pane: l.pane, agentName: l.agentName, healthy: true };
+  return { profile: l.profile, slug: l.slug, pane: l.pane, agentName: l.agentName, healthy: true };
 }
 
 async function spawn(profile: string, slug: string, task: string) {
@@ -1124,17 +1127,17 @@ async function batch(manifestPath: string, json: boolean) {
     }
   }
   const results = await Promise.all(launched.map(async ({ entry, result, error }) => {
-    if (!result) return { profile: entry.profile, pane: "-", agentName: "-", healthy: false, reason: `launch-error: ${error}` };
+    if (!result) return { profile: entry.profile, slug: entry.slug, pane: "-", agentName: "-", healthy: false, reason: `launch-error: ${error}` };
     return gateAgent(result, 45000);
   }));
   for (const r of results) {
-    const line = `${r.profile}\t${r.pane}\t${r.healthy ? "ok" : "failed"}${r.reason ? `  (${r.reason})` : ""}`;
+    const line = `${r.profile}\t${r.slug}\t${r.pane}\t${r.healthy ? "ok" : "failed"}${r.reason ? `  (${r.reason})` : ""}`;
     (r.healthy ? progress : console.error)(line);
   }
   if (json) {
     console.log(JSON.stringify(results.map((r) => r.healthy
-      ? { profile: r.profile, id: r.pane, status: "ok" }
-      : { profile: r.profile, id: null, status: "failed", reason: r.reason }), null, 2));
+      ? { profile: r.profile, slug: r.slug, id: r.pane, status: "ok" }
+      : { profile: r.profile, slug: r.slug, id: null, status: "failed", reason: r.reason }), null, 2));
   }
   const failed = results.filter((r) => !r.healthy).length;
   process.exit(failed === 0 ? 0 : failed === results.length ? 1 : 2);
