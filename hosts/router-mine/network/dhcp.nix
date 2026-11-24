@@ -27,8 +27,7 @@ in
           localservice = "1";
           localuse = "1";
           max_cache_ttl = "1800";
-          min_ttl = "3600";
-          nonegcache = "1";
+          nonegcache = "0";
           port = "53";
           readethers = "1";
           rebind_protection = "0";
