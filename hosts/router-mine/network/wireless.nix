@@ -7,7 +7,6 @@ in
     radio0 = {
       _type = "wifi-device";
       inherit (hw.radios.radio0) band path type;
-      cell_density = "3";
       channel = "11";
       country = "CN";
       htmode = "HE20";
@@ -16,7 +15,6 @@ in
     radio1 = {
       _type = "wifi-device";
       inherit (hw.radios.radio1) band path type;
-      cell_density = "3";
       channel = "36";
       country = "CN";
       htmode = "HE80";
