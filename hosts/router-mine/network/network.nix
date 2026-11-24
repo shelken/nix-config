@@ -16,7 +16,6 @@ in
         _type = "device";
         name = "br-lan";
         ports = hw.lanPorts;
-        promisc = "1";
         type = "bridge";
       }
     ];
