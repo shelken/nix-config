@@ -1,124 +1,38 @@
 # Agent 沙箱日常使用
 
-让 OMP 在 Linux 虚拟机里干活：默认只看得到当前项目，访问不了家里其他服务，`rm -rf` 删不到别的仓库。宿主 macOS 不受影响
+机制、术语与配置字段见 [沙箱 README](../../modules/features/ai/sandbox/README.md)，完整子命令运行 `sb --help` 查看
 
-机制和配置字段见 [沙箱 README](../../modules/features/ai/sandbox/README.md)，设计原因见其中的「设计决策」
+## 首次启用
 
-## 命令速查
-
-| 想做的事                        | 命令                                 |
-| ------------------------------- | ------------------------------------ |
-| 在沙箱里启动 OMP                | `omp-sb`（参数原样转给 OMP）         |
-| 在沙箱里启动 pi                 | `pi-sb`                              |
-| 在沙箱里跑一条命令              | `sb run git status`                  |
-| 进沙箱开一个 bash               | `sb shell`                           |
-| 看当前项目拿到了哪些授权        | `sb plan`                            |
-| 批准项目的 `.sandbox.yaml`      | `sb trust`                           |
-| 补齐登记的 mise 工具与 OMP 插件 | `sb sync`                            |
-| 看主 VM 状态与缺失工具          | `sb status`                          |
-| 停止、删除主 VM                 | `sb down`、`sb rm`（`--force` 强删） |
-
-## 先认识三个词
-
-| 词              | 是什么                                                                                      |
-| --------------- | ------------------------------------------------------------------------------------------- |
-| 主 VM `sb-main` | 一台常驻的 Linux 虚拟机，所有 Agent 都跑在它里面                                            |
-| 执行上下文      | 每次 `omp-sb` 或 `sb run` 新开的隔离环境，只绑定当前项目，退出即销毁                        |
-| 能力上限        | `sb.yaml` 声明的最大权限（可挂载的目录、可访问的私网、可用的 secret），项目只能在上限内申请 |
-
-## 场景一：第一次用起来
-
-1. 导入 `ai` 能力的主机（`mio`、`yuuko`）默认启用沙箱，无需额外开关
-2. 应用配置，然后新开一个终端
+1. 应用配置并新开终端：
    ```bash
    just hm
    ```
-3. 进入任意项目，启动 OMP
+2. 进入位于挂载根（默认 `~/Code`、`~/nix-config`）内的项目目录，启动 Agent：
    ```bash
    cd ~/Code/my-app
-   omp-sb
+   omp-sb            # 启动 OMP，参数原样透传；启动 pi 用 pi-sb
    ```
 
-`pi-sb` 用法与 `omp-sb` 相同。Codex、Claude 只在宿主使用，沙箱里没有。新增 harness 时在登记表条目里写 `sandboxCommand`，就自动得到 `<名>-sb`
+首次启动会自动建卷、拉起主 VM 并执行一次 `sb sync`，耗时数分钟；如需快速验证可用性，可运行 `omp-sb --model=<provider/model> -p '只回复 OK'`
 
-首次启动耗时数分钟：自动创建数据卷、拉起主 VM，并执行一次 `sb sync` 安装 omp、pi 等工具。后续启动仅需数秒
+## 日常操作
 
-项目必须位于挂载根内（默认 `~/Code`、`~/nix-config`），否则启动时报错。herdr 的 worktree 默认放在 `~/Code/worktrees`，已在 `~/Code` 之内，无需单独加挂载根
+### 多开、worktree 与临时命令
 
-只想确认沙箱能用时，指定一个便宜的模型：
+- **多开**：在不同终端分别运行 `omp-sb` 或 `pi-sb` 即可；同项目并发时避免同时改同一文件
+- **worktree**：直接进入 `~/Code/worktrees/<项目>/<分支>` 启动，要求 worktree 与主仓库都在挂载根内
+- **临时命令**：`sb run git status` 跑单条命令，`sb shell`（或 `sb run -t bash`）进入当前项目上下文
 
-```bash
-omp-sb --model=<provider/model> -p '只回复 OK'
-```
+### 误删项目文件恢复
 
-## 场景二：每天怎么用
-
-### 在项目里开 Agent
+每次启动前宿主都会建一个 APFS 本地快照，发现误删需尽快恢复（磁盘紧张时系统会自动回收）：
 
 ```bash
-cd ~/Code/my-app
-omp-sb
+tmutil listlocalsnapshots /
 ```
 
-家里的模型服务由 `sb.yaml` 的 `network.default_grant` 对所有项目默认放行，不需要在项目里声明。GitHub 等凭据在沙箱里只有占位符，请求发往 `sb.yaml` 里 `secrets.*.allow` 列出的域名时才在出口换成真实值，`git push`、`gh` 照常可用
-
-沙箱里也能用 pi：`sb run pi …`
-
-### 同时开多个 Agent
-
-每个终端执行一次 `omp-sb` 即可，新开的不会打断已在运行的
-
-```bash
-# 终端 1
-cd ~/Code/my-app && omp-sb
-# 终端 2：另一个项目
-cd ~/Code/blog && omp-sb
-# 终端 3：同一个项目再开一个
-cd ~/Code/my-app && omp-sb
-```
-
-- 不同项目的 Agent 互相看不到对方的目录
-- 同一项目的多个 Agent 共用同一份项目文件，注意不要同时改同一个文件
-- 所有 Agent 共用一份 OMP 数据（会话、插件、数据库），和宿主上同时开多个 OMP 的效果一样
-
-### 在 worktree 里开
-
-```bash
-cd ~/Code/worktrees/my-app/feature-x
-omp-sb
-```
-
-主仓库的 `.git` 会自动挂进来，Agent 可以正常 `git status`、`git commit`，提交在宿主上立即可见。worktree 与它的主仓库都要在挂载根内
-
-### 临时跑命令、进去看看
-
-```bash
-sb run git status   # 只跑一条命令
-sb run -t bash      # 同 sb shell，进当前项目的上下文
-```
-
-### 哪些改动会留下
-
-| 位置                                     | 退出后                                             |
-| ---------------------------------------- | -------------------------------------------------- |
-| 项目目录、`.sandbox.yaml` 的 `paths`     | 改动就是宿主上的改动，立即可见                     |
-| `imports` 复制进去的文件                 | 退出时删除，Agent 改了也不会写回宿主               |
-| OMP 与 pi 的会话、插件、数据库           | 保留在 VM 的数据卷里，所有项目共用，重建 VM 后仍在 |
-| OMP、pi 的声明配置（`config.yml` 等）    | 沙箱里只读，改配置见场景五                         |
-| 其他位置（`/tmp`、家目录里没声明的文件） | 退出即消失                                         |
-
-宿主的 `/tmp` 也在挂载根里，可以直接在 `/tmp/xxx` 里开 Agent；它在沙箱里的路径是 `/private/tmp/xxx`，与沙箱自己的 `/tmp` 不是同一个目录
-
-### 误删了项目文件
-
-每次开 Agent 前，`sb` 会在宿主建一个 APFS 本地快照。系统在磁盘紧张时会清掉它，发现误删要尽快恢复
-
-```bash
-tmutil listlocalsnapshots /     # 找到开 Agent 前的那个，名字里是创建时间
-```
-
-- 图形界面：在 Finder 里打开项目目录，菜单栏 Time Machine 图标 → 浏览 Time Machine 备份，选对应时间点恢复
-- 命令行：挂载快照需要 sudo
+可在 Finder 打开项目目录后通过 Time Machine 恢复，或用命令行只读挂载快照拷回：
 
 ```bash
 mkdir /tmp/snap
@@ -127,169 +41,61 @@ cp -R /tmp/snap/Users/<你>/Code/<项目>/<文件> ~/Code/<项目>/
 sudo umount /tmp/snap
 ```
 
-开 Agent 时看到「本地快照失败」的警告，说明这次没有兜底
+## 项目授权（`.sandbox.yaml`）
 
-## 场景三：项目需要凭据、私网服务或项目外目录
-
-在项目根目录写 `.sandbox.yaml`，然后批准它。批准之后才能启动：
+项目需要宿主凭据、私网服务或项目外目录时，在项目根创建 `.sandbox.yaml`：
 
 ```yaml
-# 把宿主文件复制进沙箱
 imports:
   - src: ~/.kube/home-ops.yaml
-    target: ~/.kube/home-ops.yaml # 上下文里的路径，~ 是上下文的家目录
-
-# 允许访问家里的服务
+    target: ~/.kube/home-ops.yaml
 network:
-  - "192.168.69.46"
-
-# 挂载项目外的目录（必须在挂载根内）
+  - "192.168.1.10" # 或 IP:端口
 paths:
-  - ~/Code/shared-lib # 可写
-  - ~/Code/design-docs:ro # 只读
+  - ~/Code/shared-lib
+  - ~/Code/design-docs:ro
 ```
 
-| 字段      | 不写时                                            | 作用                                                                                           |
-| --------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `imports` | 不导入                                            | 启动时复制到 `target`，退出时删除。`target` 所在目录在上下文里只剩导入的文件                   |
-| `network` | 私网全部拒绝（`sb.yaml` 的 `default_grant` 除外） | 只放行列出的私网 `IP` 或 `IP:端口`，写 `IP:端口` 才能限定端口；公网、DNS、宿主开发端口一直可用 |
-| `paths`   | 只挂当前项目                                      | 额外挂载的目录，加 `:ro` 为只读；也可写成 `{ path: ~/Code/design-docs, readonly: true }`       |
-
-字段类型写错会直接报错，不会当作没写，例如 `network` 必须是列表
-
-写好后先看清单，再批准：
-
-```bash
-sb plan    # 查看项目授权清单，末行显示批准状态
-sb trust   # 确认无误后执行批准
-```
-
-没有批准，或批准后 `.sandbox.yaml` 又改了，`omp-sb` 直接报错，不会弹提示：
-
-```
-[-] 错误: ~/Code/my-app/.sandbox.yaml 未批准，或批准后已变更。先执行 sb plan 查看授权内容，确认后执行 sb trust
-```
-
-批准只看文件内容，不看路径：同一份 `.sandbox.yaml` 在所有 worktree 里只批准一次，只改注释或格式也不用重新批准。Agent 改了文件内容，下次启动就会要求重新批准
-
-## 场景四：沙箱里缺工具
-
-只有某个项目要用的工具，写进项目自己的 `mise.toml`，在沙箱里装：
-
-```bash
-sb run bash -c 'mise trust && mise install'
-```
-
-Agent 在上下文里也可以自己执行这两条命令。装好的工具放在宿主的共用目录，重建 VM 后仍在，其他项目用同一版本时不再下载。每个项目目录只需 `mise trust` 一次。需要现场编译的工具（如带原生扩展的 `pipx:` 包）装不上，沙箱里没有 C 编译器
-
-所有项目都要用的工具，登记到共享工具表，宿主和沙箱同时获得：
-
-1. 在 `modules/features/ai/ai-tools.nix`（AI 工具）或 `modules/features/dev/tools-base.nix`（基础 CLI）里加一条
-   ```nix
-   shelken.dev.tools = {
-     yq.package = "yq-go";   # Nix 提供
-     bun.mise = "1.4.2";     # mise 提供，可写版本号
-   };
-   ```
-2. 应用配置，并把工具装进沙箱
-   ```bash
-   just hm
-   sb sync
-   ```
-
-- Nix 工具在 `just hm` 后新开的上下文里就能用
-- mise 工具要等 `sb sync` 装完；宿主上同样要执行 `mise install`
-- `sb sync` 对 mise 工具只补缺，不升级、不删除；OMP 插件与清单一致时跳过，缺失时恢复，清单外的会被删。Agent 运行中也可以执行
-
-## 场景五：改 OMP、pi 的配置或插件
-
-OMP、pi 的配置由本仓库声明，发布进沙箱后只读，所以要在宿主改仓库：
-
-1. 改 `modules/features/ai/` 下对应的文件，例如 `omp/config.yml`、`omp/plugins/package.json`
-2. 应用配置
-   ```bash
-   just hm
-   ```
-3. 改了插件清单时再补齐一次
-   ```bash
-   sb sync
-   ```
-
-新配置在新开的上下文里生效，已在运行的 Agent 继续用启动时的版本，不需要重建 VM。同一目录里的运行状态（会话、插件数据库等）照常可写
-
-## 场景六：改能力上限，重建或排查问题
-
-### 改 `sb.yaml`
-
-能力上限的源文件是 `modules/features/ai/sandbox/sb.yaml`，改完执行 `just hm`。下一次 `omp-sb` 时：
-
-- 没有 Agent 在运行：自动按新上限重建主 VM，数据卷保留
-- 还有 Agent 在运行：新的启动直接报错，正在运行的不受影响。全部退出后再启动即可
-
-改 `default_grant` 不需要重建，下一个新开的上下文就生效
-
-### 看状态
-
-```bash
-sb status
-```
-
-```
-VM 名称: sb-main
-VM 状态: Running
-VM 规格: cpus=4, memory=8G
-运行指纹: 3f2a…
-当前指纹: 3f2a…
-上限一致: consistent
-运行状态: busy (1)
-缺失工具: 无
-```
-
-`上限一致` 显示 `inconsistent` 表示 `sb.yaml` 已改、主 VM 还没重建；`缺失工具` 不为「无」时执行 `sb sync`
-
-### 看当前项目拿到了哪些授权
-
-在项目目录里执行，不会创建 VM，也不会启动 Agent：
+写完或修改后先检查授权清单，再批准，否则启动直接报错：
 
 ```bash
 sb plan
+sb trust
 ```
 
-```
-项目根: ~/Code/my-app
-额外路径:
-  无
-导入文件:
-  ~/.kube/home-ops.yaml → ~/.kube/home-ops.yaml
-放行的私网目标:
-  192.168.69.46:443（sb.yaml 默认放行）
-放行的宿主端口:
-  无
-批准状态: 已批准
-```
+## 补充工具
 
-项目根与导入源在实际输出里是解析后的绝对路径，target 保持写在 `.sandbox.yaml` 里的 `~/…`。沙箱里连不上某个内网地址、读不到某个文件时，先看这里有没有列出。`.sandbox.yaml` 写错或超出上限时它会和启动一样报错
+- **单项目工具**：写入项目 `mise.toml`，在沙箱内执行：
+  ```bash
+  sb run bash -c 'mise trust && mise install'
+  ```
+- **全局工具**：在 [ai-tools.nix](../../modules/features/ai/ai-tools.nix) 或 [tools-base.nix](../../modules/features/dev/tools-base.nix) 中登记 `shelken.dev.tools`：
+  ```nix
+  shelken.dev.tools = {
+    yq.package = "yq-go";
+    bun.mise = "1.4.2";
+  };
+  ```
+  随后应用配置并同步到沙箱（宿主侧 mise 工具另需 `mise install`）：
+  ```bash
+  just hm
+  sb sync
+  ```
 
-### 停止、删除
+## 改配置与运维
+
+改 OMP、pi 配置或能力上限 [sb.yaml](../../modules/features/ai/sandbox/sb.yaml) 后，在宿主执行：
 
 ```bash
-sb down            # 停止主 VM，下次 omp-sb 自动启动
-sb rm              # 删除主 VM，数据卷保留；有 Agent 在运行时会拒绝
-sb rm --force      # 强制删除，会打断所有 Agent
+just hm
+sb sync            # 改了插件或 mise 工具清单时补齐
 ```
 
-不用每次手动 `sb down`：`sb.yaml` 的 `idle_timeout`（现为 5 分钟）让最后一个 `omp-sb`、`sb run` 退出后，主 VM 空闲超时自动停止，下次启动再自动拉起。改这个值会在下次启动时重建主 VM（数据卷保留）
+改完 `sb.yaml` 需退出运行中的 Agent 后再启动，以触发主 VM 重建
 
-### 常见报错
-
-| 报错                                            | 原因                                 | 处理                                                           |
-| ----------------------------------------------- | ------------------------------------ | -------------------------------------------------------------- |
-| `当前项目根目录 … 超出沙箱能力上限`             | 项目不在挂载根内                     | 把项目移到 `~/Code` 下，或在 `sb.yaml` 的 `mount_roots` 加目录 |
-| `worktree 的 git common dir … 超出沙箱能力上限` | worktree 的主仓库不在挂载根内        | 同上，把主仓库所在目录加进 `mount_roots`                       |
-| `能力上限已变，主 VM 有 N 个上下文在运行 …`     | 改了上限但还有 Agent 在跑            | 退出这些 Agent 后重新启动                                      |
-| `沙箱配置尚未发布` 或 `共用 mise 目录不存在`    | 还没执行过 `just hm`                 | 执行 `just hm`                                                 |
-| `.sandbox.yaml 未批准，或批准后已变更`          | 文件是新的，或内容变了               | `sb plan` 看清单，确认后 `sb trust`                            |
-| `.sandbox.yaml 的 network 必须是列表`           | 字段类型写错                         | 按上表改成列表                                                 |
-| `.sandbox.yaml 中声明的导入文件不存在`          | `imports` 路径写错                   | 相对路径以项目根为起点，`~` 表示家目录                         |
-| `imports 的目标目录 … 是沙箱保留位置`           | `target` 落在系统目录、`~/.omp` 等下 | 换一个子目录，例如 `~/.kube/`                                  |
-| 在沙箱里执行 `sb`、`just` 等命令被拒绝          | 这些命令只能在宿主上执行             | 回到宿主终端执行                                               |
+```bash
+sb status          # 查看主 VM 状态、上限是否一致与缺失工具
+sb plan            # 查看当前项目实际授权与批准状态
+sb down            # 停止主 VM（空闲超时也会自动停止）
+sb rm              # 删除主 VM（保留数据卷；--force 强删）
+```

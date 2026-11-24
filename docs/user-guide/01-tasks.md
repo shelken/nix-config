@@ -1,17 +1,10 @@
 # 声明式定时任务
 
-声明一处任务，得到 `task-<名>` 命令、统一管理入口 `ntask`，以及自动落盘的日志；配置调度后，再由 launchd 自动触发
-
-两个声明位置，效果一致：
-
-- `hosts/<机器>/tasks/<名>.nix`：机器专属
-- 任意模块里写 `shelken.tasks.<名>`：随功能一起下发
-
-字段名、默认值与脚本包装逻辑都在 `lib/tasks.nix`，本页不复述类型定义
+所有字段定义与默认值见 [lib/tasks.nix](../../lib/tasks.nix)，设计约束与 `mise.toml` 项目写法见 [tasks README](../../modules/features/system/tasks/README.md)
 
 ## 加一个机器专属任务
 
-新建 `hosts/mio/tasks/backup-check.nix`：
+1. 新建 `hosts/<机器>/tasks/<名>.nix`，文件名去掉 `.nix` 即为任务名：
 
 ```nix
 { pkgs, ... }:
@@ -26,13 +19,12 @@
 }
 ```
 
-执行 `git add` 暂存该文件，再运行 `just sw`（新文件未进 git 无法被 flake 识别）；之后使用 `ntask ls` 确认它已注册
-
-文件名去掉 `.nix` 即为任务名，上面的任务名为 `backup-check`，日志写入 `~/Library/Logs/task-backup-check.log`
+2. 执行 `git add hosts/<机器>/tasks/<名>.nix`，再运行 `just sw`
+3. 运行 `ntask ls` 确认任务已注册
 
 ## 在模块里声明任务
 
-功能模块可在自身配置旁声明任务，`backup/kopia/` 的实现如下：
+在任意模块的 `shelken.tasks.<名>` 中声明：
 
 ```nix
 shelken.tasks.kopia-backup = {
@@ -43,130 +35,15 @@ shelken.tasks.kopia-backup = {
 };
 ```
 
-两个来源合并为同一份任务表，模块声明的任务与主机专属任务机制完全一致
-
-## 字段
-
-| 字段       | 类型                 | 默认值 | 作用                                                          |
-| ---------- | -------------------- | ------ | ------------------------------------------------------------- |
-| `enable`   | bool                 | `true` | 是否部署任务，`false` 时保留声明，不安装 job 与手动命令       |
-| `when`     | `"H:M"` 或字符串列表 |        | 日历时间，机器睡眠错过的会在唤醒后补跑                        |
-| `weekday`  | 0 到 7 的整数列表    | `[ ]`  | 限制 `when` 的星期，空列表表示每天，0 与 7 均代表周日         |
-| `every`    | 整数（秒）           |        | 间隔时间，机器关机期间错过的不会补跑                          |
-| `user`     | bool                 | `true` | `true` 生成用户态 LaunchAgent，`false` 生成 root LaunchDaemon |
-| `packages` | package 列表         | `[ ]`  | 脚本依赖的 CLI 工具，注入隔离的运行时 PATH                    |
-| `secrets`  | 属性集               | `{ }`  | 环境变量到 sops 解密文件路径的映射，运行时读文件注入          |
-| `env`      | 属性集               | `{ }`  | 普通环境变量，明文写入此处                                    |
-| `jitter`   | 整数（秒）或 `null`  | `null` | 调度唤起后的最大随机延迟，取值 `1` 到 `32767`                 |
-| `notify`   | 属性集               | 见下   | 默认 `failure = true`、`success = false`、`title = null`      |
-| `script`   | bash 脚本            | 必填   | 脚本内容；构建期只做 `bash -n` 语法检查，不跑 shellcheck      |
-
-写错字段名或漏写 `script` 会在构建时直接报错，不会静默按默认值部署
-
-## 触发时间
-
-`when` 和 `every` 互斥，按需二选一：
-
-- `when = "3:15"`：每天的日历时间，对应 launchd 的 `StartCalendarInterval`
-- `every = 7200`：间隔秒数，对应 `StartInterval`
-- 都不提供：纯手动任务，`ntask ls` 显示 `manual`，通过 `ntask run <名>` 执行
-
-`when` 在睡眠期间错过的触发会在唤醒后补跑，多次错过合并为一次补跑；`every` 不补跑，关机期间错过的日历触发亦不补跑
-
-按星期执行时，在 `when` 旁配置 `weekday`，多个星期与多个时间逐一组合：
-
-```nix
-when = "5:00";
-weekday = [ 0 ]; # 每周日 5:00，睡眠错过后在唤醒时补跑
-```
-
-`weekday` 必须配合非空的 `when` 使用，与 `every` 共用会在构建期报错；`ntask ls` 会显示具体星期（例如 `Sun 05:00`）
-
-## 临时禁用
-
-在任务声明中配置 `enable = false`，应用配置后 launchd job 与 `task-<名>` 命令会被移除，`ntask ls` 不再列出该任务
-
-声明依然保留；需要恢复时改回 `enable = true` 重新应用配置即可
-
-## 抖动 (Jitter)
-
-多台机器访问同一后端服务时，使用 `jitter` 错峰：
-
-```nix
-jitter = 600; # 唤起后随机等待 0 到 599 秒
-```
-
-手动执行 `ntask run` 不等待，抖动仅在 launchd 唤起（或 `ntask run --as-launchd`）时生效
-
-## 环境隔离
-
-所有 `task-<名>` 包装脚本默认按 launchd 裸环境运行：锁死 `PATH`（仅含 `packages` 与 `/usr/bin:/bin:/usr/sbin:/sbin`）、经 `env -i` 清除终端泄漏的变量、工作目录固定为 `/`、标准输入重定向到 `/dev/null`
-
-手动执行 `ntask run` 即可当场暴露缺包或漏环境变量，无需等到定时触发
-
-任务涉及外部项目且项目自带 `mise.toml` 时，优先只在 `packages` 声明 `mise` 与宿主机基础工具（如 `git`），脚本里 `cd` 进项目目录后用 `mise exec --` 执行命令，避免跨仓同步工具列表
-
-## 通知
-
-用户态任务失败时默认发送一条系统通知，点击通知打开对应日志；若需要成功通知或自定义标题：
-
-```nix
-notify = {
-  success = true;
-  title = "Kopia Backup";
-};
-```
-
-`title` 同时替换成功与失败两种通知的标题；仅 launchd 唤起的运行会发送通知，手动 `ntask run` 保持安静；root 任务不发送通知，图形会话不在席时亦不发送
-
-## 日志
-
-| 任务类型 | 路径                           |
-| -------- | ------------------------------ |
-| 用户态   | `~/Library/Logs/task-<名>.log` |
-| root     | `/Library/Logs/task-<名>.log`  |
-
-每次运行在日志里以 `===== Task '<名>' Started (launchd) =====` 开始、`===== Task '<名>' Finished (exit code: N) =====` 结束；手动运行标注 `(manual)`，旧记录没有括号部分
-
-`ntask log <名>` 默认只显示最近一次运行；`-n N` 显示最近 N 次，`-f` 跟随实时输出，`--all` 显示整个文件
-
-`ntask run` 的输出同时写入上述日志文件；直接执行 `task-<名>` 只在终端输出，不写日志
-
-日志由 macOS newsyslog 轮转：超过 1MB 轮转，保留 5 份 gzip 旧档（`task-<名>.log.0.gz` 最新），更早的自动删除；配置在 `/etc/newsyslog.d/space.ooooo.tasks.conf`，由 `modules/features/system/tasks/_framework.nix` 生成，需 `just sw` 生效
-
-手动验证轮转：`sudo newsyslog -nvf /etc/newsyslog.d/space.ooooo.tasks.conf`（`-n` 只打印将要执行的动作）
+临时停用任务时加 `enable = false` 再重新应用；root 任务（`user = false`）须写在机器 `tasks/` 目录或功能的 darwin 模块中，不得写在 Home Manager 模块里
 
 ## 命令
 
 ```bash
-ntask             # 等同于 ntask ls
-ntask ls          # 状态表：上次运行、结果、是否已装载
-ntask ls --names  # 每行一个任务名，供 shell 补全使用
-ntask log <名>    # 查看日志；默认最近一次，-n N 最近 N 次，-f 跟随，--all 全部
-ntask run <名>                # 前台执行（环境同 launchd，无 jitter 与通知），输出写入日志，root 任务自动引导 sudo
-ntask run --as-launchd <名>   # 完整模拟 launchd 唤起（含 jitter、通知与 launchd 日志标记）
-ntask info <名>   # 调度、日志与 plist 路径、launchd 状态
-ntask help -v     # 完整说明；--debug 输出各阶段耗时
-task-<名>         # 绕过 ntask CLI 直接执行底层脚本
+ntask ls            # 查看所有已部署任务状态
+ntask log <名>      # 查看最近一次日志（支持 -n N、-f、--all）
+ntask run <名>      # 按 launchd 隔离环境前台执行并写日志
+ntask info <名>     # 查看调度、日志与 plist 路径
 ```
 
-`ntask` 运行时读取已安装的 `space.ooooo.task-*` launchd plist，仅展示真正部署到当前机器的任务
-
-## 任务存放约定
-
-| 位置                            | 用途                                                       |
-| ------------------------------- | ---------------------------------------------------------- |
-| `hosts/<机器>/tasks/`           | 机器专属                                                   |
-| 任意模块的 `shelken.tasks.<名>` | 功能自带，如 `modules/features/nix/nix-gc.nix` 的 `nix-gc` |
-
-仅 `user = true` 的任务进入用户层；在 Home Manager 模块中声明 root 任务会在构建期报错，root 任务需写在机器 tasks 目录或功能的 darwin 模块中
-
-## 实现位置
-
-```text
-lib/tasks.nix                                  # 字段契约与脚本包装：mkTaskType、taskDefaults、mkPackage
-modules/features/system/tasks/_framework.nix   # root 任务转 LaunchDaemon
-modules/features/system/tasks/_user-tasks.nix  # 用户任务转 LaunchAgent，并构建 ntask CLI
-modules/features/system/tasks/_cli/            # ntask CLI（Python）与 zsh 补全
-modules/features/system/tasks/_notify.nix      # 通知组件 terminal-notifier
-```
+完整子命令与参数运行 `ntask help -v` 查看

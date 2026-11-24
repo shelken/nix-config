@@ -1,106 +1,47 @@
 # 功能与角色
 
-一个软件就是一个「功能」，放在 `modules/features/<分类>/<名>`，系统侧（Homebrew、launchd、defaults）和 Home Manager 部分写在同一处。主机不列具体功能，只选一个「角色」，功能自己声明属于哪个角色。设计原因见 [ADR 0004](../adr/0004-dendritic-feature-modules.md)
-
-## 角色
-
-| 角色          | 包含                                       | 主机                                               |
-| ------------- | ------------------------------------------ | -------------------------------------------------- |
-| `core`        | 所有主机共有的基线：能登录、能用 nix       | 被其他角色包含                                     |
-| `server`      | `core` + 常驻服务器职责（仅 NixOS）        | vps-cc、hk1box、yuuko-k8s、sakamoto-k8s、homelab-1 |
-| `tui`         | `core` + 终端开发工具                      | 被 `gui` 包含                                      |
-| `gui`         | `tui` + 桌面环境与图形应用                 | ling                                               |
-| `desktop`     | `gui` + 日常桌面机共有的软件（仅 darwin）  | yuuko、sakamoto                                    |
-| `workstation` | `desktop` + 主力机个人工作流               | mio                                                |
-| `homelab`     | 附加角色：兼做服务器的软件，叠加在主角色上 | yuuko、sakamoto                                    |
-
-主机的角色写在 `hosts/<主机>/default.nix` 的 `imports` 里，例如 `imports = [ self.modules.darwin.workstation ];`
+角色分工见 [GLOSSARY.md](../../GLOSSARY.md) 与 [modules/profiles/](../../modules/profiles/)，写法规则见 [software-config.md](../agents/software-config.md)、[ADR 0004](../adr/0004-dendritic-feature-modules.md) 与 [ADR 0012](../adr/0012-feature-domains-and-file-form.md)
 
 ## 加一个软件
 
-1. 新建 `modules/features/<分类>/<名>.nix`，写配置并声明加入哪个角色
+1. 新建 `modules/features/<分类>/<名>.nix`（含非 nix 资源时建 `<名>/default.nix`）：
 
-   ```nix
-   # Foo：一句话说明它是什么
-   { config, ... }:
-   {
-     # 加入 desktop：mio、yuuko、sakamoto 获得它
-     flake.modules.darwin.desktop.imports = [ config.flake.modules.darwin.foo ];
+```nix
+{ config, ... }:
+{
+  flake.modules.darwin.desktop.imports = [ config.flake.modules.darwin.foo ];
+  flake.modules.darwin.foo.homebrew.casks = [ "foo" ];
+  flake.modules.homeManager.foo = { config, mylib, ... }: {
+    xdg.configFile."foo/config.toml" = mylib.mkConfigFile config ./foo.toml;
+  };
+}
+```
 
-     # 系统侧
-     flake.modules.darwin.foo.homebrew.casks = [ "foo" ];
+2. `git add` 新文件后运行 `just bd` 验证
 
-     # 用户态：与系统侧同名，会自动跟着进入同一批主机
-     flake.modules.homeManager.foo =
-       { config, mylib, ... }:
-       {
-         xdg.configFile."foo/config.toml" = mylib.mkConfigFile config ./foo.toml;
-       };
-   }
-   ```
-
-2. 按想让它出现的主机选角色
-
-   | 想让它出现在                  | 写法                                              |
-   | ----------------------------- | ------------------------------------------------- |
-   | 所有 darwin 主机              | `flake.modules.darwin.core.imports`               |
-   | 所有 darwin 桌面机（含 ling） | `flake.modules.darwin.gui.imports`                |
-   | mio、yuuko、sakamoto          | `flake.modules.darwin.desktop.imports`            |
-   | 只有 mio                      | `flake.modules.darwin.workstation.imports`        |
-   | yuuko、sakamoto（服务器职责） | `flake.modules.darwin.homelab.imports`            |
-   | NixOS 主机                    | `flake.modules.nixos.<角色>.imports`              |
-   | 某一台主机                    | 不加入角色，在该主机的 `imports` 里导入，见下一节 |
-
-3. `git add` 新文件，再运行 `just bd` 构建。没被 git 跟踪的文件 flake 看不到
-
-几条规则：
-
-- 只有 Home Manager 部分的软件：纯 HM 功能可直接挂 `homeManager.<角色>.imports`（`core` 与 `tui` 有锚点，一行同时进入 darwin 与 nixos）；也可走系统侧 `darwin.<角色>.imports` / `nixos.<角色>.imports`，同名 `homeManager.<名>` 自动跟进；已有同名系统模块的功能不要再挂 `homeManager.<角色>.imports`，会重复导入
-- 同一个功能只能有一条导入路径：加入角色后勿在主机中重复导入，反之亦然；重复导入会导致 option 重复声明或列表重复
-- 配置文件使用 `mylib.mkConfigFile config ./文件`（直接赋给整项）或 `mylib.mkConfigLink config ./文件`（赋给 `.source`），参数须为仓库内存在的 Nix 路径值，通常写 `./文件`（文件挪动后求值即报错）；开启 `shelken.dotfiles.liveEdit` 的主机会软链到仓库工作树，修改后无需重新构建，关闭时拷进 Nix store，保证闭包自包含且回滚可恢复该代的配置内容
-- 功能带脚本、配置模板等非 nix 文件时用目录：`modules/features/<分类>/<名>/default.nix` 作为入口，资源放在同一目录；没有资源的功能用 `<名>.nix`。入口过于繁杂时才按职责拆出 `_` 开头的私有片段（如 `_settings.nix`，不得按平台命名），它们与 `README.md` 均视作目录成员，不会被自动导入。规则见 [ADR 0012](../adr/0012-feature-domains-and-file-form.md)
+- 配置文件用 `mylib.mkConfigFile config ./文件` 引入
+- 纯 Home Manager 功能挂 `homeManager.<角色>.imports`；已有同名系统模块的不要重复挂，也不要同时挂角色与主机
 
 ## 给某台主机加可选功能
 
-可选功能没有写入任何 `flake.modules.<平台>.<角色>.imports`，在主机里显式导入才生效。查看当前尚未被任何主机导入的功能文件：
-
-```bash
-just unused
-```
-
-打开对应文件确认模块名（通常与文件名或目录名一致；同一文件也可额外发布可选扩展模块，例如 `nix/nix-icache/default.nix` 的 `nixos.nix-icache-system`），加到主机的 `imports`：
+用 `just unused` 查看未挂入主机的模块，在主机 `imports` 中显式引入（NixOS 用 `self.modules.nixos.<名>`）：
 
 ```nix
 # hosts/sakamoto/default.nix
-imports = with self.modules.darwin; [
-  desktop
-  homelab
-  virts
-];
+imports = with self.modules.darwin; [ desktop homelab utm ];
 ```
-
-NixOS 主机用 `self.modules.nixos.<名>`
 
 ## 调整主机参数
 
-参数写在主机文件的 `shelken` 属性集下，未指定时采用默认值
+常用选项写在主机 `shelken` 下，比如 `shelken.secrets.enable = true`（`default.nix`）或 `shelken.dotfiles.liveEdit = true`（`home.nix`），查全部选项：
 
-| 选项                        | 写在          | 默认值           | 作用                                                                              |
-| --------------------------- | ------------- | ---------------- | --------------------------------------------------------------------------------- |
-| `secrets.enable`            | `default.nix` | `false`          | 主机持有 age 密钥；kopia 备份等需要密钥的功能依赖它，未开启时求值报错             |
-| `wm.manager`                | `default.nix` | `"omniwm"`       | 窗口管理器，目前只有 `"omniwm"`（`gui` 及以上）                                   |
-| `tools.autoinputswitch.app` | `default.nix` | `"typeswitch"`   | 自动切换输入法的软件，可选 `"typeswitch"`、`"inputsourcepro"`（`workstation`）    |
-| `dotfiles.liveEdit`         | `home.nix`    | `false`          | 配置文件软链到本地仓库，改完即时生效；远程部署机保持关闭                          |
-| `backup.backupPaths`        | `home.nix`    | `[ ]`            | kopia 额外备份的路径（`workstation`）                                             |
-| `backup.calendarInterval`   | `home.nix`    | 按 hostname 分布 | kopia 快照时间，`"H:M"` 列表；默认 `2:00` 到 `8:00` 间取两个时刻（`workstation`） |
-| `backup.policySyncWhen`     | `home.nix`    | `"5:00"`         | kopia 周日策略同步的时间（`workstation`）                                         |
-| `neovim.minimal`            | `home.nix`    | `false`          | 保留高亮、补全与外观，不装语言工具、LSP 与功能类插件（`tui` 及以上）              |
+```bash
+rg 'options\.shelken\.' modules/features/
+```
 
 ## 新增一台主机
 
-1. 复制同类主机的目录（例如 darwin 桌面机可复制 `hosts/ling/`），修改 `hostname`，并在 `imports` 中指定角色
-2. 在 `hosts/default.nix` 里照抄一条同类主机，改成新目录
-3. 若需要 sops 密钥，参考根目录 README「初始化」将新机器公钥加入 secrets 仓库，并在 `default.nix` 中配置 `shelken.secrets.enable = true;`
-4. 执行 `git add hosts/<主机>`，运行 `just b <主机>` 验证构建
-
-在 `hosts/default.nix` 登记新主机可能改变其他主机的 kopia 备份时段：`mylib.calcUniformSchedule` 读取非 OpenWrt 主机表按主机名哈希排序分配时间
+1. 复制同类主机目录（比如 `hosts/ling/`），改 `hostname` 与 `imports` 角色
+2. 在 `hosts/default.nix` 登记新主机
+3. 需要密钥时按根目录 [README](../../README.md)「初始化」加公钥，并开 `shelken.secrets.enable = true`
+4. 执行 `git add hosts/<主机>` 与 `just b <主机>` 验证
