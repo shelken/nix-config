@@ -20,22 +20,22 @@ modelRoles:
   claude: anthropic/claude-sonnet-5-5:high
   claude-max: anthropic/claude-opus-5-5:medium
   fable: anthropic/claude-opus-5-5:medium
-  gemini-lite: mp/agy-cli/gemini-4-hydrogen:high
-  gemini: mp/agy-cli/gemini-4-neon:high
-  gemini-max: mp/agy-cli/gemini-4-neon:high
+  gemini-lite: mp-agy/agy-cli/gemini-4-hydrogen:high
+  gemini: mp-agy/agy-cli/gemini-4-neon:high
+  gemini-max: mp-agy/agy-cli/gemini-4-carbon:high
   reviewer-gemini: "@gemini-max"
   reviewer-ds: "@dsf"
   reviewer-glm: "@glm-max:high"
   reviewer-gpt: "@gpt:xhigh"
   reviewer-cc: "@claude"
-  reviewer: "@reviewer-gpt"
+  reviewer: "@reviewer-gemini"
   judge: "@gemini-max"
   vision: cpa/gpt-5.6-luna:high
   commit: cpa/workbuddy/hy3:high
   tiny: cpa/workbuddy/hy3:high
   memory: cpa/gpt-5.6-luna:high
   web: google/gemini-2.5-flash
-  plan: "@reviewer-gpt"
+  plan: "@gemini-max"
   smol: "@gpt-lite"
   scout: "@gemini-lite"
   default: "@gemini"
@@ -113,18 +113,18 @@ codexResets:
 retry:
   fallbackChains:
     scout:
-      - mp/agy-cli/gemini-3.8-flash:high
+      - mp-agy/agy-cli/gemini-3.8-flash:high
       - cpa/workbuddy/glm-5.3:max
     cpa/workbuddy/hy3:
       - cpa/gpt-5.6-luna:high
-      - mp/agy-cli/gemini-3.8-flash:medium
+      - mp-agy/agy-cli/gemini-3.8-flash:medium
     cpa/gpt-5.6-luna:
-      - mp/agy-cli/gemini-3.8-flash:medium
+      - mp-agy/agy-cli/gemini-3.8-flash:medium
       - cpa/workbuddy/hy3:high
     commit:
-      - mp/agy-cli/gemini-3.8-flash:medium
+      - mp-agy/agy-cli/gemini-3.8-flash:medium
     tiny:
-      - mp/agy-cli/gemini-3.8-flash:medium
+      - mp-agy/agy-cli/gemini-3.8-flash:medium
     memory:
       - cpa/workbuddy/hy3:high
     glm-flash:

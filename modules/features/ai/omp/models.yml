@@ -37,6 +37,13 @@ providers:
           mode: effort
           efforts: [minimal, low, medium, high, xhigh, max]
     # <<< mp-modelOverrides:auto-sync <<<
+  mp-agy:
+    baseUrl: https://magpie.int.ooooo.space
+    api: anthropic-messages
+    apiKey: MAGPIE_API_KEY
+    discovery:
+      type: openai-models-list
+      timeoutMs: 3000
   cpa:
     baseUrl: https://cpa.int.ooooo.space/v1
     apiKey: CPA_PI_API_KEY

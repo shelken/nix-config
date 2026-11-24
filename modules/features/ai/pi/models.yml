@@ -2,3 +2,7 @@ providers:
   cpa:
     compat:
       sessionAffinityFormat: openrouter
+  mp-agy:
+    compat:
+      forceAdaptiveThinking: true
+      sendSessionAffinityHeaders: true

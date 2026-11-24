@@ -5,10 +5,10 @@
   "compaction": {
     "reserveTokens": 22000,
     "modelOverrides": {
-      "mp/agy-cli/gemini-4-hydrogen": {
+      "mp-agy/agy-cli/gemini-4-hydrogen": {
         "reserveTokens": 798576
       },
-      "mp/agy-cli/gemini-4-neon": {
+      "mp-agy/agy-cli/gemini-4-neon": {
         "reserveTokens": 798576
       },
       "cpa/workbuddy/glm-5.3": {
@@ -42,8 +42,8 @@
     "+codemode"
   ],
   "enabledModels": [
-    "mp/agy-cli/gemini-4-hydrogen:high",
-    "mp/agy-cli/gemini-4-neon:high",
+    "mp-agy/agy-cli/gemini-4-hydrogen:high",
+    "mp-agy/agy-cli/gemini-4-neon:high",
     "mp/opencode-zen/deepseek-v4.1-flash-free:high",
     "cpa/workbuddy/glm-5.3:high",
     "cpa/workbuddy/glm-5.2:high",
@@ -126,7 +126,7 @@
   "theme": "catppuccin",
   "transport": "auto",
   "tuiMode": "fullscreen",
-  "defaultProvider": "mp",
+  "defaultProvider": "mp-agy",
   "defaultModel": "agy-cli/gemini-4-neon",
   "extensionChangelogVersions": {
     "{\"source\":\"npm:pi-better@0.2.0\",\"scope\":\"user\"}": "0.2.0",
