@@ -1,10 +1,18 @@
-{ inputs, myvars, ... }:
+{
+  inputs,
+  lib,
+  myvars,
+  ...
+}:
 let
   net = myvars.networking;
   ip = name: net.hostAddress.${name}.address;
   secretNet = host: import (inputs.secrets + "/hosts/${host}/network.nix");
   nodeMac = name: (secretNet name).lanMac;
   deviceMac = (secretNet "router-mine").dhcpMacs;
+  withHk1boxTag =
+    entry:
+    entry // lib.optionalAttrs (builtins.elem entry.ip net.hk1boxWhitelist.ips) { tag = "hk1box"; };
 in
 {
   uci.settings.dhcp = {
@@ -80,7 +88,7 @@ in
       }
     ];
 
-    host = [
+    host = map withHk1boxTag [
       {
         _type = "host";
         name = "pve";
