@@ -6,16 +6,16 @@
 
 1. 新建 `modules/features/<分类>/<名>.nix`（含非 nix 资源时建 `<名>/default.nix`）：
 
-```nix
-{ config, ... }:
-{
-  flake.modules.darwin.desktop.imports = [ config.flake.modules.darwin.foo ];
-  flake.modules.darwin.foo.homebrew.casks = [ "foo" ];
-  flake.modules.homeManager.foo = { config, mylib, ... }: {
-    xdg.configFile."foo/config.toml" = mylib.mkConfigFile config ./foo.toml;
-  };
-}
-```
+   ```nix
+   { config, ... }:
+   {
+     flake.modules.darwin.desktop.imports = [ config.flake.modules.darwin.foo ];
+     flake.modules.darwin.foo.homebrew.casks = [ "foo" ];
+     flake.modules.homeManager.foo = { config, mylib, ... }: {
+       xdg.configFile."foo/config.toml" = mylib.mkConfigFile config ./foo.toml;
+     };
+   }
+   ```
 
 2. `git add` 新文件后运行 `just bd` 验证
 
@@ -36,7 +36,7 @@ imports = with self.modules.darwin; [ desktop homelab utm ];
 常用选项写在主机 `shelken` 下，比如 `shelken.secrets.enable = true`（`default.nix`）或 `shelken.dotfiles.liveEdit = true`（`home.nix`），查全部选项：
 
 ```bash
-rg 'options\.shelken\.' modules/features/
+rg 'options\.shelken' modules/features/
 ```
 
 ## 新增一台主机

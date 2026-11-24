@@ -50,6 +50,13 @@ nixos-anywhere -f .#hk1box --target-host root@hk1box --build-on local \
 ssh hk1box 'ls -l /mnt/var/lib/sops-nix/key.txt'   # 装完先核对私钥已写入再断电
 ```
 
+`--extra-files` 拿到空路径会静默跳过拷贝，缺失时趁 `/mnt` 仍挂载直接补传并复查后再断电：
+
+```bash
+scp hk1box-age.txt hk1box:/mnt/var/lib/sops-nix/key.txt
+ssh hk1box 'chmod 400 /mnt/var/lib/sops-nix/key.txt'
+```
+
 装完顺序：**断电 → 拔 U 盘 → 通电**。设备无 RTC，开机头几分钟墙钟与 `uptime` 可能异常，待 NTP 同步后恢复；`sing-box-sub-update.timer` 开机 1 分钟后（加随机延迟）才拉订阅，首次开机可手动 `systemctl start sing-box-sub-update`
 
 ### 别在 U 盘系统上跑 deploy / nixos-rebuild

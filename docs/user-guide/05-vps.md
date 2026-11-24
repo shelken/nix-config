@@ -29,9 +29,9 @@ ip link show <网卡>         # MTU
 2. 在 [hosts/default.nix](../../hosts/default.nix) 登记新主机，在 `~/.ssh/specific` 添加同名 SSH 别名（地址与端口）
 3. 执行 `git add hosts/vps/<主机>` 并验证构建：
 
-```bash
-nix build .#nixosConfigurations.<主机>.config.system.build.toplevel
-```
+   ```bash
+   nix build .#nixosConfigurations.<主机>.config.system.build.toplevel
+   ```
 
 ## 装机
 
@@ -45,12 +45,26 @@ nix build .#nixosConfigurations.<主机>.config.system.build.toplevel
 
 ### 两阶段安装
 
-配方定义在 [just/anywhere.just](../../just/anywhere.just)，阶段一不碰磁盘，阶段二才抹盘：
+先进入 `nix develop`（`nixos-anywhere` 在 devshell 中），阶段一不碰磁盘，阶段二才抹盘。小内存或非 22 SSH 端口的 VPS 直接运行 `nixos-anywhere` 并加 `--build-on local` 避免安装环境 OOM（内网端口 22 且内存充足的机器如 k8s 节点才用 [just/anywhere.just](../../just/anywhere.just) 的 `just anywhere::kexec` 与 `just anywhere::install`）
 
-```bash
-just anywhere::kexec <主机> <目标>                  # 阶段一：kexec 进安装环境，卡在重连时 Ctrl-C
-just anywhere::install <主机> <目标> "$EXTRA"      # 阶段二：写 substituters 后 disko、install、reboot
-```
+1. 阶段一：拉取 kexec 镜像并切入安装环境（旧内核 ≥ 6.1 报 `PEFILE: Unsigned PE binary` 时加 `--kexec-extra-flags '-c'`，卡重连时 `Ctrl-C`）
+
+   ```bash
+   KEXEC=$(just anywhere::kexec-cache x86_64 nixos-26.05)
+   nixos-anywhere -f .#<主机> --target-host root@<主机> --build-on local --ssh-port <旧系统端口> --kexec "$KEXEC" --phases kexec
+   ```
+
+2. 抹盘前核对（全部确认后再执行阶段二）：
+   - 执行 `ssh -p 22 root@<主机>`，确认目标盘符与网络/MTU 一致
+   - 业务数据备份已验证可列出
+   - `$EXTRA` 随装密钥齐备
+   - VNC 控制台可登录，且知晓 sops 里的 root 口令
+
+3. 阶段二：分区、安装并重启
+
+   ```bash
+   nixos-anywhere -f .#<主机> --target-host root@<主机> --build-on local --ssh-port 22 --phases disko,install,reboot --extra-files "$EXTRA"
+   ```
 
 ### 装好之后
 

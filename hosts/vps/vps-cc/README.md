@@ -22,9 +22,9 @@ just deploy vps-cc
 
 也可在 `home-ops` 从 kopia 快照恢复：`task kopia:list` 选快照，执行 `task kopia:full SNAPSHOT_ID=<id>` 推回 `/data/docker`
 
-## 本机 `--extra-files` 收集
+## 本机 `--extra-files` 收集与两阶段安装
 
-随装目录权限规则与两阶段安装（SSH 端口 60223，kexec 后安装环境为 22）见 [VPS 指南](../../../docs/user-guide/05-vps.md)，装完即删除 `$EXTRA`：
+随装目录权限规则见 [VPS 指南](../../../docs/user-guide/05-vps.md)：
 
 ```bash
 EXTRA=$(mktemp -d)
@@ -38,6 +38,8 @@ for k in ed25519 rsa; do
 done
 chmod 600 "$EXTRA"/var/lib/tailscale/* "$EXTRA"/etc/ssh/*_key
 ```
+
+备好数据与 `$EXTRA` 后，先用 `tar -tzf ~/vps-cc-backup/data-docker.tgz` 校验备份可读并确认 VNC 控制台可进，再在 `nix develop` 中按 [VPS 指南](../../../docs/user-guide/05-vps.md) 执行两阶段 `nixos-anywhere`：阶段一走原 SSH 端口 `60223`、加 `--build-on local` 与 `--kexec-extra-flags '-c'`；kexec 后登录 22 端口确认 BIOS、`/dev/vda` 及 `network.nix` 地址一致再抹盘；阶段二用 `--ssh-port 22`、`--build-on local` 与 `--extra-files "$EXTRA"`，装完即删除 `$EXTRA`
 
 ## 回滚与更新
 

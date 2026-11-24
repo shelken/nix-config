@@ -6,18 +6,18 @@
 
 1. 新建 `hosts/<机器>/tasks/<名>.nix`，文件名去掉 `.nix` 即为任务名：
 
-```nix
-{ pkgs, ... }:
-{
-  when = "3:15";
-  packages = with pkgs; [
-    curl
-  ];
-  script = ''
-    curl --fail --silent https://example.com/health >/dev/null
-  '';
-}
-```
+   ```nix
+   { pkgs, ... }:
+   {
+     when = "3:15";
+     packages = with pkgs; [
+       curl
+     ];
+     script = ''
+       curl --fail --silent https://example.com/health >/dev/null
+     '';
+   }
+   ```
 
 2. 执行 `git add hosts/<机器>/tasks/<名>.nix`，再运行 `just sw`
 3. 运行 `ntask ls` 确认任务已注册

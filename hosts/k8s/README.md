@@ -7,16 +7,18 @@ k3s 集群三台节点：Lima 控制面 `sakamoto-k8s`、Lima worker `yuuko-k8s`
 - `common.nix` / `lima.nix` / `<节点>/default.nix`：三台共有与单机声明；worker 导入 `nixos.sops`，控制面不导入 `sops`；`homelab-1` 另含 OpenWrt 构建器（见 [openwrt](../../modules/features/network/openwrt/README.md)）与固定 6.12 内核的 vGPU（见 [k3s-nvidia-vgpu](../../modules/features/homelab/k3s-nvidia-vgpu/README.md)）
 - 私有 `secrets`：`hosts/<节点>/network.nix`（明文 MAC）、共享 `sops/secrets/k8s.yaml`（`k3s-token`）与 `homelab-1` 独有 `sops/secrets/hosts/homelab-1.yaml`（`nvidia-client-token`）
 - **跨仓约束**：`modules/features/homelab/k3s-node/registries.yaml` 的外部镜像源端点与 `home-ops` 的 Gatus CI 探测清单一一对应，修改端点时须同步检查两边
-- **首次启用 `lima-host` 约束**：宿主的 `~/.lima/_disks` 未设 `force` 以防覆盖数据盘，首次在宿主部署 `lima-host` 前须先手动移走旧的 `~/.lima/_disks`
+- **首次启用 `lima-host` 约束**：宿主的 `~/.lima/_disks` 未设 `force` 以防覆盖数据盘，仅在设置了 `shelken.limaHost.externalDisk` 且宿主已存在旧 `~/.lima/_disks` 时（如 `sakamoto`，未设该项的 `yuuko` 不受影响），首次部署前须先手动移走旧目录
 
 ## 重装要带过去的状态
 
-| 状态                        | 节点                               | 目标路径                                            | 怎么带                                      |
-| --------------------------- | ---------------------------------- | --------------------------------------------------- | ------------------------------------------- |
-| age 私钥                    | worker（`yuuko-k8s`、`homelab-1`） | `/var/lib/sops-nix/key.txt`                         | `--extra-files`                             |
-| SSH 主机密钥与节点口令      | 全部                               | `/etc/ssh/ssh_host_*`、`/etc/rancher/node/password` | `--extra-files`（缺口令会被集群拒绝加入）   |
-| etcd、CA、加密密钥          | `sakamoto-k8s`                     | `/var/lib/rancher/k3s/server`                       | `--extra-files`                             |
-| Longhorn / OpenEBS 本地数据 | `sakamoto-k8s` / `homelab-1`       | `/mnt/lima-longhorn`、`/var/mnt/local-hostpath`     | Lima 附加盘不触碰；PVE 同盘须先经临时卷打包 |
+| 状态                        | 节点                               | 目标路径                                            | 怎么带                                        |
+| --------------------------- | ---------------------------------- | --------------------------------------------------- | --------------------------------------------- |
+| age 私钥                    | worker（`yuuko-k8s`、`homelab-1`） | `/var/lib/sops-nix/key.txt`                         | `--extra-files`                               |
+| SSH 主机密钥与节点口令      | 全部                               | `/etc/ssh/ssh_host_*`、`/etc/rancher/node/password` | `--extra-files`（缺口令会被集群拒绝加入）     |
+| etcd、CA、加密密钥          | `sakamoto-k8s`                     | `/var/lib/rancher/k3s/server`                       | `--extra-files`                               |
+| Longhorn / OpenEBS 本地数据 | `sakamoto-k8s` / `homelab-1`       | `/mnt/lima-longhorn`、`/var/mnt/local-hostpath`     | Lima 附加盘不触碰；PVE 同盘须经外部临时卷中转 |
+
+`homelab-1` 的 `/mnt/lima-longhorn` 与 `/var/mnt/local-hostpath` 与系统同盘，会被 disko 抹掉：装机前须用 GNU `tar --sparse` 打包至 PVE 外部临时卷中转（不得塞进 `--extra-files`），重装后先从临时卷恢复并核对本地数据完整，再执行 `kubectl uncordon <节点>`
 
 ## 重装一台节点
 
@@ -31,7 +33,7 @@ k3s 集群三台节点：Lima 控制面 `sakamoto-k8s`、Lima worker `yuuko-k8s`
    rm -r "$EXTRA"
    ```
 4. **验证并首推**：Lima 节点换上新 `lima.yaml`（宿主 `socket_vmnet` 须先就绪）；核对 `nixos-version`、`eth0`/`eth1`/`eth1.50` 与 `kubectl get node`；立刻执行一次不改配置的 `just deploy <节点>` 建立 deploy-rs 激活器
-5. **收尾**：`kubectl uncordon <节点>` 并确认 Longhorn 副本重建；Lima 节点 `rm ~/.lima/<节点>/no-autostart`
+5. **收尾**：`homelab-1` 先从外部临时卷恢复本地数据并核对完整，再执行 `kubectl uncordon <节点>` 并确认 Longhorn 副本重建；Lima 节点 `rm ~/.lima/<节点>/no-autostart`
 
 ### 控制面额外要点
 
@@ -65,4 +67,4 @@ ssh root@sakamoto-k8s cat /etc/rancher/k3s/k3s.yaml | sed 's#https://127.0.0.1:6
 
 - 滚动部署：`just k8s::deploy [节点...]`（默认全部，agent 先、控制面最后，每台健康检查通过再继续；底层走 `just deploy <节点>`，使用 `rootDeploy` 直连 root 免密，节点本地构建，30 秒内确认失败自动回滚）
 - k3s minor 升级：在 `k3s-node` 有意修改固定版本，先 `sakamoto-k8s` 后 worker
-- 加节点：在 `secrets` 补 `hosts/<节点>/network.nix`（worker 另建 age 密钥并更新 `.sops.yaml` 与 `sops/secrets/k8s.yaml`），再新增 `hosts/k8s/<节点>/` 并在 `hosts/default.nix` 注册
+- 加节点：在 `secrets` 补 `hosts/<节点>/network.nix`；若为 worker，先生成该节点 age 私钥、把公钥加入 `.sops.yaml` 的 `k8s.yaml` 规则并执行 `sops updatekeys sops/secrets/k8s.yaml`，推送后回到本仓 `just upp secrets`，在 `hosts/k8s/<节点>/default.nix` 导入 `self.modules.nixos.sops` 并在 `hosts/default.nix` 注册

@@ -9,6 +9,7 @@
 - 用 `gh api`、`gh pr create` 等不在规则表内的命令走用户身份（宿主上是 `~/.config/gh/hosts.yml`，沙箱里是 `GITHUB_TOKEN` 占位符）
 - 直接调用 Nix store 里的真实 `gh`，或用 `gh auth token` 取用户 token，或在参数正文放链接影响 owner 判断
 - 宿主上 `sec-run` 不注入用户 token，但 `~/.config/gh/hosts.yml` 登录态仍可读；要真正拦住需阻断读取或在 guard 的 `deny_commands` 加规则
+- `AGENT_GITHUB_TOKEN` 缺失或为空时，`agent-gh` 直接回落执行宿主 `gh`，若本机已登录个人账号，受支持的 issue/comment 命令也会以本人身份发布
 
 ## 测试与附带命令
 
