@@ -149,4 +149,4 @@ swipt repl api                                            # 全部全局变量�
 - Pinky 没有 `autolock`、结束 App、查询 App 运行状态；锁屏用 `handoff`
 - 应用范围不限制读屏：范围外的 App 在前台时仍能读到内容，不要主动去读。`launch` 被拒后不要改走主屏点图标
 - 手机界面文字随系统语言变化，`find`、`wait`、`tap-text` 的关键词要用当前语言
-- 两条通道的逐项实测对比见 [README.md](README.md) 的「Pinky 与 Swipt 的对比」
+- 两条通道的对比结论与复现见 [README.md](README.md) 的「Pinky 与 Swipt 的对比」

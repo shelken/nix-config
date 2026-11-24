@@ -10,7 +10,7 @@ NixOS 的 `core` 曾包含笔记本与开发机配置，无法作为公网 VPS �
 - `server` 为 NixOS 专用主角色，只包含 `core` 与常驻服务器职责，不得包含开发工具链
 - 区域默认值可以留在 `core` 或可选功能，国外主机应当在自身配置覆盖，不得为区域另立角色
 - 服务器口令哈希必须走系统层 `nixos.sops` 可选模块，与用户态 `shelken.secrets.enable` 隔离。每台服务器必须使用独立生成的 age 密钥，其公钥不得加入 `default.yaml` 的 recipient，私钥不得从 SSH 主机密钥派生
-- 开机即需状态（age 私钥、tailscale 节点身份、SSH 主机密钥）必须在装机时写入新系统，具体步骤见 `hosts/vps/vps-cc/README.md`
+- 开机即需状态（age 私钥、tailscale 节点身份、SSH 主机密钥）必须在装机时写入新系统，具体步骤见 `docs/user-guide/05-vps.md`
 
 ## 考虑过的替代方案
 

@@ -9,10 +9,8 @@ just --list --list-submodules
 
 ## 布局
 
-- 根 `justfile`：全局设置与高频配方，包括构建、flake、gc、git
-- `just/*.just`：低频配方按主题拆成模块，由根 `justfile` 的 `mod` 引入，调用方式统一写 `just <模块>::<配方>`，文档、注释与脚本里都不用空格形式 `just <模块> <配方>`
-- `utils/script/just/`：只给 justfile 用的脚本。配方体超过几行就放这里，配方只留一行调用
-- 平台专属的模块在 `mod` 上加 `[macos]` 或 `[linux]`，另一个平台上整块隐藏
+- 根 `justfile` 放全局设置与高频配方；低频按主题拆到 `just/*.just`，统一写 `just <模块>::<配方>`（不用空格形式）
+- 超过几行的配方体放 `utils/script/just/`，配方内只留一行调用
 
 ## 模块文件的写法
 
@@ -23,19 +21,7 @@ just --list --list-submodules
 - 模块内部互相调用写全名，如 `just anywhere::kexec-cache`
 - 配方说明用 `[doc('一句话')]`。`just --list` 只取紧挨着配方的最后一行注释，多行注释会被截断
 
-## 新增或改名
+## 变更与检查
 
-- 日常流程里常用的放根 `justfile`，低频或某一主题专用的放对应模块，没有合适的就新建 `just/<名>.just` 并在根 `justfile` 加一行 `mod`
-- 改配方名或模块名后，搜索文档与脚本里的旧调用
-
-```bash
-git grep -n "just <旧名>"
-```
-
-## 自动检查
-
-平台属性禁用的模块在本机不会被 just 解析，语法错误或引用根变量要到另一个平台才暴露。所以 pre-commit 的 `just-modules` 钩子对 `justfile` 和每个 `just/*.just` 单独解析，定义见 `.pre-commit-config.yaml`。手动检查某个模块
-
-```bash
-just --justfile just/<名>.just --summary
-```
+- 改配方或模块名后，用 `git grep -n "just <旧名>"` 清理文档与脚本中的旧调用
+- 平台属性禁用的模块不会在本机被解析，由 pre-commit 的 `just-modules` 钩子逐一校验（见 `.pre-commit-config.yaml`）；手动检查单模块执行 `just --justfile just/<名>.just --summary`
