@@ -70,7 +70,6 @@
   "modules/features/dev/gh/default.nix": 1,
   "modules/features/dev/mise.nix": 2,
   "modules/features/dev/tools.nix": 1,
-  "modules/features/dev/trash.nix": 1,
   "modules/features/dev/worktrunk.nix": 1,
   "modules/features/editor/neovim/_languages.nix": 2,
   "modules/features/editor/neovim/config/lua/shelken/lsp.lua": 2,
