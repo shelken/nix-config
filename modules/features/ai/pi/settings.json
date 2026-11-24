@@ -6,34 +6,34 @@
     "reserveTokens": 22000,
     "modelOverrides": {
       "mp/agy-cli/gemini-4-hydrogen": {
-        "reserveTokens": 698576
+        "reserveTokens": 798576
       },
       "mp/agy-cli/gemini-4-neon": {
-        "reserveTokens": 698576
+        "reserveTokens": 798576
       },
       "cpa/workbuddy/glm-5.3": {
-        "reserveTokens": 650000
+        "reserveTokens": 750000
       },
       "cpa/workbuddy/glm-5.2": {
-        "reserveTokens": 650000
+        "reserveTokens": 750000
       },
       "anthropic/claude-opus-5-5": {
-        "reserveTokens": 650000
+        "reserveTokens": 750000
       },
       "anthropic/claude-fable-5-2": {
-        "reserveTokens": 650000
+        "reserveTokens": 750000
       },
       "mp/loomy/GLM-5.3-Flash": {
-        "reserveTokens": 698576
+        "reserveTokens": 798576
       },
       "anthropic/claude-sonnet-5-5": {
-        "reserveTokens": 650000
+        "reserveTokens": 750000
       },
       "mp/loomy/DeepSeek-V4.1-Flash": {
-        "reserveTokens": 698576
+        "reserveTokens": 798576
       },
       "mp/codex/gpt-6.2-sol": {
-        "reserveTokens": 150000
+        "reserveTokens": 250000
       }
     }
   },
@@ -43,7 +43,7 @@
   ],
   "enabledModels": [
     "mp/agy-cli/gemini-4-hydrogen:high",
-    "mp/agy-cli/gemini-4-neon:medium",
+    "mp/agy-cli/gemini-4-neon:high",
     "mp/opencode-zen/deepseek-v4.1-flash-free:high",
     "cpa/workbuddy/glm-5.3:high",
     "cpa/workbuddy/glm-5.2:high",
@@ -126,7 +126,7 @@
   "theme": "catppuccin",
   "transport": "auto",
   "tuiMode": "fullscreen",
-  "defaultProvider": "cpa",
+  "defaultProvider": "mp",
   "defaultModel": "agy-cli/gemini-4-neon",
   "extensionChangelogVersions": {
     "{\"source\":\"npm:pi-better@0.2.0\",\"scope\":\"user\"}": "0.2.0",

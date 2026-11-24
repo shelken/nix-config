@@ -21,7 +21,7 @@ modelRoles:
   claude-max: anthropic/claude-opus-5-5:medium
   fable: anthropic/claude-opus-5-5:medium
   gemini-lite: mp/agy-cli/gemini-4-hydrogen:high
-  gemini: mp/agy-cli/gemini-4-neon:medium
+  gemini: mp/agy-cli/gemini-4-neon:high
   gemini-max: mp/agy-cli/gemini-4-neon:high
   reviewer-gemini: "@gemini-max"
   reviewer-ds: "@dsf"

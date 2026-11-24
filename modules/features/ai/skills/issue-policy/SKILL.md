@@ -7,6 +7,7 @@ description: Issue/PR 的读取与 Issue 的创建、关闭规范（状态核对
 
 - 先确认当前状态：open、closed 或 merged
 - 处理已有 Issue 时，同时阅读正文与评论，重点看前几条评论和项目拥有者的回复
+- gh issue view 同时带 --comments 和 --json 会报错
 
 ## 创建与关闭 Issue
 

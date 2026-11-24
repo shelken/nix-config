@@ -12,10 +12,30 @@ providers:
       timeoutMs: 3000
     # >>> mp-modelOverrides:auto-sync >>>
     modelOverrides:
-      opencode-zen/gemini-3.5-flash-lite:
+      opencode-zen/tidepool-alpha-free:
         thinking:
           mode: effort
-          efforts: [minimal, low, medium, high]
+          efforts: [minimal, low, medium, high, xhigh, max]
+      opencode-zen/muse-ember-1.0:
+        thinking:
+          mode: effort
+          efforts: [minimal, low, medium, high, xhigh, max]
+      opencode-zen/inkling-2-small-free:
+        thinking:
+          mode: effort
+          efforts: [minimal, low, medium, high, max]
+      opencode-zen/crouton-alpha-free:
+        thinking:
+          mode: effort
+          efforts: [minimal, low, medium, high, xhigh, max]
+      opencode-zen/nemotron-3.5-super-vl-free:
+        thinking:
+          mode: effort
+          efforts: [minimal, low, medium, high, xhigh]
+      opencode-zen/muse-wonder-1.0:
+        thinking:
+          mode: effort
+          efforts: [minimal, low, medium, high, xhigh, max]
     # <<< mp-modelOverrides:auto-sync <<<
   cpa:
     baseUrl: https://cpa.int.ooooo.space/v1
