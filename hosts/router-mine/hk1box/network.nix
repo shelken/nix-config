@@ -4,6 +4,15 @@ let
 in
 {
   uci.settings.network = {
+    iot_local_main = {
+      _type = "rule";
+      "in" = "viot";
+      lookup = "main";
+      priority = "900";
+      src = "192.168.50.0/24";
+      suppress_prefixlength = "0";
+    };
+
     iot_hk1 = {
       _type = "rule";
       "in" = "viot";
