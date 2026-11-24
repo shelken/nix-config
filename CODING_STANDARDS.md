@@ -5,7 +5,7 @@
 ## 编码与提交
 
 - 注释与文档使用中文
-- commit 前先 `git add`，然后运行一次 pre-commit
+- commit 前先 `git add`，然后运行一次 `prek run`
 - 优先使用 Conventional Commits 格式提交，标题英文，正文中文
 
 ## 验证
