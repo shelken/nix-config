@@ -40,8 +40,11 @@ in
             keepalive time 30;
 
             ipv4 {
-                import all;
-                export all;
+                import filter {
+                    if net ~ [ 192.168.69.0/24{24,32}, 10.42.0.0/16{16,32} ] then accept;
+                    reject;
+                };
+                export none;
                 next hop self;
             };
         }
