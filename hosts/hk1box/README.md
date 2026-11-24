@@ -50,9 +50,10 @@ nixos-anywhere -f .#hk1box --target-host root@hk1box --build-on local \
 ssh hk1box 'ls -l /mnt/var/lib/sops-nix/key.txt'   # 装完先核对私钥已写入再断电
 ```
 
-`--extra-files` 拿到空路径会静默跳过拷贝，缺失时趁 `/mnt` 仍挂载直接补传并复查后再断电：
+`--extra-files` 拿到空路径会静默跳过整棵目录，缺失时趁 `/mnt` 仍挂载建目录补传，复查后再断电：
 
 ```bash
+ssh hk1box 'install -d -m 700 /mnt/var/lib/sops-nix'
 scp hk1box-age.txt hk1box:/mnt/var/lib/sops-nix/key.txt
 ssh hk1box 'chmod 400 /mnt/var/lib/sops-nix/key.txt'
 ```

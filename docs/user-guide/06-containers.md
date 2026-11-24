@@ -33,6 +33,7 @@ virtualisation.oci-containers.containers.openlist.environmentFiles = [
 ## 加一个服务清单
 
 - [ ] 新建 `hosts/vps/vps-cc/apps/<服务>.nix`（或 `<服务>/default.nix`），确认数据目录与 `docker volume ls` 命名卷一致
+- [ ] 将新文件加入 [hosts/vps/vps-cc/apps/default.nix](../../hosts/vps/vps-cc/apps/default.nix) 的 `imports` 并执行 `git add`（`apps/default.nix` 显式列举导入，漏登记时求值与部署均会通过但容器不会生效）
 - [ ] 配置 `networks = [ "homelab" ]`（需宿主机网络栈时改用 `extraOptions = [ "--network=host" ]` 且不写 `networks`）与端口绑定
 - [ ] 非机密放 `environment`，机密走 `sops.templates` 并执行 `just upp secrets`
 - [ ] 核对求值：`nix eval .#nixosConfigurations.<主机>.config.system.build.toplevel.drvPath`

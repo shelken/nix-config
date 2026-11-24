@@ -39,7 +39,22 @@ done
 chmod 600 "$EXTRA"/var/lib/tailscale/* "$EXTRA"/etc/ssh/*_key
 ```
 
-备好数据与 `$EXTRA` 后，先用 `tar -tzf ~/vps-cc-backup/data-docker.tgz` 校验备份可读并确认 VNC 控制台可进，再在 `nix develop` 中按 [VPS 指南](../../../docs/user-guide/05-vps.md) 执行两阶段 `nixos-anywhere`：阶段一走原 SSH 端口 `60223`、加 `--build-on local` 与 `--kexec-extra-flags '-c'`；kexec 后登录 22 端口确认 BIOS、`/dev/vda` 及 `network.nix` 地址一致再抹盘；阶段二用 `--ssh-port 22`、`--build-on local` 与 `--extra-files "$EXTRA"`，装完即删除 `$EXTRA`
+备好数据与 `$EXTRA` 后，在 `nix develop` 中执行两阶段安装：
+
+1. 前置核对：运行 `tar -tzf ~/vps-cc-backup/data-docker.tgz` 确认备份可读，并确认 VNC 控制台可进
+2. 阶段一（端口 `60223`，带 `-c`）：
+   ```bash
+   KEXEC=$(just anywhere::kexec-cache x86_64 nixos-26.05)
+   nixos-anywhere -f .#vps-cc --target-host root@vps-cc --build-on local --ssh-port 60223 \
+     --kexec "$KEXEC" --kexec-extra-flags '-c' --phases kexec
+   ```
+3. 阶段一后核对（确认再抹盘）：`ssh -p 22 root@vps-cc` 确认 BIOS、`/dev/vda` 与 `network.nix` 地址/MTU 一致
+4. 阶段二（端口 `22`，装完删 `$EXTRA`）：
+   ```bash
+   nixos-anywhere -f .#vps-cc --target-host root@vps-cc --build-on local --ssh-port 22 \
+     --phases disko,install,reboot --extra-files "$EXTRA"
+   rm -r "$EXTRA"
+   ```
 
 ## 回滚与更新
 

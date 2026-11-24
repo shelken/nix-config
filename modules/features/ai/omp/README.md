@@ -6,7 +6,7 @@
 
 ## Guard 权限
 
-同时用于 omp 与 pi（边界与重放见 [extensions/guard/README.md](./extensions/guard/README.md)）。全局权限 `~/.omp/agent/permissions.yaml` 与 `~/.pi/agent/permissions.yaml` 由 `omp/permissions.yaml` 生成；项目权限取 `.omp/permissions.yml` 或 `.pi/permissions.yml`（`.yml` 优先于 `.yaml`），按「内置 → 全局 → 项目」叠加，新会话生效。`deny_paths` 与 `deny_commands` 中以 `-` 开头的条目仅在全局配置里移除内置规则，在项目配置里会被忽略（项目层只能追加，不能放宽）
+同时用于 omp 与 pi（边界与重放见 [extensions/guard/README.md](./extensions/guard/README.md)）。全局权限 `~/.omp/agent/permissions.yaml` 与 `~/.pi/agent/permissions.yaml` 由 `omp/permissions.yaml` 生成；项目权限取 `.omp/permissions.yml` 或 `.pi/permissions.yml`（`.yml` 优先于 `.yaml`），按「内置 → 全局 → 项目」叠加，新会话生效。以 `-` 开头的条目仅在全局配置的 `deny_paths` 里移除内置路径规则（`deny_commands` 无法移除硬编码内置命令拦截），在项目配置里会被忽略（项目层只能追加，不能放宽）
 
 ```yaml
 default_reason: "BLOCKED BY USER"
@@ -14,5 +14,5 @@ deny_commands:
   - pattern: "git add -A"
     reason: "请显式指定文件"
 deny_paths:
-  - "~/.aws"
+  - "secrets/prod.key"
 ```

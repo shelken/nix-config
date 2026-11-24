@@ -91,7 +91,7 @@ just hm
 sb sync            # 改了插件或 mise 工具清单时补齐
 ```
 
-修改 `sb.yaml` 中的 `network.default_grant` 不触发重建，下一个新上下文立即生效；其余 `sb.yaml` 变更需退出运行中的 Agent 后再启动以重建主 VM
+修改 `sb.yaml` 中的 `network.default_grant` 不触发重建（下一个新上下文生效）；只改 `volume.size` 也不改变 VM 指纹（不会扩容已有卷，仅新建卷时读取）；其余会改变 VM 指纹的 `sb.yaml` 变更需退出运行中的 Agent 后再启动以重建主 VM
 
 ```bash
 sb status          # 查看主 VM 状态、上限是否一致与缺失工具

@@ -11,7 +11,7 @@
 - 展开 `{{ sops.… }}` 占位符需要 `SOPS_AGE_KEY_FILE` 指向 `admin_mio` 的 age 密钥；`uci.files` 的 `content` 中的占位符不在输出打码范围
 - 匿名段按位置对比，列表新增或移动条目会让 `preview` 出现一次序号噪声，下发后消失；核对一致性按段内容看，不看序号
 - 下发前会检查设备上所有启用中的 `mode == "sta"` 无线段，防止误关热点中继导致断网
-- 迁移新配置：`just router::import <配置>` 导出后挑出设备数据与密钥写入 `hosts/router-mine/`，把所需包写入同文件的 `uci.packages`，经 `preview` 核对后 `push`；nuci 只管声明中出现的文件，但已声明文件必须写全
+- 迁移新配置：`just router::import <配置>` 导出后挑出设备数据与密钥写入 `hosts/router-mine/`，把所需包写入同文件的 `uci.packages`，将新文件加入所属分组 `default.nix` 的 `imports`（各分组均为显式导入，漏登记不会编译下发），经 `just router::preview` 核对出现期望差异后再 `push`；nuci 只管声明中出现的文件，但已声明文件必须写全
 
 ## 固件
 

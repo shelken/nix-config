@@ -97,7 +97,7 @@ sudo darwin-uninstaller
 just deploy-diff                         # 检查各主机待部署差异
 just deploy-all                          # 确认后逐台部署有差异的主机
 just deploy <主机>                       # 远程部署单台主机
-just linux::gen-image <host> <variant>   # 构建镜像变体（iso / qemu 等）
+just linux::gen-image <host> <variant>   # 构建镜像变体（iso / qemu 等）并 rsync 上传到 PVE（覆盖 latest）
 ```
 
 完整配方见 `just --list`，远程装机与回滚见 [VPS 指南](docs/user-guide/05-vps.md)
