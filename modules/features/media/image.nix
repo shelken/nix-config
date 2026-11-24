@@ -4,6 +4,5 @@
 
   flake.modules.darwin.image.homebrew.casks = [
     "imageoptim"
-    "upic"
   ];
 }
