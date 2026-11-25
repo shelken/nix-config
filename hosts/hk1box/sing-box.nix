@@ -76,22 +76,11 @@ in
         "L+ /etc/sing-box/config.json - - - - ${configFile}"
       ];
 
-      # EXTERNAL: HK1 Box 无硬件 RTC，断电重启后时钟从旧值起步，需等待首次 NTP 同步（30s 超时兜底不阻塞无网启动）
+      # EXTERNAL: HK1 Box 无硬件 RTC，断电重启后时钟从旧值起步，启用上游等待同步单元并设 30s 超时兜底不阻塞无网启动
+      systemd.additionalUpstreamSystemUnits = [ "systemd-time-wait-sync.service" ];
       systemd.services.systemd-time-wait-sync = {
-        description = "等待内核时钟完成首次 NTP 同步";
-        after = [
-          "network-online.target"
-          "systemd-timesyncd.service"
-        ];
-        wants = [ "network-online.target" ];
-        before = [ "time-sync.target" ];
         wantedBy = [ "time-sync.target" ];
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = "${config.systemd.package}/lib/systemd/systemd-time-wait-sync";
-          RemainAfterExit = true;
-          TimeoutStartSec = "30s";
-        };
+        serviceConfig.TimeoutStartSec = "30s";
       };
 
       systemd.services.sing-box = {

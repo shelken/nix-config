@@ -2,8 +2,8 @@
 # 内层只反转源 IP 条件。写在同一层会把 dns-in 的查询也翻成命中。
 # 白名单按源 IP 匹配：透明 DNS 在 auto_redirect 预匹配阶段取不到源 MAC。
 # 内核 merge 不校验 CIDR，且把单元素数组写成标量，所以占位符直接写成标量。
-# route.rules 顺序是固定的：白名单 bypass → 53 劫持。名单外设备若手动经旁路由，
-# 其 53 端口查询一并原样直放，不被劫持到 dns-in。
+# route.rules 顺序是固定的：白名单 bypass → 放行解析器 → 53 劫持。名单外设备若手动经旁路由，
+# 其 53 端口查询一并原样直放；名单内设备显式访问放行解析器也不被劫持到 dns-in。
 subs:
   - "{{ op://Projects/proxy/subs-miaona }}"
 nodes:
@@ -56,6 +56,14 @@ overlay: |
               ]
             }
           ],
+          "action": "bypass",
+          "outbound": "direct"
+        },
+        {
+          "inbound": ["tun-in"],
+          "ip_cidr": ["223.5.5.5/32"],
+          "port": [53],
+          "network": ["udp", "tcp"],
           "action": "bypass",
           "outbound": "direct"
         },

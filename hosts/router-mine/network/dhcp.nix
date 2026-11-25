@@ -149,6 +149,18 @@ in
         ip = ip "yuuko";
         mac = [ deviceMac.yuuko ];
       }
+      {
+        _type = "host";
+        name = "sakamoto";
+        ip = ip "sakamoto";
+        mac = [ deviceMac.sakamoto ];
+      }
+      {
+        _type = "host";
+        name = "quest2";
+        ip = "192.168.6.125";
+        mac = [ deviceMac.quest2 ];
+      }
     ];
 
     lan = {
