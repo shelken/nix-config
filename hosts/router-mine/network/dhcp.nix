@@ -1,6 +1,5 @@
 {
   inputs,
-  lib,
   myvars,
   ...
 }:
@@ -10,9 +9,6 @@ let
   secretNet = host: import (inputs.secrets + "/hosts/${host}/network.nix");
   nodeMac = name: (secretNet name).lanMac;
   deviceMac = (secretNet "router-mine").dhcpMacs;
-  withHk1boxTag =
-    entry:
-    entry // lib.optionalAttrs (builtins.elem entry.ip net.hk1boxWhitelist.ips) { tag = "hk1box"; };
 in
 {
   uci.settings.dhcp = {
@@ -88,13 +84,14 @@ in
       }
     ];
 
-    host = map withHk1boxTag [
+    host = [
       {
         _type = "host";
         name = "pve";
         ip = ip "pve";
         leasetime = "infinite";
         mac = [ deviceMac.pve ];
+        tag = "hk1box";
       }
       {
         _type = "host";
@@ -117,6 +114,7 @@ in
         name = "sakamoto-k8s";
         ip = ip "sakamoto-k8s";
         mac = [ (nodeMac "sakamoto-k8s") ];
+        tag = "hk1box";
       }
       {
         _type = "host";
@@ -136,30 +134,35 @@ in
         name = "homelab-1";
         ip = ip "homelab-1";
         mac = nodeMac "homelab-1";
+        tag = "hk1box";
       }
       {
         _type = "host";
         name = "yuuko-k8s";
         ip = ip "yuuko-k8s";
         mac = [ (nodeMac "yuuko-k8s") ];
+        tag = "hk1box";
       }
       {
         _type = "host";
         name = "yuuko";
         ip = ip "yuuko";
         mac = [ deviceMac.yuuko ];
+        tag = "hk1box";
       }
       {
         _type = "host";
         name = "sakamoto";
         ip = ip "sakamoto";
         mac = [ deviceMac.sakamoto ];
+        tag = "hk1box";
       }
       {
         _type = "host";
         name = "quest2";
         ip = "192.168.6.125";
         mac = [ deviceMac.quest2 ];
+        tag = "hk1box";
       }
     ];
 

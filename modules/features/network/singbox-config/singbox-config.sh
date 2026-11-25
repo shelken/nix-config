@@ -16,8 +16,7 @@ URL 由 sbtools 写进剪切板。私密值只落在临时目录，退出即删�
   clash-secret       router 的 clash API secret
 
 订阅服务地址取 sops 的 main-domain，脚本里拼成 https://subs.<main-domain>。
-router 模板里的白名单是占位符，由 hosts/hk1box/sing-box.nix 在盒子上替换；本网解析器地址
-（dns-lan）、放行解析器清单与 clash API 的监听地址直接写在 templates/router.yaml。
+router 模板里的本网解析器地址（dns-lan）、本机与放行解析器规则以及 clash API 的监听地址直接写在 templates/router.yaml。
 EOF
   exit 2
 }

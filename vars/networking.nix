@@ -60,33 +60,9 @@ let
     ))
     (lib.foldl' (acc: hosts: acc // hosts) { })
   ];
-
-  hk1boxWhitelist =
-    let
-      hosts = [
-        "sakamoto-k8s"
-        "yuuko-k8s"
-        "homelab-1"
-        "pve"
-        "yuuko"
-        "sakamoto"
-      ];
-      extraIps = [ "192.168.6.125" ];
-      subnets = [ "192.168.50.0/24" ];
-      ips = map (name: hostAddress.${name}.address) hosts ++ extraIps;
-    in
-    {
-      inherit
-        hosts
-        extraIps
-        subnets
-        ips
-        ;
-      cidrs = map (ip: "${ip}/32") ips ++ subnets;
-    };
 in
 {
-  inherit prefixLength hostAddress hk1boxWhitelist;
+  inherit prefixLength hostAddress;
 
   ssh = {
     extraConfig = lib.concatStringsSep "\n\n" (

@@ -1,7 +1,6 @@
 {
   config,
   lib,
-  myvars,
   pkgs,
   ...
 }:
@@ -9,8 +8,6 @@ let
   stateDir = "/var/lib/sing-box-sub";
   configFile = "${stateDir}/config.json";
   sing-box = config.services.sing-box.package;
-
-  whitelist = builtins.toJSON myvars.networking.hk1boxWhitelist.cidrs;
   urlFile = config.sops.secrets.sing-box-sub-url.path;
 
   update = pkgs.writeShellApplication {
@@ -19,27 +16,18 @@ let
       pkgs.coreutils
       pkgs.curl
       pkgs.diffutils
-      pkgs.jq
       pkgs.systemd
       sing-box
     ];
     text = ''
-      raw=$(mktemp -p ${stateDir} .raw.XXXXXX)
       tmp=$(mktemp -p ${stateDir} .config.XXXXXX)
       work=$(mktemp -d)
-      trap 'rm -rf "$raw" "$tmp" "$work"' EXIT
+      trap 'rm -rf "$tmp" "$work"' EXIT
 
       # URL 带着加密载荷，经 stdin 交给 curl，不出现在进程参数与日志里
       printf 'url = "%s"\n' "$(tr -d '\n' < ${urlFile})" \
         | curl --config - --fail --silent --show-error --location \
-            --max-time 120 --retry 3 --retry-delay 10 --output "$raw"
-
-      jq --argjson w ${lib.escapeShellArg whitelist} '
-        def replace: walk(if type == "object" and .source_ip_cidr == "@whitelist@" then .source_ip_cidr = $w else . end);
-        ([(.dns.rules? // []), (.route.rules? // []) | .. | select(type == "object" and .source_ip_cidr == "@whitelist@")] | length) as $n
-        | if $n != 2 then error("expected 2 @whitelist@ slots in dns/route rules, got \($n)") else . end
-        | ((.dns.rules, .route.rules) | select(. != null)) |= replace
-      ' "$raw" > "$tmp"
+            --max-time 120 --retry 3 --retry-delay 10 --output "$tmp"
 
       # 工作目录指向临时目录，check 不在 stateDir 里留下缓存文件
       sing-box check -D "$work" -c "$tmp"
