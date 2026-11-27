@@ -11,6 +11,6 @@
     uv = { };
 
     # renovate: datasource=github-releases depName=j178/prek
-    prek.mise = "0.5.10";
+    prek.mise = "0.5.12";
   };
 }
