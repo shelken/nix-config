@@ -2,4 +2,6 @@
 
 插件、语言工具与 treesitter 语法均由 Nix 提供，不在运行时下载；版本由 `flake.lock` 锁定，回滚跟随 Home Manager generation
 
-`neovim-minimal`（所有主机）与 `neovim`（tui 及以上）共用 `config/`，拆分原则是不依赖外部命令的外观与补全进 minimal，依赖语言工具或 `rg` 等外部命令的留在完整层
+全员统一安装预编译 `pkgs.neovim-unwrapped`，经无 CC 的 `xdg.dataFile` 挂载 packpath 与 `nix_config.lua`；纯 Lua 插件直取源码（`.src`），有构建步骤的插件及 treesitter parser 走官方二进制缓存，避免 `programs.neovim` 与 `buildVimPlugin` 在更新 `flake.lock` 后触发 `stdenv`/`gcc` 本地构建
+
+`neovim-minimal`（`core`，所有主机）只保留 Catppuccin 主题与运维常用 treesitter 高亮；`neovim`（`tui` 及以上，可通过 `shelken.neovim.minimal = true` 退回 minimal）补齐 UI、补全、LSP、语言工具与全量语法

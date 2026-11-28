@@ -34,6 +34,7 @@
             whiskers = pkgs.catppuccin-whiskers;
             starship = "${fetchPort "starship"}/themes";
             palette = fetchPort "palette";
+            nvim = fetchPort "nvim";
           }
         );
         autoEnable = true;

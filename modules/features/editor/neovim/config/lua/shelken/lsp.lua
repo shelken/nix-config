@@ -1,4 +1,4 @@
-local languages = vim.g.nix_languages
+local languages = require("nix_config").languages
 
 vim.diagnostic.config({
   virtual_text = true,

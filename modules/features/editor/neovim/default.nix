@@ -2,15 +2,37 @@
 let
   hmModules = config.flake.modules.homeManager;
 
+  coreGrammars = [
+    "nix"
+    "bash"
+    "json"
+    "yaml"
+    "toml"
+    "dockerfile"
+    "diff"
+  ];
+
   languagesOf = pkgs: builtins.attrValues (import ./_languages.nix pkgs);
   collect = pkgs: field: pkgs.lib.concatMap (lang: lang.${field} or [ ]) (languagesOf pkgs);
 
-  # catppuccin 的 auto_integrations 只认 vim.pack / lazy / pckr，识别不了 Nix 放进 packpath 的插件，需显式列出
-  catppuccinIntegrations =
-    lib: names:
-    lib.genAttrs names (_: {
-      enabled = true;
-    });
+  collectDeps =
+    lib: list:
+    let
+      expand = p: [ p ] ++ lib.concatMap expand (p.dependencies or [ ]);
+    in
+    lib.unique (lib.concatMap expand list);
+
+  isPurePlugin =
+    p:
+    (p.patches or [ ]) == [ ]
+    && (p.buildPhase or ":") == ":"
+    && (p.preInstall or "") == ""
+    && (p.postInstall or "") == ""
+    && (p.postPatch or "") == ""
+    && !(p ? sourceRoot)
+    && p ? src;
+
+  pluginSource = p: if isPurePlugin p then p.src else p;
 in
 {
   flake.modules.homeManager.core.imports = [ hmModules.neovim-minimal ];
@@ -25,51 +47,96 @@ in
       ...
     }:
     let
+      cfg = config.shelken.neovim;
       ts = pkgs.vimPlugins.nvim-treesitter;
-      # 同 nvim-treesitter.withPlugins：parser 与高亮 queries 是两个插件，缺 queries 就没有高亮
-      grammars = lib.concatMap (
-        name: [ ts.grammarPlugins.${name} ] ++ lib.optional (ts.queries ? ${name}) ts.queries.${name}
-      ) (collect pkgs "grammars");
-    in
-    {
-      programs.neovim = {
-        enable = true;
-        defaultEditor = true;
-        withRuby = false;
-        withPython3 = false;
-        viAlias = true;
-        vimAlias = true;
-        sideloadInitLua = true;
-        plugins =
-          with pkgs.vimPlugins;
-          [
-            nvim-treesitter
-            noice-nvim
-            nui-nvim
-            blink-cmp
-            markview-nvim
-            mini-icons
-          ]
-          ++ grammars;
+      grammarNames = lib.unique cfg.grammars;
+      queryDrvs = collectDeps lib (
+        lib.concatMap (name: lib.optional (ts.queries ? ${name}) ts.queries.${name}) grammarNames
+      );
+      grammarsDir = pkgs.symlinkJoin {
+        name = "nvim-treesitter-grammars";
+        paths = map (name: ts.grammarPlugins.${name}) grammarNames ++ queryDrvs;
       };
 
-      xdg.configFile.nvim = mylib.mkConfigFile config ./config;
+      allPlugins = collectDeps lib cfg.plugins;
+      pluginEntries = [
+        {
+          name = "catppuccin-nvim";
+          path = config.catppuccin.sources.nvim;
+        }
+        {
+          name = "nvim-treesitter-grammars";
+          path = grammarsDir;
+        }
+      ]
+      ++ map (p: {
+        name = p.pname or (lib.getName p);
+        path = pluginSource p;
+      }) allPlugins;
 
-      catppuccin.nvim.settings = {
-        transparent_background = true;
-        integrations = catppuccinIntegrations lib [
-          "blink_cmp"
-          "markview"
-          "mini"
-          "noice"
-        ];
+      nvimAliases = pkgs.linkFarm "nvim-aliases" [
+        {
+          name = "bin/vi";
+          path = "${pkgs.neovim-unwrapped}/bin/nvim";
+        }
+        {
+          name = "bin/vim";
+          path = "${pkgs.neovim-unwrapped}/bin/nvim";
+        }
+      ];
+    in
+    {
+      options.shelken.neovim = {
+        minimal = mylib.mkBoolOpt false "只要 neovim-minimal：不装语言工具、LSP 与功能类插件";
+        grammars = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = "Treesitter 语法解析器列表";
+        };
+        plugins = lib.mkOption {
+          type = lib.types.listOf lib.types.package;
+          default = [ ];
+          description = "Neovim 插件列表";
+        };
+        languages = lib.mkOption {
+          type = lib.types.nullOr lib.types.attrs;
+          default = null;
+          description = "传给 Lua 的 LSP/formatter/linter 语言表，非 null 时启用完整层";
+        };
+      };
+
+      config = {
+        catppuccin.nvim.enable = false;
+        shelken.neovim.grammars = coreGrammars;
+
+        home = {
+          packages = [
+            pkgs.neovim-unwrapped
+            nvimAliases
+          ];
+          sessionVariables = {
+            EDITOR = "nvim";
+            VISUAL = "nvim";
+          };
+        };
+
+        xdg.configFile.nvim = mylib.mkConfigFile config ./config;
+
+        xdg.dataFile = {
+          "nvim/site/pack/nix/start".source = pkgs.linkFarm "nvim-pack-start" pluginEntries;
+          "nvim/site/lua/nix_config.lua".text = "return ${
+            lib.generators.toLua { } {
+              flavor = config.catppuccin.flavor;
+              languages = cfg.languages;
+            }
+          }";
+        };
       };
     };
 
   flake.modules.homeManager.neovim =
     {
       lib,
-      mylib,
       pkgs,
       config,
       ...
@@ -85,17 +152,19 @@ in
       };
     in
     {
-      options.shelken.neovim = {
-        minimal = mylib.mkBoolOpt false "只要 neovim-minimal：不装语言工具、LSP 与功能类插件";
-      };
-
       config = lib.mkIf (!cfg.minimal) {
-        home.packages = collect pkgs "packages";
+        home.packages = [ pkgs.chafa ] ++ collect pkgs "packages";
 
-        programs.neovim = {
-          initLua = "vim.g.nix_languages = ${lib.generators.toLua { } nixLanguages}";
-          extraPackages = [ pkgs.chafa ];
+        shelken.neovim = {
+          languages = nixLanguages;
+          grammars = collect pkgs "grammars";
           plugins = with pkgs.vimPlugins; [
+            nvim-treesitter
+            noice-nvim
+            nui-nvim
+            blink-cmp
+            markview-nvim
+            mini-icons
             nvim-lspconfig
             SchemaStore-nvim
             friendly-snippets
@@ -110,14 +179,6 @@ in
             yazi-nvim
           ];
         };
-
-        catppuccin.nvim.settings.integrations = catppuccinIntegrations lib [
-          "flash"
-          "gitsigns"
-          "grug_far"
-          "snacks"
-          "which_key"
-        ];
       };
     };
 }

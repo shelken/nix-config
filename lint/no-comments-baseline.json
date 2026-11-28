@@ -73,7 +73,6 @@
   "modules/features/editor/neovim/_languages.nix": 2,
   "modules/features/editor/neovim/config/lua/shelken/lsp.lua": 2,
   "modules/features/editor/neovim/config/lua/shelken/options.lua": 1,
-  "modules/features/editor/neovim/default.nix": 2,
   "modules/features/homelab/k3s-node/default.nix": 11,
   "modules/features/homelab/k3s-nvidia-vgpu/default.nix": 10,
   "modules/features/homelab/lima-host.nix": 7,
