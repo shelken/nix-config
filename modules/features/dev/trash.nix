@@ -11,17 +11,6 @@
     {
       config = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (
         let
-          macTrash = pkgs.darwin.trash.overrideAttrs (old: {
-            postPatch = (old.postPatch or "") + ''
-              substituteInPlace trash.m \
-                --replace-fail 'BOOL arg_list = NO;' 'BOOL arg_force = NO; BOOL arg_list = NO;' \
-                --replace-fail "case 'f':" "" \
-                --replace-fail "case 'd':" "case 'f': arg_force = YES; break; case 'd':" \
-                --replace-fail 'PrintfErr(@"trash: %s: path does not exist\n", argv[i]);' \
-                  'if (arg_force) continue; PrintfErr(@"trash: %s: path does not exist\n", argv[i]);'
-            '';
-          });
-
           rmAsTrash = pkgs.writeShellScriptBin "rm" ''
             if [ -n "''${NIX_BUILD_TOP:-}" ] || [ "$(id -u)" -eq 0 ]; then
               exec /bin/rm "$@"
@@ -115,18 +104,28 @@
             fi
 
             if [ "$has_force" -eq 1 ]; then
-              options+=("-f")
+              filtered=()
+              for p in "''${operands[@]}"; do
+                if [ -e "$p" ] || [ -L "$p" ]; then
+                  filtered+=("$p")
+                fi
+              done
+              operands=("''${filtered[@]}")
+              if [ "''${#operands[@]}" -eq 0 ]; then
+                exit 0
+              fi
             fi
+
             if [ "$has_verbose" -eq 1 ]; then
               options+=("-v")
             fi
 
-            exec ${macTrash}/bin/trash "''${options[@]}" -- "''${operands[@]}"
+            exec ${pkgs.darwin.trash}/bin/trash "''${options[@]}" -- "''${operands[@]}"
           '';
         in
         {
           home.packages = [
-            macTrash
+            pkgs.darwin.trash
             rmAsTrash
           ];
 
