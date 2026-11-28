@@ -130,11 +130,11 @@
       flake = false;
     };
     cursor-plugins = {
-      url = "git+https://github.com/cursor/plugins?ref=main&rev=aaeb0ea3a0584995aa8f55ce44c6c5259414b896&shallow=1";
+      url = "git+https://github.com/cursor/plugins?ref=main&rev=b7b93c36be9bcc36a74db438e0fd385d660bc559&shallow=1";
       flake = false;
     };
     diagram-design = {
-      url = "git+https://github.com/cathrynlavery/diagram-design?ref=main&rev=d74d8c2d0c78a9e1efd43137f6a9a51182a8b5f0&shallow=1";
+      url = "git+https://github.com/cathrynlavery/diagram-design?ref=main&rev=795eec47fd376e5dda0b9e056a49520060cd2f13&shallow=1";
       flake = false;
     };
     humanlayer-skills = {
@@ -154,7 +154,7 @@
       flake = false;
     };
     mattpocock-skills = {
-      url = "git+https://github.com/mattpocock/skills?ref=main&rev=abeeaf95660ba9e8b7c753eb38f441ca707a8823&shallow=1";
+      url = "git+https://github.com/mattpocock/skills?ref=main&rev=bbadaa631c37af594e5a05c9cefacd9956136b18&shallow=1";
       flake = false;
     };
     rime-main = {
