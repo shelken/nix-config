@@ -1,6 +1,7 @@
 { config, ... }:
 {
   flake.modules.nixos.core.imports = [ config.flake.modules.nixos.locale ];
+  flake.modules.nixos.gui.imports = [ config.flake.modules.nixos.locale-gui ];
 
   flake.modules.nixos.locale = {
     time.timeZone = "Asia/Shanghai";
@@ -10,6 +11,10 @@
     ];
 
     i18n.defaultLocale = "en_US.UTF-8";
+  };
+
+  flake.modules.nixos.locale-gui = {
+    i18n.supportedLocales = [ "all" ];
 
     i18n.extraLocaleSettings = {
       LC_ADDRESS = "zh_CN.UTF-8";
