@@ -25,7 +25,7 @@
             allow_low_downloads = true;
           };
           # renovate: datasource=npm depName=@llamaindex/liteparse
-          "npm:@llamaindex/liteparse" = "2.19.0";
+          "npm:@llamaindex/liteparse" = "2.21.4";
           # renovate: datasource=github-releases depName=rtk-ai/rtk
           rtk = "1.2";
         };
